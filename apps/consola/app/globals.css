@@ -307,3 +307,62 @@ table.tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .cabecera-interior { padding: 12px 14px; }
   .tabla td, .tabla th { padding-left: 12px; padding-right: 12px; }
 }
+
+/* Edición en la ficha de cuenta */
+.rejilla-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px 14px;
+}
+.campo-ancho { grid-column: 1 / -1; }
+.campo textarea {
+  font-family: var(--sans);
+  font-size: 15px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--borde);
+  background: var(--blanco);
+  color: var(--tinta);
+  min-height: 72px;
+  resize: vertical;
+}
+.campo textarea:focus { outline: 2px solid var(--verde); outline-offset: 0; border-color: var(--verde); }
+
+.form-bloque { padding: 16px 18px; display: grid; gap: 14px; }
+.form-bloque .boton { justify-self: start; }
+
+details.pliegue { border-top: 1px solid var(--borde); }
+details.pliegue > summary {
+  cursor: pointer;
+  padding: 12px 18px;
+  font-size: 14px;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+details.pliegue > summary::-webkit-details-marker { display: none; }
+details.pliegue > summary::after { content: "+"; color: var(--gris-claro); font-family: var(--mono); }
+details.pliegue[open] > summary::after { content: "–"; }
+details.pliegue > summary:hover { background: var(--papel); }
+.sumario-nombre { font-weight: 500; }
+.sumario-detalle { color: var(--gris-claro); font-size: 13px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.aviso-ok {
+  background: #E7F1EC;
+  color: #0F6E56;
+  border: 1px solid #C5DED4;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.fila-encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 8px;
+}

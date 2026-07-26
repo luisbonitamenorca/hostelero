@@ -40,6 +40,6 @@ pasan por las políticas RLS del rol autenticado (solo operadores).
 
 ## Pendiente conocido
 
-- Alta de sociedades, centros y usuarios desde la consola (hoy: desde Supabase).
+- Alta y edición de usuarios de cuenta desde la consola (hoy: desde Supabase).
 - "Entrar como cliente" con registro en `accesos_soporte` (necesita la app general).
 - Regenerar tipos al cambiar el esquema: `supabase gen types typescript` (o pedírselo a Claude).

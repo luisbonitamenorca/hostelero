@@ -55,25 +55,47 @@ export type Database = {
         Row: {
           creado_en: string
           cuenta_id: string
+          direccion: string | null
+          email: string | null
           id: string
           nombre: string
+          observaciones: string | null
+          persona_contacto: string | null
           sociedad_id: string
+          telefono: string | null
         }
         Insert: {
           creado_en?: string
           cuenta_id: string
+          direccion?: string | null
+          email?: string | null
           id?: string
           nombre: string
+          observaciones?: string | null
+          persona_contacto?: string | null
           sociedad_id: string
+          telefono?: string | null
         }
         Update: {
           creado_en?: string
           cuenta_id?: string
+          direccion?: string | null
+          email?: string | null
           id?: string
           nombre?: string
+          observaciones?: string | null
+          persona_contacto?: string | null
           sociedad_id?: string
+          telefono?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "centros_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "centros_sociedad_id_cuenta_id_fkey"
             columns: ["sociedad_id", "cuenta_id"]
@@ -222,22 +244,31 @@ export type Database = {
           cif: string | null
           creada_en: string
           cuenta_id: string
+          direccion: string | null
+          email: string | null
           id: string
           nombre: string
+          telefono: string | null
         }
         Insert: {
           cif?: string | null
           creada_en?: string
           cuenta_id: string
+          direccion?: string | null
+          email?: string | null
           id?: string
           nombre: string
+          telefono?: string | null
         }
         Update: {
           cif?: string | null
           creada_en?: string
           cuenta_id?: string
+          direccion?: string | null
+          email?: string | null
           id?: string
           nombre?: string
+          telefono?: string | null
         }
         Relationships: [
           {
