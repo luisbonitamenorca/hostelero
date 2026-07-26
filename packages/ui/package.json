@@ -1,0 +1,7 @@
+{
+  "name": "@hostelero/ui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "tokens.ts",
+  "types": "tokens.ts"
+}
