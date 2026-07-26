@@ -7,10 +7,27 @@ Monorepo del producto Hostelero. Una base de datos común en Supabase (proyecto
 
     apps/
       consola/     Consola interna de Hostelero (solo operadores)
-      general/     App del cliente (llegará después)
+      general/     App del cliente (login de cuenta, lanzadera de módulos)
     packages/
       db/          Tipos TypeScript generados del esquema de Supabase
       ui/          Identidad y tokens de diseño compartidos
+
+## Apps
+
+Las dos apps comparten patrón: Next.js 15 (App Router) + Supabase con
+cookies vía @supabase/ssr, render de servidor, escrituras por server
+actions bajo RLS. La consola autentica operadores (tabla `operadores`);
+la general autentica usuarios de cuenta (tabla `perfiles`) y muestra
+solo los módulos contratados y permitidos por rol.
+
+### Despliegues en Vercel (mismo repo, dos proyectos)
+
+| Proyecto | Root Directory | Audiencia |
+|---|---|---|
+| hostelero-consola | `apps/consola` | Operadores de Hostelero |
+| hostelero-app | `apps/general` | Clientes (Bonita y siguientes) |
+
+Ambos con las mismas dos variables de entorno.
 
 ## Consola
 
