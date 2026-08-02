@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { crearClienteServicio } from "@/lib/supabase/servicio";
+import { registrarConsentimientoPublico } from "@/lib/crm-publico";
 
 export const dynamic = "force-dynamic";
 
@@ -35,5 +36,12 @@ export async function POST(req: Request) {
     p_notas: notas,
   });
   if (error) return NextResponse.json({ error: "consulta" }, { status: 500 });
+
+  // Casilla de marketing (T2 CRM): solo con reserva creada y casilla marcada.
+  const j = data as unknown as { ok?: boolean; error?: string } | null;
+  if (body.marketing === true && j && !j.error) {
+    await registrarConsentimientoPublico(sb, { nombre, email: email || null, telefono, front: "front_reservas" });
+  }
+
   return NextResponse.json(data);
 }

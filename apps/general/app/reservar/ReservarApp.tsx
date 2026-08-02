@@ -20,9 +20,9 @@ const DOW: Record<Lang, string[]> = {
   fr: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
 };
 const T = {
-  es: { title: "Reserva tu visita", sub: "Elige el día y descubre las experiencias disponibles", results: (d: string) => "Experiencias para el " + d, none: "No hay visitas disponibles este día.", left: (n: number) => "Quedan " + n + (n === 1 ? " plaza" : " plazas"), buy: "Reservar", book: "Completa tu reserva", name: "Nombre y apellidos", email: "Email", phone: "Teléfono (opcional)", country: "País", people: "Personas", total: "Total", cancel: "Cancelar", confirm: "Confirmar reserva", okT: "¡Reserva recibida!", okP1: "Hemos guardado tu plaza.", okP2: "Recibirás la confirmación por email.", code: "Código", close: "Cerrar", sending: "Enviando…", reqName: "Indica tu nombre", reqEmail: "Indica un email válido", errGen: "No se pudo completar la reserva. Inténtalo de nuevo." },
-  en: { title: "Book your visit", sub: "Choose a day and discover the available experiences", results: (d: string) => "Experiences for " + d, none: "No visits available on this day.", left: (n: number) => n + (n === 1 ? " spot left" : " spots left"), buy: "Book", book: "Complete your booking", name: "Full name", email: "Email", phone: "Phone (optional)", country: "Country", people: "People", total: "Total", cancel: "Cancel", confirm: "Confirm booking", okT: "Booking received!", okP1: "Your spot is saved.", okP2: "You will receive confirmation by email.", code: "Code", close: "Close", sending: "Sending…", reqName: "Enter your name", reqEmail: "Enter a valid email", errGen: "Could not complete the booking. Please try again." },
-  fr: { title: "Réservez votre visite", sub: "Choisissez un jour et découvrez les expériences disponibles", results: (d: string) => "Expériences pour le " + d, none: "Aucune visite disponible ce jour.", left: (n: number) => n + (n === 1 ? " place restante" : " places restantes"), buy: "Réserver", book: "Finalisez votre réservation", name: "Nom et prénom", email: "Email", phone: "Téléphone (optionnel)", country: "Pays", people: "Personnes", total: "Total", cancel: "Annuler", confirm: "Confirmer", okT: "Réservation reçue !", okP1: "Votre place est réservée.", okP2: "Vous recevrez la confirmation par email.", code: "Code", close: "Fermer", sending: "Envoi…", reqName: "Indiquez votre nom", reqEmail: "Indiquez un email valide", errGen: "Impossible de finaliser la réservation. Réessayez." },
+  es: { title: "Reserva tu visita", sub: "Elige el día y descubre las experiencias disponibles", results: (d: string) => "Experiencias para el " + d, none: "No hay visitas disponibles este día.", left: (n: number) => "Quedan " + n + (n === 1 ? " plaza" : " plazas"), buy: "Reservar", book: "Completa tu reserva", name: "Nombre y apellidos", email: "Email", phone: "Teléfono (opcional)", country: "País", people: "Personas", total: "Total", cancel: "Cancelar", confirm: "Confirmar reserva", okT: "¡Reserva recibida!", okP1: "Hemos guardado tu plaza.", okP2: "Recibirás la confirmación por email.", code: "Código", close: "Cerrar", sending: "Enviando…", reqName: "Indica tu nombre", reqEmail: "Indica un email válido", errGen: "No se pudo completar la reserva. Inténtalo de nuevo.", mk: "Quiero recibir noticias y ofertas de Binifadet por email" },
+  en: { title: "Book your visit", sub: "Choose a day and discover the available experiences", results: (d: string) => "Experiences for " + d, none: "No visits available on this day.", left: (n: number) => n + (n === 1 ? " spot left" : " spots left"), buy: "Book", book: "Complete your booking", name: "Full name", email: "Email", phone: "Phone (optional)", country: "Country", people: "People", total: "Total", cancel: "Cancel", confirm: "Confirm booking", okT: "Booking received!", okP1: "Your spot is saved.", okP2: "You will receive confirmation by email.", code: "Code", close: "Close", sending: "Sending…", reqName: "Enter your name", reqEmail: "Enter a valid email", errGen: "Could not complete the booking. Please try again.", mk: "I want to receive Binifadet news and offers by email" },
+  fr: { title: "Réservez votre visite", sub: "Choisissez un jour et découvrez les expériences disponibles", results: (d: string) => "Expériences pour le " + d, none: "Aucune visite disponible ce jour.", left: (n: number) => n + (n === 1 ? " place restante" : " places restantes"), buy: "Réserver", book: "Finalisez votre réservation", name: "Nom et prénom", email: "Email", phone: "Téléphone (optionnel)", country: "Pays", people: "Personnes", total: "Total", cancel: "Annuler", confirm: "Confirmer", okT: "Réservation reçue !", okP1: "Votre place est réservée.", okP2: "Vous recevrez la confirmation par email.", code: "Code", close: "Fermer", sending: "Envoi…", reqName: "Indiquez votre nom", reqEmail: "Indiquez un email valide", errGen: "Impossible de finaliser la réservation. Réessayez.", mk: "Je souhaite recevoir les actualités et offres de Binifadet par email" },
 };
 
 const iso = (d: Date) =>
@@ -42,6 +42,7 @@ export default function ReservarApp({ initialLang }: { initialLang: Lang }) {
   const [qty, setQty] = useState<Record<string, number>>({});
   const [modal, setModal] = useState<{ sesion: Sesion; qty: number } | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [marketing, setMarketing] = useState(false);
   const [errModal, setErrModal] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState<string | null>(null);
 
@@ -124,6 +125,7 @@ export default function ReservarApp({ initialLang }: { initialLang: Lang }) {
           pais,
           idioma: lang,
           personas: modal.qty,
+          marketing,
         }),
       });
       const json = await res.json();
@@ -287,6 +289,10 @@ export default function ReservarApp({ initialLang }: { initialLang: Lang }) {
                   <div className="fld"><label>{t.email}</label><input id="rs_email" type="email" /></div>
                   <div className="fld"><label>{t.phone}</label><input id="rs_tel" /></div>
                   <div className="fld"><label>{t.country}</label><input id="rs_pais" /></div>
+                  <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, color: "var(--muted)", textTransform: "none", letterSpacing: 0, cursor: "pointer" }}>
+                    <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} style={{ width: "auto", marginTop: 2 }} />
+                    <span>{t.mk}</span>
+                  </label>
                 </form>
                 {errModal ? <div className="err">{errModal}</div> : null}
                 <div className="ft">

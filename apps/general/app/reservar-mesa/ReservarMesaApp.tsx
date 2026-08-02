@@ -62,6 +62,7 @@ export default function ReservarMesaApp() {
   const [dEmail, setDEmail] = useState("");
   const [dNotas, setDNotas] = useState("");
   const [dError, setDError] = useState("");
+  const [dMarketing, setDMarketing] = useState(false);
   // espera
   const [eNombre, setENombre] = useState("");
   const [eTel, setETel] = useState("");
@@ -144,7 +145,7 @@ export default function ReservarMesaApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug: local.slug, fecha, hora, pax,
-          nombre: dNombre.trim(), telefono: dTel.trim(), email: dEmail.trim(), notas: dNotas.trim(),
+          nombre: dNombre.trim(), telefono: dTel.trim(), email: dEmail.trim(), notas: dNotas.trim(), marketing: dMarketing,
         }),
       });
       const j = await r.json();
@@ -403,6 +404,10 @@ export default function ReservarMesaApp() {
               <input id="d-email" type="email" autoComplete="email" placeholder="tu@email.com" value={dEmail} onChange={(e) => setDEmail(e.target.value)} />
               <label htmlFor="d-notas">Alergias o peticiones (opcional)</label>
               <textarea id="d-notas" placeholder="Alergias, trona, celebración…" value={dNotas} onChange={(e) => setDNotas(e.target.value)} />
+              <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, fontWeight: 400, cursor: "pointer" }}>
+                <input type="checkbox" checked={dMarketing} onChange={(e) => setDMarketing(e.target.checked)} style={{ width: "auto", marginTop: 3 }} />
+                <span>Quiero recibir noticias y ofertas de Bonita Menorca por email</span>
+              </label>
             </div>
             {dError ? <div className="aviso err">{dError}</div> : null}
             <button className="btn" disabled={cargandoBtn} onClick={crearReserva}>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Database } from "@hostelero/db";
 import { crearClienteServicio } from "@/lib/supabase/servicio";
 import { CUENTA_PUBLICA } from "@/lib/visitas-publico";
+import { registrarConsentimientoPublico } from "@/lib/crm-publico";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,11 @@ export async function POST(req: Request) {
     p_metodo_pago: "stripe",
   });
   if (error) return NextResponse.json({ error: "no_creada" }, { status: 409 });
+
+  // Casilla de marketing (T2 CRM): solo si la marcó, y sin romper la reserva.
+  if (body.marketing === true) {
+    await registrarConsentimientoPublico(sb, { nombre, email, telefono, front: "front_visitas" });
+  }
 
   const r = data as unknown as { codigo_reserva?: string } | null;
   return NextResponse.json({ codigo_reserva: r?.codigo_reserva ?? null });
