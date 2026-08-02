@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Reservas · Bonita Menorca</title>
+<meta name="description" content="Reserva tu mesa en los restaurantes de Bonita Menorca: Binifadet, Tamarindos, Casa Tirant y El Bar de Tamarindos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@400;500;600;700&family=Spline+Sans+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --calc:#F7F4EE; --mar:#0F4C5C; --mar-osc:#0C3E4B; --mar-claro:#E3EEF0;
+  --vi:#7C2D3E; --arena:#E9E0CE; --tinta:#1A2226; --gris:#6B7280;
+  --ok:#2F7D46; --error:#B3261E;
+  --radio:14px; --sombra:0 2px 12px rgba(15,76,92,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Figtree',system-ui,sans-serif;background:var(--calc);color:var(--tinta);min-height:100vh;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding:0 18px 60px}
+header.top{padding:26px 0 8px;text-align:center}
+.marca{font-family:'Marcellus',serif;font-size:26px;letter-spacing:.06em;color:var(--mar)}
+.marca small{display:block;font-family:'Figtree';font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gris);margin-top:2px}
+.ola{width:64px;height:10px;margin:10px auto 0;display:block}
+h2.paso{font-family:'Marcellus',serif;font-size:21px;color:var(--tinta);margin:24px 0 4px}
+p.sub{color:var(--gris);font-size:14px;margin-bottom:16px}
+.card{background:#fff;border:1px solid #E7E2D8;border-radius:var(--radio);box-shadow:var(--sombra);padding:16px;margin-bottom:12px}
+.card.rest{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s, transform .1s}
+.card.rest:active{transform:scale(.99)}
+.card.rest:hover{border-color:var(--mar)}
+.card.rest h3{font-family:'Marcellus',serif;font-size:18px;color:var(--mar)}
+.card.rest p{font-size:13px;color:var(--gris);margin-top:2px}
+.flecha{color:var(--mar);font-size:20px;flex-shrink:0}
+label{display:block;font-size:13px;font-weight:600;color:var(--tinta);margin:14px 0 6px}
+input,select,textarea{width:100%;padding:13px 14px;font-family:inherit;font-size:16px;border:1.5px solid #D8D2C4;border-radius:10px;background:#fff;color:var(--tinta)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--mar);outline-offset:0;border-color:var(--mar)}
+textarea{resize:vertical;min-height:74px}
+.fila{display:flex;gap:12px}
+.fila>div{flex:1}
+.pax{display:flex;align-items:center;gap:0;border:1.5px solid #D8D2C4;border-radius:10px;background:#fff;overflow:hidden}
+.pax button{width:52px;height:50px;border:none;background:var(--mar-claro);color:var(--mar);font-size:22px;font-weight:700;cursor:pointer}
+.pax button:disabled{opacity:.35;cursor:default}
+.pax span{flex:1;text-align:center;font-size:17px;font-weight:600}
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:12px;background:var(--mar);color:#fff;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;margin-top:20px;transition:background .15s}
+.btn:hover{background:#0C3E4B}
+.btn:disabled{background:#B9C6CA;cursor:default}
+.btn.sec{background:transparent;color:var(--mar);border:1.5px solid var(--mar)}
+.btn.sec:hover{background:var(--mar-claro)}
+.btn.vino{background:var(--vi)}
+.enlace{background:none;border:none;color:var(--mar);text-decoration:underline;font-family:inherit;font-size:14px;cursor:pointer;padding:8px 0}
+.volver{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--gris);font-family:inherit;font-size:14px;cursor:pointer;padding:14px 0 0}
+.turno-bloque{margin-bottom:18px}
+.turno-nombre{font-family:'Marcellus',serif;font-size:16px;color:var(--vi);margin-bottom:10px;letter-spacing:.04em}
+.horas{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.hora-chip{padding:12px 0;text-align:center;border:1.5px solid #D8D2C4;border-radius:10px;background:#fff;font-family:'Spline Sans Mono',monospace;font-size:15px;font-weight:500;cursor:pointer;color:var(--tinta);transition:all .12s}
+.hora-chip:hover{border-color:var(--mar)}
+.hora-chip.sel{background:var(--mar);color:#fff;border-color:var(--mar)}
+.aviso{padding:14px;border-radius:10px;font-size:14px;margin:14px 0}
+.aviso.info{background:var(--mar-claro);color:var(--mar)}
+.aviso.err{background:#FBEAE9;color:var(--error)}
+.aviso.ok{background:#E8F3EC;color:var(--ok)}
+.resumen{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+.resumen span{background:var(--arena);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:600;color:var(--tinta)}
+/* Resguardo de confirmación */
+.ticket{background:#fff;border-radius:var(--radio);box-shadow:var(--sombra);margin-top:22px;overflow:hidden;border:1px solid #E7E2D8}
+.ticket .cab{background:var(--mar);color:#fff;padding:20px 18px;text-align:center}
+.ticket .cab .t{font-family:'Marcellus',serif;font-size:20px;letter-spacing:.04em}
+.ticket .cab .s{font-size:13px;opacity:.85;margin-top:2px}
+.ticket .cuerpo{padding:20px 18px;text-align:center}
+.perfo{height:0;border-top:2px dashed #D8D2C4;position:relative;margin:0 10px}
+.perfo::before,.perfo::after{content:'';position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:var(--calc)}
+.perfo::before{left:-19px}.perfo::after{right:-19px}
+.loc-label{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gris)}
+.loc{font-family:'Spline Sans Mono',monospace;font-size:38px;font-weight:600;letter-spacing:.14em;color:var(--vi);margin:4px 0 14px}
+.ticket dl{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center;margin-top:6px}
+.ticket dt{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris)}
+.ticket dd{font-size:16px;font-weight:600;margin-top:2px}
+.acciones-ticket{display:flex;gap:10px;margin-top:18px}
+.acciones-ticket a{flex:1;text-align:center;padding:12px;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;border:1.5px solid var(--mar);color:var(--mar)}
+.pie{margin-top:34px;text-align:center;font-size:13px;color:var(--gris)}
+.pie button{display:block;margin:6px auto 0}
+.cargando{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:gira .7s linear infinite;vertical-align:-4px;margin-right:8px}
+.cargando.osc{border-color:rgba(15,76,92,.25);border-top-color:var(--mar)}
+@keyframes gira{to{transform:rotate(360deg)}}
+.oculto{display:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:380px){.horas{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="marca">Bonita Menorca<small>Reservas</small></div>
+    <svg class="ola" viewBox="0 0 64 10" fill="none" aria-hidden="true"><path d="M1 5 Q9 0 17 5 T33 5 T49 5 T65 5" stroke="#0F4C5C" stroke-width="1.6" stroke-linecap="round" opacity=".6"/></svg>
+  </header>
+
+  <!-- PASO 1: elegir restaurante -->
+  <section id="v-locales">
+    <h2 class="paso">¿Dónde quieres reservar?</h2>
+    <p class="sub">Elige uno de nuestros restaurantes.</p>
+    <div id="lista-locales"><div class="aviso info">Cargando restaurantes…</div></div>
+    <div class="pie">
+      ¿Ya tienes una reserva?
+      <button class="enlace" onclick="irGestion()">Consultar o cancelar con tu localizador</button>
+    </div>
+  </section>
+
+  <!-- PASO 2: fecha y comensales -->
+  <section id="v-fecha" class="oculto">
+    <button class="volver" onclick="volverA('v-locales')">‹ Cambiar restaurante</button>
+    <h2 class="paso" id="f-titulo">Reservar</h2>
+    <p class="sub" id="f-sub"></p>
+    <div class="card">
+      <label for="f-fecha">Día</label>
+      <input type="date" id="f-fecha">
+      <label>Comensales</label>
+      <div class="pax">
+        <button type="button" onclick="cambiaPax(-1)" id="pax-menos" aria-label="Menos comensales">−</button>
+        <span id="pax-num">2</span>
+        <button type="button" onclick="cambiaPax(1)" id="pax-mas" aria-label="Más comensales">+</button>
+      </div>
+    </div>
+    <button class="btn" id="btn-disponibilidad" onclick="buscarDisponibilidad()">Ver horas disponibles</button>
+  </section>
+
+  <!-- PASO 3: hora -->
+  <section id="v-horas" class="oculto">
+    <button class="volver" onclick="volverA('v-fecha')">‹ Cambiar día o comensales</button>
+    <h2 class="paso">Elige la hora</h2>
+    <div class="resumen" id="h-resumen"></div>
+    <div id="h-contenido"></div>
+    <button class="btn oculto" id="btn-continuar" onclick="irDatos()">Continuar</button>
+  </section>
+
+  <!-- Lista de espera -->
+  <section id="v-espera" class="oculto">
+    <button class="volver" onclick="volverA('v-horas')">‹ Volver</button>
+    <h2 class="paso">Apúntate a la lista de espera</h2>
+    <p class="sub">Si queda una mesa libre ese día, te llamaremos.</p>
+    <div class="card">
+      <label for="e-nombre">Nombre</label>
+      <input id="e-nombre" autocomplete="name">
+      <label for="e-tel">Teléfono</label>
+      <input id="e-tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="600 000 000">
+      <label for="e-notas">Comentarios (opcional)</label>
+      <textarea id="e-notas" placeholder="Franja horaria preferida, carrito de bebé…"></textarea>
+    </div>
+    <div class="aviso err oculto" id="e-error"></div>
+    <button class="btn vino" id="btn-espera" onclick="apuntarEspera()">Apuntarme</button>
+  </section>
+
+  <!-- PASO 4: datos -->
+  <section id="v-datos" class="oculto">
+    <button class="volver" onclick="volverA('v-horas')">‹ Cambiar hora</button>
+    <h2 class="paso">Tus datos</h2>
+    <div class="resumen" id="d-resumen"></div>
+    <div class="card">
+      <label for="d-nombre">Nombre y apellido</label>
+      <input id="d-nombre" autocomplete="name">
+      <label for="d-tel">Teléfono móvil</label>
+      <input id="d-tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="600 000 000">
+      <label for="d-email">Email (opcional)</label>
+      <input id="d-email" type="email" autocomplete="email" placeholder="tu@email.com">
+      <label for="d-notas">Alergias o peticiones (opcional)</label>
+      <textarea id="d-notas" placeholder="Alergias, trona, celebración…"></textarea>
+    </div>
+    <div class="aviso err oculto" id="d-error"></div>
+    <button class="btn" id="btn-reservar" onclick="crearReserva()">Confirmar reserva</button>
+  </section>
+
+  <!-- PASO 5: resguardo -->
+  <section id="v-ticket" class="oculto">
+    <div class="ticket">
+      <div class="cab">
+        <div class="t" id="t-rest"></div>
+        <div class="s">Reserva recibida</div>
+      </div>
+      <div class="cuerpo">
+        <div class="loc-label">Localizador</div>
+        <div class="loc" id="t-loc"></div>
+        <div class="perfo"></div>
+        <dl>
+          <div><dt>Día</dt><dd id="t-fecha"></dd></div>
+          <div><dt>Hora</dt><dd id="t-hora"></dd></div>
+          <div><dt>Comensales</dt><dd id="t-pax"></dd></div>
+          <div><dt>A nombre de</dt><dd id="t-nombre"></dd></div>
+        </dl>
+        <div class="acciones-ticket">
+          <a id="t-cal" target="_blank" rel="noopener">Añadir al calendario</a>
+          <a id="t-tel-rest" >Llamar al restaurante</a>
+        </div>
+      </div>
+    </div>
+    <p class="sub" style="text-align:center;margin-top:16px">Guarda tu localizador: lo necesitarás para consultar o cancelar la reserva. Si no puedes venir, cancela con antelación — otra persona ocupará tu mesa.</p>
+    <button class="btn sec" onclick="reiniciar()">Hacer otra reserva</button>
+  </section>
+
+  <!-- Gestión de reserva -->
+  <section id="v-gestion" class="oculto">
+    <button class="volver" onclick="volverA('v-locales')">‹ Volver al inicio</button>
+    <h2 class="paso">Tu reserva</h2>
+    <p class="sub">Introduce el localizador y el teléfono con el que reservaste.</p>
+    <div class="card">
+      <label for="g-loc">Localizador</label>
+      <input id="g-loc" style="font-family:'Spline Sans Mono',monospace;letter-spacing:.12em;text-transform:uppercase" maxlength="6" placeholder="A1B2C3">
+      <label for="g-tel">Teléfono</label>
+      <input id="g-tel" type="tel" inputmode="tel" placeholder="600 000 000">
+    </div>
+    <div class="aviso err oculto" id="g-error"></div>
+    <button class="btn" id="btn-consultar" onclick="consultarReserva()">Consultar</button>
+    <div id="g-resultado" class="oculto">
+      <div class="card" style="margin-top:18px">
+        <dl style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center">
+          <div><dt class="loc-label">Restaurante</dt><dd id="g-rest" style="font-weight:600;margin-top:3px"></dd></div>
+          <div><dt class="loc-label">Estado</dt><dd id="g-estado" style="font-weight:600;margin-top:3px"></dd></div>
+          <div><dt class="loc-label">Día</dt><dd id="g-fecha" style="font-weight:600;margin-top:3px"></dd></div>
+          <div><dt class="loc-label">Hora · pax</dt><dd id="g-horapax" style="font-weight:600;margin-top:3px"></dd></div>
+        </dl>
+      </div>
+      <button class="btn vino oculto" id="btn-cancelar" onclick="cancelarReserva()">Cancelar esta reserva</button>
+    </div>
+  </section>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://rgetdomhvcbrcimabwja.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_0KVHCjdiqosDra4q3hos2Q_R9GqpxF4';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const MSG = {
+  LOCAL_NO_DISPONIBLE:'Este restaurante no admite reservas online ahora mismo. Llámanos y te atendemos.',
+  TELEFONO_INVALIDO:'Revisa el teléfono: necesitamos al menos 9 dígitos.',
+  NOMBRE_REQUERIDO:'Dinos tu nombre para completar la reserva.',
+  PAX_INVALIDO:'El número de comensales no es válido.',
+  FECHA_FUERA_DE_RANGO:'Esa fecha queda fuera del calendario de reservas online.',
+  HORA_FUERA_DE_TURNO:'Esa hora ya no está disponible. Elige otra.',
+  GRUPO_GRANDE:'Para grupos grandes, llámanos y lo organizamos contigo.',
+  ANTELACION_INSUFICIENTE:'Esa hora está demasiado cerca. Elige otra o llámanos.',
+  SIN_DISPONIBILIDAD:'Justo se ha ocupado esa hora. Elige otra, por favor.',
+  NO_ENCONTRADA:'No encontramos ninguna reserva con esos datos.',
+  NO_CANCELABLE:'Esta reserva ya no se puede cancelar online. Llámanos y lo vemos.',
+  RED:'No hay conexión. Comprueba tu red e inténtalo de nuevo.'
+};
+const ESTADOS = {pendiente:'Recibida', confirmada:'Confirmada', sentada:'En mesa', terminada:'Completada', no_show:'No presentado', cancelada:'Cancelada'};
+
+let locales = [];
+let sel = { local:null, fecha:null, pax:2, hora:null, turno:null };
+
+function fmtFecha(iso){
+  const d = new Date(iso+'T12:00:00');
+  return d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+}
+function muestra(id){
+  document.querySelectorAll('section').forEach(s=>s.classList.add('oculto'));
+  document.getElementById(id).classList.remove('oculto');
+  window.scrollTo({top:0});
+}
+function volverA(id){ muestra(id); }
+function cargando(btnId, si, texto){
+  const b = document.getElementById(btnId);
+  b.disabled = si;
+  if(si){ b.dataset.txt = b.textContent; b.innerHTML = '<span class="cargando"></span>'+(texto||'Un momento…'); }
+  else if(b.dataset.txt){ b.textContent = b.dataset.txt; }
+}
+
+async function init(){
+  try{
+    const {data, error} = await db.from('restaurantes')
+      .select('slug,nombre,ubicacion,descripcion,telefono,antelacion_max_dias,online_activo')
+      .eq('activo', true).order('orden');
+    if(error) throw error;
+    locales = data;
+    const cont = document.getElementById('lista-locales');
+    cont.innerHTML = '';
+    data.forEach(r=>{
+      const el = document.createElement('div');
+      el.className = 'card rest';
+      el.setAttribute('role','button'); el.tabIndex = 0;
+      el.innerHTML = `<div><h3>${r.nombre}</h3><p>${r.ubicacion||''}${r.descripcion? ' · '+r.descripcion:''}</p></div><span class="flecha">›</span>`;
+      const abrir = ()=> elegirLocal(r);
+      el.onclick = abrir;
+      el.onkeydown = e=>{ if(e.key==='Enter'||e.key===' ') {e.preventDefault(); abrir();} };
+      cont.appendChild(el);
+    });
+  }catch(e){
+    document.getElementById('lista-locales').innerHTML = `<div class="aviso err">${MSG.RED}</div>`;
+  }
+}
+
+function elegirLocal(r){
+  sel.local = r;
+  document.getElementById('f-titulo').textContent = r.nombre;
+  document.getElementById('f-sub').textContent = r.ubicacion || '';
+  const f = document.getElementById('f-fecha');
+  const hoy = new Date();
+  const max = new Date(); max.setDate(max.getDate() + (r.antelacion_max_dias||60));
+  f.min = hoy.toISOString().slice(0,10);
+  f.max = max.toISOString().slice(0,10);
+  if(!f.value || f.value < f.min) f.value = f.min;
+  muestra('v-fecha');
+}
+
+function cambiaPax(d){
+  sel.pax = Math.min(20, Math.max(1, sel.pax + d));
+  document.getElementById('pax-num').textContent = sel.pax;
+  document.getElementById('pax-menos').disabled = sel.pax<=1;
+  document.getElementById('pax-mas').disabled = sel.pax>=20;
+}
+
+async function buscarDisponibilidad(){
+  sel.fecha = document.getElementById('f-fecha').value;
+  if(!sel.fecha) return;
+  cargando('btn-disponibilidad', true, 'Buscando mesas…');
+  try{
+    const {data, error} = await db.rpc('fn_disponibilidad', {p_slug:sel.local.slug, p_fecha:sel.fecha, p_pax:sel.pax});
+    if(error) throw error;
+    pintarHoras(data);
+    muestra('v-horas');
+  }catch(e){
+    alert(MSG.RED);
+  }finally{
+    cargando('btn-disponibilidad', false);
+  }
+}
+
+function pintarHoras(res){
+  sel.hora = null;
+  document.getElementById('btn-continuar').classList.add('oculto');
+  document.getElementById('h-resumen').innerHTML =
+    `<span>${sel.local.nombre}</span><span>${fmtFecha(sel.fecha)}</span><span>${sel.pax} pax</span>`;
+  const cont = document.getElementById('h-contenido');
+  cont.innerHTML = '';
+  if(res.error){ cont.innerHTML = `<div class="aviso err">${MSG[res.error]||res.error}</div>`; return; }
+  if(res.cerrado){ cont.innerHTML = `<div class="aviso info">Ese día el restaurante está cerrado. Prueba otra fecha.</div>`; return; }
+  const turnos = res.turnos || [];
+  let hayHoras = false, grupoGrande = false;
+  turnos.forEach(t=>{
+    if(t.grupo_grande){ grupoGrande = true; return; }
+    if(!t.horas || !t.horas.length) return;
+    hayHoras = true;
+    const b = document.createElement('div');
+    b.className = 'turno-bloque';
+    b.innerHTML = `<div class="turno-nombre">${t.turno}</div>`;
+    const g = document.createElement('div'); g.className = 'horas';
+    t.horas.forEach(h=>{
+      const chip = document.createElement('button');
+      chip.type='button'; chip.className='hora-chip'; chip.textContent = h;
+      chip.onclick = ()=>{
+        document.querySelectorAll('.hora-chip').forEach(c=>c.classList.remove('sel'));
+        chip.classList.add('sel');
+        sel.hora = h; sel.turno = t.turno;
+        document.getElementById('btn-continuar').classList.remove('oculto');
+      };
+      g.appendChild(chip);
+    });
+    b.appendChild(g);
+    cont.appendChild(b);
+  });
+  if(grupoGrande && !hayHoras){
+    cont.innerHTML = `<div class="aviso info">Para ${sel.pax} personas preferimos organizarlo por teléfono: llámanos al <strong>${sel.local.telefono||'restaurante'}</strong> y te buscamos el mejor sitio.</div>`;
+    return;
+  }
+  if(!hayHoras){
+    cont.innerHTML = `
+      <div class="aviso info">No queda mesa online en ${sel.local.nombre} para ese día y ese número de comensales.</div>
+      <div id="cross-selling"><div class="aviso info"><span class="cargando osc"></span>Buscando mesa en el resto de restaurantes del grupo…</div></div>
+      <button class="btn vino" onclick="muestra('v-espera')">Apuntarme a la lista de espera</button>
+      <button class="btn sec" onclick="volverA('v-fecha')">Probar otro día</button>`;
+    buscarEnGrupo();
+  }
+}
+
+async function buscarEnGrupo(){
+  const cont = document.getElementById('cross-selling');
+  const otros = locales.filter(r=>r.slug!==sel.local.slug && r.online_activo);
+  const conMesa = [];
+  await Promise.all(otros.map(async r=>{
+    try{
+      const {data} = await db.rpc('fn_disponibilidad', {p_slug:r.slug, p_fecha:sel.fecha, p_pax:sel.pax});
+      if(data && !data.error && !data.cerrado){
+        const horas = (data.turnos||[]).flatMap(t=>t.horas||[]);
+        if(horas.length) conMesa.push({r, n:horas.length, primera:horas[0]});
+      }
+    }catch(e){}
+  }));
+  if(!cont) return;
+  if(!conMesa.length){ cont.innerHTML = ''; return; }
+  cont.innerHTML = `<p class="sub" style="margin:14px 0 8px">Ese mismo día sí tenemos mesa en:</p>` +
+    conMesa.map(o=>`
+      <div class="card rest" role="button" tabindex="0" onclick='cambiarLocalCross("${o.r.slug}")'>
+        <div><h3>${o.r.nombre}</h3><p>${o.r.ubicacion||''} · ${o.n} hora${o.n>1?'s':''} disponible${o.n>1?'s':''}</p></div>
+        <span class="flecha">›</span>
+      </div>`).join('');
+}
+
+function cambiarLocalCross(slug){
+  const r = locales.find(x=>x.slug===slug);
+  if(!r) return;
+  sel.local = r;
+  document.getElementById('f-titulo').textContent = r.nombre;
+  document.getElementById('f-sub').textContent = r.ubicacion || '';
+  buscarDisponibilidad();
+}
+
+function irGestion(){ muestra('v-gestion'); }
+
+function irDatos(){
+  if(!sel.hora) return;
+  document.getElementById('d-resumen').innerHTML =
+    `<span>${sel.local.nombre}</span><span>${fmtFecha(sel.fecha)}</span><span>${sel.hora} h</span><span>${sel.pax} pax</span>`;
+  document.getElementById('d-error').classList.add('oculto');
+  muestra('v-datos');
+}
+
+async function crearReserva(){
+  const nombre = document.getElementById('d-nombre').value.trim();
+  const tel = document.getElementById('d-tel').value.trim();
+  const email = document.getElementById('d-email').value.trim();
+  const notas = document.getElementById('d-notas').value.trim();
+  const err = document.getElementById('d-error');
+  err.classList.add('oculto');
+  if(!nombre){ err.textContent = MSG.NOMBRE_REQUERIDO; err.classList.remove('oculto'); return; }
+  if(tel.replace(/\D/g,'').length < 9){ err.textContent = MSG.TELEFONO_INVALIDO; err.classList.remove('oculto'); return; }
+  cargando('btn-reservar', true, 'Reservando…');
+  try{
+    const {data, error} = await db.rpc('fn_crear_reserva_online', {
+      p_slug:sel.local.slug, p_fecha:sel.fecha, p_hora:sel.hora+':00', p_pax:sel.pax,
+      p_nombre:nombre, p_telefono:tel, p_email:email, p_notas:notas
+    });
+    if(error) throw error;
+    if(data.error){
+      if(data.error==='SIN_DISPONIBILIDAD' || data.error==='HORA_FUERA_DE_TURNO' || data.error==='ANTELACION_INSUFICIENTE'){
+        err.textContent = MSG[data.error];
+        err.classList.remove('oculto');
+        setTimeout(()=>buscarDisponibilidad(), 1600);
+      } else {
+        err.textContent = MSG[data.error] || data.error;
+        err.classList.remove('oculto');
+      }
+      return;
+    }
+    pintarTicket(data, nombre);
+    muestra('v-ticket');
+  }catch(e){
+    err.textContent = MSG.RED; err.classList.remove('oculto');
+  }finally{
+    cargando('btn-reservar', false);
+  }
+}
+
+function pintarTicket(d, nombre){
+  document.getElementById('t-rest').textContent = d.restaurante;
+  document.getElementById('t-loc').textContent = d.localizador;
+  document.getElementById('t-fecha').textContent = d.fecha;
+  document.getElementById('t-hora').textContent = d.hora + ' h';
+  document.getElementById('t-pax').textContent = d.pax;
+  document.getElementById('t-nombre').textContent = nombre;
+  // Enlace a Google Calendar (fecha DD/MM/YYYY + hora HH:MM, duración 2h por defecto)
+  const [dd,mm,aa] = d.fecha.split('/');
+  const [hh,mi] = d.hora.split(':');
+  const ini = `${aa}${mm}${dd}T${hh}${mi}00`;
+  const finH = String((parseInt(hh)+2)%24).padStart(2,'0');
+  const fin = `${aa}${mm}${dd}T${finH}${mi}00`;
+  const cal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Reserva '+d.restaurante)}&dates=${ini}/${fin}&details=${encodeURIComponent('Localizador '+d.localizador+' · '+d.pax+' pax')}`;
+  document.getElementById('t-cal').href = cal;
+  const telRest = (sel.local && sel.local.telefono) ? sel.local.telefono.replace(/\s/g,'') : '';
+  const a = document.getElementById('t-tel-rest');
+  if(telRest){ a.href = 'tel:'+telRest; a.classList.remove('oculto'); } else { a.classList.add('oculto'); }
+}
+
+async function apuntarEspera(){
+  const nombre = document.getElementById('e-nombre').value.trim();
+  const tel = document.getElementById('e-tel').value.trim();
+  const notas = document.getElementById('e-notas').value.trim();
+  const err = document.getElementById('e-error');
+  err.classList.add('oculto');
+  if(!nombre){ err.textContent = MSG.NOMBRE_REQUERIDO; err.classList.remove('oculto'); return; }
+  if(tel.replace(/\D/g,'').length < 9){ err.textContent = MSG.TELEFONO_INVALIDO; err.classList.remove('oculto'); return; }
+  cargando('btn-espera', true);
+  try{
+    const {data, error} = await db.rpc('fn_apuntar_lista_espera', {
+      p_slug:sel.local.slug, p_fecha:sel.fecha, p_nombre:nombre, p_telefono:tel, p_pax:sel.pax, p_notas:notas
+    });
+    if(error) throw error;
+    if(data.error){ err.textContent = MSG[data.error]||data.error; err.classList.remove('oculto'); return; }
+    document.getElementById('v-espera').innerHTML = `
+      <h2 class="paso">Apuntado ✓</h2>
+      <div class="aviso ok">Estás en la lista de espera de ${sel.local.nombre} para el ${fmtFecha(sel.fecha)} (${sel.pax} pax). Si se libera una mesa, te llamaremos al ${tel}.</div>
+      <button class="btn sec" onclick="location.reload()">Volver al inicio</button>`;
+  }catch(e){
+    err.textContent = MSG.RED; err.classList.remove('oculto');
+  }finally{
+    cargando('btn-espera', false);
+  }
+}
+
+async function consultarReserva(){
+  const loc = document.getElementById('g-loc').value.trim();
+  const tel = document.getElementById('g-tel').value.trim();
+  const err = document.getElementById('g-error');
+  err.classList.add('oculto');
+  document.getElementById('g-resultado').classList.add('oculto');
+  if(!loc || tel.replace(/\D/g,'').length < 9){ err.textContent = 'Introduce el localizador y tu teléfono.'; err.classList.remove('oculto'); return; }
+  cargando('btn-consultar', true);
+  try{
+    const {data, error} = await db.rpc('fn_consultar_reserva', {p_localizador:loc, p_telefono:tel});
+    if(error) throw error;
+    if(data.error){ err.textContent = MSG[data.error]||data.error; err.classList.remove('oculto'); return; }
+    document.getElementById('g-rest').textContent = data.restaurante;
+    document.getElementById('g-estado').textContent = ESTADOS[data.estado]||data.estado;
+    document.getElementById('g-fecha').textContent = data.fecha;
+    document.getElementById('g-horapax').textContent = `${data.hora} h · ${data.pax} pax`;
+    document.getElementById('g-resultado').classList.remove('oculto');
+    const puedeCancelar = ['pendiente','confirmada'].includes(data.estado);
+    document.getElementById('btn-cancelar').classList.toggle('oculto', !puedeCancelar);
+  }catch(e){
+    err.textContent = MSG.RED; err.classList.remove('oculto');
+  }finally{
+    cargando('btn-consultar', false);
+  }
+}
+
+async function cancelarReserva(){
+  if(!confirm('¿Seguro que quieres cancelar esta reserva?')) return;
+  const loc = document.getElementById('g-loc').value.trim();
+  const tel = document.getElementById('g-tel').value.trim();
+  cargando('btn-cancelar', true);
+  try{
+    const {data, error} = await db.rpc('fn_cancelar_reserva', {p_localizador:loc, p_telefono:tel});
+    if(error) throw error;
+    const err = document.getElementById('g-error');
+    if(data.error){ err.textContent = MSG[data.error]||data.error; err.classList.remove('oculto'); return; }
+    document.getElementById('g-estado').textContent = 'Cancelada';
+    document.getElementById('btn-cancelar').classList.add('oculto');
+    err.className = 'aviso ok'; err.textContent = 'Reserva cancelada. ¡Te esperamos en otra ocasión!';
+  }catch(e){
+    alert(MSG.RED);
+  }finally{
+    cargando('btn-cancelar', false);
+  }
+}
+
+function reiniciar(){ location.reload(); }
+cambiaPax(0);
+init();
+</script>
+</body>
+</html>
