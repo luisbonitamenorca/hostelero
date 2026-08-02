@@ -2,6 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Front público de reservas: sin sesión de cuenta. No pasa por el guard de login.
+  const ruta = request.nextUrl.pathname;
+  if (ruta.startsWith("/reservar") || ruta.startsWith("/api/publico")) {
+    return NextResponse.next({ request });
+  }
+
   let respuesta = NextResponse.next({ request });
 
   const supabase = createServerClient(
