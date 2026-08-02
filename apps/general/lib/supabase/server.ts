@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Database } from "@hostelero/db";
 
 export async function crearClienteServidor() {
@@ -59,3 +59,29 @@ export const ACCESO_POR_ROL: Record<string, string[] | null> = {
   jefe_sala: ["reservas", "visitas", "tpv", "rrhh"],
   administracion: ["compras", "docs", "crm"],
 };
+
+/**
+ * Exige acceso a un módulo concreto: sesión de perfil + módulo contratado y
+ * activo + permitido por el rol. Redirige/`notFound` igual que /m/[modulo].
+ * Devuelve el mismo contexto que exigirPerfil (cliente, perfil, cuenta).
+ */
+export async function exigirModulo(moduloId: string) {
+  const ctx = await exigirPerfil();
+  const { supabase, perfil, cuenta } = ctx;
+
+  const { data: contratacion } = await supabase
+    .from("modulos_contratados")
+    .select("activo")
+    .eq("cuenta_id", cuenta.id)
+    .eq("modulo_id", moduloId)
+    .maybeSingle();
+
+  const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
+  const conAcceso =
+    contratacion?.activo === true &&
+    (permitidos === null || permitidos.includes(moduloId));
+
+  if (!conAcceso) notFound();
+
+  return ctx;
+}

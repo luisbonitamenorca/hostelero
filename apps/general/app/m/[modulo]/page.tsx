@@ -1,8 +1,13 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { exigirPerfil, ACCESO_POR_ROL } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+/** Módulos que ya tienen su propia app dentro del esqueleto: su tarjeta entra ahí. */
+const RUTAS_MODULO: Record<string, string> = {
+  visitas: "/visitas",
+};
 
 export default async function PaginaModulo({
   params,
@@ -29,6 +34,9 @@ export default async function PaginaModulo({
     (permitidos === null || permitidos.includes(modulo));
 
   if (!conAcceso) notFound();
+
+  // Módulo ya portado: su tarjeta lleva a su propia app (que revalida el acceso).
+  if (RUTAS_MODULO[modulo]) redirect(RUTAS_MODULO[modulo]);
 
   return (
     <>
