@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const RUTAS_MODULO: Record<string, string> = {
   visitas: "/visitas",
   reservas: "/reservas",
+  crm: "/crm",
 };
 
 export default async function PaginaModulo({

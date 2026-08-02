@@ -1,0 +1,99 @@
+/* CRM. Portado de docs/legado/crm-index.html, acotado bajo .crm.
+   El menú lateral y el login del legado desaparecen: los aporta el esqueleto. */
+.crm{
+  --papel:#F7F8F6; --tinta:#22303A; --tinta-suave:#5B6B75;
+  --persiana:#3F6B4F; --persiana-osc:#33573F; --mar:#2E5E6E; --wa:#2FA45B;
+  --gamba:#C75146; --sal:#E3E7E1; --blanco:#FFFFFF;
+  --sombra:0 1px 2px rgba(34,48,58,.06), 0 4px 14px rgba(34,48,58,.05); --radio:10px;
+  background:var(--papel); color:var(--tinta); min-height:100vh;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; font-size:15px; line-height:1.45;
+}
+.crm *{box-sizing:border-box}
+.crm button{font-family:inherit;cursor:pointer}
+.crm input,.crm select,.crm textarea,.crm-ficha input,.crm-ficha select,.crm-ficha textarea{
+  font-family:inherit;font-size:15px;color:var(--tinta);background:#fff;border:1px solid var(--sal);
+  border-radius:8px;padding:9px 11px;width:100%}
+.crm input:focus,.crm select:focus,.crm textarea:focus,.crm-ficha input:focus,.crm-ficha select:focus,.crm-ficha textarea:focus{outline:2px solid var(--persiana);outline-offset:1px}
+
+/* pestañas */
+.crm .tabsbar{background:#fff;border-bottom:1px solid var(--sal);display:flex;gap:2px;overflow-x:auto;padding:0 12px;position:sticky;top:0;z-index:30}
+.crm .tabsbar button{background:none;border:none;padding:13px 15px;color:var(--tinta-suave);font-weight:600;font-size:13.5px;border-bottom:2.5px solid transparent;white-space:nowrap}
+.crm .tabsbar button.activo{color:var(--persiana-osc);border-bottom-color:var(--persiana)}
+
+.crm main{padding:24px 26px 90px;max-width:1120px;margin:0 auto}
+.crm .cabecera-sec{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.crm .cabecera-sec h1{font-family:Georgia,serif;font-size:26px;font-weight:600;letter-spacing:-.01em;margin:0}
+.crm .fecha{color:var(--tinta-suave);font-size:13px}
+
+.crm .tarjeta{background:#fff;border:1px solid var(--sal);border-radius:var(--radio);box-shadow:var(--sombra);padding:18px}
+.crm .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.crm .kpi .cifra{font-family:Georgia,serif;font-size:32px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.crm .kpi .rotulo{font-size:12px;color:var(--tinta-suave);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+.crm .carta-borde{border-top:2px solid var(--tinta);padding-top:12px}
+.crm .chip,.crm-ficha .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--sal);background:var(--papel);white-space:nowrap}
+.crm .chip.canal-email{color:var(--mar)}
+.crm .chip.canal-sms{color:var(--persiana)}
+.crm .chip.canal-whatsapp{color:var(--wa)}
+.crm .chip.apagado{color:#A6B0A9;border-style:dashed}
+.crm .chip.estado-borrador{color:var(--tinta-suave)}
+.crm .chip.estado-enviada{color:var(--persiana)}
+.crm .chip.baja,.crm-ficha .chip.baja{color:var(--gamba)}
+.crm .boton,.crm-ficha .boton{background:var(--persiana);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer}
+.crm .boton:hover,.crm-ficha .boton:hover{background:var(--persiana-osc)}
+.crm .boton.secundario,.crm-ficha .boton.secundario{background:#fff;color:var(--tinta);border:1px solid var(--sal)}
+.crm .boton.peligro,.crm-ficha .boton.peligro{background:#fff;color:var(--gamba);border:1px solid #E8C4BF}
+.crm .boton:disabled,.crm-ficha .boton:disabled{opacity:.45;cursor:not-allowed}
+.crm .fila-herr{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.crm .fila-herr input[type=search]{max-width:340px}
+.crm .filtros{display:flex;gap:6px;flex-wrap:wrap}
+.crm .filtro{border:1px solid var(--sal);background:#fff;border-radius:99px;padding:5px 12px;font-size:13px;color:var(--tinta-suave);cursor:pointer}
+.crm .filtro.activo{background:var(--tinta);border-color:var(--tinta);color:#fff}
+.crm .lista-tabla{display:flex;flex-direction:column}
+.crm .filac{display:flex;align-items:center;gap:12px;padding:11px 6px;border-bottom:1px solid var(--sal);cursor:pointer}
+.crm .filac:hover{background:#FBFCFA}
+.crm .filac .quien{flex:1;min-width:0}
+.crm .filac .quien b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crm .filac .quien span{font-size:12.5px;color:var(--tinta-suave)}
+.crm .vacio,.crm-ficha .vacio{text-align:center;color:var(--tinta-suave);padding:40px 16px}
+.crm .vacio h3{color:var(--tinta);margin:0 0 6px;font-family:Georgia,serif}
+.crm .paginacion{display:flex;gap:8px;justify-content:center;align-items:center;padding:14px;font-size:13px;color:var(--tinta-suave)}
+.crm .mini,.crm-ficha .mini{font-size:13px;color:var(--tinta-suave)}
+.crm .aviso,.crm-ficha .aviso{border:1px solid var(--sal);background:#fff;border-radius:8px;padding:11px 13px;font-size:13.5px;color:var(--tinta-suave)}
+.crm .aviso.mal,.crm-ficha .aviso.mal{border-color:#E8C4BF;color:var(--gamba)}
+.crm .punto{width:9px;height:9px;border-radius:50%;background:#C4CDC6;flex:none;display:inline-block}
+.crm .punto.conectado{background:var(--persiana)}
+.crm .punto.error{background:var(--gamba)}
+.crm .canal-tarjetas{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.crm .canal-tarjetas h3{display:flex;align-items:center;gap:8px;font-size:17px;font-family:Georgia,serif;margin:0}
+
+/* ficha lateral */
+.crm-velo{position:fixed;inset:0;background:rgba(34,48,58,.35);z-index:50}
+.crm-ficha{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:#fff;z-index:51;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(34,48,58,.12);color:var(--tinta);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px}
+.crm-ficha header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #E3E7E1}
+.crm-ficha header h2{font-family:Georgia,serif;font-size:19px;margin:0}
+.crm-ficha .cuerpo{overflow-y:auto;padding:18px 20px;flex:1}
+.crm-ficha .campo{margin-bottom:12px}
+.crm-ficha .campo label{display:block;font-size:12px;color:#5B6B75;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.crm-ficha .dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.crm-ficha .dos{grid-template-columns:1fr}}
+.crm-ficha .consents{display:flex;flex-direction:column;gap:8px;margin:6px 0 4px}
+.crm-ficha .consent{display:flex;justify-content:space-between;align-items:center;border:1px solid #E3E7E1;border-radius:8px;padding:10px 12px;gap:10px}
+.crm-ficha .interruptor{position:relative;width:40px;height:22px;flex:none}
+.crm-ficha .interruptor input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer}
+.crm-ficha .interruptor i{position:absolute;inset:0;background:#CDD5CE;border-radius:99px;transition:.15s;pointer-events:none}
+.crm-ficha .interruptor i:before{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.15s}
+.crm-ficha .interruptor input:checked+i{background:#3F6B4F}
+.crm-ficha .interruptor input:checked+i:before{transform:translateX(18px)}
+.crm-ficha .bloque{border-top:1px solid #E3E7E1;margin-top:16px;padding-top:14px}
+.crm-ficha .bloque h3{font-size:15px;margin:0 0 8px;font-family:Georgia,serif}
+.crm-ficha .resumen-visitas{display:flex;gap:14px;flex-wrap:wrap}
+.crm-ficha .resumen-visitas div b{font-family:Georgia,serif;font-size:22px;display:block;font-variant-numeric:tabular-nums}
+.crm-ficha .resumen-visitas div span{font-size:11.5px;color:#5B6B75;text-transform:uppercase;letter-spacing:.05em}
+.crm-ficha .form-modal{display:flex;flex-direction:column;gap:12px}
+.crm-ficha .contador{font-size:12px;color:#5B6B75;text-align:right}
+.crm-ficha .sugerencias{border:1px solid #E3E7E1;border-radius:8px;background:#fff;overflow:hidden}
+.crm-ficha .sugerencias div{padding:9px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid #F0F2EF}
+.crm-ficha .sugerencias div:hover{background:#F0F5F1}
+
+@media (max-width:840px){.crm main{padding:16px 14px 90px}}
+@media (prefers-reduced-motion:reduce){.crm *,.crm-ficha *{animation:none!important;transition:none!important}}
