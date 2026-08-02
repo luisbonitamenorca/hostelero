@@ -9,6 +9,7 @@ const RUTAS_MODULO: Record<string, string> = {
   visitas: "/visitas",
   reservas: "/reservas",
   crm: "/crm",
+  rrhh: "/rrhh",
 };
 
 export default async function PaginaModulo({
