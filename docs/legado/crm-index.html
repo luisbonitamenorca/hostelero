@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CRM · Bonita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papel:#F7F8F6;      /* hueso frío, no crema */
+  --tinta:#22303A;      /* azul tinta de calamar */
+  --tinta-suave:#5B6B75;
+  --persiana:#3F6B4F;   /* verde persiana mallorquina: acción principal */
+  --persiana-osc:#33573F;
+  --mar:#2E5E6E;        /* canal email */
+  --wa:#2FA45B;         /* canal whatsapp */
+  --gamba:#C75146;      /* avisos y bajas */
+  --sal:#E3E7E1;        /* bordes */
+  --blanco:#FFFFFF;
+  --sombra:0 1px 2px rgba(34,48,58,.06), 0 4px 14px rgba(34,48,58,.05);
+  --radio:10px;
+  --display:'Fraunces', Georgia, serif;
+  --texto:system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--papel);color:var(--tinta);font-family:var(--texto);font-size:15px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:-.01em;margin:0}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--tinta);background:var(--blanco);
+  border:1px solid var(--sal);border-radius:8px;padding:9px 11px;width:100%}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--persiana);outline-offset:1px}
+a{color:var(--persiana)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ----- estructura ----- */
+#app{display:none;min-height:100vh}
+.lado{position:fixed;inset:0 auto 0 0;width:212px;background:var(--tinta);color:#EDF1EE;
+  display:flex;flex-direction:column;padding:18px 12px;gap:2px}
+.lado .marca{font-family:var(--display);font-size:21px;padding:6px 10px 16px;color:#fff}
+.lado .marca small{display:block;font-family:var(--texto);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:#9FB0A6;margin-top:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:#C9D4CD;
+  text-decoration:none;font-size:14px;border:0;background:none;width:100%;text-align:left}
+.nav-item.activo{background:rgba(255,255,255,.09);color:#fff}
+.nav-item:hover{color:#fff}
+.lado .abajo{margin-top:auto;font-size:12px;color:#8FA096;padding:10px 12px}
+.lado .abajo button{background:none;border:0;color:#C9D4CD;padding:0;font-size:12px;text-decoration:underline}
+main{margin-left:212px;padding:26px 30px 90px;max-width:1120px}
+.cabecera{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.cabecera h1{font-size:27px}
+.cabecera .fecha{color:var(--tinta-suave);font-size:13px}
+
+@media (max-width:840px){
+  .lado{inset:auto 0 0 0;width:100%;height:60px;flex-direction:row;align-items:center;
+    padding:0 6px calc(env(safe-area-inset-bottom));gap:0;z-index:40}
+  .lado .marca,.lado .abajo{display:none}
+  .nav-item{flex-direction:column;gap:3px;font-size:10px;padding:6px 4px;flex:1;align-items:center;border-radius:6px}
+  .nav-item svg{width:20px;height:20px}
+  main{margin:0;padding:18px 16px 96px}
+}
+
+/* ----- piezas ----- */
+.tarjeta{background:var(--blanco);border:1px solid var(--sal);border-radius:var(--radio);
+  box-shadow:var(--sombra);padding:18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.kpi .cifra{font-family:var(--display);font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .rotulo{font-size:12px;color:var(--tinta-suave);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+.carta-borde{border-top:2px solid var(--tinta);padding-top:12px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px;border-radius:99px;
+  border:1px solid var(--sal);background:var(--papel);white-space:nowrap}
+.chip.canal-email{color:var(--mar);border-color:color-mix(in srgb,var(--mar) 35%,white)}
+.chip.canal-sms{color:var(--persiana);border-color:color-mix(in srgb,var(--persiana) 35%,white)}
+.chip.canal-whatsapp{color:var(--wa);border-color:color-mix(in srgb,var(--wa) 40%,white)}
+.chip.apagado{color:#A6B0A9;border-style:dashed}
+.chip.estado-borrador{color:var(--tinta-suave)}
+.chip.estado-enviada{color:var(--persiana)}
+.chip.baja{color:var(--gamba);border-color:color-mix(in srgb,var(--gamba) 35%,white)}
+.boton{background:var(--persiana);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:500}
+.boton:hover{background:var(--persiana-osc)}
+.boton.secundario{background:var(--blanco);color:var(--tinta);border:1px solid var(--sal)}
+.boton.peligro{background:var(--blanco);color:var(--gamba);border:1px solid color-mix(in srgb,var(--gamba) 40%,white)}
+.boton:disabled{opacity:.45;cursor:not-allowed}
+.fila-herr{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.fila-herr input[type=search]{max-width:340px}
+.filtros{display:flex;gap:6px;flex-wrap:wrap}
+.filtro{border:1px solid var(--sal);background:var(--blanco);border-radius:99px;padding:5px 12px;font-size:13px;color:var(--tinta-suave)}
+.filtro.activo{background:var(--tinta);border-color:var(--tinta);color:#fff}
+.lista-tabla{display:flex;flex-direction:column}
+.fila{display:flex;align-items:center;gap:12px;padding:11px 6px;border-bottom:1px solid var(--sal);cursor:pointer}
+.fila:hover{background:#FBFCFA}
+.fila .quien{flex:1;min-width:0}
+.fila .quien b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .quien span{font-size:12.5px;color:var(--tinta-suave)}
+.vacio{text-align:center;color:var(--tinta-suave);padding:40px 16px}
+.vacio h3{color:var(--tinta);margin-bottom:6px}
+.paginacion{display:flex;gap:8px;justify-content:center;align-items:center;padding:14px;font-size:13px;color:var(--tinta-suave)}
+
+/* ----- panel lateral (ficha) ----- */
+.velo{position:fixed;inset:0;background:rgba(34,48,58,.35);z-index:50;display:none}
+.velo.abierto{display:block}
+.ficha{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--blanco);z-index:51;
+  transform:translateX(102%);transition:transform .18s ease;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(34,48,58,.12)}
+.ficha.abierta{transform:none}
+.ficha header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--sal)}
+.ficha .cuerpo{overflow-y:auto;padding:18px 20px;flex:1}
+.campo{margin-bottom:12px}
+.campo label{display:block;font-size:12px;color:var(--tinta-suave);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.consents{display:flex;flex-direction:column;gap:8px;margin:6px 0 4px}
+.consent{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--sal);border-radius:8px;padding:10px 12px}
+.interruptor{position:relative;width:40px;height:22px;flex:none}
+.interruptor input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer}
+.interruptor i{position:absolute;inset:0;background:#CDD5CE;border-radius:99px;transition:.15s;pointer-events:none}
+.interruptor i:before{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.15s}
+.interruptor input:checked+i{background:var(--persiana)}
+.interruptor input:checked+i:before{transform:translateX(18px)}
+.bloque{border-top:1px solid var(--sal);margin-top:16px;padding-top:14px}
+.bloque h3{font-size:15px;margin-bottom:8px}
+.mini{font-size:13px;color:var(--tinta-suave)}
+.resumen-visitas{display:flex;gap:14px;flex-wrap:wrap}
+.resumen-visitas div b{font-family:var(--display);font-size:22px;display:block;font-variant-numeric:tabular-nums}
+.resumen-visitas div span{font-size:11.5px;color:var(--tinta-suave);text-transform:uppercase;letter-spacing:.05em}
+
+/* ----- login ----- */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+#login .caja{width:min(380px,100%)}
+#login h1{font-size:30px;margin-bottom:2px}
+#login .sub{color:var(--tinta-suave);font-size:13px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:22px}
+#login form{display:flex;flex-direction:column;gap:10px}
+.aviso{border:1px solid var(--sal);background:var(--blanco);border-radius:8px;padding:11px 13px;font-size:13.5px;color:var(--tinta-suave)}
+.aviso.ok{border-color:color-mix(in srgb,var(--persiana) 40%,white);color:var(--persiana-osc)}
+.aviso.mal{border-color:color-mix(in srgb,var(--gamba) 40%,white);color:var(--gamba)}
+
+/* ----- toast ----- */
+#toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:var(--tinta);color:#fff;padding:10px 18px;border-radius:99px;font-size:13.5px;z-index:80;
+  transition:.2s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.visible{opacity:1;transform:translateX(-50%)}
+@media(min-width:841px){#toast{bottom:28px}}
+.form-modal{display:flex;flex-direction:column;gap:12px}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.dos{grid-template-columns:1fr}}
+.contador{font-size:12px;color:var(--tinta-suave);text-align:right}
+.canal-tarjetas{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.canal-tarjetas .tarjeta h3{display:flex;align-items:center;gap:8px;font-size:17px}
+.punto{width:9px;height:9px;border-radius:50%;background:#C4CDC6;flex:none}
+.punto.conectado{background:var(--persiana)}
+.punto.error{background:var(--gamba)}
+</style>
+</head>
+<body>
+
+<div id="login" style="display:none">
+  <div class="caja">
+    <h1>Bonita</h1>
+    <div class="sub">CRM · Clientes y campañas</div>
+    <form id="form-login">
+      <input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email" required>
+      <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password" required>
+      <button class="boton" type="submit">Entrar</button>
+      <div id="login-msg"></div>
+    </form>
+  </div>
+</div>
+
+<div id="app">
+  <nav class="lado" id="nav"></nav>
+  <main id="contenido"></main>
+</div>
+
+<div class="velo" id="velo"></div>
+<aside class="ficha" id="ficha" aria-hidden="true"></aside>
+<div id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* =================== CONFIG =================== */
+const SB_URL = 'https://rgetdomhvcbrcimabwja.supabase.co';
+const SB_KEY = 'sb_publishable_0KVHCjdiqosDra4q3hos2Q_R9GqpxF4';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+const CANALES = [
+  {id:'email',    nombre:'Email',    campoConsent:'consentimiento_email',    necesita:'email',    detalle:'Boletines y confirmaciones por correo.'},
+  {id:'sms',      nombre:'SMS',      campoConsent:'consentimiento_sms',      necesita:'telefono', detalle:'Mensajes de texto cortos.'},
+  {id:'whatsapp', nombre:'WhatsApp', campoConsent:'consentimiento_whatsapp', necesita:'telefono', detalle:'Mensajes por WhatsApp con plantillas aprobadas.'},
+];
+const canalPor = id => CANALES.find(c=>c.id===id);
+let estadoCanales = {};           // {email:'sin_conectar',...} — se carga de la tabla canales
+let paginaContactos = 0, filtroContactos = 'todos', busquedaContactos = '';
+const POR_PAGINA = 50;
+
+/* =================== UTILIDADES =================== */
+const $ = s => document.querySelector(s);
+const esc = t => (t??'').toString().replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const fmt = n => (n??0).toLocaleString('es-ES');
+const fFecha = d => d ? new Date(d).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+function normalizarTelefono(t){
+  if(!t) return null;
+  const dig = t.replace(/\D/g,'');
+  if(!dig) return null;
+  return dig.length===9 ? '34'+dig : dig;
+}
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('visible');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('visible'), 2600);
+}
+function fallo(e, contexto){
+  console.error(contexto, e);
+  toast(contexto + ': ' + (e?.message || 'error inesperado'));
+}
+
+/* =================== SESIÓN =================== */
+async function arrancar(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ mostrarLogin(); }
+  else{ await entrar(); }
+  sb.auth.onAuthStateChange((ev)=>{ if(ev==='SIGNED_IN') entrar(); if(ev==='SIGNED_OUT') mostrarLogin(); });
+}
+function mostrarLogin(){
+  $('#app').style.display='none'; $('#login').style.display='flex';
+}
+$('#form-login').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const email = $('#login-email').value.trim();
+  const msg = $('#login-msg');
+  msg.innerHTML = '<div class="aviso">Entrando…</div>';
+  const {error} = await sb.auth.signInWithPassword({email, password: $('#login-pass').value});
+  if(error){
+    const suave = /invalid login credentials/i.test(error.message)
+      ? 'Email o contraseña incorrectos.'
+      : 'No se pudo entrar: ' + esc(error.message);
+    msg.innerHTML = `<div class="aviso mal">${suave}</div>`;
+  } else {
+    msg.innerHTML = '';
+  }
+});
+async function entrar(){
+  // La RLS (fn_es_staff) decide: si esta consulta falla o llega vacía, el email no está autorizado.
+  const {data, error} = await sb.from('canales').select('canal, proveedor, estado');
+  if(error || !data || data.length===0){
+    $('#login').style.display='flex'; $('#app').style.display='none';
+    $('#login-msg').innerHTML = '<div class="aviso mal">Tu email no está en el personal autorizado. Habla con Luis para que te dé de alta.</div>';
+    await sb.auth.signOut();
+    return;
+  }
+  data.forEach(c=> estadoCanales[c.canal] = c);
+  $('#login').style.display='none'; $('#app').style.display='block';
+  pintarNav();
+  irA(location.hash.replace('#/','') || 'panel');
+}
+async function salir(){ await sb.auth.signOut(); location.hash=''; }
+
+/* =================== NAVEGACIÓN =================== */
+const SECCIONES = [
+  {id:'panel',    nombre:'Panel',    icono:'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'},
+  {id:'contactos',nombre:'Contactos',icono:'M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'},
+  {id:'campanas', nombre:'Campañas', icono:'M2.01 21L23 12 2.01 3 2 10l15 2-15 2z'},
+  {id:'listas',   nombre:'Listas',   icono:'M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z'},
+  {id:'flujos',   nombre:'Flujos',   icono:'M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3z'},
+  {id:'canales',  nombre:'Canales',  icono:'M12 2a10 10 0 100 20 10 10 0 000-20zm1 17.93V19a2 2 0 01-2 0v.93A8 8 0 014.07 13H5a2 2 0 000-2h-.93A8 8 0 0111 4.07V5a2 2 0 002 0v-.93A8 8 0 0119.93 11H19a2 2 0 000 2h.93A8 8 0 0113 19.93z'},
+];
+function pintarNav(){
+  $('#nav').innerHTML = `
+    <div class="marca">Bonita<small>CRM</small></div>
+    ${SECCIONES.map(s=>`
+      <button class="nav-item" data-sec="${s.id}">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="${s.icono}"/></svg>
+        ${s.nombre}
+      </button>`).join('')}
+    <div class="abajo"><button onclick="salir()">Cerrar sesión</button></div>`;
+  document.querySelectorAll('.nav-item').forEach(b=> b.addEventListener('click', ()=> irA(b.dataset.sec)));
+}
+function irA(sec){
+  if(!SECCIONES.some(s=>s.id===sec)) sec='panel';
+  location.hash = '#/'+sec;
+  document.querySelectorAll('.nav-item').forEach(b=> b.classList.toggle('activo', b.dataset.sec===sec));
+  ({panel:vistaPanel, contactos:vistaContactos, campanas:vistaCampanas,
+    listas:vistaListas, flujos:vistaFlujos, canales:vistaCanales})[sec]();
+}
+window.addEventListener('hashchange', ()=>{
+  const sec = location.hash.replace('#/','');
+  const activo = document.querySelector('.nav-item.activo')?.dataset.sec;
+  if(sec && sec!==activo) irA(sec);
+});
+
+/* =================== PANEL =================== */
+async function vistaPanel(){
+  const hoy = new Date().toLocaleDateString('es-ES',{weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  $('#contenido').innerHTML = `
+    <div class="cabecera"><h1>El censo</h1><span class="fecha">${esc(hoy)}</span></div>
+    <div class="kpis" id="kpis"><div class="tarjeta kpi"><div class="cifra">…</div><div class="rotulo">Cargando</div></div></div>
+    <div class="tarjeta carta-borde">
+      <h2 style="font-size:18px;margin-bottom:10px">Canales</h2>
+      <div id="panel-canales" class="mini">Cargando…</div>
+    </div>`;
+  try{
+    const cuenta = (tabla, filtros) => {
+      let q = sb.from(tabla).select('id',{count:'exact', head:true});
+      (filtros||[]).forEach(([m,...a])=> q = q[m](...a));
+      return q.then(r=> r.count ?? 0);
+    };
+    const [total, env_email, env_sms, env_wa, clientes, vinculados, supr] = await Promise.all([
+      cuenta('contactos'),
+      cuenta('contactos', [['eq','consentimiento_email',true],['not','email','is',null]]),
+      cuenta('contactos', [['eq','consentimiento_sms',true],['not','telefono','is',null]]),
+      cuenta('contactos', [['eq','consentimiento_whatsapp',true],['not','telefono','is',null]]),
+      cuenta('clientes'),
+      cuenta('contactos', [['not','cliente_id','is',null]]),
+      cuenta('supresiones'),
+    ]);
+    $('#kpis').innerHTML = `
+      <div class="tarjeta kpi"><div class="cifra">${fmt(total)}</div><div class="rotulo">Contactos</div></div>
+      <div class="tarjeta kpi"><div class="cifra" style="color:var(--mar)">${fmt(env_email)}</div><div class="rotulo">Enviables · email</div></div>
+      <div class="tarjeta kpi"><div class="cifra" style="color:var(--persiana)">${fmt(env_sms)}</div><div class="rotulo">Enviables · SMS</div></div>
+      <div class="tarjeta kpi"><div class="cifra" style="color:var(--wa)">${fmt(env_wa)}</div><div class="rotulo">Enviables · WhatsApp</div></div>
+      <div class="tarjeta kpi"><div class="cifra">${fmt(clientes - vinculados)}</div><div class="rotulo">Clientes de sala sin ficha</div></div>
+      <div class="tarjeta kpi"><div class="cifra" style="color:var(--gamba)">${fmt(supr)}</div><div class="rotulo">Supresiones</div></div>`;
+    $('#panel-canales').innerHTML = CANALES.map(c=>{
+      const est = estadoCanales[c.id]?.estado || 'sin_conectar';
+      const prov = estadoCanales[c.id]?.proveedor;
+      return `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--sal)">
+        <span class="punto ${est}"></span><b style="width:86px">${c.nombre}</b>
+        <span>${est==='conectado' ? 'Conectado' + (prov? ' · '+esc(prov):'') : 'Sin conectar' + (prov? ' · previsto '+esc(prov):' · proveedor por decidir')}</span>
+      </div>`;
+    }).join('') + `<p class="mini" style="margin:10px 0 0">Los envíos se activan canal a canal según se conectan. Mientras, todo lo demás — contactos, consentimientos, borradores — ya funciona.</p>`;
+  }catch(e){ fallo(e,'No pude cargar el panel'); }
+}
+
+/* =================== CONTACTOS =================== */
+async function vistaContactos(){
+  $('#contenido').innerHTML = `
+    <div class="cabecera"><h1>Contactos</h1>
+      <button class="boton" onclick="abrirFichaNueva()">Nuevo contacto</button></div>
+    <div class="fila-herr">
+      <input type="search" id="buscar" placeholder="Buscar por nombre, email o teléfono…" value="${esc(busquedaContactos)}">
+      <div class="filtros" id="filtros"></div>
+    </div>
+    <div class="tarjeta" style="padding:6px 14px">
+      <div class="lista-tabla" id="lista-contactos"><div class="vacio">Cargando…</div></div>
+      <div class="paginacion" id="paginacion"></div>
+    </div>`;
+  const FILTROS = [['todos','Todos'],['email','Email ✓'],['sms','SMS ✓'],['whatsapp','WhatsApp ✓'],['baja','Bajas']];
+  $('#filtros').innerHTML = FILTROS.map(([id,n])=>
+    `<button class="filtro ${filtroContactos===id?'activo':''}" data-f="${id}">${n}</button>`).join('');
+  document.querySelectorAll('.filtro').forEach(b=> b.addEventListener('click', ()=>{
+    filtroContactos = b.dataset.f; paginaContactos = 0; vistaContactos();
+  }));
+  let tm; $('#buscar').addEventListener('input', e=>{
+    clearTimeout(tm); tm = setTimeout(()=>{ busquedaContactos = e.target.value.trim(); paginaContactos = 0; cargarContactos(); }, 300);
+  });
+  cargarContactos();
+}
+async function cargarContactos(){
+  const cont = $('#lista-contactos'); if(!cont) return;
+  try{
+    let q = sb.from('contactos').select('id,nombre,email,telefono,estado,consentimiento_email,consentimiento_sms,consentimiento_whatsapp,cliente_id',{count:'exact'})
+      .order('creado_en',{ascending:false})
+      .range(paginaContactos*POR_PAGINA, paginaContactos*POR_PAGINA + POR_PAGINA - 1);
+    if(filtroContactos==='baja') q = q.eq('estado','baja');
+    else if(filtroContactos!=='todos') q = q.eq(canalPor(filtroContactos).campoConsent, true);
+    if(busquedaContactos){
+      const b = busquedaContactos.replace(/[%,()]/g,'');
+      q = q.or(`nombre.ilike.%${b}%,email.ilike.%${b}%,telefono.ilike.%${b}%`);
+    }
+    const {data, count, error} = await q;
+    if(error) throw error;
+    if(!data.length){
+      cont.innerHTML = `<div class="vacio"><h3>Nada por aquí</h3>
+        ${count===0 && !busquedaContactos && filtroContactos==='todos'
+          ? 'Los contactos aparecerán al importar los listados de Klaviyo, CoverManager y Codetickets, o al darlos de alta a mano.'
+          : 'Prueba con otra búsqueda u otro filtro.'}</div>`;
+      $('#paginacion').innerHTML=''; return;
+    }
+    cont.innerHTML = data.map(c=>`
+      <div class="fila" onclick="abrirFicha('${c.id}')">
+        <div class="quien"><b>${esc(c.nombre || c.email || c.telefono)}</b>
+          <span>${esc([c.email, c.telefono].filter(Boolean).join(' · '))}</span></div>
+        ${c.estado==='baja' ? '<span class="chip baja">Baja</span>' : CANALES.map(k=>
+          `<span class="chip canal-${k.id} ${c[k.campoConsent]?'':'apagado'}" title="${k.nombre}: ${c[k.campoConsent]?'con consentimiento':'sin consentimiento'}">${k.nombre}</span>`).join('')}
+      </div>`).join('');
+    const paginas = Math.ceil(count/POR_PAGINA);
+    $('#paginacion').innerHTML = paginas>1 ? `
+      <button class="boton secundario" ${paginaContactos===0?'disabled':''} onclick="paginaContactos--;cargarContactos()">Anterior</button>
+      <span>${paginaContactos+1} de ${paginas} · ${fmt(count)} contactos</span>
+      <button class="boton secundario" ${paginaContactos>=paginas-1?'disabled':''} onclick="paginaContactos++;cargarContactos()">Siguiente</button>`
+      : `<span>${fmt(count)} contacto${count===1?'':'s'}</span>`;
+  }catch(e){ fallo(e,'No pude cargar contactos'); }
+}
+
+/* ----- ficha de contacto ----- */
+function cerrarFicha(){ $('#ficha').classList.remove('abierta'); $('#velo').classList.remove('abierto'); }
+$('#velo').addEventListener('click', cerrarFicha);
+function pintarFicha(html){
+  $('#ficha').innerHTML = html; $('#ficha').classList.add('abierta'); $('#velo').classList.add('abierto');
+}
+function abrirFichaNueva(){
+  pintarFicha(`
+    <header><h2>Nuevo contacto</h2><button class="boton secundario" onclick="cerrarFicha()">Cerrar</button></header>
+    <div class="cuerpo"><div class="form-modal">
+      <div class="campo"><label>Nombre</label><input id="f-nombre"></div>
+      <div class="dos">
+        <div class="campo"><label>Email</label><input id="f-email" type="email"></div>
+        <div class="campo"><label>Teléfono</label><input id="f-telefono" type="tel"></div>
+      </div>
+      <div class="campo"><label>Cumpleaños</label><input id="f-cumple" type="date"></div>
+      <p class="mini">Se crea sin consentimientos: actívalos en su ficha solo si la persona los ha dado de verdad (y anota dónde).</p>
+      <button class="boton" onclick="crearContacto()">Crear contacto</button>
+    </div></div>`);
+}
+async function crearContacto(){
+  const email = $('#f-email').value.trim().toLowerCase() || null;
+  const telefono = $('#f-telefono').value.trim() || null;
+  if(!email && !telefono){ toast('Hace falta al menos email o teléfono'); return; }
+  try{
+    const {data, error} = await sb.from('contactos').insert({
+      nombre: $('#f-nombre').value.trim() || null, email, telefono,
+      cumpleanos: $('#f-cumple').value || null,
+    }).select('id').single();
+    if(error) throw error;
+    toast('Contacto creado');
+    await sb.from('contacto_fuentes').insert({contacto_id:data.id, fuente:'manual'});
+    abrirFicha(data.id); vistaContactos();
+  }catch(e){
+    e?.code==='23505' ? toast('Ya existe un contacto con ese email') : fallo(e,'No pude crear el contacto');
+  }
+}
+async function abrirFicha(id){
+  pintarFicha(`<header><h2>Cargando…</h2><button class="boton secundario" onclick="cerrarFicha()">Cerrar</button></header>`);
+  try{
+    const [{data:c, error:e1}, {data:fuentes}] = await Promise.all([
+      sb.from('contactos').select('*').eq('id',id).single(),
+      sb.from('contacto_fuentes').select('fuente,creado_en').eq('contacto_id',id).order('creado_en'),
+    ]);
+    if(e1) throw e1;
+    pintarFicha(`
+      <header><h2>${esc(c.nombre || 'Contacto')}</h2>
+        <button class="boton secundario" onclick="cerrarFicha()">Cerrar</button></header>
+      <div class="cuerpo">
+        ${c.estado==='baja' ? '<div class="aviso mal" style="margin-bottom:12px">Dado de baja: en la lista de supresión. No recibirá envíos.</div>':''}
+        <div class="campo"><label>Nombre</label><input id="e-nombre" value="${esc(c.nombre||'')}"></div>
+        <div class="dos">
+          <div class="campo"><label>Email</label><input id="e-email" type="email" value="${esc(c.email||'')}"></div>
+          <div class="campo"><label>Teléfono</label><input id="e-telefono" type="tel" value="${esc(c.telefono||'')}"></div>
+        </div>
+        <div class="campo"><label>Cumpleaños</label><input id="e-cumple" type="date" value="${c.cumpleanos||''}"></div>
+        <button class="boton secundario" onclick="guardarContacto('${c.id}')">Guardar cambios</button>
+
+        <div class="bloque"><h3>Consentimientos</h3>
+          <div class="consents">${CANALES.map(k=>`
+            <div class="consent"><div><b style="font-size:14px">${k.nombre}</b>
+              <div class="mini">${c[k.necesita] ? k.detalle : 'Necesita '+(k.necesita==='email'?'un email':'un teléfono')+'.'}</div></div>
+              <span class="interruptor"><input type="checkbox" ${c[k.campoConsent]?'checked':''}
+                ${c[k.necesita]?'':'disabled'} onchange="cambiarConsent('${c.id}','${k.id}',this.checked)"><i></i></span>
+            </div>`).join('')}</div>
+          <p class="mini">Cada cambio queda registrado con fecha y origen en el libro de consentimientos.</p>
+        </div>
+
+        <div class="bloque"><h3>En el restaurante</h3><div id="ficha-visitas" class="mini">Cargando…</div></div>
+
+        <div class="bloque"><h3>Fuentes</h3>
+          <div class="mini">${fuentes?.length ? fuentes.map(f=>`${esc(f.fuente)} · ${fFecha(f.creado_en)}`).join('<br>') : 'Alta directa en el CRM.'}</div>
+        </div>
+
+        ${c.estado!=='baja' ? `<div class="bloque"><h3>Zona delicada</h3>
+          <button class="boton peligro" onclick="darDeBaja('${c.id}')">Dar de baja de todo</button>
+          <p class="mini" style="margin-top:6px">Retira los tres consentimientos y añade sus datos a la lista de supresión. La ficha se conserva.</p>
+        </div>`:''}
+      </div>`);
+    cargarVisitas(c);
+  }catch(e){ fallo(e,'No pude abrir la ficha'); }
+}
+async function cargarVisitas(c){
+  const caja = $('#ficha-visitas'); if(!caja) return;
+  try{
+    if(!c.cliente_id){
+      const norm = normalizarTelefono(c.telefono);
+      if(!norm){ caja.innerHTML = 'Sin vínculo con la base de reservas (no hay teléfono para buscar).'; return; }
+      const ultimos9 = norm.slice(-9);
+      const {data:cand} = await sb.from('clientes').select('id,nombre,telefono').ilike('telefono','%'+ultimos9+'%').limit(3);
+      caja.innerHTML = !cand?.length
+        ? 'No aparece en la base de reservas por teléfono.'
+        : 'Posible ficha de sala: ' + cand.map(x=>
+            `<button class="boton secundario" style="margin:4px 6px 0 0;padding:5px 10px;font-size:12.5px"
+              onclick="vincularCliente('${c.id}','${x.id}')">${esc(x.nombre)} · ${esc(x.telefono||'')}</button>`).join('');
+      return;
+    }
+    const {data:rs, error} = await sb.from('reservas').select('fecha,estado,pax')
+      .eq('cliente_id', c.cliente_id).order('fecha',{ascending:false}).limit(500);
+    if(error) throw error;
+    const hechas = rs.filter(r=>r.estado==='terminada');
+    const noshows = rs.filter(r=>r.estado==='no_show').length;
+    const ultima = hechas[0]?.fecha;
+    caja.innerHTML = `<div class="resumen-visitas">
+      <div><b>${fmt(hechas.length)}</b><span>Visitas</span></div>
+      <div><b>${ultima ? fFecha(ultima) : '—'}</b><span>Última</span></div>
+      <div><b style="${noshows? 'color:var(--gamba)':''}">${fmt(noshows)}</b><span>No-shows</span></div>
+    </div>`;
+  }catch(e){ caja.innerHTML = 'No pude leer las reservas.'; }
+}
+async function vincularCliente(contactoId, clienteId){
+  try{
+    const {error} = await sb.from('contactos').update({cliente_id: clienteId}).eq('id', contactoId);
+    if(error) throw error;
+    toast('Ficha vinculada con la base de reservas'); abrirFicha(contactoId);
+  }catch(e){ fallo(e,'No pude vincular'); }
+}
+async function guardarContacto(id){
+  try{
+    const {error} = await sb.from('contactos').update({
+      nombre: $('#e-nombre').value.trim() || null,
+      email: $('#e-email').value.trim().toLowerCase() || null,
+      telefono: $('#e-telefono').value.trim() || null,
+      cumpleanos: $('#e-cumple').value || null,
+    }).eq('id', id);
+    if(error) throw error;
+    toast('Guardado'); cargarContactos();
+  }catch(e){ fallo(e,'No pude guardar'); }
+}
+async function cambiarConsent(contactoId, canal, valor){
+  try{
+    const k = canalPor(canal);
+    const {error} = await sb.from('contactos').update({[k.campoConsent]: valor}).eq('id', contactoId);
+    if(error) throw error;
+    const {data:{user}} = await sb.auth.getUser();
+    await sb.from('consentimientos').insert({
+      contacto_id: contactoId, canal, accion: valor?'alta':'baja',
+      origen:'panel', detalle:'Cambiado por '+(user?.email||'staff'),
+    });
+    toast(`${k.nombre}: ${valor?'consentimiento activado':'consentimiento retirado'}`);
+  }catch(e){ fallo(e,'No pude cambiar el consentimiento'); }
+}
+async function darDeBaja(id){
+  if(!confirm('¿Dar de baja de todos los canales y añadir a la lista de supresión?')) return;
+  try{
+    const {data:c} = await sb.from('contactos').select('email,telefono').eq('id',id).single();
+    const sup = [];
+    if(c.email) sup.push({canal:'email', identificador:c.email.toLowerCase(), motivo:'manual', detalle:'Baja desde ficha'});
+    const norm = normalizarTelefono(c.telefono);
+    if(norm){ sup.push({canal:'sms', identificador:norm, motivo:'manual', detalle:'Baja desde ficha'});
+              sup.push({canal:'whatsapp', identificador:norm, motivo:'manual', detalle:'Baja desde ficha'}); }
+    if(sup.length){
+      const {error} = await sb.from('supresiones').upsert(sup, {onConflict:'canal,identificador'});
+      if(error) throw error;
+    }
+    await sb.from('contactos').update({estado:'baja', consentimiento_email:false, consentimiento_sms:false, consentimiento_whatsapp:false}).eq('id',id);
+    await sb.from('consentimientos').insert(CANALES.map(k=>({contacto_id:id, canal:k.id, accion:'baja', origen:'panel', detalle:'Baja total desde ficha'})));
+    toast('Dado de baja y suprimido'); abrirFicha(id); cargarContactos();
+  }catch(e){ fallo(e,'No pude completar la baja'); }
+}
+
+/* =================== CAMPAÑAS =================== */
+async function vistaCampanas(){
+  $('#contenido').innerHTML = `
+    <div class="cabecera"><h1>Campañas</h1>
+      <button class="boton" onclick="nuevaCampana()">Nueva campaña</button></div>
+    <div class="tarjeta" style="padding:6px 14px">
+      <div class="lista-tabla" id="lista-campanas"><div class="vacio">Cargando…</div></div>
+    </div>`;
+  try{
+    const {data, error} = await sb.from('campanas')
+      .select('id,nombre,canal,estado,asunto,creado_en,enviada_en').order('creado_en',{ascending:false}).limit(100);
+    if(error) throw error;
+    $('#lista-campanas').innerHTML = !data.length
+      ? `<div class="vacio"><h3>Aún no hay campañas</h3>Crea la primera cuando quieras: se guarda como borrador y el envío se activará al conectar cada canal.</div>`
+      : data.map(c=>`
+        <div class="fila" onclick="abrirCampana('${c.id}')">
+          <div class="quien"><b>${esc(c.nombre)}</b><span>${esc(c.asunto || 'Sin asunto')} · creada ${fFecha(c.creado_en)}</span></div>
+          <span class="chip canal-${c.canal}">${canalPor(c.canal).nombre}</span>
+          <span class="chip estado-${c.estado}">${esc(c.estado)}</span>
+        </div>`).join('');
+  }catch(e){ fallo(e,'No pude cargar campañas'); }
+}
+function nuevaCampana(){ formCampana(null); }
+async function abrirCampana(id){
+  const {data:c, error} = await sb.from('campanas').select('*').eq('id',id).single();
+  if(error) return fallo(error,'No pude abrir la campaña');
+  formCampana(c);
+}
+function formCampana(c){
+  const canal = c?.canal || 'email';
+  pintarFicha(`
+    <header><h2>${c?'Campaña':'Nueva campaña'}</h2>
+      <button class="boton secundario" onclick="cerrarFicha()">Cerrar</button></header>
+    <div class="cuerpo"><div class="form-modal">
+      <div class="campo"><label>Canal</label>
+        <select id="c-canal" ${c?'disabled':''} onchange="ajustarFormCampana()">
+          ${CANALES.map(k=>{
+            const conectado = estadoCanales[k.id]?.estado==='conectado';
+            return `<option value="${k.id}" ${k.id===canal?'selected':''}>${k.nombre}${conectado?'':' — sin conectar'}</option>`;
+          }).join('')}
+        </select></div>
+      <div class="campo"><label>Nombre interno</label><input id="c-nombre" value="${esc(c?.nombre||'')}" placeholder="Newsletter julio, aviso cierre agosto…"></div>
+      <div class="campo" id="caja-asunto"><label>Asunto</label><input id="c-asunto" value="${esc(c?.asunto||'')}" placeholder="Puedes usar {{nombre}}"></div>
+      <div class="campo"><label>Mensaje</label>
+        <textarea id="c-cuerpo" rows="9" placeholder="Hola {{nombre}}, …">${esc(canal==='email' ? (c?.html||'') : (c?.cuerpo_texto||''))}</textarea>
+        <div class="contador" id="c-contador"></div></div>
+      <div class="campo"><label>Audiencia</label>
+        <select id="c-audiencia"><option value="enviables">Todos los enviables del canal</option></select>
+        <p class="mini" style="margin:5px 0 0">Con listas y segmentos podrás afinar la audiencia; de momento va a todos los que tienen consentimiento en el canal, quitando supresiones.</p></div>
+      <button class="boton" onclick="guardarCampana('${c?.id||''}')">${c?'Guardar cambios':'Guardar borrador'}</button>
+      <button class="boton secundario" disabled title="Se activa al conectar el canal">Enviar — se activa al conectar el canal</button>
+    </div></div>`);
+  ajustarFormCampana();
+}
+function ajustarFormCampana(){
+  const canal = $('#c-canal').value;
+  $('#caja-asunto').style.display = canal==='email' ? 'block' : 'none';
+  const area = $('#c-cuerpo'), cont = $('#c-contador');
+  const pintar = ()=>{
+    if(canal==='sms'){
+      const n = area.value.length;
+      cont.textContent = `${n} caracteres · ${Math.max(1, Math.ceil(n/160))} SMS`;
+    } else if(canal==='whatsapp'){
+      cont.textContent = 'WhatsApp exigirá una plantilla aprobada por Meta; este texto será la base.';
+    } else cont.textContent = 'Variables disponibles: {{nombre}}';
+  };
+  area.oninput = pintar; pintar();
+}
+async function guardarCampana(id){
+  const canal = $('#c-canal').value;
+  const nombre = $('#c-nombre').value.trim();
+  if(!nombre){ toast('Ponle un nombre interno'); return; }
+  const cuerpo = $('#c-cuerpo').value;
+  const fila = {
+    nombre, canal, estado:'borrador',
+    asunto: canal==='email' ? $('#c-asunto').value.trim() || null : null,
+    html: canal==='email' ? cuerpo : null,
+    cuerpo_texto: canal!=='email' ? cuerpo : null,
+    audiencia: {tipo:'enviables'},
+  };
+  try{
+    const {error} = id
+      ? await sb.from('campanas').update(fila).eq('id',id)
+      : await sb.from('campanas').insert(fila);
+    if(error) throw error;
+    toast('Borrador guardado'); cerrarFicha(); vistaCampanas();
+  }catch(e){ fallo(e,'No pude guardar la campaña'); }
+}
+
+/* =================== LISTAS =================== */
+async function vistaListas(){
+  $('#contenido').innerHTML = `
+    <div class="cabecera"><h1>Listas</h1>
+      <button class="boton" onclick="nuevaLista()">Nueva lista</button></div>
+    <div class="tarjeta" style="padding:6px 14px">
+      <div class="lista-tabla" id="lista-listas"><div class="vacio">Cargando…</div></div>
+    </div>`;
+  try{
+    const {data, error} = await sb.from('listas').select('id,nombre,descripcion,lista_contactos(count)').order('creado_en');
+    if(error) throw error;
+    $('#lista-listas').innerHTML = !data.length
+      ? `<div class="vacio"><h3>Sin listas todavía</h3>Las listas son grupos fijos: prensa, empleados, clientes del bono regalo… Los segmentos dinámicos llegarán en la fase de automatizaciones.</div>`
+      : data.map(l=>`
+        <div class="fila" style="cursor:default">
+          <div class="quien"><b>${esc(l.nombre)}</b><span>${esc(l.descripcion||'')}</span></div>
+          <span class="chip">${fmt(l.lista_contactos?.[0]?.count||0)} contactos</span>
+        </div>`).join('');
+  }catch(e){ fallo(e,'No pude cargar listas'); }
+}
+function nuevaLista(){
+  pintarFicha(`
+    <header><h2>Nueva lista</h2><button class="boton secundario" onclick="cerrarFicha()">Cerrar</button></header>
+    <div class="cuerpo"><div class="form-modal">
+      <div class="campo"><label>Nombre</label><input id="l-nombre" placeholder="Prensa, VIPs, bono regalo…"></div>
+      <div class="campo"><label>Descripción</label><input id="l-desc"></div>
+      <button class="boton" onclick="crearLista()">Crear lista</button>
+    </div></div>`);
+}
+async function crearLista(){
+  const nombre = $('#l-nombre').value.trim();
+  if(!nombre){ toast('Ponle nombre a la lista'); return; }
+  try{
+    const {error} = await sb.from('listas').insert({nombre, descripcion: $('#l-desc').value.trim()||null});
+    if(error) throw error;
+    toast('Lista creada'); cerrarFicha(); vistaListas();
+  }catch(e){ fallo(e,'No pude crear la lista'); }
+}
+
+/* =================== FLUJOS Y CANALES =================== */
+function vistaFlujos(){
+  $('#contenido').innerHTML = `
+    <div class="cabecera"><h1>Flujos</h1></div>
+    <div class="tarjeta"><div class="vacio">
+      <h3>Automatizaciones — fase 1D</h3>
+      Bienvenida al suscribirse, felicitación de cumpleaños, recuperación de quien no vuelve…
+      Las tablas ya existen (flujos, pasos y ejecuciones, con canal por paso); el motor que las mueve llega tras conectar el primer canal.
+    </div></div>`;
+}
+function vistaCanales(){
+  $('#contenido').innerHTML = `
+    <div class="cabecera"><h1>Canales</h1></div>
+    <div class="canal-tarjetas">
+      ${CANALES.map(k=>{
+        const info = estadoCanales[k.id]||{}; const conectado = info.estado==='conectado';
+        return `<div class="tarjeta">
+          <h3><span class="punto ${info.estado||'sin_conectar'}"></span>${k.nombre}</h3>
+          <p class="mini" style="margin:8px 0 12px">${k.detalle}</p>
+          <p class="mini"><b>Estado:</b> ${conectado?'conectado':'sin conectar'}<br>
+          <b>Proveedor:</b> ${info.proveedor ? esc(info.proveedor) : 'por decidir'}</p>
+          <button class="boton secundario" disabled title="La conexión se hace desde el servidor, con las claves en secreto">
+            ${conectado?'Conectado':'Conectar (próxima fase)'}</button>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="mini" style="margin-top:14px">Las claves de cada proveedor viven en el servidor (secrets de Supabase), nunca en esta pantalla ni en la base de datos. Email será el primero, con Resend; SMS y WhatsApp, cuando elijamos proveedor.</p>`;
+}
+
+/* =================== ARRANQUE =================== */
+arrancar();
+</script>
+</body>
+</html>
