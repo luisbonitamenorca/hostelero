@@ -1,0 +1,64 @@
+/* App del empleado (Bonita Equipo). Portada de docs/legado/planifica-empleado.html, scoped .emp */
+.emp{
+  --fondo:#FAFAF7; --tinta:#1C2B33; --tinta-suave:#5A6B73;
+  --mar:#0E7C86; --mar-oscuro:#0A5C64; --arena:#E9E4D8; --linea:#DDD6C7;
+  --ok:#2F855A; --ok-f:#E8F3EC; --error:#B03A2E; --error-f:#F9ECEA;
+  --pausa-f:#EFF1F0; --aviso:#B7791F; --aviso-f:#FBF3E0; --correccion-f:#F1EDF7; --correccion:#7A5CA8;
+  background:var(--fondo); color:var(--tinta); font-family:system-ui,-apple-system,sans-serif; font-size:15px;
+  min-height:100vh; padding-bottom:calc(70px + env(safe-area-inset-bottom));
+}
+.emp *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.emp label{display:block;font-weight:600;font-size:12px;margin:12px 0 5px}
+.emp input,.emp select,.emp textarea{width:100%;padding:12px;border:1px solid var(--linea);border-radius:10px;font:inherit;background:#fff;font-size:16px;color:var(--tinta)}
+.emp input:focus,.emp select:focus{outline:2px solid var(--mar);outline-offset:1px}
+.emp .btn{cursor:pointer;border:none;border-radius:10px;padding:13px 16px;font-weight:600;font-size:15px;font-family:inherit}
+.emp .btn-primario{background:var(--mar);color:#fff;width:100%;margin-top:18px}
+.emp .btn-primario:active{background:var(--mar-oscuro)}
+.emp header.cab{background:var(--mar);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px}
+.emp header.cab .brand{font-size:17px;font-weight:700}
+.emp header.cab .quien{font-size:12.5px;opacity:.85;margin-left:auto;text-align:right}
+.emp main{padding:16px;max-width:520px;margin:0 auto}
+.emp .tarjeta{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.emp .dia-cab{font-weight:600;font-size:13px;color:var(--tinta-suave);text-transform:capitalize;margin:14px 4px 6px}
+.emp .dia-cab.hoy{color:var(--mar)}
+.emp .turno-linea{display:flex;align-items:center;gap:12px}
+.emp .turno-hora{font-weight:700;font-size:17px}
+.emp .turno-det{color:var(--tinta-suave);font-size:13px}
+.emp .libre{color:var(--tinta-suave);font-size:13.5px;padding:6px 4px}
+.emp .badge{font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px}
+.emp .badge.aus{background:var(--pausa-f);color:var(--tinta-suave)}
+.emp .vacio{text-align:center;padding:34px 16px;color:var(--tinta-suave)}
+.emp .fichar-caja{text-align:center;padding:8px 0}
+.emp .reloj{font-size:46px;font-weight:600;letter-spacing:1px}
+.emp .fecha-hoy{color:var(--tinta-suave);margin-bottom:14px;text-transform:capitalize}
+.emp .estado-actual{margin:8px 0 16px;font-size:14px}
+.emp .estado-actual b{color:var(--mar)}
+.emp .botones-fichar{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+.emp .botones-fichar button{border:none;border-radius:14px;padding:20px 8px;font-size:16px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit}
+.emp .b-entrada{background:var(--ok)} .emp .b-salida{background:var(--error)}
+.emp .b-pausa{background:var(--arena);color:var(--tinta)!important;font-size:14px!important}
+.emp .geo-nota{font-size:12px;color:var(--tinta-suave);margin-top:12px}
+.emp .chipf{border-radius:6px;padding:2px 8px;font-size:11.5px;border:1.2px solid var(--linea);display:inline-block;margin:2px;background:#fff}
+.emp .chipf.entrada{background:var(--ok-f);border-color:var(--ok)}
+.emp .chipf.salida{background:var(--error-f);border-color:var(--error)}
+.emp .chipf.pausa_inicio,.emp .chipf.pausa_fin{background:var(--pausa-f)}
+.emp .chipf.correccion{background:var(--correccion-f);border-color:var(--correccion)}
+.emp .aus-linea{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--fondo)}
+.emp .aus-linea:last-child{border-bottom:none}
+.emp .aus-tipo{font-weight:600;text-transform:capitalize}
+.emp .aus-fechas{font-size:12.5px;color:var(--tinta-suave)}
+.emp .estado{font-size:11px;font-weight:700;border-radius:20px;padding:3px 10px}
+.emp .estado.solicitada{background:var(--aviso-f);color:var(--aviso)}
+.emp .estado.aprobada{background:var(--ok-f);color:var(--ok)}
+.emp .estado.rechazada{background:var(--error-f);color:var(--error)}
+.emp .fila-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.emp .total-mes{font-size:34px;font-weight:700;color:var(--mar);text-align:center}
+.emp .total-sub{text-align:center;color:var(--tinta-suave);font-size:13px;margin-bottom:12px}
+.emp .dia-h{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--fondo);flex-wrap:wrap}
+.emp .dia-h .f{font-weight:600;font-size:13px;min-width:92px;text-transform:capitalize}
+.emp .dia-h .h{color:var(--mar);font-weight:600;min-width:52px}
+.emp .tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--linea);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:30}
+.emp .tabbar button{flex:1;background:none;border:none;padding:10px 4px 8px;cursor:pointer;color:var(--tinta-suave);font-size:11px;font-weight:600;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+.emp .tabbar button.activo{color:var(--mar)}
+.emp .tabbar .ico{font-size:20px;line-height:1}
+.emp .toast{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:60;pointer-events:none;max-width:90vw;text-align:center}

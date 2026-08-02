@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { exigirPerfil, ACCESO_POR_ROL } from "@/lib/supabase/server";
 import { cerrarSesion } from "./acciones";
 
@@ -12,6 +13,9 @@ const ROLES: Record<string, string> = {
 
 export default async function Portada() {
   const { supabase, perfil, cuenta } = await exigirPerfil();
+
+  // Los empleados tienen su propia app; la lanzadera de módulos es para gestión.
+  if (perfil.rol === "empleado") redirect("/empleado");
 
   if (cuenta.estado === "suspendida" || cuenta.estado === "baja") {
     return (
