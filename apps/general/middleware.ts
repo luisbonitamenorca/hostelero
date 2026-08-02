@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   // Rutas públicas (fronts de reserva y baja de comunicaciones): sin guard de login.
   const ruta = request.nextUrl.pathname;
-  if (ruta.startsWith("/reservar") || ruta.startsWith("/baja") || ruta.startsWith("/api/publico")) {
+  if (ruta.startsWith("/reservar") || ruta.startsWith("/baja") || ruta.startsWith("/kiosco") || ruta.startsWith("/api/publico") || ruta.startsWith("/api/rrhh/fichar")) {
     return NextResponse.next({ request });
   }
 
