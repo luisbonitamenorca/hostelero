@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserva de visitas · Binifadet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --green:#1f4a35;        /* verde botella: botones, día seleccionado */
+    --green-2:#2c5e46;
+    --sage:#b9ccb2;         /* días con disponibilidad */
+    --sage-bg:#e4ece0;      /* fondo filas de sesión */
+    --sage-line:#cdddc6;
+    --today:#eef07a;        /* hoy */
+    --ink:#2b2a26;
+    --muted:#8a857b;
+    --line:#e8e4da;
+    --bg:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Jost",system-ui,sans-serif;font-weight:300;font-size:16px;line-height:1.5}
+  h1,h2,h3,.serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;letter-spacing:.01em}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 64px}
+
+  /* idioma */
+  .langbar{display:flex;justify-content:flex-end;gap:4px;margin-bottom:8px}
+  .langbar button{background:none;border:none;font-family:"Jost";font-size:13px;letter-spacing:.08em;color:var(--muted);padding:6px 10px;cursor:pointer;text-transform:uppercase}
+  .langbar button.on{color:var(--green);font-weight:500;border-bottom:1.5px solid var(--green)}
+
+  .intro{text-align:center;margin-bottom:26px}
+  .intro h1{font-size:38px;color:var(--green);margin:0 0 6px}
+  .intro p{color:var(--muted);margin:0;font-size:15px;letter-spacing:.02em}
+
+  /* calendario */
+  .cal{max-width:430px;margin:0 auto;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .cal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
+  .cal-h .title{font-family:"Cormorant Garamond",serif;font-size:24px;text-transform:capitalize}
+  .cal-h button{background:none;border:none;font-size:22px;color:var(--ink);cursor:pointer;padding:0 8px;line-height:1}
+  .cal-h button:disabled{color:var(--line);cursor:default}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal-grid .dow{text-align:center;font-size:11px;letter-spacing:.06em;color:var(--ink);padding:8px 0 10px;text-transform:uppercase;text-decoration:underline;text-underline-offset:3px}
+  .cal-grid .cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:300;border-top:1px solid #f1eee7;cursor:default;user-select:none}
+  .cal-grid .cell.out{color:#cfcabf;background:#fafaf7}
+  .cal-grid .cell.past{color:#cfcabf}
+  .cal-grid .cell.avail{background:var(--sage);cursor:pointer}
+  .cal-grid .cell.avail:hover{background:#a9c0a1}
+  .cal-grid .cell.today{background:var(--today)}
+  .cal-grid .cell.sel{background:var(--green);color:#fff}
+
+  /* sesiones */
+  .results-label{text-align:center;color:var(--muted);margin:24px 0 16px;font-size:15px}
+  .session{display:flex;align-items:center;gap:16px;background:var(--sage-bg);border:1px solid var(--sage-line);border-radius:6px;padding:16px 18px;margin-bottom:12px;flex-wrap:wrap}
+  .session .hora{font-family:"Cormorant Garamond",serif;font-size:22px;color:var(--green);min-width:56px}
+  .session .info{flex:1;min-width:160px}
+  .session .info .nm{font-size:17px;font-weight:400}
+  .session .info .meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .session .precio{font-family:"Cormorant Garamond",serif;font-size:20px;white-space:nowrap}
+  .session.full{opacity:.55}
+  .stepper{display:flex;align-items:center;border:1px solid var(--green);border-radius:4px;overflow:hidden}
+  .stepper button{background:#fff;border:none;width:32px;height:34px;font-size:18px;color:var(--green);cursor:pointer}
+  .stepper button:disabled{color:var(--line);cursor:default}
+  .stepper span{min-width:34px;text-align:center;font-size:15px}
+  .buy{background:var(--green);color:#fff;border:none;border-radius:4px;padding:10px 22px;font-family:"Jost";font-size:13px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+  .buy:hover{background:var(--green-2)}
+  .buy:disabled{background:#b6b6ad;cursor:default}
+  .noses{text-align:center;color:var(--muted);padding:30px;font-style:italic}
+
+  /* modal reserva */
+  .overlay{position:fixed;inset:0;background:rgba(31,42,30,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .sheet{background:#fff;border-radius:8px;width:100%;max-width:460px;max-height:92vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+  .sheet .sh{padding:22px 26px 0}
+  .sheet .sh h2{font-size:28px;color:var(--green);margin:0}
+  .sheet .resumen{background:var(--sage-bg);border-radius:6px;padding:14px 16px;margin:16px 26px;font-size:14px}
+  .sheet .resumen .r{display:flex;justify-content:space-between;margin:3px 0}
+  .sheet .resumen .total{border-top:1px solid var(--sage-line);margin-top:8px;padding-top:8px;font-family:"Cormorant Garamond",serif;font-size:20px}
+  .sheet .body{padding:0 26px}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .fld input,.fld select{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:5px;font-family:"Jost";font-size:15px;color:var(--ink)}
+  .fld input:focus,.fld select:focus{outline:none;border-color:var(--green)}
+  .sheet .ft{padding:18px 26px 26px;display:flex;gap:10px;justify-content:flex-end}
+  .btn-ghost{background:none;border:none;color:var(--muted);cursor:pointer;font-family:"Jost";font-size:14px;padding:10px}
+  .err{color:#b3261e;font-size:13px;margin:0 26px 10px}
+
+  /* confirmación */
+  .ok-wrap{text-align:center;padding:30px 26px 36px}
+  .ok-wrap .check{width:54px;height:54px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px}
+  .ok-wrap h2{font-size:30px;color:var(--green);margin:0 0 8px}
+  .ok-wrap p{color:var(--muted);margin:4px 0}
+  .ok-wrap .cod{font-family:"Cormorant Garamond",serif;font-size:24px;color:var(--ink);letter-spacing:.05em;margin:14px 0}
+
+  .spinner{width:22px;height:22px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading{text-align:center;padding:40px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="langbar" id="langbar"></div>
+  <div class="intro">
+    <h1 id="i_title">Reserva tu visita</h1>
+    <p id="i_sub">Elige el día y descubre las experiencias disponibles</p>
+  </div>
+  <div id="calBox" class="cal"><div class="loading"><span class="spinner"></span></div></div>
+  <div id="resLabel" class="results-label" style="display:none"></div>
+  <div id="sessions"></div>
+</div>
+<div id="modalRoot"></div>
+
+<script>
+/* ===== CONFIG (proyecto binifadet-visitas) ===== */
+const SUPABASE_URL  = "https://faocwphdaughhziserqb.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhb2N3cGhkYXVnaGh6aXNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NTY5MjEsImV4cCI6MjA5NjQzMjkyMX0.n7oc96uH1hxiXCqDuoP0CDFmF2qlFHjJJ043geaZLSE";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+/* ===== i18n ===== */
+const LANGS=['es','en','fr'];
+const LOCALE={es:'es-ES',en:'en-GB',fr:'fr-FR'};
+const DOW={ // lunes primero
+  es:['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
+  en:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+  fr:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
+};
+const T={
+  es:{title:'Reserva tu visita',sub:'Elige el día y descubre las experiencias disponibles',results:d=>'Experiencias para el '+d,none:'No hay visitas disponibles este día.',left:n=>'Quedan '+n+(n===1?' plaza':' plazas'),full:'Completo',buy:'Reservar',book:'Completa tu reserva',name:'Nombre y apellidos',email:'Email',phone:'Teléfono (opcional)',country:'País',people:'Personas',total:'Total',cancel:'Cancelar',confirm:'Confirmar reserva',okT:'¡Reserva recibida!',okP1:'Hemos guardado tu plaza.',okP2:'Recibirás la confirmación por email.',code:'Código',close:'Cerrar',sending:'Enviando…',reqName:'Indica tu nombre',reqEmail:'Indica un email válido'},
+  en:{title:'Book your visit',sub:'Choose a day and discover the available experiences',results:d=>'Experiences for '+d,none:'No visits available on this day.',left:n=>n+(n===1?' spot left':' spots left'),full:'Sold out',buy:'Book',book:'Complete your booking',name:'Full name',email:'Email',phone:'Phone (optional)',country:'Country',people:'People',total:'Total',cancel:'Cancel',confirm:'Confirm booking',okT:'Booking received!',okP1:'Your spot is saved.',okP2:'You will receive confirmation by email.',code:'Code',close:'Close',sending:'Sending…',reqName:'Enter your name',reqEmail:'Enter a valid email'},
+  fr:{title:'Réservez votre visite',sub:'Choisissez un jour et découvrez les expériences disponibles',results:d=>'Expériences pour le '+d,none:'Aucune visite disponible ce jour.',left:n=>n+(n===1?' place restante':' places restantes'),full:'Complet',buy:'Réserver',book:'Finalisez votre réservation',name:'Nom et prénom',email:'Email',phone:'Téléphone (optionnel)',country:'Pays',people:'Personnes',total:'Total',cancel:'Annuler',confirm:'Confirmer',okT:'Réservation reçue !',okP1:'Votre place est réservée.',okP2:'Vous recevrez la confirmation par email.',code:'Code',close:'Fermer',sending:'Envoi…',reqName:'Indiquez votre nom',reqEmail:'Indiquez un email valide'}
+};
+function nombre(prod){return prod?.['nombre_'+LANG]||prod?.nombre_es||'';}
+
+/* ===== estado ===== */
+const params=new URLSearchParams(location.search);
+let LANG=LANGS.includes(params.get('lang'))?params.get('lang'):'es';
+const today=new Date(); today.setHours(0,0,0,0);
+let view=new Date(today.getFullYear(),today.getMonth(),1);
+let selected=null;
+let sesByDay={};   // 'YYYY-MM-DD' -> [sesiones con free]
+let availDays={};  // 'YYYY-MM-DD' -> true
+
+const $=s=>document.querySelector(s);
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const euro=n=>(Number(n)||0).toLocaleString(LOCALE[LANG],{style:'currency',currency:'EUR'});
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ===== idioma ===== */
+function renderLangbar(){
+  $('#langbar').innerHTML=LANGS.map(l=>`<button class="${l===LANG?'on':''}" onclick="setLang('${l}')">${l}</button>`).join('');
+  $('#i_title').textContent=T[LANG].title;
+  $('#i_sub').textContent=T[LANG].sub;
+}
+function setLang(l){LANG=l;renderLangbar();renderCal();if(selected)renderSessions();}
+
+/* ===== carga del mes ===== */
+async function loadMonth(){
+  $('#calBox').innerHTML='<div class="loading"><span class="spinner"></span></div>';
+  const first=iso(new Date(view.getFullYear(),view.getMonth(),1));
+  const last=iso(new Date(view.getFullYear(),view.getMonth()+1,0));
+  const {data:ses,error}=await sb.from('sesiones')
+    .select('id,fecha,hora_inicio,aforo,estado,productos(nombre_es,nombre_en,nombre_fr,precio,idioma,duracion_min)')
+    .eq('estado','activa').gte('fecha',first).lte('fecha',last).order('hora_inicio');
+  sesByDay={};availDays={};
+  if(error){$('#calBox').innerHTML=`<div class="loading">${esc(error.message)}</div>`;return;}
+  const ids=(ses||[]).map(s=>s.id);
+  let occ={};
+  if(ids.length){
+    const {data:rs}=await sb.from('reservas').select('sesion_id,num_personas,estado').in('sesion_id',ids);
+    (rs||[]).forEach(r=>{if(['pendiente_pago','pagada'].includes(r.estado))occ[r.sesion_id]=(occ[r.sesion_id]||0)+r.num_personas;});
+  }
+  const todayI=iso(today);
+  (ses||[]).forEach(s=>{
+    const free=s.aforo-(occ[s.id]||0);
+    (sesByDay[s.fecha]=sesByDay[s.fecha]||[]).push({...s,free});
+    if(free>0 && s.fecha>=todayI)availDays[s.fecha]=true;
+  });
+  renderCal();
+}
+
+/* ===== calendario ===== */
+function renderCal(){
+  const y=view.getFullYear(),m=view.getMonth();
+  const monthName=new Intl.DateTimeFormat(LOCALE[LANG],{month:'long',year:'numeric'}).format(view);
+  const firstDow=(new Date(y,m,1).getDay()+6)%7; // lunes=0
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const prevDays=new Date(y,m,0).getDate();
+  const todayI=iso(today);
+  const canPrev=!(y===today.getFullYear()&&m===today.getMonth());
+  let cells='';
+  // dow headers
+  cells+=DOW[LANG].map(d=>`<div class="dow">${d}</div>`).join('');
+  // 42 celdas
+  for(let i=0;i<42;i++){
+    const dayNum=i-firstDow+1;
+    if(dayNum<1){ // mes anterior
+      cells+=`<div class="cell out">${prevDays+dayNum}</div>`;
+    }else if(dayNum>daysInMonth){ // mes siguiente
+      cells+=`<div class="cell out">${dayNum-daysInMonth}</div>`;
+    }else{
+      const dstr=`${y}-${String(m+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      const isToday=dstr===todayI, isPast=dstr<todayI, isAvail=availDays[dstr], isSel=dstr===selected;
+      let cls='cell';
+      if(isSel)cls+=' sel';
+      else if(isAvail)cls+=' avail';
+      if(isToday&&!isSel)cls+=' today';
+      if(isPast&&!isAvail)cls+=' past';
+      const click=(isAvail&&!isSel)?`onclick="selectDay('${dstr}')"`:'';
+      cells+=`<div class="${cls}" ${click}>${dayNum}</div>`;
+    }
+    if(i>=34 && (i-firstDow+1)>daysInMonth && (i%7)===6) break; // corta filas vacías al final
+  }
+  $('#calBox').innerHTML=`
+    <div class="cal-h">
+      <button ${canPrev?'':'disabled'} onclick="nav(-1)">‹</button>
+      <span class="title">${monthName}</span>
+      <button onclick="nav(1)">›</button>
+    </div>
+    <div class="cal-grid">${cells}</div>`;
+}
+function nav(d){view=new Date(view.getFullYear(),view.getMonth()+d,1);selected=null;$('#resLabel').style.display='none';$('#sessions').innerHTML='';loadMonth();}
+
+/* ===== sesiones del día ===== */
+function selectDay(dstr){selected=dstr;renderCal();renderSessions();$('#sessions').scrollIntoView({behavior:'smooth',block:'nearest'});}
+function renderSessions(){
+  const lbl=$('#resLabel');
+  const dlong=new Intl.DateTimeFormat(LOCALE[LANG],{weekday:'long',day:'numeric',month:'long'}).format(new Date(selected+'T00:00:00'));
+  lbl.style.display='block';lbl.textContent=T[LANG].results(dlong);
+  const list=(sesByDay[selected]||[]).slice().sort((a,b)=>a.hora_inicio.localeCompare(b.hora_inicio));
+  const cont=$('#sessions');
+  if(!list.length){cont.innerHTML=`<div class="noses">${T[LANG].none}</div>`;return;}
+  cont.innerHTML=list.map(s=>{
+    const full=s.free<=0;
+    const maxQ=Math.min(s.free,20);
+    return `<div class="session ${full?'full':''}" data-id="${s.id}">
+      <div class="hora">${s.hora_inicio.slice(0,5)}</div>
+      <div class="info"><div class="nm">${esc(nombre(s.productos))}</div>
+        <div class="meta">${s.productos?.duracion_min?s.productos.duracion_min+' min · ':''}${full?T[LANG].full:T[LANG].left(s.free)}</div></div>
+      <div class="precio">${euro(s.productos?.precio)}</div>
+      ${full?'':`<div class="stepper">
+        <button onclick="step('${s.id}',-1,${maxQ})">−</button><span id="q_${s.id}">1</span><button onclick="step('${s.id}',1,${maxQ})">+</button>
+      </div>
+      <button class="buy" onclick='openReserva(${JSON.stringify(s).replace(/'/g,"&#39;")})'>${T[LANG].buy}</button>`}
+    </div>`;
+  }).join('');
+}
+function step(id,d,max){const el=$('#q_'+id);let n=parseInt(el.textContent)+d;if(n<1)n=1;if(n>max)n=max;el.textContent=n;}
+
+/* ===== reserva ===== */
+function openReserva(s){
+  const qty=parseInt($('#q_'+s.id)?.textContent||'1');
+  const precio=s.productos?.precio||0;
+  const dlong=new Intl.DateTimeFormat(LOCALE[LANG],{weekday:'long',day:'numeric',month:'long'}).format(new Date(s.fecha+'T00:00:00'));
+  window._rsv={sesion_id:s.id,precio,nombreExp:nombre(s.productos)};
+  drawSheet(`
+    <div class="sh"><h2>${T[LANG].book}</h2></div>
+    <div class="resumen">
+      <div class="r"><span>${esc(nombre(s.productos))}</span><span>${s.hora_inicio.slice(0,5)}</span></div>
+      <div class="r"><span style="text-transform:capitalize">${dlong}</span><span></span></div>
+      <div class="r"><span>${qty} × ${euro(precio)}</span><span></span></div>
+      <div class="r total"><span>${T[LANG].total}</span><span id="rs_total">${euro(qty*precio)}</span></div>
+    </div>
+    <div class="body">
+      <div class="fld"><label>${T[LANG].people}</label>
+        <div class="stepper" style="width:fit-content"><button onclick="rsStep(-1,${Math.min(s.free,20)})">−</button><span id="rs_q">${qty}</span><button onclick="rsStep(1,${Math.min(s.free,20)})">+</button></div></div>
+      <div class="fld"><label>${T[LANG].name}</label><input id="rs_nombre"></div>
+      <div class="fld"><label>${T[LANG].email}</label><input id="rs_email" type="email"></div>
+      <div class="fld"><label>${T[LANG].phone}</label><input id="rs_tel"></div>
+      <div class="fld"><label>${T[LANG].country}</label><input id="rs_pais"></div>
+    </div>
+    <div class="err" id="rs_err" style="display:none"></div>
+    <div class="ft"><button class="btn-ghost" onclick="closeSheet()">${T[LANG].cancel}</button>
+      <button class="buy" id="rs_btn" onclick="submitReserva()">${T[LANG].confirm}</button></div>`);
+}
+function rsStep(d,max){const el=$('#rs_q');let n=parseInt(el.textContent)+d;if(n<1)n=1;if(n>max)n=max;el.textContent=n;$('#rs_total').textContent=euro(n*window._rsv.precio);}
+async function submitReserva(){
+  const nombreC=$('#rs_nombre').value.trim(), email=$('#rs_email').value.trim();
+  const err=$('#rs_err');
+  if(!nombreC){err.style.display='block';err.textContent=T[LANG].reqName;return;}
+  if(!email||!/.+@.+\..+/.test(email)){err.style.display='block';err.textContent=T[LANG].reqEmail;return;}
+  err.style.display='none';
+  const qty=parseInt($('#rs_q').textContent);
+  const btn=$('#rs_btn');btn.disabled=true;btn.textContent=T[LANG].sending;
+  const {data,error}=await sb.rpc('crear_reserva',{
+    p_sesion_id:window._rsv.sesion_id,
+    p_cliente_nombre:nombreC,
+    p_cliente_email:email,
+    p_cliente_telefono:$('#rs_tel').value.trim()||null,
+    p_cliente_pais:$('#rs_pais').value.trim()||null,
+    p_idioma_preferido:LANG,
+    p_num_personas:qty,
+    p_importe_total:qty*window._rsv.precio,
+    p_metodo_pago:'stripe'   /* AQUÍ irá el cobro con Stripe; de momento queda 'pendiente_pago' */
+  });
+  if(error){btn.disabled=false;btn.textContent=T[LANG].confirm;err.style.display='block';err.textContent=error.message;return;}
+  const r=Array.isArray(data)?data[0]:data;
+  drawSheet(`<div class="ok-wrap">
+    <div class="check">✓</div>
+    <h2>${T[LANG].okT}</h2>
+    <p>${T[LANG].okP1}</p>
+    <div class="cod">${T[LANG].code}: ${esc(r?.codigo_reserva||'')}</div>
+    <p>${T[LANG].okP2}</p>
+    <div style="margin-top:18px"><button class="buy" onclick="closeSheet();loadMonth()">${T[LANG].close}</button></div>
+  </div>`);
+}
+
+function drawSheet(html){$('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()"><div class="sheet">${html}</div></div>`;}
+function closeSheet(){$('#modalRoot').innerHTML='';}
+
+/* ===== arranque ===== */
+renderLangbar();
+loadMonth();
+/* avisar al iframe padre de la altura (por si quiere autoajustar) */
+function postHeight(){try{parent.postMessage({binifadetHeight:document.body.scrollHeight},'*');}catch(e){}}
+new ResizeObserver(postHeight).observe(document.body);
+</script>
+</body>
+</html>
