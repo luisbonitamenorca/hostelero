@@ -1,0 +1,77 @@
+/* Front público de reservas de Visitas. Portado de docs/legado/visitas-front-index.html.
+   Acotado bajo .rsv para no interferir con el resto de la app general. */
+.rsv {
+  --green:#1f4a35; --green-2:#2c5e46; --sage:#b9ccb2; --sage-bg:#e4ece0;
+  --sage-line:#cdddc6; --today:#eef07a; --ink:#2b2a26; --muted:#8a857b;
+  --line:#e8e4da; --bg:#ffffff;
+  background:var(--bg); color:var(--ink);
+  font-family:"Jost",system-ui,sans-serif; font-weight:300; font-size:16px; line-height:1.5;
+  min-height:100vh;
+}
+.rsv *{box-sizing:border-box}
+.rsv .serif,.rsv h1,.rsv h2,.rsv h3{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:.01em}
+.rsv .wrap{max-width:760px;margin:0 auto;padding:28px 20px 64px}
+
+.rsv .langbar{display:flex;justify-content:flex-end;gap:4px;margin-bottom:8px}
+.rsv .langbar button{background:none;border:none;font-size:13px;letter-spacing:.08em;color:var(--muted);padding:6px 10px;cursor:pointer;text-transform:uppercase}
+.rsv .langbar button.on{color:var(--green);font-weight:500;border-bottom:1.5px solid var(--green)}
+
+.rsv .intro{text-align:center;margin-bottom:26px}
+.rsv .intro h1{font-size:38px;color:var(--green);margin:0 0 6px}
+.rsv .intro p{color:var(--muted);margin:0;font-size:15px;letter-spacing:.02em}
+
+.rsv .cal{max-width:430px;margin:0 auto;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.rsv .cal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
+.rsv .cal-h .title{font-family:Georgia,serif;font-size:24px;text-transform:capitalize}
+.rsv .cal-h button{background:none;border:none;font-size:22px;color:var(--ink);cursor:pointer;padding:0 8px;line-height:1}
+.rsv .cal-h button:disabled{color:var(--line);cursor:default}
+.rsv .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.rsv .cal-grid .dow{text-align:center;font-size:11px;letter-spacing:.06em;color:var(--ink);padding:8px 0 10px;text-transform:uppercase;text-decoration:underline;text-underline-offset:3px}
+.rsv .cal-grid .cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:300;border-top:1px solid #f1eee7;cursor:default;user-select:none}
+.rsv .cal-grid .cell.out{color:#cfcabf;background:#fafaf7}
+.rsv .cal-grid .cell.past{color:#cfcabf}
+.rsv .cal-grid .cell.avail{background:var(--sage);cursor:pointer}
+.rsv .cal-grid .cell.avail:hover{background:#a9c0a1}
+.rsv .cal-grid .cell.today{background:var(--today)}
+.rsv .cal-grid .cell.sel{background:var(--green);color:#fff}
+
+.rsv .results-label{text-align:center;color:var(--muted);margin:24px 0 16px;font-size:15px}
+.rsv .session{display:flex;align-items:center;gap:16px;background:var(--sage-bg);border:1px solid var(--sage-line);border-radius:6px;padding:16px 18px;margin-bottom:12px;flex-wrap:wrap}
+.rsv .session .hora{font-family:Georgia,serif;font-size:22px;color:var(--green);min-width:56px}
+.rsv .session .info{flex:1;min-width:160px}
+.rsv .session .info .nm{font-size:17px;font-weight:400}
+.rsv .session .info .meta{font-size:13px;color:var(--muted);margin-top:2px}
+.rsv .session .precio{font-family:Georgia,serif;font-size:20px;white-space:nowrap}
+.rsv .stepper{display:flex;align-items:center;border:1px solid var(--green);border-radius:4px;overflow:hidden}
+.rsv .stepper button{background:#fff;border:none;width:32px;height:34px;font-size:18px;color:var(--green);cursor:pointer}
+.rsv .stepper button:disabled{color:var(--line);cursor:default}
+.rsv .stepper span{min-width:34px;text-align:center;font-size:15px}
+.rsv .buy{background:var(--green);color:#fff;border:none;border-radius:4px;padding:10px 22px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;font-family:inherit}
+.rsv .buy:hover{background:var(--green-2)}
+.rsv .buy:disabled{background:#b6b6ad;cursor:default}
+.rsv .noses{text-align:center;color:var(--muted);padding:30px;font-style:italic}
+
+.rsv-overlay{position:fixed;inset:0;background:rgba(31,42,30,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+.rsv-overlay .sheet{background:#fff;border-radius:8px;width:100%;max-width:460px;max-height:92vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.25);color:var(--ink);font-family:"Jost",system-ui,sans-serif}
+.rsv-overlay .sh{padding:22px 26px 0}
+.rsv-overlay .sh h2{font-size:28px;color:var(--green);margin:0}
+.rsv-overlay .resumen{background:var(--sage-bg);border-radius:6px;padding:14px 16px;margin:16px 26px;font-size:14px}
+.rsv-overlay .resumen .r{display:flex;justify-content:space-between;margin:3px 0}
+.rsv-overlay .resumen .total{border-top:1px solid var(--sage-line);margin-top:8px;padding-top:8px;font-family:Georgia,serif;font-size:20px}
+.rsv-overlay .body{padding:0 26px}
+.rsv-overlay .fld{margin-bottom:14px}
+.rsv-overlay .fld label{display:block;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.rsv-overlay .fld input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:5px;font-family:inherit;font-size:15px;color:var(--ink)}
+.rsv-overlay .fld input:focus{outline:none;border-color:var(--green)}
+.rsv-overlay .ft{padding:18px 26px 26px;display:flex;gap:10px;justify-content:flex-end}
+.rsv-overlay .btn-ghost{background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;font-size:14px;padding:10px}
+.rsv-overlay .err{color:#b3261e;font-size:13px;margin:0 26px 10px}
+.rsv-overlay .ok-wrap{text-align:center;padding:30px 26px 36px}
+.rsv-overlay .ok-wrap .check{width:54px;height:54px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px}
+.rsv-overlay .ok-wrap h2{font-size:30px;color:var(--green);margin:0 0 8px}
+.rsv-overlay .ok-wrap p{color:var(--muted);margin:4px 0}
+.rsv-overlay .ok-wrap .cod{font-family:Georgia,serif;font-size:24px;color:var(--ink);letter-spacing:.05em;margin:14px 0}
+
+.rsv .spinner{width:22px;height:22px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:rsv-spin .7s linear infinite;display:inline-block}
+@keyframes rsv-spin{to{transform:rotate(360deg)}}
+.rsv .loading{text-align:center;padding:40px;color:var(--muted)}
