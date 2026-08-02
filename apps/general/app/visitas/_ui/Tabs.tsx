@@ -9,6 +9,7 @@ const TABS = [
   { href: "/visitas/calendario", label: "Calendario" },
   { href: "/visitas/reservas", label: "Reservas" },
   { href: "/visitas/bonos", label: "Bonos" },
+  { href: "/visitas/front", label: "Front" },
 ];
 
 export default function Tabs() {

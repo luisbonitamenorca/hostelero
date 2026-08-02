@@ -27,7 +27,7 @@ import {
   type Turno,
 } from "./tipos";
 
-type Tab = "sala" | "espera" | "clientes" | "datos" | "ajustes";
+type Tab = "sala" | "espera" | "clientes" | "datos" | "front" | "ajustes";
 type Modal =
   | { tipo: "reserva"; reserva: Reserva | null; prellenar?: { cliente?: Cliente | null; pax?: number; notaInterna?: string } }
   | { tipo: "mesaSheet"; mesaId: string }
@@ -204,9 +204,9 @@ export default function PanelReservas({ restaurantes }: { restaurantes: Restaura
 
       {/* pestañas */}
       <div className="tabsbar">
-        {(["sala", "espera", "clientes", "datos", "ajustes"] as Tab[]).map((t) => (
+        {(["sala", "espera", "clientes", "datos", "front", "ajustes"] as Tab[]).map((t) => (
           <button key={t} className={tab === t ? "activo" : ""} onClick={() => { setTab(t); setVistaMes(false); }}>
-            {{ sala: "Sala", espera: "Lista de espera", clientes: "Clientes", datos: "Datos", ajustes: "Ajustes" }[t]}
+            {{ sala: "Sala", espera: "Lista de espera", clientes: "Clientes", datos: "Datos", front: "Front", ajustes: "Ajustes" }[t]}
           </button>
         ))}
       </div>
@@ -358,6 +358,8 @@ export default function PanelReservas({ restaurantes }: { restaurantes: Restaura
           <TabClientes abrirCliente={(id) => setModal({ tipo: "cliente", clienteId: id })} />
         ) : tab === "datos" ? (
           <TabDatos rest={rest} />
+        ) : tab === "front" ? (
+          <TabFront />
         ) : (
           <TabAjustes
             rest={rest}
@@ -1885,5 +1887,24 @@ function ModalEmail({ emailId, cerrar }: { emailId: string; cerrar: () => void }
         </>
       )}
     </Marco>
+  );
+}
+
+/* ---- Front público embebido: reservar como un cliente ---- */
+function TabFront() {
+  return (
+    <>
+      <div className="stats" style={{ alignItems: "center" }}>
+        <span>La misma página que ve el cliente (/reservar-mesa). Lo que reserves aquí es real: gestiónalo después desde Sala.</span>
+        <a href="/reservar-mesa" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700 }}>Abrir en pestaña nueva ↗</a>
+      </div>
+      <div style={{ background: "#fff", border: "1px solid var(--borde)", borderRadius: 12, overflow: "hidden" }}>
+        <iframe
+          src="/reservar-mesa"
+          title="Front público de Reservas"
+          style={{ width: "100%", height: "calc(100vh - 250px)", minHeight: 600, border: 0, display: "block" }}
+        />
+      </div>
+    </>
   );
 }
