@@ -103,7 +103,7 @@ Porte del Edge Function (el código de referencia está en el §7): acciones `pi
 token de tablet + PIN, y `nuevo_pin` (con sesión de gestor o encargado del centro del empleado).
 
 - La pimienta del PIN pasa a variable de entorno `RRHH_PIN_PEPPER` en Vercel — **con el MISMO
-  valor que el legado** (`bonita-fichaje-2026-v1`): los `pin_hash` cargados en la T1 se calcularon
+  valor que el legado** (retirado de este documento — el repo es público; el valor vive en `.env.local` y en Vercel): los `pin_hash` cargados en la T1 se calcularon
   con ella; cambiarla invalidaría todos los PINs (rotarla = regenerar PINs, decisión aparte).
 - Validaciones idénticas al legado: token_hash del dispositivo, PIN sha256(pepper+pin), empleado
   sin fecha_baja, asignación vigente al centro de la tablet. Todo con service key de servidor.
