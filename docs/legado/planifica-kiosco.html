@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Fichaje · Bonita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fondo:#14232B; --panel:#1C2F39; --tinta:#F4F6F5; --tinta-suave:#8FA3AD;
+    --mar:#19A5B1; --arena:#2A404C;
+    --ok:#3BB273; --error:#D9584A; --aviso:#D9A24A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:var(--fondo);color:var(--tinta);font-family:'Inter',system-ui,sans-serif;
+       min-height:100vh;display:flex;align-items:center;justify-content:center;user-select:none}
+  h1,h2,button{font-family:'Archivo',sans-serif}
+
+  .kiosco{width:100%;max-width:440px;padding:24px;text-align:center}
+  .cabecera h1{font-size:20px;font-weight:700}
+  .cabecera h1 span{color:var(--mar)}
+  .cabecera .local{color:var(--tinta-suave);font-size:14px;margin-top:2px}
+  .reloj{font-family:'Archivo';font-size:44px;font-weight:600;margin:14px 0 4px;letter-spacing:1px}
+  .fecha{color:var(--tinta-suave);font-size:14px;margin-bottom:18px;text-transform:capitalize}
+
+  .puntos{display:flex;justify-content:center;gap:14px;margin:10px 0 20px;height:18px}
+  .punto{width:16px;height:16px;border-radius:50%;border:2px solid var(--tinta-suave)}
+  .punto.lleno{background:var(--mar);border-color:var(--mar)}
+
+  .teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  .teclado button{background:var(--panel);color:var(--tinta);border:1px solid var(--arena);
+    border-radius:14px;font-size:26px;font-weight:600;padding:18px 0;cursor:pointer}
+  .teclado button:active{background:var(--arena)}
+  .teclado .aux{font-size:15px;color:var(--tinta-suave)}
+
+  .acciones{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .acciones button{border:none;border-radius:14px;padding:20px 8px;font-size:17px;font-weight:600;
+    cursor:pointer;color:#fff;opacity:.35;pointer-events:none;transition:opacity .15s}
+  .acciones.activas button{opacity:1;pointer-events:auto}
+  .b-entrada{background:var(--ok)} .b-salida{background:var(--error)}
+  .b-pausa{background:var(--arena);color:var(--tinta)!important;font-size:15px!important}
+
+  .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    flex-direction:column;gap:10px;text-align:center;padding:30px;z-index:10}
+  .overlay.visible{display:flex}
+  .overlay .icono{font-size:70px}
+  .overlay h2{font-size:30px}
+  .overlay .detalle{font-size:18px;opacity:.9}
+  .overlay.ok{background:var(--ok);color:#fff}
+  .overlay.mal{background:var(--error);color:#fff}
+
+  /* Configuración */
+  .config{display:none;text-align:left}
+  .config.visible{display:block}
+  .config h2{font-size:18px;margin-bottom:6px}
+  .config p{color:var(--tinta-suave);font-size:13px;margin-bottom:16px}
+  .config input{width:100%;padding:14px;border-radius:10px;border:1px solid var(--arena);
+    background:var(--panel);color:var(--tinta);font:inherit;font-size:16px}
+  .config button{width:100%;margin-top:14px;background:var(--mar);color:#fff;border:none;
+    border-radius:10px;padding:14px;font-size:16px;font-weight:600;cursor:pointer}
+  .config .msg{margin-top:12px;font-size:13px;min-height:18px}
+  .oculto{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="kiosco">
+  <div id="pantalla-fichar">
+    <div class="cabecera" id="cabecera">
+      <h1>Fichaje <span>Bonita</span></h1>
+      <div class="local" id="nombre-local">—</div>
+    </div>
+    <div class="reloj" id="reloj">--:--</div>
+    <div class="fecha" id="fecha"></div>
+
+    <div class="puntos" id="puntos"></div>
+
+    <div class="teclado" id="teclado">
+      <button data-n="1">1</button><button data-n="2">2</button><button data-n="3">3</button>
+      <button data-n="4">4</button><button data-n="5">5</button><button data-n="6">6</button>
+      <button data-n="7">7</button><button data-n="8">8</button><button data-n="9">9</button>
+      <button class="aux" data-n="C">Borrar</button><button data-n="0">0</button><button class="aux" data-n="<">⌫</button>
+    </div>
+
+    <div class="acciones" id="acciones">
+      <button class="b-entrada" data-tipo="entrada">Entrada</button>
+      <button class="b-salida" data-tipo="salida">Salida</button>
+      <button class="b-pausa" data-tipo="pausa_inicio">Empiezo pausa</button>
+      <button class="b-pausa" data-tipo="pausa_fin">Vuelvo de pausa</button>
+    </div>
+  </div>
+
+  <div class="config" id="pantalla-config">
+    <h2>Configurar esta tablet</h2>
+    <p>Pega el código de esta tablet (te lo da administración). Solo hay que hacerlo una vez.</p>
+    <input id="input-token" placeholder="Código del dispositivo" autocomplete="off">
+    <button id="btn-guardar-token">Comprobar y guardar</button>
+    <div class="msg" id="config-msg"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="icono" id="ov-icono"></div>
+  <h2 id="ov-titulo"></h2>
+  <div class="detalle" id="ov-detalle"></div>
+</div>
+
+<script>
+const URL_FN = 'https://cwhmyarbjyvkfskxreeo.supabase.co/functions/v1/fichar';
+const NOMBRE_TIPO = { entrada:'Entrada', salida:'Salida', pausa_inicio:'Inicio de pausa', pausa_fin:'Vuelta de pausa' };
+const $ = id => document.getElementById(id);
+let pin = '', enviando = false;
+
+// ---------- Reloj ----------
+function tic(){
+  const ahora = new Date();
+  $('reloj').textContent = ahora.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  $('fecha').textContent = ahora.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+}
+tic(); setInterval(tic, 5000);
+
+// ---------- Configuración del dispositivo ----------
+function token(){ return localStorage.getItem('bonita_token_tablet') || ''; }
+function mostrarConfig(){ $('pantalla-fichar').classList.add('oculto'); $('pantalla-config').classList.add('visible'); }
+function mostrarFichar(){ $('pantalla-fichar').classList.remove('oculto'); $('pantalla-config').classList.remove('visible'); }
+
+async function comprobarToken(t){
+  const r = await fetch(URL_FN, { method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ token: t, accion:'ping' }) });
+  const d = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(d.error || 'Sin respuesta del servidor');
+  return d.local;
+}
+
+$('btn-guardar-token').addEventListener('click', async () => {
+  const t = $('input-token').value.trim();
+  if (!t){ $('config-msg').textContent = 'Pega el código antes de guardar.'; return; }
+  $('config-msg').textContent = 'Comprobando…';
+  try {
+    const local = await comprobarToken(t);
+    localStorage.setItem('bonita_token_tablet', t);
+    $('nombre-local').textContent = local;
+    $('config-msg').textContent = '';
+    mostrarFichar();
+  } catch (e){ $('config-msg').textContent = '✕ ' + e.message; }
+});
+
+// Cinco toques en la cabecera abren la configuración (para cambiar el código)
+let toques = 0, toquesTimer;
+$('cabecera').addEventListener('click', () => {
+  toques++; clearTimeout(toquesTimer);
+  toquesTimer = setTimeout(()=>toques=0, 1500);
+  if (toques >= 5){ toques = 0; $('input-token').value = token(); mostrarConfig(); }
+});
+
+// ---------- PIN ----------
+function pintarPuntos(){
+  $('puntos').innerHTML = [0,1,2,3].map(i=>`<div class="punto ${i<pin.length?'lleno':''}"></div>`).join('');
+  $('acciones').classList.toggle('activas', pin.length === 4);
+}
+pintarPuntos();
+
+$('teclado').addEventListener('click', e => {
+  const n = e.target.dataset?.n; if (!n) return;
+  if (n === 'C') pin = '';
+  else if (n === '<') pin = pin.slice(0,-1);
+  else if (pin.length < 4) pin += n;
+  pintarPuntos();
+});
+
+// ---------- Fichar ----------
+$('acciones').addEventListener('click', async e => {
+  const tipo = e.target.dataset?.tipo;
+  if (!tipo || pin.length !== 4 || enviando) return;
+  enviando = true;
+  try {
+    const r = await fetch(URL_FN, { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ token: token(), pin, tipo }) });
+    const d = await r.json().catch(()=>({}));
+    if (r.ok && d.ok){
+      let detalle = `${NOMBRE_TIPO[d.tipo]} · ${d.hora}`;
+      if (tipo==='entrada' && d.anterior?.tipo==='entrada') detalle += '\n(Ojo: tu último fichaje de hoy ya era una entrada)';
+      overlay('ok','✓', d.nombre, detalle);
+    } else {
+      overlay('mal','✕','No registrado', d.error || 'Sin conexión. Inténtalo otra vez.');
+    }
+  } catch {
+    overlay('mal','✕','Sin conexión','Avisa a tu encargado si sigue fallando.');
+  } finally {
+    pin = ''; pintarPuntos(); enviando = false;
+  }
+});
+
+let overlayTimer;
+function overlay(clase, icono, titulo, detalle){
+  $('ov-icono').textContent = icono;
+  $('ov-titulo').textContent = titulo;
+  $('ov-detalle').textContent = detalle;
+  const ov = $('overlay');
+  ov.className = 'overlay visible ' + clase;
+  clearTimeout(overlayTimer);
+  overlayTimer = setTimeout(()=>{ ov.className='overlay'; }, 2800);
+}
+
+// ---------- Arranque ----------
+(async () => {
+  if (!token()) { mostrarConfig(); return; }
+  try { $('nombre-local').textContent = await comprobarToken(token()); }
+  catch { $('nombre-local').textContent = 'Sin conexión'; }
+})();
+</script>
+</body>
+</html>

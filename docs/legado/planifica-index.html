@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planifica Bonita</title>
+<style>
+  :root{
+    /* Paleta unificada con Ratios */
+    --green:#1D9E75; --green-dark:#085041; --green-light:#E1F5EE;
+    --blue:#185FA5; --blue-light:#E6F1FB;
+    --purple:#534AB7; --purple-light:#EEEDFE;
+    --amber:#BA7517; --amber-light:#FAEEDA;
+    --red:#A32D2D; --red-light:#FCEBEB;
+    --coral:#993C1D; --coral-light:#FAECE7;
+    --border:0.5px solid #e0e0e0; --radius:8px; --radius-lg:10px; --shadow:0 1px 3px rgba(0,0,0,.06);
+    /* Alias hacia los nombres que ya usa la lógica de Planifica, remapeados a la paleta Ratios */
+    --fondo:#f8f8f6; --tinta:#1a1a1a; --tinta-suave:#888;
+    --mar:var(--green); --mar-oscuro:var(--green-dark); --arena:#f0efec; --linea:#e0e0e0;
+    --aviso:var(--amber); --aviso-fondo:var(--amber-light);
+    --publicado:var(--green); --publicado-fondo:var(--green-light);
+    --borrador-fondo:#FFFFFF; --ausencia-fondo:#f0efec; --error:var(--red);
+    --entrada:var(--green); --entrada-f:var(--green-light); --salida:var(--red); --salida-f:var(--red-light);
+    --pausa:#888; --pausa-f:#f0efec; --correccion:var(--purple); --correccion-f:var(--purple-light);
+    --ok:var(--green); --ok-f:var(--green-light); --mas:var(--red); --menos:var(--green);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--fondo);color:var(--tinta);font-family:system-ui,-apple-system,sans-serif;font-size:13px;min-height:100vh}
+  h1,h2,h3{font-weight:600}
+  label{display:block;font-weight:600;font-size:12px;margin:12px 0 5px}
+  input,select,textarea{padding:8px 11px;border:1px solid var(--linea);border-radius:var(--radius);font:inherit;background:#fff}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--green);outline-offset:1px}
+  .btn{cursor:pointer;border:none;border-radius:7px;padding:9px 15px;font-weight:500;font-size:13px;font-family:inherit}
+  .btn-primario{background:var(--green);color:#fff}
+  .btn-primario:hover{background:var(--green-dark)}
+  .btn-primario:disabled{background:var(--linea);color:var(--tinta-suave);cursor:default}
+  .btn-fantasma{background:#fff;border:1px solid var(--linea);color:var(--tinta)}
+  .error-msg{color:var(--red);margin-top:12px;font-size:13px}
+
+  /* ---------- Login ---------- */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-card{background:#fff;border:var(--border);border-radius:var(--radius-lg);padding:36px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+  .login-card .brand{font-size:19px;font-weight:600;margin-bottom:4px}
+  .login-card .brand span{color:var(--green)}
+  .login-card p{color:var(--tinta-suave);margin-bottom:24px;font-size:12px}
+  .login-card input{width:100%}
+  .login-card .btn-primario{width:100%;margin-top:20px}
+
+  /* ---------- Layout: sidebar + columna principal (patrón Ratios) ---------- */
+  #vista-app{display:flex;align-items:flex-start;min-height:100vh}
+  .side-nav{width:210px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#fdfdfc;border-right:var(--border);padding:18px 10px 18px 14px;display:flex;flex-direction:column}
+  .side-brand{padding:0 4px 14px;border-bottom:var(--border);margin-bottom:12px}
+  .side-brand .app-title{font-size:18px;font-weight:600}
+  .side-brand .app-title span{color:var(--green)}
+  .side-brand .app-sub{font-size:11px;color:var(--tinta-suave);margin-top:2px}
+  .tabs-nav{display:flex;flex-direction:column;gap:1px}
+  .tabs-nav button{padding:9px 11px;border:none;background:none;cursor:pointer;color:var(--tinta-suave);font-size:12.5px;text-align:left;width:100%;border-left:3px solid transparent;border-radius:0 6px 6px 0;font-family:inherit;font-weight:500}
+  .tabs-nav button:hover{background:rgba(29,158,117,.05)}
+  .tabs-nav button.activa{color:var(--green);border-left-color:var(--green);background:rgba(29,158,117,.09);font-weight:600}
+  .side-salir{margin-top:auto;padding-top:14px;border-top:var(--border)}
+  .side-salir button{width:100%;color:var(--tinta-suave);font-size:12px;background:none;border:none;text-align:left;cursor:pointer;padding:8px 11px;font-family:inherit}
+  .side-salir button:hover{color:var(--red)}
+
+  .main-col{flex:1;min-width:0;padding:0 20px 40px}
+  .main-inner{max-width:1280px;margin:0 auto}
+  /* Barra superior de controles de cada sección */
+  #barra-seccion{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px 0;border-bottom:var(--border);margin-bottom:16px;min-height:56px}
+  #barra-seccion:empty{display:none}
+
+  .seccion{display:none}
+  .seccion.activa{display:block}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;z-index:60;pointer-events:none}
+  .toast.visible{opacity:1}
+  .vacio{text-align:center;padding:40px;color:var(--tinta-suave)}
+
+  /* ========== PLANIFICACIÓN (cuadrante) ========== */
+  .sem-nav{display:flex;align-items:center;gap:6px}
+  .sem-nav button{background:#fff;border:1px solid var(--linea);border-radius:8px;width:34px;height:34px;font-size:16px;cursor:pointer}
+  .sem-nav .sem-label{font-weight:600;min-width:170px;text-align:center}
+  .chip-borradores{background:var(--aviso-fondo);color:var(--aviso);border-radius:20px;padding:5px 12px;font-weight:600;font-size:12px}
+  .btn-publicar{background:var(--publicado);color:#fff}
+  .btn-publicar:disabled{background:var(--linea);color:var(--tinta-suave);cursor:default}
+  #plan-main{padding:18px 20px;overflow-x:auto}
+  #plan-main select{min-width:200px}
+  table.cuadrante{border-collapse:collapse;width:100%;min-width:960px;background:#fff;border:1px solid var(--linea);border-radius:12px;overflow:hidden}
+  table.cuadrante th,table.cuadrante td{border:1px solid var(--linea);vertical-align:top}
+  table.cuadrante thead th{background:var(--arena);font-size:12px;font-weight:600;padding:8px;text-align:center}
+  table.cuadrante thead th.hoy{background:var(--mar);color:#fff}
+  tr.fila-depto td{background:var(--arena);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;padding:5px 10px;color:var(--tinta)}
+  tr.fila-depto td span{font-weight:400;color:var(--tinta-suave);letter-spacing:0;text-transform:none}
+  td.nombre{background:#fff;padding:10px;min-width:150px;position:sticky;left:0;z-index:5;border-right:2px solid var(--linea)}
+  td.nombre .np{font-weight:600}
+  td.nombre .horas{font-size:11px;color:var(--tinta-suave);margin-top:2px}
+  td.nombre .horas.exceso{color:var(--aviso);font-weight:600}
+  td.celda{min-width:110px;height:64px;padding:4px;cursor:pointer;position:relative}
+  td.celda:hover{background:#F6F9F8}
+  td.celda.ausencia{background:var(--ausencia-fondo)}
+  .tag-ausencia{font-size:10px;color:var(--tinta-suave);text-transform:uppercase;letter-spacing:.4px;padding:2px 4px}
+  .turno{border-radius:7px;padding:5px 7px;margin-bottom:4px;font-size:12px;line-height:1.35;cursor:pointer}
+  .turno .hh{font-weight:600;}
+  .turno .pu{color:var(--tinta-suave);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .turno.borrador{background:var(--borrador-fondo);border:1.5px dashed var(--mar)}
+  .turno.publicado{background:var(--publicado-fondo);border:1.5px solid var(--publicado)}
+  .turno .warn{color:var(--aviso);font-weight:700}
+  .turno.conflicto{border-color:var(--error)}
+  .leyenda{display:flex;gap:18px;margin-top:12px;color:var(--tinta-suave);font-size:12px;flex-wrap:wrap}
+  .leyenda span{display:inline-flex;align-items:center;gap:6px}
+  .muestra{width:22px;height:14px;border-radius:4px;display:inline-block}
+  .avisos-panel{margin-top:14px;background:var(--aviso-fondo);border:1px solid #EAD9AF;border-radius:10px;padding:12px 16px;font-size:13px;display:none}
+  .avisos-panel.visible{display:block}
+  .avisos-panel h3{font-size:13px;color:var(--aviso);margin-bottom:6px}
+  .avisos-panel div{margin:3px 0}
+
+  /* Modal compartido */
+  .modal-fondo{position:fixed;inset:0;background:rgba(28,43,51,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal-fondo.visible{display:flex}
+  .modal{background:#fff;border-radius:14px;padding:26px;width:100%;max-width:420px}
+  .modal h2{font-size:17px;margin-bottom:2px}
+  .modal .sub{color:var(--tinta-suave);font-size:13px;margin-bottom:10px}
+  .fila-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-acciones{display:flex;gap:10px;margin-top:22px}
+  .modal-acciones .btn{flex:1}
+  .btn-borrar{background:transparent;border:1px solid var(--error);color:var(--error)}
+  .aviso-modal{margin-top:10px;font-size:12px;color:var(--aviso)}
+  .modal input,.modal select,.modal textarea{width:100%}
+
+  /* ---------- FICHAJES ---------- */
+  .leyenda-f{color:var(--tinta-suave);font-size:12px;margin:6px 0 14px}
+  .tarjeta-f{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px 16px;margin-bottom:12px;max-width:860px}
+  .tarjeta-f .fila-cab{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .tarjeta-f h3{font-size:15px;}
+  .horas-dia{font-weight:600;color:var(--mar)}
+  .badge{font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px}
+  .badge.incidencia{background:var(--aviso-fondo);color:var(--aviso)}
+  .badge.encurso{background:var(--publicado-fondo);color:var(--publicado)}
+  .sin-fichajes{color:var(--tinta-suave);font-size:13px;margin-top:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .chip{border-radius:8px;padding:6px 10px;font-size:12.5px;border:1.5px solid transparent;cursor:pointer}
+  .chip .t{font-weight:600;}
+  .chip.entrada{background:var(--publicado-fondo);border-color:var(--publicado)}
+  .chip.salida{background:#F9ECEA;border-color:#B03A2E}
+  .chip.pausa_inicio,.chip.pausa_fin{background:#EFF1F0;border-color:#5A6B73}
+  .chip.correccion{background:#F1EDF7;border-color:#7A5CA8}
+  .chip.anulado{opacity:.45;text-decoration:line-through;cursor:default}
+  .link-btn{background:none;border:none;color:var(--mar);font-weight:600;font-size:13px;cursor:pointer;padding:0;margin-top:10px}
+  .link-btn2{background:none;border:none;color:var(--green);font-weight:600;font-size:12px;cursor:pointer;padding:0}
+  .link-btn2:hover{text-decoration:underline}
+
+  /* ---------- INFORMES ---------- */
+  .filtros-inf{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px}
+  .filtros-inf label{display:block;font-weight:600;font-size:12px;margin-bottom:5px}
+  .filtros-inf input,.filtros-inf select{padding:9px 12px;border:1px solid var(--linea);border-radius:8px;font:inherit;background:#fff}
+  .exportes{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 20px}
+  table.inf{border-collapse:collapse;width:100%;max-width:940px;background:#fff;border:1px solid var(--linea);border-radius:12px;overflow:hidden}
+  table.inf th,table.inf td{border-bottom:1px solid var(--fondo);padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums}
+  table.inf th:first-child,table.inf td:first-child{text-align:left}
+  table.inf thead th{background:var(--arena);font-size:12px}
+  table.inf td.np{font-weight:600}
+  .desv-mas{color:#B03A2E;font-weight:600}.desv-menos{color:var(--publicado);font-weight:600}
+  table.inf tfoot td{font-weight:700;background:var(--fondo)}
+  .nota-inf{color:var(--tinta-suave);font-size:12px;margin-top:10px;max-width:940px}
+  .aviso-inc{background:var(--aviso-fondo);color:var(--aviso);border-radius:20px;font-size:11px;font-weight:600;padding:2px 8px;margin-left:6px}
+
+  /* ---------- EMPLEADOS ---------- */
+  .layout-emp{display:grid;grid-template-columns:290px 1fr;gap:0;min-height:calc(100vh - 100px)}
+  .aside-emp{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px;margin-right:16px;height:fit-content}
+  .buscador,.aside-emp select{width:100%;padding:9px 12px;border:1px solid var(--linea);border-radius:8px;font:inherit;background:#fff;margin-bottom:6px}
+  .contador-emp{font-size:11.5px;color:var(--tinta-suave);margin:0 0 6px 2px}
+  .lista-emp{overflow-y:auto;max-height:calc(100vh - 260px)}
+  .item-emp{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer}
+  .item-emp:hover{background:var(--fondo)}
+  .item-emp.activo{background:var(--mar);color:#fff}
+  .item-emp.activo .sub{color:#CFE8EA}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--arena);color:var(--tinta);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+  .avatar.grande{width:52px;height:52px;font-size:18px}
+  .item-emp .np{font-weight:600;font-size:13.5px}
+  .item-emp .sub{font-size:11.5px;color:var(--tinta-suave)}
+  #emp-ficha{max-width:820px}
+  .cab-ficha{display:flex;align-items:center;gap:14px;margin-bottom:6px;flex-wrap:wrap}
+  .cab-ficha h2{font-size:20px;}
+  .subcab{color:var(--tinta-suave);font-size:13px;margin-bottom:18px}
+  .panel{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:18px;margin-bottom:16px}
+  .panel h3{font-size:14px;margin-bottom:10px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 16px}
+  .fila-acciones{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .check{display:flex;align-items:center;gap:8px;margin-top:14px}.check input{width:auto}
+  .btn-peligro{background:transparent;border:1px solid var(--error);color:var(--error)}
+  .pin-caja{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .pin-valor{font-size:22px;font-weight:700;letter-spacing:4px;color:var(--mar)}
+  .nota{font-size:12px;color:var(--tinta-suave)}
+  .dia-h{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--fondo);flex-wrap:wrap}
+  .dia-h .f{font-weight:600;font-size:13px;min-width:110px;text-transform:capitalize}
+  .dia-h .h{color:var(--mar);font-weight:600;min-width:55px}
+  .badge-inc{font-size:10.5px;font-weight:600;border-radius:12px;padding:2px 8px;background:var(--aviso-fondo);color:var(--aviso)}
+
+  /* ---------- AJUSTES ---------- */
+  .layout-aj{display:grid;grid-template-columns:220px 1fr;gap:0;min-height:calc(100vh - 100px)}
+  .aside-aj{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px;margin-right:16px;height:fit-content}
+  .nav-sec{display:block;width:100%;text-align:left;background:none;border:none;border-radius:9px;padding:11px 12px;font-weight:600;font-size:13.5px;color:var(--tinta);cursor:pointer;margin-bottom:3px}
+  .nav-sec:hover{background:var(--fondo)}
+  .nav-sec.activa{background:var(--mar);color:#fff}
+  .nav-sec small{display:block;font-weight:400;font-size:11px;color:var(--tinta-suave);margin-top:2px}
+  .nav-sec.activa small{color:#CFE8EA}
+  #aj-cuerpo{max-width:860px}
+  #aj-cuerpo h2{font-size:19px;margin-bottom:3px;}
+  .grid-regla{display:grid;grid-template-columns:1fr 120px;gap:8px 14px;align-items:center;margin-bottom:2px}
+  .grid-regla .txt{font-size:13px}.grid-regla .txt small{display:block;color:var(--tinta-suave);font-size:11.5px}
+  .grid-regla input{text-align:right}
+  .fila-guardar{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+  .aviso-caja{background:var(--aviso-fondo);border:1px solid #EAD9AF;border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--aviso);margin-bottom:14px}
+  table.aj{border-collapse:collapse;width:100%}
+  table.aj th,table.aj td{border-bottom:1px solid var(--fondo);padding:9px 8px;text-align:left;font-size:13px}
+  table.aj thead th{font-size:12px;color:var(--tinta-suave)}
+  table.aj td.c,table.aj th.c{text-align:center}
+  .chip-conv{display:inline-flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .chip-conv button{border:1px solid var(--linea);background:#fff;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+  .chip-conv button.activa{background:var(--mar);color:#fff;border-color:var(--mar)}
+  .badge-def{font-size:10px;background:var(--publicado-fondo);color:var(--publicado);border-radius:10px;padding:1px 7px;margin-left:5px;font-weight:600}
+  .switch{position:relative;display:inline-block;width:38px;height:22px}
+  .switch input{display:none}
+  .slider{position:absolute;inset:0;background:var(--linea);border-radius:22px;cursor:pointer;transition:.2s}
+  .slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .switch input:checked + .slider{background:var(--mar)}
+  .switch input:checked + .slider:before{transform:translateX(16px)}
+  .btn-peque{padding:6px 12px;font-size:13px}
+  #aj-cuerpo label{display:block;font-weight:600;font-size:12px;margin:12px 0 5px}
+  #aj-cuerpo input,#aj-cuerpo select{width:100%;padding:9px 12px;border:1px solid var(--linea);border-radius:8px;font:inherit;background:#fff}
+  @media (max-width:760px){
+    #vista-app{flex-direction:column}
+    .side-nav{position:static;width:100%;height:auto;border-right:none;border-bottom:var(--border);padding:12px 12px 0;flex-direction:column}
+    .side-brand{border-bottom:none;padding-bottom:8px;margin-bottom:8px}
+    .tabs-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:2px;padding-bottom:6px}
+    .tabs-nav button{width:auto;border-left:none;border-bottom:2px solid transparent;border-radius:0;white-space:nowrap;padding:8px 12px}
+    .tabs-nav button.activa{border-left:none;border-bottom-color:var(--green);background:none}
+    .side-salir{margin-top:0;border-top:none;padding-top:0;position:absolute;top:12px;right:12px}
+    .layout-emp,.layout-aj{grid-template-columns:1fr} .aside-emp,.aside-aj{margin-right:0;margin-bottom:12px} .grid-2,.grid-3{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="vista-login" class="login-wrap">
+  <form class="login-card" id="form-login">
+    <div class="brand">Planifica <span>Bonita</span></div>
+    <p>Planificación y registro horario</p>
+    <label for="email">Email</label>
+    <input type="email" id="email" autocomplete="username" required>
+    <label for="pass">Contraseña</label>
+    <input type="password" id="pass" autocomplete="current-password" required>
+    <button class="btn btn-primario" type="submit">Entrar</button>
+    <div class="error-msg" id="login-error"></div>
+  </form>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="vista-app" style="display:none">
+  <!-- BARRA LATERAL (patrón Ratios) -->
+  <aside class="side-nav">
+    <div class="side-brand">
+      <div class="app-title">Planifica <span>Bonita</span></div>
+      <div class="app-sub">Bonita Menorca · Temporada 2026</div>
+    </div>
+    <nav class="tabs-nav" id="tabs">
+      <button data-sec="planificacion" class="activa">Planificación</button>
+      <button data-sec="fichajes">Fichajes</button>
+      <button data-sec="informes">Informes</button>
+      <button data-sec="empleados">Empleados</button>
+      <button data-sec="ajustes" id="tab-ajustes" style="display:none">Ajustes</button>
+    </nav>
+    <div class="side-salir"><button id="btn-salir">Salir</button></div>
+  </aside>
+
+  <!-- COLUMNA PRINCIPAL -->
+  <div class="main-col">
+    <div class="main-inner">
+      <div id="barra-seccion"></div>
+
+      <!-- ---------- Sección Planificación ---------- -->
+      <div class="seccion activa" id="sec-planificacion">
+        <main id="plan-main">
+          <div id="plan-grid"></div>
+          <div class="leyenda">
+            <span><span class="muestra" style="border:1.5px dashed var(--green);background:#fff"></span> Borrador (solo lo ves tú)</span>
+            <span><span class="muestra" style="border:1.5px solid var(--green);background:var(--green-light)"></span> Publicado (visible para el empleado)</span>
+            <span><span class="muestra" style="background:var(--ausencia-fondo);border:1px solid var(--linea)"></span> Ausencia aprobada</span>
+            <span style="color:var(--amber)">⚠ Aviso de descanso u horas — no bloquea</span>
+          </div>
+          <div class="avisos-panel" id="plan-avisos"></div>
+        </main>
+      </div>
+
+  <!-- ---------- Otras secciones (se rellenan en fases siguientes) ---------- -->
+  <div class="seccion" id="sec-fichajes">
+    <div class="leyenda-f">Verde entrada · rojo salida · gris pausa · morado corrección. Toca un fichaje para corregirlo.</div>
+    <div id="fich-lista"></div>
+  </div>
+
+  <div class="seccion" id="sec-informes">
+    <div id="inf-cuerpo"></div>
+  </div>
+
+  <div class="seccion" id="sec-empleados">
+    <div class="layout-emp">
+      <aside class="aside-emp">
+        <input class="buscador" id="emp-buscador" placeholder="Buscar por nombre…">
+        <select id="emp-filtro-local" style="margin-bottom:6px"></select>
+        <select id="emp-filtro-depto" style="margin-bottom:8px"></select>
+        <div class="contador-emp" id="emp-contador"></div>
+        <div class="lista-emp" id="emp-lista"></div>
+      </aside>
+      <section id="emp-ficha"><div class="vacio">Elige a alguien de la lista.</div></section>
+    </div>
+  </div>
+
+  <div class="seccion" id="sec-ajustes">
+    <div class="layout-aj">
+      <aside class="aside-aj">
+        <button class="nav-sec activa" data-aj="convenios">Convenios y reglas<small>Descansos, jornadas, avisos</small></button>
+        <button class="nav-sec" data-aj="locales">Locales y fichaje<small>Ubicación y radio</small></button>
+        <button class="nav-sec" data-aj="ausencias">Tipos de ausencia<small>Catálogo y vacaciones</small></button>
+        <button class="nav-sec" data-aj="catalogos">Departamentos y contratos<small>Listas de la ficha</small></button>
+        <button class="nav-sec" data-aj="matriz">Departamentos por centro<small>Qué hay en cada local</small></button>
+      </aside>
+      <section id="aj-cuerpo"><div class="vacio">Cargando…</div></section>
+    </div>
+  </div>
+
+    </div><!-- /main-inner -->
+  </div><!-- /main-col -->
+</div><!-- /vista-app -->
+
+<!-- Modal de corrección de fichaje (sección Fichajes) -->
+<div class="modal-fondo" id="modal-corr">
+  <form class="modal" id="form-corr">
+    <h2 id="corr-titulo">Añadir fichaje</h2>
+    <div class="sub" id="corr-sub"></div>
+    <div class="fila-2">
+      <div><label for="c-tipo">Tipo</label>
+        <select id="c-tipo"><option value="entrada">Entrada</option><option value="salida">Salida</option>
+          <option value="pausa_inicio">Inicio de pausa</option><option value="pausa_fin">Fin de pausa</option></select></div>
+      <div><label for="c-hora">Hora</label><input type="time" id="c-hora" required></div>
+    </div>
+    <label for="c-motivo">Motivo (obligatorio, queda en el registro)</label>
+    <textarea id="c-motivo" rows="2" required placeholder="Ej.: olvidó fichar la salida al cerrar" style="width:100%;padding:10px 12px;border:1px solid var(--linea);border-radius:8px;font:inherit"></textarea>
+    <div class="aviso-modal" id="corr-error"></div>
+    <div class="modal-acciones">
+      <button type="button" class="btn btn-fantasma" id="corr-cancelar">Cancelar</button>
+      <button type="submit" class="btn btn-primario" style="width:auto;margin:0">Guardar corrección</button>
+    </div>
+  </form>
+</div>
+
+<!-- Modal de turno (Planificación) -->
+<div class="modal-fondo" id="modal-fondo">
+  <form class="modal" id="form-turno">
+    <h2 id="modal-titulo">Nuevo turno</h2>
+    <div class="sub" id="modal-sub"></div>
+    <div class="fila-2">
+      <div><label for="t-inicio">Entrada</label><input type="time" id="t-inicio" required step="300"></div>
+      <div><label for="t-fin">Salida</label><input type="time" id="t-fin" required step="300"></div>
+    </div>
+    <div class="fila-2">
+      <div><label for="t-pausa">Pausa (min)</label><input type="number" id="t-pausa" min="0" step="5" value="0"></div>
+      <div><label for="t-puesto">Puesto</label><input type="text" id="t-puesto" placeholder="Sala, cocina, barra…" list="lista-puestos">
+        <datalist id="lista-puestos"><option>Sala</option><option>Cocina</option><option>Barra</option><option>Office</option><option>Tienda</option></datalist>
+      </div>
+    </div>
+    <div class="aviso-modal" id="modal-aviso"></div>
+    <div class="modal-acciones">
+      <button type="button" class="btn btn-borrar" id="btn-borrar" style="display:none">Eliminar</button>
+      <button type="button" class="btn btn-fantasma" id="btn-cancelar">Cancelar</button>
+      <button type="submit" class="btn btn-primario" style="width:auto;margin:0">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const sb = createClient(
+  'https://cwhmyarbjyvkfskxreeo.supabase.co',
+  'sb_publishable_M-wEN03Ty8Gf1tSgni8PaA_V_F2-4vN'
+);
+
+// ===================== ESTADO GLOBAL COMPARTIDO =====================
+const APP = { user:null, rol:null, seccionActual:null, iniciadas:new Set() };
+const $ = id => document.getElementById(id);
+let toastTimer;
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('visible'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('visible'),2800); }
+
+// ---------- Helpers compartidos entre secciones ----------
+const hoyIso = () => new Date().toLocaleDateString('sv-SE');
+const sumaDia = (iso,n) => { const d=new Date(iso+'T12:00'); d.setDate(d.getDate()+n); return d.toLocaleDateString('sv-SE'); };
+const horaDe = ts => new Date(ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+const fmtDia = iso => new Date(iso+'T12:00').toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+const iniciales = n => n.split(/\s+/).map(p=>p[0]||'').join('').slice(0,2).toUpperCase();
+// Locales que el usuario puede ver/gestionar (admin: todos; encargado: los suyos)
+async function localesDelUsuario(){
+  if (APP.rol==='admin'){
+    const { data } = await sb.from('locales').select('id,nombre').eq('activo',true).order('nombre');
+    return data||[];
+  }
+  const { data } = await sb.from('encargado_locales').select('locales(id,nombre)').eq('user_id', APP.user.id);
+  return (data||[]).map(r=>r.locales).filter(Boolean).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+}
+
+// ===================== LOGIN Y SESIÓN =====================
+sb.auth.onAuthStateChange(async (_e, ses) => {
+  if (ses?.user && !APP.user){ APP.user = ses.user; await arrancar(); }
+  if (!ses?.user){ APP.user=null; APP.rol=null; APP.iniciadas.clear(); $('vista-app').style.display='none'; $('vista-login').style.display='flex'; }
+});
+$('form-login').addEventListener('submit', async e => {
+  e.preventDefault(); $('login-error').textContent='';
+  const { error } = await sb.auth.signInWithPassword({ email:$('email').value.trim(), password:$('pass').value });
+  if (error) $('login-error').textContent = 'No se pudo entrar: revisa el email y la contraseña.';
+});
+$('btn-salir').addEventListener('click', ()=>sb.auth.signOut());
+
+async function arrancar(){
+  const { data: perfil } = await sb.from('perfiles').select('rol').eq('user_id', APP.user.id).single();
+  if (!perfil || perfil.rol === 'empleado'){
+    $('login-error').textContent='Esta herramienta es para encargados y administración.';
+    await sb.auth.signOut(); return;
+  }
+  APP.rol = perfil.rol;
+  if (APP.rol === 'admin') $('tab-ajustes').style.display='inline-block';
+  $('vista-login').style.display='none'; $('vista-app').style.display='flex';
+  // Sección inicial: según el hash de la URL, o Planificación
+  const inicial = (location.hash||'').replace('#','') || 'planificacion';
+  irASeccion(['planificacion','fichajes','informes','empleados','ajustes'].includes(inicial)?inicial:'planificacion');
+}
+
+// ===================== ROUTER DE SECCIONES =====================
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  irASeccion(b.dataset.sec);
+});
+window.addEventListener('hashchange', ()=>{
+  const s = (location.hash||'').replace('#','');
+  if (s && s!==APP.seccionActual) irASeccion(s);
+});
+
+const INIT = {}; // cada sección registra aquí su función init
+
+async function irASeccion(sec){
+  if (sec==='ajustes' && APP.rol!=='admin') sec='planificacion';
+  APP.seccionActual = sec;
+  location.hash = sec;
+  document.querySelectorAll('.tabs-nav button').forEach(b=>b.classList.toggle('activa', b.dataset.sec===sec));
+  document.querySelectorAll('.seccion').forEach(d=>d.classList.remove('activa'));
+  $('sec-'+sec).classList.add('activa');
+  $('barra-seccion').innerHTML=''; // cada sección repinta su barra de controles
+  // Inicializar la sección la primera vez; después solo refrescar si define refresh()
+  if (INIT[sec]){
+    if (!APP.iniciadas.has(sec)){ APP.iniciadas.add(sec); await INIT[sec].init(); }
+    else if (INIT[sec].onShow){ await INIT[sec].onShow(); }
+  }
+}
+
+// ========================================================================
+// ============== SECCIÓN: PLANIFICACIÓN (CUADRANTE) ======================
+// ========================================================================
+INIT.planificacion = (() => {
+  const S = { locales:[], localId:null, lunes:lunesDe(new Date()), empleados:[], turnos:[], ausencias:[], reglas:null, editando:null, celda:null };
+  const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+  function lunesDe(d){ const x=new Date(d); const dia=(x.getDay()+6)%7; x.setDate(x.getDate()-dia); x.setHours(0,0,0,0); return x; }
+  function suma(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function iso(d){ return d.toLocaleDateString('sv-SE'); }
+  function fmtCorta(d){ return d.toLocaleDateString('es-ES',{day:'numeric',month:'short'}); }
+  function minutos(hhmm){ const [h,m]=hhmm.split(':').map(Number); return h*60+m; }
+  function horasNetas(t){ let dur=minutos(t.hora_fin)-minutos(t.hora_inicio); if(dur<=0)dur+=1440; return Math.max(0,dur-(t.pausa_min||0))/60; }
+  function finAbsoluto(t){ let fin=minutos(t.hora_fin); if(fin<=minutos(t.hora_inicio))fin+=1440; return fin; }
+  function hh(t){ return t.hora_inicio.slice(0,5)+'–'+t.hora_fin.slice(0,5); }
+
+  async function init(){
+    // Localizar los locales que el usuario puede planificar
+    if (APP.rol==='admin'){
+      const { data } = await sb.from('locales').select('id,nombre').eq('activo',true).order('nombre');
+      S.locales = data||[];
+    } else {
+      const { data } = await sb.from('encargado_locales').select('locales(id,nombre)').eq('user_id', APP.user.id);
+      S.locales = (data||[]).map(r=>r.locales).filter(Boolean).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    }
+    if (!S.locales.length){ $('plan-grid').innerHTML='<div class="vacio">No tienes ningún local asignado.</div>'; return; }
+    S.localId = S.locales[0].id;
+    pintarBarra();
+    await cargarSemana();
+  }
+
+  function pintarBarra(){
+    $('barra-seccion').innerHTML = `
+      <select id="plan-local">${S.locales.map(l=>`<option value="${l.id}" ${l.id===S.localId?'selected':''}>${l.nombre}</option>`).join('')}</select>
+      <div class="sem-nav">
+        <button id="plan-prev" aria-label="Semana anterior">‹</button>
+        <span class="sem-label" id="plan-label"></span>
+        <button id="plan-next" aria-label="Semana siguiente">›</button>
+        <button id="plan-hoy" class="btn btn-fantasma" style="height:34px">Hoy</button>
+      </div>
+      <span class="chip-borradores" id="plan-chip" style="display:none"></span>
+      <button class="btn btn-fantasma" id="plan-duplicar">Copiar semana anterior</button>
+      <button class="btn btn-publicar" id="plan-publicar">Publicar semana</button>`;
+    $('plan-local').addEventListener('change', e=>{ S.localId=e.target.value; cargarSemana(); });
+    $('plan-prev').addEventListener('click', ()=>{ S.lunes=suma(S.lunes,-7); cargarSemana(); });
+    $('plan-next').addEventListener('click', ()=>{ S.lunes=suma(S.lunes,7); cargarSemana(); });
+    $('plan-hoy').addEventListener('click', ()=>{ S.lunes=lunesDe(new Date()); cargarSemana(); });
+    $('plan-duplicar').addEventListener('click', duplicar);
+    $('plan-publicar').addEventListener('click', publicar);
+  }
+
+  async function cargarSemana(){
+    const desde=iso(S.lunes), hasta=iso(suma(S.lunes,6));
+    $('plan-label').textContent = `${fmtCorta(S.lunes)} — ${fmtCorta(suma(S.lunes,6))}`;
+    try {
+      const { data: loc } = await sb.from('locales').select('convenios(*)').eq('id', S.localId).single();
+      S.reglas = loc?.convenios || null;
+    } catch { S.reglas=null; }
+    const [emps, turnos, ausencias, periodos] = await Promise.all([
+      sb.from('asignaciones').select('empleado_id, empleados!inner(id,nombre,apellidos,fecha_baja,departamento)')
+        .eq('local_id', S.localId).or(`fecha_fin.is.null,fecha_fin.gte.${desde}`),
+      sb.from('turnos').select('*').eq('local_id', S.localId).gte('fecha', desde).lte('fecha', hasta),
+      sb.from('ausencias').select('*').eq('estado','aprobada').lte('fecha_inicio', hasta).gte('fecha_fin', desde),
+      // Periodos que solapan con la semana: alta <= fin de semana y (baja null o baja >= inicio)
+      sb.from('periodos_contrato').select('empleado_id,fecha_alta,horas_semana').lte('fecha_alta', hasta).or(`fecha_baja.is.null,fecha_baja.gte.${desde}`)
+    ]);
+    // Horas del periodo vigente por empleado (si solapan varios, el de alta más reciente manda)
+    const horasPorEmp={};
+    for(const p of (periodos.data||[])){
+      const prev=horasPorEmp[p.empleado_id];
+      if(!prev || p.fecha_alta>prev.fecha_alta) horasPorEmp[p.empleado_id]={fecha_alta:p.fecha_alta, horas:p.horas_semana};
+    }
+    const activos = new Set(Object.keys(horasPorEmp));
+    const vistos=new Set();
+    S.empleados=(emps.data||[]).map(r=>r.empleados)
+      .filter(e=>e && activos.has(e.id) && !vistos.has(e.id) && vistos.add(e.id))
+      .map(e=>({...e, horas_semana: horasPorEmp[e.id]?.horas ?? null}))  // horas del periodo vigente
+      .sort((a,b)=>(a.departamento||'zz').localeCompare(b.departamento||'zz')||a.nombre.localeCompare(b.nombre));
+    S.turnos=turnos.data||[]; S.ausencias=ausencias.data||[];
+    render();
+  }
+
+  function calcularAvisos(){
+    const r=S.reglas||{}; const minDescanso=r.descanso_diario_h??12; const maxDiaria=r.jornada_max_diaria_h??9;
+    const avisos=[]; const turnosConflicto=new Set();
+    for (const e of S.empleados){
+      const suyos=S.turnos.filter(t=>t.empleado_id===e.id).sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.hora_inicio.localeCompare(b.hora_inicio));
+      const total=suyos.reduce((s,t)=>s+horasNetas(t),0); e._horasSemana=total;
+      if (e.horas_semana && total>Number(e.horas_semana)+0.01)
+        avisos.push(`${e.nombre}: ${total.toFixed(1)} h planificadas, contrato de ${e.horas_semana} h.`);
+      for (let i=1;i<suyos.length;i++){
+        const a=suyos[i-1], b=suyos[i];
+        const diasEntre=(new Date(b.fecha)-new Date(a.fecha))/86400000;
+        const finA=diasEntre*24*60*-1+finAbsoluto(a);
+        const descanso=(minutos(b.hora_inicio)-finA)/60;
+        if (a.fecha===b.fecha && minutos(b.hora_inicio)<finAbsoluto(a)){
+          avisos.push(`${e.nombre}: turnos solapados el ${DIAS[(new Date(b.fecha).getDay()+6)%7].toLowerCase()}.`);
+          turnosConflicto.add(a.id); turnosConflicto.add(b.id);
+        } else if (minDescanso!=null && diasEntre<=1 && descanso<minDescanso){
+          avisos.push(`${e.nombre}: solo ${descanso.toFixed(1)} h de descanso antes del turno del ${DIAS[(new Date(b.fecha).getDay()+6)%7].toLowerCase()} (mínimo ${minDescanso} h).`);
+          turnosConflicto.add(b.id);
+        }
+      }
+      if (maxDiaria!=null) for (const t of suyos) if (horasNetas(t)>maxDiaria)
+        avisos.push(`${e.nombre}: turno de ${horasNetas(t).toFixed(1)} h el ${DIAS[(new Date(t.fecha).getDay()+6)%7].toLowerCase()} (máximo ${maxDiaria} h).`);
+    }
+    return { avisos, turnosConflicto };
+  }
+
+  function ausenciaDe(empId, fecha){ return S.ausencias.find(a=>a.empleado_id===empId && a.fecha_inicio<=fecha && a.fecha_fin>=fecha); }
+
+  function render(){
+    const { avisos, turnosConflicto } = calcularAvisos();
+    const hoyIso = iso(new Date());
+    if (!S.empleados.length){
+      $('plan-grid').innerHTML='<div class="vacio">Este local no tiene empleados asignados todavía.</div>';
+    } else {
+      let html='<table class="cuadrante"><thead><tr><th style="min-width:150px">Equipo</th>';
+      for (let d=0; d<7; d++){ const f=suma(S.lunes,d); html+=`<th class="${iso(f)===hoyIso?'hoy':''}">${DIAS[d]}<br>${fmtCorta(f)}</th>`; }
+      html+='</tr></thead><tbody>';
+      let deptoActual=null;
+      for (const e of S.empleados){
+        const d=e.departamento||'Sin departamento';
+        if (d!==deptoActual){ deptoActual=d; const tot=S.empleados.filter(x=>(x.departamento||'Sin departamento')===d).length;
+          html+=`<tr class="fila-depto"><td colspan="8">${d} <span>· ${tot}</span></td></tr>`; }
+        const exceso=e.horas_semana && e._horasSemana>Number(e.horas_semana)+0.01;
+        html+=`<tr><td class="nombre"><div class="np">${e.nombre} ${e.apellidos||''}</div>
+          <div class="horas ${exceso?'exceso':''}">${e._horasSemana.toFixed(1)} h${e.horas_semana?' / '+e.horas_semana+' h':''}</div></td>`;
+        for (let dd=0; dd<7; dd++){
+          const fecha=iso(suma(S.lunes,dd)); const aus=ausenciaDe(e.id,fecha);
+          const celdaTurnos=S.turnos.filter(t=>t.empleado_id===e.id && t.fecha===fecha).sort((a,b)=>a.hora_inicio.localeCompare(b.hora_inicio));
+          html+=`<td class="celda ${aus?'ausencia':''}" data-emp="${e.id}" data-fecha="${fecha}">`;
+          if (aus) html+=`<div class="tag-ausencia">${aus.tipo}</div>`;
+          for (const t of celdaTurnos){
+            const warn=turnosConflicto.has(t.id)?'<span class="warn"> ⚠</span>':'';
+            html+=`<div class="turno ${t.estado} ${turnosConflicto.has(t.id)?'conflicto':''}" data-turno="${t.id}">
+              <div class="hh">${hh(t)}${warn}</div>${t.puesto?`<div class="pu">${t.puesto}</div>`:''}</div>`;
+          }
+          html+='</td>';
+        }
+        html+='</tr>';
+      }
+      html+='</tbody></table>';
+      $('plan-grid').innerHTML=html;
+    }
+    const borradores=S.turnos.filter(t=>t.estado==='borrador').length;
+    if ($('plan-chip')){ $('plan-chip').style.display=borradores?'inline-block':'none'; $('plan-chip').textContent=`${borradores} sin publicar`; }
+    if ($('plan-publicar')) $('plan-publicar').disabled=!borradores;
+    const panel=$('plan-avisos');
+    if (avisos.length){ panel.classList.add('visible'); panel.innerHTML='<h3>⚠ Avisos de la semana (no bloquean)</h3>'+avisos.map(a=>`<div>${a}</div>`).join(''); }
+    else panel.classList.remove('visible');
+  }
+
+  // Interacción con el grid (delegada, se engancha una vez)
+  $('plan-grid').addEventListener('click', e=>{
+    if (APP.seccionActual!=='planificacion') return;
+    const turnoEl=e.target.closest('.turno'); const celda=e.target.closest('td.celda');
+    if (turnoEl){ const t=S.turnos.find(x=>x.id===turnoEl.dataset.turno); abrirModal({empleadoId:t.empleado_id,fecha:t.fecha}, t); }
+    else if (celda){
+      const emp=celda.dataset.emp, fecha=celda.dataset.fecha; const aus=ausenciaDe(emp,fecha);
+      if (aus && !confirm(`Este día tiene una ausencia aprobada (${aus.tipo}). ¿Crear turno igualmente?`)) return;
+      abrirModal({empleadoId:emp,fecha}, null);
+    }
+  });
+
+  function abrirModal(celda, turno){
+    S.celda=celda; S.editando=turno;
+    const e=S.empleados.find(x=>x.id===celda.empleadoId); const f=new Date(celda.fecha);
+    $('modal-titulo').textContent=turno?'Editar turno':'Nuevo turno';
+    $('modal-sub').textContent=`${e?e.nombre:''} · ${DIAS[(f.getDay()+6)%7]} ${fmtCorta(f)}`;
+    $('t-inicio').value=turno?turno.hora_inicio.slice(0,5):'12:00';
+    $('t-fin').value=turno?turno.hora_fin.slice(0,5):'18:00';
+    $('t-pausa').value=turno?(turno.pausa_min||0):0;
+    $('t-puesto').value=turno?(turno.puesto||''):'';
+    $('btn-borrar').style.display=turno?'block':'none';
+    $('modal-aviso').textContent=turno&&turno.estado==='publicado'?'Este turno ya está publicado: el cambio será visible para el empleado al guardar.':'';
+    $('modal-fondo').classList.add('visible'); $('t-inicio').focus();
+  }
+  function cerrarModal(){ $('modal-fondo').classList.remove('visible'); S.editando=null; S.celda=null; }
+  $('btn-cancelar').addEventListener('click', cerrarModal);
+  $('modal-fondo').addEventListener('click', e=>{ if(e.target===e.currentTarget) cerrarModal(); });
+
+  $('form-turno').addEventListener('submit', async e=>{
+    e.preventDefault();
+    if (!S.celda) return;
+    const fila={ empleado_id:S.celda.empleadoId, local_id:S.localId, fecha:S.celda.fecha,
+      hora_inicio:$('t-inicio').value, hora_fin:$('t-fin').value,
+      pausa_min:Number($('t-pausa').value)||0, puesto:$('t-puesto').value.trim()||null };
+    let error;
+    if (S.editando){ ({error}=await sb.from('turnos').update(fila).eq('id', S.editando.id)); }
+    else { fila.creado_por=APP.user.id; ({error}=await sb.from('turnos').insert(fila)); }
+    if (error){ $('modal-aviso').textContent='No se pudo guardar: '+error.message; return; }
+    cerrarModal(); toast('Turno guardado'); await cargarSemana();
+  });
+  $('btn-borrar').addEventListener('click', async ()=>{
+    if (!S.editando || !confirm('¿Eliminar este turno?')) return;
+    const { error }=await sb.from('turnos').delete().eq('id', S.editando.id);
+    if (error){ $('modal-aviso').textContent='No se pudo eliminar: '+error.message; return; }
+    cerrarModal(); toast('Turno eliminado'); await cargarSemana();
+  });
+
+  async function publicar(){
+    const n=S.turnos.filter(t=>t.estado==='borrador').length;
+    if (!confirm(`Publicar ${n} turno${n===1?'':'s'} de esta semana? Serán visibles para el equipo.`)) return;
+    const { error }=await sb.from('turnos').update({estado:'publicado',publicado_at:new Date().toISOString()})
+      .eq('local_id',S.localId).eq('estado','borrador').gte('fecha',iso(S.lunes)).lte('fecha',iso(suma(S.lunes,6)));
+    if (error){ toast('Error al publicar: '+error.message); return; }
+    toast('Semana publicada'); await cargarSemana();
+  }
+  async function duplicar(){
+    const desde=iso(suma(S.lunes,-7)), hasta=iso(suma(S.lunes,-1));
+    const { data:previos, error }=await sb.from('turnos').select('*').eq('local_id',S.localId).gte('fecha',desde).lte('fecha',hasta);
+    if (error){ toast('Error leyendo la semana anterior'); return; }
+    if (!previos?.length){ toast('La semana anterior está vacía'); return; }
+    const activos=new Set(S.empleados.map(e=>e.id));
+    const nuevos=previos.filter(t=>activos.has(t.empleado_id)).map(t=>({
+      empleado_id:t.empleado_id, local_id:t.local_id, fecha:iso(suma(new Date(t.fecha),7)),
+      hora_inicio:t.hora_inicio, hora_fin:t.hora_fin, pausa_min:t.pausa_min, puesto:t.puesto,
+      estado:'borrador', creado_por:APP.user.id }));
+    if (S.turnos.length && !confirm(`Esta semana ya tiene ${S.turnos.length} turnos. ¿Añadir ${nuevos.length} más copiados de la anterior?`)) return;
+    const { error:e2 }=await sb.from('turnos').insert(nuevos);
+    if (e2){ toast('Error al copiar: '+e2.message); return; }
+    toast(`${nuevos.length} turnos copiados como borrador`); await cargarSemana();
+  }
+
+  // Al volver a la sección, repintar su barra de controles
+  return { init, onShow: ()=>{ pintarBarra(); cargarSemana(); } };
+})();
+
+// ========================================================================
+// ===================== SECCIÓN: FICHAJES ================================
+// ========================================================================
+INIT.fichajes = (() => {
+  const S = { locales:[], localId:null, fecha:hoyIso(), empleados:[], fichajes:[], corr:null };
+  const NT = { entrada:'Entrada', salida:'Salida', pausa_inicio:'Pausa ▶', pausa_fin:'Pausa ■' };
+  const MET = { tablet_pin:'tablet', movil_geo:'móvil', correccion:'corrección' };
+
+  async function init(){
+    S.locales = await localesDelUsuario();
+    if (!S.locales.length){ $('fich-lista').innerHTML='<div class="vacio">No tienes ningún local asignado.</div>'; return; }
+    S.localId = S.locales[0].id;
+    pintarBarra(); await cargar();
+  }
+  function pintarBarra(){
+    $('barra-seccion').innerHTML = `
+      <select id="fich-local">${S.locales.map(l=>`<option value="${l.id}" ${l.id===S.localId?'selected':''}>${l.nombre}</option>`).join('')}</select>
+      <div class="sem-nav">
+        <button id="fich-prev" aria-label="Día anterior">‹</button>
+        <input type="date" id="fich-fecha" value="${S.fecha}">
+        <button id="fich-next" aria-label="Día siguiente">›</button>
+        <button id="fich-hoy" class="btn btn-fantasma" style="height:34px">Hoy</button>
+      </div>`;
+    $('fich-local').addEventListener('change', e=>{ S.localId=e.target.value; cargar(); });
+    $('fich-fecha').addEventListener('change', e=>{ S.fecha=e.target.value; cargar(); });
+    $('fich-prev').addEventListener('click', ()=>{ S.fecha=sumaDia(S.fecha,-1); $('fich-fecha').value=S.fecha; cargar(); });
+    $('fich-next').addEventListener('click', ()=>{ S.fecha=sumaDia(S.fecha, 1); $('fich-fecha').value=S.fecha; cargar(); });
+    $('fich-hoy').addEventListener('click', ()=>{ S.fecha=hoyIso(); $('fich-fecha').value=S.fecha; cargar(); });
+  }
+  async function cargar(){
+    const ini=new Date(S.fecha+'T00:00').toISOString();
+    const fin=new Date(S.fecha+'T00:00'); fin.setDate(fin.getDate()+1);
+    const [emps, fichs] = await Promise.all([
+      sb.from('asignaciones').select('empleados!inner(id,nombre,apellidos,fecha_baja)')
+        .eq('local_id',S.localId).or(`fecha_fin.is.null,fecha_fin.gte.${S.fecha}`),
+      sb.from('fichajes').select('*').eq('local_id',S.localId).gte('ts',ini).lt('ts',fin.toISOString()).order('ts')
+    ]);
+    const vistos=new Set();
+    S.empleados=(emps.data||[]).map(r=>r.empleados).filter(e=>e&&!e.fecha_baja&&!vistos.has(e.id)&&vistos.add(e.id)).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    S.fichajes=fichs.data||[];
+    render();
+  }
+  function efectivosDe(id){ const s=S.fichajes.filter(f=>f.empleado_id===id); const an=new Set(s.map(f=>f.corrige_a).filter(Boolean)); return {efectivos:s.filter(f=>!an.has(f.id)), anulados:an}; }
+  function calcular(efs){
+    let neto=0,ab=null,pa=null,inc=[],enCurso=false;
+    for(const f of efs){ const t=new Date(f.ts).getTime();
+      if(f.tipo==='entrada'){ if(ab!==null)inc.push('dos entradas seguidas'); ab=t; pa=null; }
+      else if(f.tipo==='salida'){ if(ab===null){inc.push('salida sin entrada');continue;} if(pa!==null){inc.push('pausa sin cerrar');pa=null;} neto+=t-ab; ab=null; }
+      else if(f.tipo==='pausa_inicio'){ if(ab===null)inc.push('pausa fuera de jornada'); else if(pa!==null)inc.push('dos inicios de pausa'); else pa=t; }
+      else if(f.tipo==='pausa_fin'){ if(pa===null)inc.push('fin de pausa sin inicio'); else{neto-=(t-pa);pa=null;} } }
+    if(ab!==null){ if(S.fecha===hoyIso())enCurso=true; else inc.push('entrada sin salida'); }
+    return { horas:neto/3600000, inc:[...new Set(inc)], enCurso };
+  }
+  function render(){
+    if(!S.empleados.length){ $('fich-lista').innerHTML='<div class="vacio">Este local no tiene empleados asignados.</div>'; return; }
+    let html='';
+    for(const e of S.empleados){
+      const {efectivos,anulados}=efectivosDe(e.id);
+      const todos=S.fichajes.filter(f=>f.empleado_id===e.id);
+      const {horas,inc,enCurso}=calcular(efectivos);
+      html+=`<div class="tarjeta-f"><div class="fila-cab"><h3>${e.nombre} ${e.apellidos||''}</h3>
+        ${todos.length?`<span class="horas-dia">${horas.toFixed(2)} h</span>`:''}
+        ${enCurso?'<span class="badge encurso">En curso</span>':''}
+        ${inc.map(i=>`<span class="badge incidencia">⚠ ${i}</span>`).join('')}</div>`;
+      if(!todos.length) html+='<div class="sin-fichajes">Sin fichajes este día.</div>';
+      else{ html+='<div class="chips">';
+        for(const f of todos){ const anu=anulados.has(f.id);
+          const cl=anu?f.tipo+' anulado':(f.metodo==='correccion'?'correccion':f.tipo);
+          html+=`<div class="chip ${cl}" data-id="${f.id}" title="${f.metodo==='correccion'?('Corrección: '+(f.motivo_correccion||'')):MET[f.metodo]||''}">
+            <span class="t">${NT[f.tipo]}</span> ${horaDe(f.ts)} <span style="color:var(--tinta-suave);font-size:11px">${f.metodo==='correccion'?'✎':''}${anu?' anulado':''}</span></div>`; }
+        html+='</div>'; }
+      html+=`<button class="link-btn" data-add="${e.id}">+ Añadir fichaje que falta</button></div>`;
+    }
+    $('fich-lista').innerHTML=html;
+  }
+  $('fich-lista').addEventListener('click', e=>{
+    const add=e.target.closest('[data-add]'), chip=e.target.closest('.chip:not(.anulado)');
+    if(add) abrir(add.dataset.add,null);
+    else if(chip){ const f=S.fichajes.find(x=>x.id===chip.dataset.id); if(f) abrir(f.empleado_id,f); }
+  });
+  function abrir(empId,orig){
+    const e=S.empleados.find(x=>x.id===empId);
+    S.corr={empId,orig};
+    $('corr-titulo').textContent=orig?'Corregir fichaje':'Añadir fichaje';
+    $('corr-sub').textContent=`${e?e.nombre:''} · ${S.fecha}`+(orig?` · sustituye a ${NT[orig.tipo]} ${horaDe(orig.ts)}`:'');
+    $('c-tipo').value=orig?orig.tipo:'salida';
+    $('c-hora').value=orig?new Date(orig.ts).toTimeString().slice(0,5):'';
+    $('c-motivo').value=''; $('corr-error').textContent='';
+    $('modal-corr').classList.add('visible'); $('c-hora').focus();
+  }
+  $('corr-cancelar').addEventListener('click', ()=>$('modal-corr').classList.remove('visible'));
+  $('modal-corr').addEventListener('click', e=>{ if(e.target===e.currentTarget) $('modal-corr').classList.remove('visible'); });
+  $('form-corr').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fila={ empleado_id:S.corr.empId, local_id:S.localId, tipo:$('c-tipo').value, metodo:'correccion',
+      ts:new Date(`${S.fecha}T${$('c-hora').value}`).toISOString(), corrige_a:S.corr.orig?.id??null,
+      motivo_correccion:$('c-motivo').value.trim(), corregido_por:APP.user.id };
+    if(!fila.motivo_correccion){ $('corr-error').textContent='El motivo es obligatorio.'; return; }
+    const { error }=await sb.from('fichajes').insert(fila);
+    if(error){ $('corr-error').textContent='No se pudo guardar: '+error.message; return; }
+    $('modal-corr').classList.remove('visible'); toast('Corrección registrada'); await cargar();
+  });
+  return { init, onShow: ()=>{ pintarBarra(); cargar(); } };
+})();
+
+// ========================================================================
+// ===================== SECCIÓN: INFORMES ================================
+// ========================================================================
+INIT.informes = (() => {
+  const S = { locales:[], datos:null };
+  const NT = { entrada:'entrada', salida:'salida', pausa_inicio:'pausa_inicio', pausa_fin:'pausa_fin' };
+
+  async function init(){
+    S.locales = await localesDelUsuario();
+    const hoy=new Date();
+    const desde=new Date(hoy.getFullYear(),hoy.getMonth(),1).toLocaleDateString('sv-SE');
+    const hasta=hoy.toLocaleDateString('sv-SE');
+    $('inf-cuerpo').innerHTML = `
+      <div class="filtros-inf">
+        <div><label>Local</label><select id="inf-local">${S.locales.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('')}</select></div>
+        <div><label>Desde</label><input type="date" id="inf-desde" value="${desde}"></div>
+        <div><label>Hasta</label><input type="date" id="inf-hasta" value="${hasta}"></div>
+        <button class="btn btn-primario" id="inf-calcular">Calcular</button>
+      </div>
+      <div class="exportes">
+        <button class="btn btn-fantasma" id="inf-exp-resumen">⬇ CSV resumen (gestoría)</button>
+        <button class="btn btn-fantasma" id="inf-exp-diario">⬇ CSV detalle diario</button>
+        <button class="btn btn-fantasma" id="inf-exp-insp">⬇ CSV registro completo (Inspección)</button>
+      </div>
+      <div id="inf-resultado"><div class="vacio">Elige local y periodo, y pulsa Calcular.</div></div>
+      <div class="nota-inf">Horas fichadas = entradas↔salidas menos pausas, con las correcciones ya aplicadas. Planificado = solo turnos publicados. El registro completo para Inspección incluye método, correcciones y motivos, tal como exige la normativa.</div>`;
+    $('inf-calcular').addEventListener('click', calcular);
+    $('inf-exp-resumen').addEventListener('click', expResumen);
+    $('inf-exp-diario').addEventListener('click', expDiario);
+    $('inf-exp-insp').addEventListener('click', expInsp);
+  }
+  function efectivos(fs){ const an=new Set(fs.map(f=>f.corrige_a).filter(Boolean)); return fs.filter(f=>!an.has(f.id)); }
+  function horasDePares(efs){
+    let neto=0,ab=null,pa=null,inc=0;
+    for(const f of efs){ const t=new Date(f.ts).getTime();
+      if(f.tipo==='entrada'){ if(ab!==null)inc++; ab=t; pa=null; }
+      else if(f.tipo==='salida'){ if(ab===null){inc++;continue;} if(pa!==null){inc++;pa=null;} neto+=t-ab; ab=null; }
+      else if(f.tipo==='pausa_inicio'){ if(ab===null||pa!==null)inc++; else pa=t; }
+      else if(f.tipo==='pausa_fin'){ if(pa===null)inc++; else{neto-=(t-pa);pa=null;} } }
+    if(ab!==null)inc++;
+    return { horas:neto/3600000, inc };
+  }
+  function horasTurno(t){ const [h1,m1]=t.hora_inicio.split(':').map(Number),[h2,m2]=t.hora_fin.split(':').map(Number); let d=(h2*60+m2)-(h1*60+m1); if(d<=0)d+=1440; return Math.max(0,d-(t.pausa_min||0))/60; }
+
+  async function calcular(){
+    const localId=$('inf-local').value, desde=$('inf-desde').value, hasta=$('inf-hasta').value;
+    if(!desde||!hasta||desde>hasta){ alert('Revisa el rango de fechas.'); return; }
+    $('inf-resultado').innerHTML='<div class="vacio">Calculando…</div>';
+    const finTs=new Date(hasta+'T00:00'); finTs.setDate(finTs.getDate()+1);
+    const [emps,turnos,fichs]=await Promise.all([
+      sb.from('empleados').select('id,nombre,apellidos'),
+      sb.from('turnos').select('*').eq('local_id',localId).eq('estado','publicado').gte('fecha',desde).lte('fecha',hasta),
+      sb.from('fichajes').select('*').eq('local_id',localId).gte('ts',new Date(desde+'T00:00').toISOString()).lt('ts',finTs.toISOString()).order('ts')
+    ]);
+    const nombres={}; for(const e of (emps.data||[])) nombres[e.id]=`${e.nombre} ${e.apellidos||''}`.trim();
+    const porEmpDia={};
+    for(const f of efectivos(fichs.data||[])){ const d=new Date(f.ts).toLocaleDateString('sv-SE'); ((porEmpDia[f.empleado_id]=porEmpDia[f.empleado_id]||{})[d]=porEmpDia[f.empleado_id][d]||[]).push(f); }
+    const filas={};
+    for(const t of (turnos.data||[])){ const r=filas[t.empleado_id]=filas[t.empleado_id]||{plan:0,real:0,inc:0}; r.plan+=horasTurno(t); }
+    for(const [id,dias] of Object.entries(porEmpDia)){ const r=filas[id]=filas[id]||{plan:0,real:0,inc:0}; for(const efs of Object.values(dias)){ const {horas,inc}=horasDePares(efs); r.real+=horas; r.inc+=inc; } }
+    S.datos={ localId,desde,hasta,filas,nombres,fichajesTodos:fichs.data||[],porEmpDia,localNombre:S.locales.find(l=>l.id===localId)?.nombre||'' };
+    const ids=Object.keys(filas).sort((a,b)=>(nombres[a]||'').localeCompare(nombres[b]||''));
+    if(!ids.length){ $('inf-resultado').innerHTML='<div class="vacio">Sin turnos ni fichajes en este periodo.</div>'; return; }
+    let tp=0,tr=0;
+    let html='<table class="inf"><thead><tr><th>Empleado</th><th>Planificado</th><th>Fichado</th><th>Desviación</th></tr></thead><tbody>';
+    for(const id of ids){ const r=filas[id], d=r.real-r.plan; tp+=r.plan; tr+=r.real;
+      const cl=Math.abs(d)<0.02?'':(d>0?'desv-mas':'desv-menos');
+      html+=`<tr><td class="np">${nombres[id]||'—'}${r.inc?`<span class="aviso-inc">⚠ ${r.inc}</span>`:''}</td><td>${r.plan.toFixed(2)} h</td><td>${r.real.toFixed(2)} h</td><td class="${cl}">${d>=0?'+':''}${d.toFixed(2)} h</td></tr>`; }
+    const td=tr-tp;
+    html+=`</tbody><tfoot><tr><td>Total ${S.datos.localNombre}</td><td>${tp.toFixed(2)} h</td><td>${tr.toFixed(2)} h</td><td class="${td>0?'desv-mas':td<0?'desv-menos':''}">${td>=0?'+':''}${td.toFixed(2)} h</td></tr></tfoot></table>`;
+    $('inf-resultado').innerHTML=html;
+  }
+  function descargar(nombre,filas){
+    const csv=filas.map(f=>f.map(c=>{ const s=String(c??''); return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(';')).join('\n');
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre; a.click(); URL.revokeObjectURL(a.href);
+  }
+  const necesita=()=>{ if(!S.datos){ alert('Primero pulsa Calcular.'); return true; } return false; };
+  function expResumen(){ if(necesita())return; const {filas,nombres,desde,hasta,localNombre}=S.datos;
+    const out=[['Local','Periodo','Empleado','Horas planificadas','Horas fichadas','Desviacion','Incidencias']];
+    for(const [id,r] of Object.entries(filas)) out.push([localNombre,`${desde} a ${hasta}`,nombres[id]||'',r.plan.toFixed(2),r.real.toFixed(2),(r.real-r.plan).toFixed(2),r.inc]);
+    descargar(`resumen_${localNombre}_${desde}_${hasta}.csv`,out); }
+  function expDiario(){ if(necesita())return; const {porEmpDia,nombres,desde,hasta,localNombre}=S.datos;
+    const out=[['Local','Empleado','Fecha','Fichajes del dia','Horas netas','Incidencias']];
+    for(const [id,dias] of Object.entries(porEmpDia)) for(const d of Object.keys(dias).sort()){ const efs=dias[d]; const {horas,inc}=horasDePares(efs);
+      out.push([localNombre,nombres[id]||'',d,efs.map(f=>`${NT[f.tipo]} ${horaDe(f.ts)}`).join(' | '),horas.toFixed(2),inc]); }
+    descargar(`detalle_diario_${localNombre}_${desde}_${hasta}.csv`,out); }
+  function expInsp(){ if(necesita())return; const {fichajesTodos,nombres,desde,hasta,localNombre}=S.datos;
+    const an=new Set(fichajesTodos.map(f=>f.corrige_a).filter(Boolean));
+    const out=[['Local','Empleado','Fecha y hora','Tipo','Metodo','Estado','Corrige a','Motivo correccion','Registrado el']];
+    for(const f of fichajesTodos) out.push([localNombre,nombres[f.empleado_id]||'',new Date(f.ts).toLocaleString('es-ES'),f.tipo,f.metodo,an.has(f.id)?'ANULADO por correccion':'vigente',f.corrige_a||'',f.motivo_correccion||'',new Date(f.created_at).toLocaleString('es-ES')]);
+    descargar(`registro_horario_${localNombre}_${desde}_${hasta}.csv`,out); }
+
+  return { init };
+})();
+
+// ========================================================================
+// ===================== SECCIÓN: EMPLEADOS ==============================
+// ========================================================================
+INIT.empleados = (() => {
+  const URL_FN='https://cwhmyarbjyvkfskxreeo.supabase.co/functions/v1/fichar';
+  const S = { empleados:[], locales:[], deptos:[], contratos:[], deptosPorLocal:{}, asigs:{}, sel:null, filtro:'', depto:'', local:'', soloActivos:false };
+  const NT = { entrada:'Entrada', salida:'Salida', pausa_inicio:'Pausa ▶', pausa_fin:'Pausa ■' };
+
+  async function init(){
+    if (APP.rol==='admin') pintarBarra();
+    const [locs,deps,cons,matriz]=await Promise.all([
+      sb.from('locales').select('id,nombre').eq('activo',true).order('nombre'),
+      sb.from('departamentos').select('id,nombre').eq('activo',true).order('orden'),
+      sb.from('tipos_contrato').select('nombre').eq('activo',true).order('orden'),
+      sb.from('local_departamentos').select('local_id, departamentos(nombre)')
+    ]);
+    S.locales=locs.data||[]; S.deptos=(deps.data||[]).map(d=>d.nombre); S.contratos=(cons.data||[]).map(c=>c.nombre);
+    S.deptosPorLocal={}; for(const r of (matriz.data||[])){ if(r.departamentos)(S.deptosPorLocal[r.local_id]=S.deptosPorLocal[r.local_id]||[]).push(r.departamentos.nombre); }
+    await cargarLista();
+  }
+  function pintarBarra(){ $('barra-seccion').innerHTML=`<button class="btn btn-primario" id="emp-alta">+ Añadir empleado</button>`;
+    $('emp-alta').addEventListener('click', alta); }
+  function nombreLocal(id){ return S.locales.find(l=>l.id===id)?.nombre||'—'; }
+
+  async function cargarLista(){
+    const hoy=hoyIso();
+    const [emps,asigs,pers]=await Promise.all([
+      sb.from('empleados').select('*').order('nombre'),
+      sb.from('asignaciones').select('empleado_id, local_id'),
+      sb.from('periodos_contrato').select('empleado_id,fecha_alta,fecha_baja')
+    ]);
+    // Marcar activos: algún periodo cubre hoy
+    const activos=new Set();
+    for(const p of (pers.data||[])) if(p.fecha_alta<=hoy && (!p.fecha_baja||p.fecha_baja>=hoy)) activos.add(p.empleado_id);
+    S.empleados=(emps.data||[]).map(e=>({...e, _activo:activos.has(e.id)}));
+    S.asigs={};
+    for(const a of (asigs.data||[])) (S.asigs[a.empleado_id]=S.asigs[a.empleado_id]||[]).push(a.local_id);
+    pintarLista();
+  }
+  function pintarLista(){
+    const f=S.filtro.toLowerCase();
+    const lista=S.empleados.filter(e=>(`${e.nombre} ${e.apellidos||''}`).toLowerCase().includes(f)&&(!S.depto||e.departamento===S.depto)&&(!S.local||e.local_principal_id===S.local)&&(!S.soloActivos||e._activo));
+    const locUsados=[...new Set(S.empleados.map(e=>e.local_principal_id).filter(Boolean))];
+    $('emp-filtro-local').innerHTML='<option value="">Todos los centros</option>'+S.locales.filter(l=>locUsados.includes(l.id)).map(l=>`<option value="${l.id}" ${S.local===l.id?'selected':''}>${l.nombre}</option>`).join('');
+    const base=S.local?S.empleados.filter(e=>e.local_principal_id===S.local):S.empleados;
+    const depUsados=[...new Set(base.map(e=>e.departamento).filter(Boolean))].sort();
+    $('emp-filtro-depto').innerHTML='<option value="">Todos los departamentos</option>'+depUsados.map(d=>`<option value="${d}" ${S.depto===d?'selected':''}>${d}</option>`).join('');
+    const nActivos=S.empleados.filter(e=>e._activo).length;
+    $('emp-contador').innerHTML=`${lista.length} de ${S.empleados.length} · <label style="display:inline;font-weight:400;margin:0;cursor:pointer"><input type="checkbox" id="emp-solo-activos" ${S.soloActivos?'checked':''} style="width:auto;vertical-align:middle"> solo activos (${nActivos})</label>`;
+    $('emp-solo-activos').addEventListener('change', e=>{ S.soloActivos=e.target.checked; pintarLista(); });
+    $('emp-lista').innerHTML=lista.map(e=>`<div class="item-emp ${S.sel===e.id?'activo':''}" data-id="${e.id}" style="${e._activo?'':'opacity:.5'}">
+      <div class="avatar">${iniciales(e.nombre+' '+(e.apellidos||''))}</div>
+      <div><div class="np">${e.nombre} ${e.apellidos||''}${e._activo?'':' <span style="font-size:10px;color:var(--tinta-suave);font-weight:400">· inactivo</span>'}</div><div class="sub">${nombreLocal(e.local_principal_id)}${e.departamento?' · '+e.departamento:''}</div></div></div>`).join('')||'<div class="vacio">Sin resultados.</div>';
+  }
+  $('emp-buscador').addEventListener('input', e=>{ S.filtro=e.target.value; pintarLista(); });
+  $('emp-filtro-local').addEventListener('change', e=>{ S.local=e.target.value; S.depto=''; pintarLista(); });
+  $('emp-filtro-depto').addEventListener('change', e=>{ S.depto=e.target.value; pintarLista(); });
+  $('emp-lista').addEventListener('click', e=>{ const it=e.target.closest('.item-emp'); if(!it)return; S.sel=it.dataset.id; pintarLista(); pintarFicha(); });
+
+  async function pintarFicha(){
+    const e=S.empleados.find(x=>x.id===S.sel); if(!e)return;
+    const admin=APP.rol==='admin', dis=admin?'':'disabled';
+    const locales=S.asigs[e.id]?.map(nombreLocal).join(' · ')||'Sin asignaciones';
+    $('emp-ficha').innerHTML=`
+      <div class="cab-ficha"><div class="avatar grande">${iniciales(e.nombre+' '+(e.apellidos||''))}</div>
+        <h2>${e.nombre} ${e.apellidos||''}</h2>
+        ${e.departamento?`<span class="badge" style="background:var(--arena)">${e.departamento}</span>`:''}
+        ${e.fichaje_movil?'<span class="badge encurso">Fichaje móvil</span>':''}</div>
+      <div class="subcab">Asignado a: ${locales}</div>
+      <div class="panel"><h3>Datos</h3><form id="emp-form">
+        <div class="grid-2">
+          <div><label>Nombre</label><input id="ef-nombre" value="${e.nombre||''}" ${dis}></div>
+          <div><label>Apellidos</label><input id="ef-apellidos" value="${e.apellidos||''}" ${dis}></div>
+          <div><label>Email</label><input id="ef-email" value="${e.email||''}" ${dis}></div>
+          <div><label>Teléfono</label><input id="ef-telefono" value="${e.telefono||''}" ${dis}></div>
+        </div>
+        <div class="grid-2">
+          <div><label>Local principal</label><select id="ef-local" ${dis}>${S.locales.map(l=>`<option value="${l.id}" ${l.id===e.local_principal_id?'selected':''}>${l.nombre}</option>`).join('')}</select></div>
+          <div><label>Departamento</label><select id="ef-depto" ${dis}></select></div>
+        </div>
+        <div class="grid-2"><div><label>Tipo de contrato</label><select id="ef-contrato" ${dis}>
+          <option value="">— sin asignar —</option>
+          ${S.contratos.map(c=>`<option ${c===e.tipo_contrato?'selected':''}>${c}</option>`).join('')}
+          ${e.tipo_contrato&&!S.contratos.includes(e.tipo_contrato)?`<option selected>${e.tipo_contrato}</option>`:''}
+        </select></div><div></div></div>
+        <div class="check"><input type="checkbox" id="ef-movil" ${e.fichaje_movil?'checked':''} ${dis}><label for="ef-movil" style="margin:0">Puede fichar desde el móvil (con geolocalización)</label></div>
+        ${admin?`<div class="fila-acciones"><button class="btn btn-primario" type="submit">Guardar cambios</button></div>`:''}
+      </form></div>
+      <div class="panel"><h3>Periodos de contrato</h3>
+        <div class="nota" style="margin-bottom:10px">Para fijos-discontinuos, cada temporada es un periodo (alta–baja). La fecha de baja es el último día que trabaja. Fuera de sus periodos, el empleado no aparece en el cuadrante.</div>
+        <div id="ef-periodos">Cargando…</div>
+      </div>
+      <div class="panel"><h3>PIN de fichaje</h3><div class="pin-caja">
+        <span class="nota">El PIN no se puede consultar (solo se guarda cifrado).</span>
+        <button class="btn btn-fantasma" id="ef-pin">Generar nuevo PIN</button><span class="pin-valor" id="ef-pin-nuevo"></span>
+      </div><div class="nota" id="ef-pin-nota" style="margin-top:6px"></div></div>
+      <div class="panel"><h3>Fichajes · últimos 14 días</h3><div id="ef-historico">Cargando…</div></div>`;
+    poblarDeptos(e.local_principal_id, e.departamento);
+    if(admin){ $('emp-form').addEventListener('submit', guardar);
+      $('ef-local').addEventListener('change', ()=>poblarDeptos($('ef-local').value,null)); }
+    $('ef-pin').addEventListener('click', nuevoPin);
+    await Promise.all([pintarPeriodos(e.id), historico(e.id)]);
+  }
+
+  // --- Periodos de contrato ---
+  function estadoPeriodo(p, hoy){
+    if (p.fecha_alta>hoy) return {txt:'Próximo', color:'var(--blue)', bg:'var(--blue-light)'};
+    if (p.fecha_baja && p.fecha_baja<hoy) return {txt:'Finalizado', color:'var(--tinta-suave)', bg:'var(--arena)'};
+    return {txt:'Activo', color:'var(--green)', bg:'var(--green-light)'};
+  }
+  async function pintarPeriodos(empId){
+    const admin=APP.rol==='admin';
+    const { data }=await sb.from('periodos_contrato').select('*').eq('empleado_id',empId).order('fecha_alta',{ascending:false});
+    const periodos=data||[]; const hoy=hoyIso();
+    let html='';
+    if(!periodos.length) html='<div class="nota">Sin periodos registrados.</div>';
+    else html=`<table class="aj" style="margin-bottom:${admin?'14px':'0'}"><thead><tr><th>Alta</th><th>Baja</th><th>Horas/sem.</th><th>Estado</th>${admin?'<th></th>':''}</tr></thead><tbody>
+      ${periodos.map(p=>{ const s=estadoPeriodo(p,hoy);
+        return `<tr data-per="${p.id}"><td>${fmtDia(p.fecha_alta)}</td>
+          <td>${p.fecha_baja?fmtDia(p.fecha_baja):'<span style="color:var(--tinta-suave)">abierto</span>'}</td>
+          <td>${p.horas_semana!=null?p.horas_semana+' h':'<span style="color:var(--tinta-suave)">—</span>'}</td>
+          <td><span class="badge" style="background:${s.bg};color:${s.color};font-weight:600">${s.txt}</span></td>
+          ${admin?`<td style="text-align:right;white-space:nowrap">
+            ${!p.fecha_baja?`<button class="link-btn2" data-cerrar="${p.id}">Cerrar</button> · `:''}
+            <button class="link-btn2" data-editar="${p.id}">Editar</button> ·
+            <button class="link-btn2" style="color:var(--red)" data-borrar-per="${p.id}">Borrar</button></td>`:''}
+        </tr>`; }).join('')}
+    </tbody></table>`;
+    if(admin) html+=`<div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+      <div><label style="margin-top:0">Alta</label><input type="date" id="ef-nueva-alta" value="${hoy}"></div>
+      <div><label style="margin-top:0">Baja (opcional)</label><input type="date" id="ef-nueva-baja"></div>
+      <div><label style="margin-top:0">Horas/sem.</label><input type="number" step="0.5" min="0" id="ef-nueva-horas" style="width:90px" placeholder="40"></div>
+      <button class="btn btn-primario btn-peque" id="ef-add-periodo">Añadir periodo</button></div>`;
+    $('ef-periodos').innerHTML=html;
+    if(!admin) return;
+    $('ef-add-periodo').addEventListener('click', ()=>addPeriodo(empId));
+    $('ef-periodos').querySelectorAll('[data-cerrar]').forEach(b=>b.addEventListener('click', ()=>cerrarPeriodo(b.dataset.cerrar, empId)));
+    $('ef-periodos').querySelectorAll('[data-editar]').forEach(b=>b.addEventListener('click', ()=>editarPeriodo(b.dataset.editar, periodos, empId)));
+    $('ef-periodos').querySelectorAll('[data-borrar-per]').forEach(b=>b.addEventListener('click', ()=>borrarPeriodo(b.dataset.borrarPer, empId)));
+  }
+  async function addPeriodo(empId){
+    const alta=$('ef-nueva-alta').value, baja=$('ef-nueva-baja').value||null, horas=$('ef-nueva-horas').value;
+    if(!alta){ toast('Indica la fecha de alta'); return; }
+    if(baja && baja<alta){ toast('La baja no puede ser anterior al alta'); return; }
+    const { error }=await sb.from('periodos_contrato').insert({empleado_id:empId, fecha_alta:alta, fecha_baja:baja, horas_semana:horas===''?null:Number(horas)});
+    if(error){ toast('No se pudo añadir: '+error.message); return; }
+    toast('Periodo añadido'); await refrescarTrasPeriodo(empId);
+  }
+  async function cerrarPeriodo(id, empId){
+    const f=prompt('Último día que trabaja (AAAA-MM-DD):', hoyIso());
+    if(!f) return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(f)){ toast('Formato de fecha no válido'); return; }
+    const { error }=await sb.from('periodos_contrato').update({fecha_baja:f}).eq('id',id);
+    if(error){ toast('No se pudo cerrar: '+error.message); return; }
+    toast('Periodo cerrado'); await refrescarTrasPeriodo(empId);
+  }
+  async function editarPeriodo(id, periodos, empId){
+    const p=periodos.find(x=>x.id===id); if(!p)return;
+    const alta=prompt('Fecha de alta (AAAA-MM-DD):', p.fecha_alta); if(!alta)return;
+    const baja=prompt('Fecha de baja (AAAA-MM-DD, vacío = abierto):', p.fecha_baja||'');
+    if(baja && baja<alta){ toast('La baja no puede ser anterior al alta'); return; }
+    const horas=prompt('Horas/semana (vacío = sin definir):', p.horas_semana??'');
+    const { error }=await sb.from('periodos_contrato').update({fecha_alta:alta, fecha_baja:baja||null, horas_semana:horas===''||horas==null?null:Number(horas)}).eq('id',id);
+    if(error){ toast('No se pudo guardar: '+error.message); return; }
+    toast('Periodo actualizado'); await refrescarTrasPeriodo(empId);
+  }
+  async function borrarPeriodo(id, empId){
+    if(!confirm('¿Borrar este periodo? Se usa para saber cuándo el empleado está activo.'))return;
+    const { error }=await sb.from('periodos_contrato').delete().eq('id',id);
+    if(error){ toast('No se pudo borrar: '+error.message); return; }
+    toast('Periodo borrado'); await refrescarTrasPeriodo(empId);
+  }
+  // Tras cambiar periodos, refrescar el panel y sincronizar fecha_alta/fecha_baja "de conveniencia"
+  // en empleados (el más reciente), para que consultas rápidas y el badge de activo sigan al día.
+  async function refrescarTrasPeriodo(empId){
+    const { data }=await sb.from('periodos_contrato').select('fecha_alta,fecha_baja,horas_semana').eq('empleado_id',empId).order('fecha_alta',{ascending:false}).limit(1);
+    const ult=data?.[0];
+    if(ult) await sb.from('empleados').update({fecha_alta:ult.fecha_alta, fecha_baja:ult.fecha_baja, horas_semana:ult.horas_semana}).eq('id',empId);
+    await pintarPeriodos(empId);
+    await cargarLista();
+  }
+  function poblarDeptos(localId, actual){
+    const sel=$('ef-depto'); if(!sel)return;
+    const permit=S.deptosPorLocal[localId]||[]; const lista=permit.length?permit:S.deptos;
+    let html='<option value="">— sin asignar —</option>'+lista.map(d=>`<option ${d===actual?'selected':''}>${d}</option>`).join('');
+    if(actual&&!lista.includes(actual)) html+=`<option selected>${actual} (otro centro)</option>`;
+    sel.innerHTML=html;
+  }
+  async function guardar(ev){
+    ev.preventDefault(); const e=S.empleados.find(x=>x.id===S.sel);
+    const c={ nombre:$('ef-nombre').value.trim(), apellidos:$('ef-apellidos').value.trim(),
+      email:$('ef-email').value.trim()||null, telefono:$('ef-telefono').value.trim()||null,
+      local_principal_id:$('ef-local').value, tipo_contrato:$('ef-contrato').value.trim()||null,
+      departamento:($('ef-depto').value.replace(/ \(otro centro\)$/,'').trim())||null,
+      fichaje_movil:$('ef-movil').checked };
+    const { error }=await sb.from('empleados').update(c).eq('id',e.id);
+    if(error){ toast('No se pudo guardar: '+error.message); return; }
+    if(c.local_principal_id!==e.local_principal_id && !(S.asigs[e.id]||[]).includes(c.local_principal_id))
+      await sb.from('asignaciones').insert({empleado_id:e.id, local_id:c.local_principal_id});
+    toast('Ficha guardada'); await cargarLista(); pintarFicha();
+  }
+  async function nuevoPin(){
+    const e=S.empleados.find(x=>x.id===S.sel);
+    if(!confirm(`Generar un PIN nuevo para ${e.nombre}? El anterior dejará de funcionar al instante.`))return;
+    const { data:ses }=await sb.auth.getSession();
+    const r=await fetch(URL_FN,{ method:'POST', headers:{'content-type':'application/json','authorization':'Bearer '+ses.session.access_token}, body:JSON.stringify({accion:'nuevo_pin',empleado_id:e.id}) });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok){ toast(d.error||'No se pudo generar el PIN'); return; }
+    $('ef-pin-nuevo').textContent=d.pin; $('ef-pin-nota').textContent='Apúntalo y dáselo ahora: no se volverá a mostrar.';
+  }
+  function efHist(fs){ const an=new Set(fs.map(f=>f.corrige_a).filter(Boolean)); return {lista:fs.filter(f=>!an.has(f.id)),anulados:an}; }
+  function horasDia(efs){
+    let neto=0,ab=null,pa=null;
+    for(const f of efs){ const t=new Date(f.ts).getTime();
+      if(f.tipo==='entrada'){ab=t;pa=null;} else if(f.tipo==='salida'&&ab!==null){neto+=t-ab;ab=null;pa=null;}
+      else if(f.tipo==='pausa_inicio'&&ab!==null){pa=t;} else if(f.tipo==='pausa_fin'&&pa!==null){neto-=(t-pa);pa=null;} }
+    return { horas:neto/3600000, abierto:ab!==null };
+  }
+  async function historico(id){
+    const desde=new Date(); desde.setDate(desde.getDate()-14); desde.setHours(0,0,0,0);
+    const { data }=await sb.from('fichajes').select('*').eq('empleado_id',id).gte('ts',desde.toISOString()).order('ts');
+    const fs=data||[]; if(!fs.length){ $('ef-historico').innerHTML='<div class="nota">Sin fichajes en las dos últimas semanas.</div>'; return; }
+    const dias={}; for(const f of fs){ const d=new Date(f.ts).toLocaleDateString('sv-SE'); (dias[d]=dias[d]||[]).push(f); }
+    let html='';
+    for(const d of Object.keys(dias).sort().reverse()){
+      const {lista,anulados}=efHist(dias[d]); const {horas,abierto}=horasDia(lista);
+      html+=`<div class="dia-h"><span class="f">${new Date(d+'T12:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}</span><span class="h">${horas.toFixed(2)} h</span>`;
+      for(const f of dias[d]){ const anu=anulados.has(f.id); const cl=anu?f.tipo+' anulado':(f.metodo==='correccion'?'correccion':f.tipo);
+        html+=`<span class="chip ${cl}" style="cursor:default" title="${f.metodo==='correccion'?(f.motivo_correccion||''):f.metodo}">${NT[f.tipo]} ${horaDe(f.ts)}</span>`; }
+      if(abierto&&d===hoyIso()) html+='<span class="badge-inc" style="background:var(--publicado-fondo);color:var(--publicado)">En curso</span>';
+      else if(abierto) html+='<span class="badge-inc">⚠ sin salida</span>';
+      html+='</div>';
+    }
+    $('ef-historico').innerHTML=html;
+  }
+  async function alta(){
+    const nombre=prompt('Nombre del empleado:'); if(!nombre?.trim())return;
+    const apellidos=prompt('Apellidos:')??'';
+    const idx=Number(prompt(`Local principal (número):\n${S.locales.map((l,i)=>`${i+1}. ${l.nombre}`).join('\n')}`));
+    const local=S.locales[idx-1]; if(!local){ toast('Local no válido'); return; }
+    const horas=Number(prompt('Horas/semana del contrato:','40'))||null;
+    const { data,error }=await sb.from('empleados').insert({nombre:nombre.trim(),apellidos:apellidos.trim(),local_principal_id:local.id,fecha_alta:hoyIso(),horas_semana:horas}).select('id').single();
+    if(error){ toast('No se pudo crear: '+error.message); return; }
+    await sb.from('asignaciones').insert({empleado_id:data.id,local_id:local.id});
+    await sb.from('periodos_contrato').insert({empleado_id:data.id,fecha_alta:hoyIso(),horas_semana:horas}); // primer periodo, abierto
+    toast(`${nombre} añadido a ${local.nombre}`); await cargarLista(); S.sel=data.id; pintarLista(); pintarFicha();
+  }
+  return { init, onShow: ()=>{ if(APP.rol==='admin') pintarBarra(); } };
+})();
+
+// ========================================================================
+// ===================== SECCIÓN: AJUSTES (solo admin) ===================
+// ========================================================================
+INIT.ajustes = (() => {
+  const S = { sub:'convenios', convenios:[], locales:[], convSel:null };
+  const REGLAS=[
+    ['descanso_diario_h','Descanso diario mínimo','horas libres entre jornadas','h'],
+    ['descanso_semanal_dias','Descanso semanal','días libres consecutivos por semana','días'],
+    ['max_dias_consecutivos','Máximo días seguidos','días de trabajo sin descanso','días'],
+    ['jornada_max_diaria_h','Jornada máxima diaria','horas máximas en un día','h'],
+    ['jornada_min_diaria_h','Jornada mínima por turno','salvo petición del trabajador','h'],
+    ['jornada_max_semanal_h','Jornada máxima semanal','media semanal anual','h'],
+    ['pausa_tras_h','Pausa obligatoria tras','horas seguidas trabajadas','h'],
+    ['pausa_min_minutos','Duración mínima de la pausa','','min'],
+  ];
+  async function init(){
+    document.querySelectorAll('.aside-aj .nav-sec').forEach(b=>b.addEventListener('click',()=>ir(b.dataset.aj)));
+    ir('convenios');
+  }
+  function ir(sub){ S.sub=sub; document.querySelectorAll('.aside-aj .nav-sec').forEach(b=>b.classList.toggle('activa',b.dataset.aj===sub));
+    ({convenios:secConvenios,locales:secLocales,ausencias:secAusencias,catalogos:secCatalogos,matriz:secMatriz})[sub](); }
+
+  // --- Convenios ---
+  async function secConvenios(){
+    $('aj-cuerpo').innerHTML='<div class="vacio">Cargando…</div>';
+    const [{data:conv},{data:locs}]=await Promise.all([
+      sb.from('convenios').select('*').order('nombre'),
+      sb.from('locales').select('id,nombre,convenio_id').eq('activo',true).order('nombre')]);
+    S.convenios=conv||[]; S.locales=locs||[];
+    if(!S.convSel) S.convSel=(S.convenios.find(c=>c.es_por_defecto)||S.convenios[0])?.id;
+    pintarConv();
+  }
+  function pintarConv(){
+    const c=S.convenios.find(x=>x.id===S.convSel); if(!c)return;
+    const locales=S.locales.filter(l=>l.convenio_id===c.id).map(l=>l.nombre);
+    $('aj-cuerpo').innerHTML=`<h2>Convenios y reglas</h2>
+      <div class="sub" style="color:var(--tinta-suave);font-size:13px;margin-bottom:14px">Las reglas alimentan los avisos del cuadrante. No bloquean: avisan al encargado.</div>
+      <div class="aviso-caja">Estas reglas siguen el convenio de hostelería de Baleares. Bodega y Campo se afinarán cuando lleguen sus textos; de momento comparten las mismas reglas.</div>
+      <div class="chip-conv">${S.convenios.map(x=>`<button class="${x.id===S.convSel?'activa':''}" data-conv="${x.id}">${x.nombre}${x.es_por_defecto?'<span class="badge-def">por defecto</span>':''}</button>`).join('')}</div>
+      <div class="panel"><h3>Reglas de «${c.nombre}»</h3><div class="nota" style="margin-bottom:12px">Deja un campo vacío para desactivar ese aviso.</div>
+        ${REGLAS.map(([k,t,d,u])=>`<div class="grid-regla"><div class="txt">${t}<small>${d}</small></div>
+          <div style="display:flex;align-items:center;gap:6px"><input type="number" step="0.5" min="0" id="aj-r-${k}" value="${c[k]??''}"><span style="font-size:12px;color:var(--tinta-suave);min-width:26px">${u}</span></div></div>`).join('')}
+        <div class="fila-guardar"><button class="btn btn-primario" id="aj-guardar-conv">Guardar reglas</button></div>
+        <div class="nota" style="margin-top:8px">Se aplica a: ${locales.length?locales.join(' · '):'ningún local todavía'}</div></div>
+      <div class="panel"><h3>Convenio por local</h3><div class="nota" style="margin-bottom:10px">Asigna a cada local el convenio que le corresponde.</div>
+        <table class="aj"><thead><tr><th>Local</th><th>Convenio</th></tr></thead><tbody>
+          ${S.locales.map(l=>`<tr><td>${l.nombre}</td><td><select data-loc="${l.id}" style="width:auto;min-width:180px">${S.convenios.map(x=>`<option value="${x.id}" ${x.id===l.convenio_id?'selected':''}>${x.nombre}</option>`).join('')}</select></td></tr>`).join('')}
+        </tbody></table></div>`;
+    document.querySelectorAll('[data-conv]').forEach(b=>b.addEventListener('click',()=>{S.convSel=b.dataset.conv;pintarConv();}));
+    $('aj-guardar-conv').addEventListener('click', async()=>{
+      const c={}; for(const [k] of REGLAS){ const v=$('aj-r-'+k).value; c[k]=v===''?null:Number(v); }
+      const { error }=await sb.from('convenios').update(c).eq('id',S.convSel);
+      if(error){ toast('No se pudo guardar: '+error.message); return; }
+      const i=S.convenios.findIndex(x=>x.id===S.convSel); S.convenios[i]={...S.convenios[i],...c}; toast('Reglas guardadas'); });
+    document.querySelectorAll('[data-loc]').forEach(sel=>sel.addEventListener('change', async()=>{
+      const { error }=await sb.from('locales').update({convenio_id:sel.value}).eq('id',sel.dataset.loc);
+      if(error){ toast('No se pudo cambiar'); return; }
+      const l=S.locales.find(x=>x.id===sel.dataset.loc); if(l)l.convenio_id=sel.value; toast('Convenio actualizado'); pintarConv(); }));
+  }
+  // --- Locales y fichaje ---
+  async function secLocales(){
+    $('aj-cuerpo').innerHTML='<div class="vacio">Cargando…</div>';
+    const { data }=await sb.from('locales').select('*').order('nombre'); S.locales=data||[];
+    $('aj-cuerpo').innerHTML=`<h2>Locales y fichaje</h2>
+      <div class="sub" style="color:var(--tinta-suave);font-size:13px;margin-bottom:14px">Coordenadas y radio para validar el fichaje móvil.</div>
+      <div class="aviso-caja">Para obtener lat/lng: abre Google Maps, haz clic derecho sobre el local y copia los dos números.</div>
+      ${S.locales.filter(l=>l.activo).map(l=>`<div class="panel"><h3>${l.nombre}</h3>
+        <div class="grid-2"><div><label>Latitud</label><input id="aj-lat-${l.id}" type="number" step="0.000001" value="${l.lat??''}" placeholder="39.8xxxxx"></div>
+        <div><label>Longitud</label><input id="aj-lng-${l.id}" type="number" step="0.000001" value="${l.lng??''}" placeholder="4.2xxxxx"></div></div>
+        <div style="max-width:220px"><label>Radio de fichaje (metros)</label><input id="aj-rad-${l.id}" type="number" min="20" step="10" value="${l.radio_fichaje_m??150}"></div>
+        <div class="fila-guardar"><button class="btn btn-primario btn-peque" data-guardar-loc="${l.id}">Guardar</button></div></div>`).join('')}`;
+    document.querySelectorAll('[data-guardar-loc]').forEach(b=>b.addEventListener('click', async()=>{
+      const id=b.dataset.guardarLoc, lat=$('aj-lat-'+id).value, lng=$('aj-lng-'+id).value, rad=$('aj-rad-'+id).value;
+      const { error }=await sb.from('locales').update({lat:lat===''?null:Number(lat),lng:lng===''?null:Number(lng),radio_fichaje_m:rad===''?150:Number(rad)}).eq('id',id);
+      toast(error?'No se pudo guardar':'Local actualizado'); }));
+  }
+  // --- Tipos de ausencia ---
+  async function secAusencias(){
+    $('aj-cuerpo').innerHTML='<div class="vacio">Cargando…</div>';
+    const { data }=await sb.from('tipos_ausencia').select('*').order('orden'); const tipos=data||[];
+    $('aj-cuerpo').innerHTML=`<h2>Tipos de ausencia</h2>
+      <div class="sub" style="color:var(--tinta-suave);font-size:13px;margin-bottom:14px">Qué ausencias existen, cuáles restan de vacaciones y cuáles puede pedir el empleado.</div>
+      <div class="panel"><table class="aj"><thead><tr><th>Tipo</th><th class="c">Activo</th><th class="c">Resta vacaciones</th><th class="c">La pide el empleado</th></tr></thead><tbody>
+        ${tipos.map(t=>`<tr data-tipo="${t.id}"><td>${t.nombre}</td>
+          <td class="c"><label class="switch"><input type="checkbox" data-campo="activo" ${t.activo?'checked':''}><span class="slider"></span></label></td>
+          <td class="c"><label class="switch"><input type="checkbox" data-campo="computa_vacaciones" ${t.computa_vacaciones?'checked':''}><span class="slider"></span></label></td>
+          <td class="c"><label class="switch"><input type="checkbox" data-campo="solicitable_empleado" ${t.solicitable_empleado?'checked':''}><span class="slider"></span></label></td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="panel"><h3>Añadir tipo</h3><div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px"><label>Nombre</label><input id="aj-nuevo-tipo" placeholder="Ej.: Permiso por mudanza"></div>
+        <button class="btn btn-primario btn-peque" id="aj-add-tipo">Añadir</button></div></div>`;
+    document.querySelectorAll('[data-campo]').forEach(chk=>chk.addEventListener('change', async()=>{
+      const id=chk.closest('[data-tipo]').dataset.tipo;
+      const { error }=await sb.from('tipos_ausencia').update({[chk.dataset.campo]:chk.checked}).eq('id',id);
+      toast(error?'No se pudo guardar':'Guardado'); if(error)secAusencias(); }));
+    $('aj-add-tipo').addEventListener('click', async()=>{
+      const n=$('aj-nuevo-tipo').value.trim(); if(!n){ toast('Escribe un nombre'); return; }
+      const { error }=await sb.from('tipos_ausencia').insert({nombre:n,orden:100});
+      toast(error?'No se pudo añadir':'Tipo añadido'); if(!error)secAusencias(); });
+  }
+  // --- Catálogos: departamentos y contratos ---
+  async function secCatalogos(){
+    $('aj-cuerpo').innerHTML='<div class="vacio">Cargando…</div>';
+    const [dep,con]=await Promise.all([sb.from('departamentos').select('*').order('orden'),sb.from('tipos_contrato').select('*').order('orden')]);
+    $('aj-cuerpo').innerHTML=`<h2>Departamentos y contratos</h2>
+      <div class="sub" style="color:var(--tinta-suave);font-size:13px;margin-bottom:14px">Las listas que aparecen en la ficha de cada empleado. Desactivar un valor lo oculta de los desplegables, pero no cambia a quien ya lo tenga.</div>
+      ${bloque('Departamentos','departamentos',dep.data||[])}${bloque('Tipos de contrato','tipos_contrato',con.data||[])}`;
+    engancha();
+  }
+  function bloque(titulo,tabla,filas){
+    return `<div class="panel"><h3>${titulo}</h3><table class="aj"><thead><tr><th>Nombre</th><th class="c">Activo</th><th class="c"></th></tr></thead><tbody>
+      ${filas.map(f=>`<tr data-tabla="${tabla}" data-id="${f.id}"><td>${f.nombre}</td>
+        <td class="c"><label class="switch"><input type="checkbox" data-toggle ${f.activo?'checked':''}><span class="slider"></span></label></td>
+        <td class="c"><button class="btn btn-fantasma btn-peque" data-borrar>Quitar</button></td></tr>`).join('')}
+      </tbody></table><div style="display:flex;gap:10px;align-items:end;margin-top:12px"><div style="flex:1"><label>Añadir a ${titulo.toLowerCase()}</label><input data-nuevo="${tabla}" placeholder="Nombre nuevo"></div><button class="btn btn-primario btn-peque" data-add="${tabla}">Añadir</button></div></div>`;
+  }
+  function engancha(){
+    document.querySelectorAll('[data-toggle]').forEach(chk=>chk.addEventListener('change', async()=>{
+      const tr=chk.closest('[data-tabla]'); const { error }=await sb.from(tr.dataset.tabla).update({activo:chk.checked}).eq('id',tr.dataset.id);
+      toast(error?'No se pudo guardar':'Guardado'); if(error)secCatalogos(); }));
+    document.querySelectorAll('[data-borrar]').forEach(b=>b.addEventListener('click', async()=>{
+      const tr=b.closest('[data-tabla]'); if(!confirm('¿Quitar este valor de la lista? Quien ya lo tenga asignado lo conserva.'))return;
+      const { error }=await sb.from(tr.dataset.tabla).delete().eq('id',tr.dataset.id);
+      if(error){ toast('No se pudo quitar (puede estar en uso). Desactívalo en su lugar.'); return; } toast('Quitado'); secCatalogos(); }));
+    document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click', async()=>{
+      const tabla=b.dataset.add, inp=document.querySelector(`[data-nuevo="${tabla}"]`), n=inp.value.trim();
+      if(!n){ toast('Escribe un nombre'); return; }
+      const { error }=await sb.from(tabla).insert({nombre:n,orden:200});
+      toast(error?'No se pudo añadir: '+error.message:'Añadido'); if(!error)secCatalogos(); }));
+  }
+  // --- Matriz departamentos × centro ---
+  async function secMatriz(){
+    $('aj-cuerpo').innerHTML='<div class="vacio">Cargando…</div>';
+    const [loc,dep,rel]=await Promise.all([
+      sb.from('locales').select('id,nombre').eq('activo',true).order('nombre'),
+      sb.from('departamentos').select('id,nombre').eq('activo',true).order('orden'),
+      sb.from('local_departamentos').select('local_id,departamento_id')]);
+    const locales=loc.data||[], deptos=dep.data||[]; const act=new Set((rel.data||[]).map(r=>`${r.local_id}|${r.departamento_id}`));
+    $('aj-cuerpo').innerHTML=`<h2>Departamentos por centro</h2>
+      <div class="sub" style="color:var(--tinta-suave);font-size:13px;margin-bottom:14px">Marca qué departamentos existen en cada centro. En la ficha del empleado, el desplegable mostrará solo los de su centro.</div>
+      <div class="aviso-caja">Marcado inicial según lo que ya tienen tus empleados. Revísalo: verás casillas heredadas del histórico que quizá quieras desmarcar.</div>
+      <div class="panel" style="overflow-x:auto"><table class="aj" style="min-width:640px"><thead><tr><th style="position:sticky;left:0;background:#fff">Centro</th>
+        ${deptos.map(d=>`<th class="c" style="writing-mode:vertical-rl;transform:rotate(180deg);height:90px;white-space:nowrap">${d.nombre}</th>`).join('')}</tr></thead><tbody>
+        ${locales.map(l=>`<tr><td style="position:sticky;left:0;background:#fff;font-weight:600">${l.nombre}</td>
+          ${deptos.map(d=>`<td class="c"><label class="switch"><input type="checkbox" data-l="${l.id}" data-d="${d.id}" ${act.has(`${l.id}|${d.id}`)?'checked':''}><span class="slider"></span></label></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div>`;
+    document.querySelectorAll('[data-l][data-d]').forEach(chk=>chk.addEventListener('change', async()=>{
+      const l=chk.dataset.l, d=chk.dataset.d; let error;
+      if(chk.checked) ({error}=await sb.from('local_departamentos').insert({local_id:l,departamento_id:d}));
+      else ({error}=await sb.from('local_departamentos').delete().eq('local_id',l).eq('departamento_id',d));
+      if(error){ toast('No se pudo guardar'); chk.checked=!chk.checked; } else toast('Guardado'); }));
+  }
+  return { init };
+})();
+</script>
+</body>
+</html>

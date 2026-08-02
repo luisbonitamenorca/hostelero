@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bonita Equipo</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E7C86">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fondo:#FAFAF7; --tinta:#1C2B33; --tinta-suave:#5A6B73;
+    --mar:#0E7C86; --mar-oscuro:#0A5C64; --arena:#E9E4D8; --linea:#DDD6C7;
+    --ok:#2F855A; --ok-f:#E8F3EC; --error:#B03A2E; --error-f:#F9ECEA;
+    --pausa-f:#EFF1F0; --aviso:#B7791F; --aviso-f:#FBF3E0; --correccion-f:#F1EDF7; --correccion:#7A5CA8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:var(--fondo);color:var(--tinta);font-family:'Inter',system-ui,sans-serif;font-size:15px;
+       padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+  h1,h2,h3,button,.brand{font-family:'Archivo',sans-serif}
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-card{background:#fff;border:1px solid var(--linea);border-radius:16px;padding:30px;width:100%;max-width:380px}
+  .brand{font-size:22px;font-weight:700}.brand span{color:var(--mar)}
+  .login-card p{color:var(--tinta-suave);margin-bottom:20px}
+  label{display:block;font-weight:600;font-size:12px;margin:12px 0 5px}
+  input,select,textarea{width:100%;padding:12px;border:1px solid var(--linea);border-radius:10px;font:inherit;background:#fff;font-size:16px}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--mar);outline-offset:1px}
+  .btn{cursor:pointer;border:none;border-radius:10px;padding:13px 16px;font-weight:600;font-size:15px}
+  .btn-primario{background:var(--mar);color:#fff;width:100%;margin-top:18px}
+  .btn-primario:active{background:var(--mar-oscuro)}
+  .btn-fantasma{background:transparent;border:1px solid var(--linea);color:var(--tinta)}
+  .error-msg{color:var(--error);margin-top:10px;font-size:13px;min-height:16px}
+  .nota-login{margin-top:14px;font-size:12.5px;color:var(--tinta-suave);text-align:center}
+  .nota-login button{background:none;border:none;color:var(--mar);font-weight:600;cursor:pointer;font-size:12.5px}
+
+  header{background:var(--mar);color:#fff;padding:14px 18px calc(14px);display:flex;align-items:center;gap:10px}
+  header .brand{font-size:17px;color:#fff}
+  header .quien{font-size:12.5px;opacity:.85;margin-left:auto;text-align:right}
+  main{padding:16px;max-width:520px;margin:0 auto}
+  .tarjeta{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+  .dia-cab{font-family:'Archivo';font-weight:600;font-size:13px;color:var(--tinta-suave);text-transform:capitalize;margin:14px 4px 6px}
+  .dia-cab.hoy{color:var(--mar)}
+  .turno-linea{display:flex;align-items:center;gap:12px}
+  .turno-hora{font-family:'Archivo';font-weight:700;font-size:17px}
+  .turno-det{color:var(--tinta-suave);font-size:13px}
+  .libre{color:var(--tinta-suave);font-size:13.5px;padding:6px 4px}
+  .badge{font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px}
+  .badge.aus{background:var(--pausa-f);color:var(--tinta-suave)}
+  .vacio{text-align:center;padding:34px 16px;color:var(--tinta-suave)}
+
+  /* Fichar */
+  .fichar-caja{text-align:center;padding:8px 0}
+  .reloj{font-family:'Archivo';font-size:46px;font-weight:600;letter-spacing:1px}
+  .fecha-hoy{color:var(--tinta-suave);margin-bottom:14px;text-transform:capitalize}
+  .estado-actual{margin:8px 0 16px;font-size:14px}
+  .estado-actual b{color:var(--mar)}
+  .botones-fichar{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+  .botones-fichar button{border:none;border-radius:14px;padding:20px 8px;font-size:16px;font-weight:600;color:#fff;cursor:pointer}
+  .b-entrada{background:var(--ok)} .b-salida{background:var(--error)}
+  .b-pausa{background:var(--arena);color:var(--tinta)!important;font-size:14px!important}
+  .geo-nota{font-size:12px;color:var(--tinta-suave);margin-top:12px}
+  .chipf{border-radius:6px;padding:2px 8px;font-size:11.5px;border:1.2px solid var(--linea);display:inline-block;margin:2px}
+  .chipf.entrada{background:var(--ok-f);border-color:var(--ok)}
+  .chipf.salida{background:var(--error-f);border-color:var(--error)}
+  .chipf.pausa_inicio,.chipf.pausa_fin{background:var(--pausa-f)}
+  .chipf.correccion{background:var(--correccion-f);border-color:var(--correccion)}
+
+  /* Ausencias */
+  .aus-linea{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--fondo)}
+  .aus-linea:last-child{border-bottom:none}
+  .aus-tipo{font-weight:600;text-transform:capitalize}
+  .aus-fechas{font-size:12.5px;color:var(--tinta-suave)}
+  .estado{font-size:11px;font-weight:700;border-radius:20px;padding:3px 10px}
+  .estado.solicitada{background:var(--aviso-f);color:var(--aviso)}
+  .estado.aprobada{background:var(--ok-f);color:var(--ok)}
+  .estado.rechazada{background:var(--error-f);color:var(--error)}
+  .fila-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  /* Horas */
+  .total-mes{font-family:'Archivo';font-size:34px;font-weight:700;color:var(--mar);text-align:center}
+  .total-sub{text-align:center;color:var(--tinta-suave);font-size:13px;margin-bottom:12px}
+  .dia-h{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--fondo);flex-wrap:wrap}
+  .dia-h .f{font-weight:600;font-family:'Archivo';font-size:13px;min-width:92px;text-transform:capitalize}
+  .dia-h .h{color:var(--mar);font-weight:600;min-width:52px}
+
+  /* Barra inferior */
+  .tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--linea);
+    display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:30}
+  .tabbar button{flex:1;background:none;border:none;padding:10px 4px 8px;cursor:pointer;color:var(--tinta-suave);
+    font-size:11px;font-weight:600;font-family:'Archivo';display:flex;flex-direction:column;align-items:center;gap:3px}
+  .tabbar button.activo{color:var(--mar)}
+  .tabbar .ico{font-size:20px;line-height:1}
+  .toast{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+    background:var(--tinta);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;z-index:60;pointer-events:none;max-width:90vw;text-align:center}
+  .toast.visible{opacity:1}
+  .oculto{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="vista-login" class="login-wrap">
+  <form class="login-card" id="form-login">
+    <div class="brand">Bonita <span>Equipo</span></div>
+    <p id="login-sub">Tus turnos, fichajes y vacaciones</p>
+    <label for="email">Email</label>
+    <input type="email" id="email" autocomplete="username" required>
+    <label for="pass">Contraseña</label>
+    <input type="password" id="pass" autocomplete="current-password" required>
+    <button class="btn btn-primario" type="submit" id="btn-login">Entrar</button>
+    <div class="error-msg" id="login-error"></div>
+    <div class="nota-login" id="nota-login">¿Primera vez? <button type="button" id="btn-modo">Crear mi cuenta</button></div>
+  </form>
+</div>
+
+<div id="vista-app" class="oculto">
+  <header>
+    <div class="brand">Bonita Equipo</div>
+    <div class="quien" id="quien"></div>
+  </header>
+  <main id="contenido"></main>
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="turnos" class="activo"><span class="ico">📅</span>Turnos</button>
+    <button data-tab="fichar" id="tab-fichar"><span class="ico">⏱</span>Fichar</button>
+    <button data-tab="ausencias"><span class="ico">🌴</span>Ausencias</button>
+    <button data-tab="horas"><span class="ico">Σ</span>Horas</button>
+    <button data-tab="salir"><span class="ico">↩</span>Salir</button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const sb = createClient(
+  'https://cwhmyarbjyvkfskxreeo.supabase.co',
+  'sb_publishable_M-wEN03Ty8Gf1tSgni8PaA_V_F2-4vN'
+);
+
+const S = { user:null, emp:null, locales:[], tab:'turnos', registro:false };
+const NOMBRE_TIPO = { entrada:'Entrada', salida:'Salida', pausa_inicio:'Pausa ▶', pausa_fin:'Pausa ■' };
+const $ = id => document.getElementById(id);
+const hoyIso = () => new Date().toLocaleDateString('sv-SE');
+
+// ---------- Sesión ----------
+sb.auth.onAuthStateChange(async (_e, ses) => {
+  if (ses?.user && !S.user){ S.user = ses.user; await iniciar(); }
+  if (!ses?.user){ S.user=null; S.emp=null; $('vista-app').classList.add('oculto'); $('vista-login').style.display='flex'; }
+});
+
+$('btn-modo').addEventListener('click', () => {
+  S.registro = !S.registro;
+  $('btn-login').textContent = S.registro ? 'Crear cuenta' : 'Entrar';
+  $('login-sub').textContent = S.registro ? 'Usa el email que Bonita tiene en tu ficha' : 'Tus turnos, fichajes y vacaciones';
+  $('nota-login').firstChild.textContent = S.registro ? '¿Ya tienes cuenta? ' : '¿Primera vez? ';
+  $('btn-modo').textContent = S.registro ? 'Entrar' : 'Crear mi cuenta';
+});
+
+$('form-login').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('login-error').textContent='';
+  const email = $('email').value.trim(), password = $('pass').value;
+  if (S.registro){
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error){ $('login-error').textContent = 'No se pudo crear la cuenta: '+error.message; return; }
+    if (!data.session){ $('login-error').textContent = 'Revisa tu correo para confirmar la cuenta y vuelve a entrar.'; return; }
+  } else {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error){ $('login-error').textContent = 'No se pudo entrar: revisa el email y la contraseña.'; }
+  }
+});
+
+async function iniciar(){
+  // Vincular cuenta ↔ ficha (por email) y cargar mi ficha
+  await sb.rpc('vincular_mi_empleado');
+  const { data: emp } = await sb.from('empleados')
+    .select('id,nombre,apellidos,fichaje_movil,local_principal_id')
+    .eq('user_id', S.user.id).maybeSingle();
+  if (!emp){
+    $('login-error').textContent = 'Tu email no coincide con ninguna ficha de empleado. Habla con tu encargado para que lo añadan a tu ficha.';
+    await sb.auth.signOut(); return;
+  }
+  S.emp = emp;
+  const { data: asigs } = await sb.from('asignaciones')
+    .select('local_id, locales(id,nombre,lat,lng,radio_fichaje_m)')
+    .eq('empleado_id', emp.id)
+    .or(`fecha_fin.is.null,fecha_fin.gte.${hoyIso()}`);
+  const vistos = new Set();
+  S.locales = (asigs||[]).map(r=>r.locales).filter(l=>l && !vistos.has(l.id) && vistos.add(l.id));
+  $('quien').textContent = emp.nombre;
+  if (!emp.fichaje_movil) $('tab-fichar').classList.add('oculto');
+  $('vista-login').style.display='none';
+  $('vista-app').classList.remove('oculto');
+  pintar('turnos');
+}
+
+// ---------- Navegación ----------
+$('tabbar').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if (b.dataset.tab === 'salir'){ sb.auth.signOut(); return; }
+  pintar(b.dataset.tab);
+});
+function pintar(tab){
+  S.tab = tab;
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('activo', b.dataset.tab===tab));
+  ({ turnos: pintarTurnos, fichar: pintarFichar, ausencias: pintarAusencias, horas: pintarHoras })[tab]();
+}
+
+// ---------- MIS TURNOS ----------
+async function pintarTurnos(){
+  $('contenido').innerHTML = '<div class="vacio">Cargando…</div>';
+  const hoy = new Date(); const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+  const desde = lunes.toLocaleDateString('sv-SE');
+  const fin = new Date(lunes); fin.setDate(lunes.getDate()+13);
+  const hasta = fin.toLocaleDateString('sv-SE');
+
+  const [turnos, ausencias] = await Promise.all([
+    sb.from('turnos').select('*, locales(nombre)').eq('empleado_id', S.emp.id)
+      .gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora_inicio'),
+    sb.from('ausencias').select('*').eq('empleado_id', S.emp.id).eq('estado','aprobada')
+      .lte('fecha_inicio', hasta).gte('fecha_fin', desde)
+  ]);
+  const porDia = {};
+  for (const t of (turnos.data||[])) (porDia[t.fecha] = porDia[t.fecha]||[]).push(t);
+
+  let html = '';
+  for (let i=0; i<14; i++){
+    const d = new Date(lunes); d.setDate(lunes.getDate()+i);
+    const iso = d.toLocaleDateString('sv-SE');
+    const esHoy = iso === hoyIso();
+    if (i===0) html += '<h3 class="dia-cab" style="font-size:15px;color:var(--tinta)">Esta semana</h3>';
+    if (i===7) html += '<h3 class="dia-cab" style="font-size:15px;color:var(--tinta);margin-top:22px">Semana que viene</h3>';
+    const label = d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'short'});
+    html += `<div class="dia-cab ${esHoy?'hoy':''}">${label}${esHoy?' · hoy':''}</div>`;
+    const aus = (ausencias.data||[]).find(a=>a.fecha_inicio<=iso && a.fecha_fin>=iso);
+    const dia = porDia[iso]||[];
+    if (aus) html += `<div class="tarjeta"><span class="badge aus">${aus.tipo}</span></div>`;
+    else if (!dia.length) html += '<div class="libre">Libre</div>';
+    else for (const t of dia){
+      html += `<div class="tarjeta"><div class="turno-linea">
+        <div class="turno-hora">${t.hora_inicio.slice(0,5)}–${t.hora_fin.slice(0,5)}</div>
+        <div class="turno-det">${t.locales?.nombre||''}${t.puesto?' · '+t.puesto:''}${t.pausa_min?' · '+t.pausa_min+" min pausa":''}</div>
+      </div></div>`;
+    }
+  }
+  $('contenido').innerHTML = html || '<div class="vacio">Sin turnos publicados.</div>';
+}
+
+// ---------- FICHAR ----------
+let relojTimer;
+async function pintarFichar(){
+  clearInterval(relojTimer);
+  const opciones = S.locales.map(l=>`<option value="${l.id}" ${l.id===S.emp.local_principal_id?'selected':''}>${l.nombre}</option>`).join('');
+  const { data: ultimos } = await sb.from('fichajes').select('tipo,ts,metodo').eq('empleado_id', S.emp.id)
+    .gte('ts', hoyIso()+'T00:00:00').order('ts');
+  const ult = (ultimos||[]).at(-1);
+  const estado = !ult ? 'Aún no has fichado hoy'
+    : ult.tipo==='entrada' ? 'Estás <b>dentro</b> desde las '+hora(ult.ts)
+    : ult.tipo==='salida' ? 'Saliste a las '+hora(ult.ts)
+    : ult.tipo==='pausa_inicio' ? 'En <b>pausa</b> desde las '+hora(ult.ts)
+    : 'Volviste de la pausa a las '+hora(ult.ts);
+
+  $('contenido').innerHTML = `
+    <div class="tarjeta fichar-caja">
+      <div class="reloj" id="reloj-f"></div>
+      <div class="fecha-hoy" id="fecha-f"></div>
+      <label style="text-align:left">Local</label>
+      <select id="f-local">${opciones}</select>
+      <div class="estado-actual" style="margin-top:14px">${estado}</div>
+      <div class="botones-fichar">
+        <button class="b-entrada" data-tipo="entrada">Entrada</button>
+        <button class="b-salida" data-tipo="salida">Salida</button>
+        <button class="b-pausa" data-tipo="pausa_inicio">Empiezo pausa</button>
+        <button class="b-pausa" data-tipo="pausa_fin">Vuelvo de pausa</button>
+      </div>
+      <div class="geo-nota">Al fichar se registra tu ubicación en ese momento (solo en ese momento, nunca después).</div>
+    </div>
+    <div class="tarjeta"><h3 style="font-size:14px;margin-bottom:8px">Hoy</h3><div id="hoy-f">
+      ${(ultimos||[]).map(f=>`<span class="chipf ${f.metodo==='correccion'?'correccion':f.tipo}">${NOMBRE_TIPO[f.tipo]} ${hora(f.ts)}</span>`).join('')||'<span class="libre">Sin fichajes.</span>'}
+    </div></div>`;
+
+  const tic = () => {
+    const n = new Date();
+    $('reloj-f').textContent = n.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    $('fecha-f').textContent = n.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+  };
+  tic(); relojTimer = setInterval(tic, 5000);
+
+  document.querySelector('.botones-fichar').addEventListener('click', ficharMovil);
+}
+function hora(ts){ return new Date(ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}); }
+function distanciaM(lat1,lng1,lat2,lng2){
+  const R=6371000, r=x=>x*Math.PI/180;
+  const dLat=r(lat2-lat1), dLng=r(lng2-lng1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(r(lat1))*Math.cos(r(lat2))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+let fichando = false;
+async function ficharMovil(e){
+  const tipo = e.target.dataset?.tipo; if(!tipo || fichando) return;
+  fichando = true;
+  const localId = $('f-local').value;
+  const local = S.locales.find(l=>l.id===localId);
+  let pos = null;
+  try {
+    pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy:true, timeout:8000 }));
+  } catch {
+    toast('Necesito tu ubicación para fichar. Activa el permiso e inténtalo de nuevo.');
+    fichando = false; return;
+  }
+  const lat = pos.coords.latitude, lng = pos.coords.longitude;
+  let dentro = null;
+  if (local?.lat != null && local?.lng != null)
+    dentro = distanciaM(lat,lng,local.lat,local.lng) <= (local.radio_fichaje_m||150);
+  const { error } = await sb.from('fichajes').insert({
+    empleado_id: S.emp.id, local_id: localId, tipo, metodo:'movil_geo',
+    lat, lng, dentro_radio: dentro
+  });
+  fichando = false;
+  if (error){ toast('No se pudo fichar: '+error.message); return; }
+  toast(`${NOMBRE_TIPO[tipo]} registrada` + (dentro===false ? ' (fuera del radio del local: tu encargado lo revisará)' : ''));
+  pintarFichar();
+}
+
+// ---------- AUSENCIAS ----------
+async function pintarAusencias(){
+  $('contenido').innerHTML = '<div class="vacio">Cargando…</div>';
+  const { data } = await sb.from('ausencias').select('*').eq('empleado_id', S.emp.id)
+    .order('fecha_inicio', { ascending:false }).limit(20);
+  const lista = (data||[]).map(a=>`
+    <div class="aus-linea">
+      <div><div class="aus-tipo">${a.tipo}</div>
+      <div class="aus-fechas">${fFecha(a.fecha_inicio)} → ${fFecha(a.fecha_fin)}</div></div>
+      <span class="estado ${a.estado}">${a.estado}</span>
+    </div>`).join('') || '<div class="libre">Sin solicitudes.</div>';
+
+  $('contenido').innerHTML = `
+    <div class="tarjeta"><h3 style="font-size:14px;margin-bottom:6px">Pedir ausencia</h3>
+      <form id="form-aus">
+        <label>Tipo</label>
+        <select id="a-tipo"><option value="vacaciones">Vacaciones</option><option value="permiso">Permiso</option><option value="otro">Otro</option></select>
+        <div class="fila-2">
+          <div><label>Desde</label><input type="date" id="a-desde" required min="${hoyIso()}"></div>
+          <div><label>Hasta</label><input type="date" id="a-hasta" required min="${hoyIso()}"></div>
+        </div>
+        <button class="btn btn-primario" type="submit">Enviar solicitud</button>
+      </form>
+    </div>
+    <div class="tarjeta"><h3 style="font-size:14px;margin-bottom:8px">Mis solicitudes</h3>${lista}</div>`;
+
+  $('form-aus').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = $('a-desde').value, h = $('a-hasta').value;
+    if (!d || !h || h < d){ toast('Revisa las fechas.'); return; }
+    const { error } = await sb.from('ausencias').insert({
+      empleado_id: S.emp.id, tipo: $('a-tipo').value,
+      fecha_inicio: d, fecha_fin: h, estado:'solicitada', solicitada_por: S.user.id
+    });
+    if (error){ toast('No se pudo enviar: '+error.message); return; }
+    toast('Solicitud enviada a tu encargado');
+    pintarAusencias();
+  });
+}
+function fFecha(iso){ return new Date(iso+'T12:00').toLocaleDateString('es-ES',{day:'numeric',month:'short'}); }
+
+// ---------- MIS HORAS ----------
+async function pintarHoras(){
+  $('contenido').innerHTML = '<div class="vacio">Cargando…</div>';
+  const hoy = new Date();
+  const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const { data } = await sb.from('fichajes').select('*').eq('empleado_id', S.emp.id)
+    .gte('ts', desde.toISOString()).order('ts');
+  const fichs = data||[];
+  const anulados = new Set(fichs.map(f=>f.corrige_a).filter(Boolean));
+  const efectivos = fichs.filter(f=>!anulados.has(f.id));
+  const dias = {};
+  for (const f of efectivos){
+    const d = new Date(f.ts).toLocaleDateString('sv-SE');
+    (dias[d] = dias[d]||[]).push(f);
+  }
+  let total = 0, html = '';
+  for (const d of Object.keys(dias).sort().reverse()){
+    let neto=0, abierto=null, pausa=null;
+    for (const f of dias[d]){
+      const t = new Date(f.ts).getTime();
+      if (f.tipo==='entrada'){ abierto=t; pausa=null; }
+      else if (f.tipo==='salida' && abierto!==null){ neto+=t-abierto; abierto=null; pausa=null; }
+      else if (f.tipo==='pausa_inicio' && abierto!==null){ pausa=t; }
+      else if (f.tipo==='pausa_fin' && pausa!==null){ neto-=(new Date(f.ts).getTime()-pausa); pausa=null; }
+    }
+    const horas = neto/3600000; total += horas;
+    const enCurso = abierto!==null && d===hoyIso();
+    html += `<div class="dia-h"><span class="f">${new Date(d+'T12:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}</span>
+      <span class="h">${horas.toFixed(2)} h</span>${enCurso?'<span class="badge aus" style="background:var(--ok-f);color:var(--ok)">en curso</span>':''}</div>`;
+  }
+  const mes = hoy.toLocaleDateString('es-ES',{month:'long'});
+  $('contenido').innerHTML = `
+    <div class="tarjeta">
+      <div class="total-mes">${total.toFixed(1)} h</div>
+      <div class="total-sub">trabajadas en ${mes} (con correcciones aplicadas)</div>
+      ${html || '<div class="libre">Sin fichajes este mes.</div>'}
+    </div>
+    <div class="geo-nota" style="padding:0 6px">Si ves algo que no cuadra, díselo a tu encargado: puede corregirlo y quedará registrado con su motivo.</div>`;
+}
+
+let toastTimer;
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('visible'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('visible'),3500); }
+</script>
+</body>
+</html>
