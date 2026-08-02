@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 /** Módulos que ya tienen su propia app dentro del esqueleto: su tarjeta entra ahí. */
 const RUTAS_MODULO: Record<string, string> = {
   visitas: "/visitas",
+  reservas: "/reservas",
 };
 
 export default async function PaginaModulo({
