@@ -107,6 +107,123 @@ export type Database = {
           },
         ]
       }
+      clientes: {
+        Row: {
+          actualizado_en: string
+          apellidos: string | null
+          atributos: Json
+          creado_en: string
+          cuenta_id: string
+          cumpleanos: string | null
+          email: string | null
+          email_norm: string | null
+          id: string
+          idioma: string | null
+          nombre: string | null
+          notas: string | null
+          origen_alta: string
+          telefono: string | null
+          telefono_norm: string | null
+          vip: boolean
+        }
+        Insert: {
+          actualizado_en?: string
+          apellidos?: string | null
+          atributos?: Json
+          creado_en?: string
+          cuenta_id?: string
+          cumpleanos?: string | null
+          email?: string | null
+          email_norm?: string | null
+          id?: string
+          idioma?: string | null
+          nombre?: string | null
+          notas?: string | null
+          origen_alta?: string
+          telefono?: string | null
+          telefono_norm?: string | null
+          vip?: boolean
+        }
+        Update: {
+          actualizado_en?: string
+          apellidos?: string | null
+          atributos?: Json
+          creado_en?: string
+          cuenta_id?: string
+          cumpleanos?: string | null
+          email?: string | null
+          email_norm?: string | null
+          id?: string
+          idioma?: string | null
+          nombre?: string | null
+          notas?: string | null
+          origen_alta?: string
+          telefono?: string | null
+          telefono_norm?: string | null
+          vip?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes_origenes: {
+        Row: {
+          cliente_id: string
+          creado_en: string
+          cuenta_id: string
+          datos: Json | null
+          id: string
+          id_externo: string | null
+          origen: string
+        }
+        Insert: {
+          cliente_id: string
+          creado_en?: string
+          cuenta_id?: string
+          datos?: Json | null
+          id?: string
+          id_externo?: string | null
+          origen: string
+        }
+        Update: {
+          cliente_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          datos?: Json | null
+          id?: string
+          id_externo?: string | null
+          origen?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_origenes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_origenes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_consentimiento_vigente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "clientes_origenes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras_correo: {
         Row: {
           asunto: string | null
@@ -604,6 +721,463 @@ export type Database = {
           },
         ]
       }
+      consentimientos: {
+        Row: {
+          cliente_id: string
+          cuenta_id: string
+          estado: string
+          evidencia: Json | null
+          finalidad: string
+          id: string
+          ocurrido_en: string
+          origen: string
+        }
+        Insert: {
+          cliente_id: string
+          cuenta_id?: string
+          estado: string
+          evidencia?: Json | null
+          finalidad: string
+          id?: string
+          ocurrido_en?: string
+          origen: string
+        }
+        Update: {
+          cliente_id?: string
+          cuenta_id?: string
+          estado?: string
+          evidencia?: Json | null
+          finalidad?: string
+          id?: string
+          ocurrido_en?: string
+          origen?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consentimientos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consentimientos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_consentimiento_vigente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "consentimientos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_campanas: {
+        Row: {
+          asunto: string | null
+          audiencia: Json | null
+          centro_id: string | null
+          creado_en: string
+          cuenta_id: string
+          cuerpo_html: string | null
+          cuerpo_texto: string | null
+          enviada_en: string | null
+          estado: string
+          id: string
+          lista_id: string | null
+          nombre: string
+          plantilla_id: string | null
+          preencabezado: string | null
+          programada_para: string | null
+          remitente_email: string | null
+          remitente_nombre: string | null
+          segmento_id: string | null
+        }
+        Insert: {
+          asunto?: string | null
+          audiencia?: Json | null
+          centro_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          cuerpo_html?: string | null
+          cuerpo_texto?: string | null
+          enviada_en?: string | null
+          estado?: string
+          id?: string
+          lista_id?: string | null
+          nombre: string
+          plantilla_id?: string | null
+          preencabezado?: string | null
+          programada_para?: string | null
+          remitente_email?: string | null
+          remitente_nombre?: string | null
+          segmento_id?: string | null
+        }
+        Update: {
+          asunto?: string | null
+          audiencia?: Json | null
+          centro_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          cuerpo_html?: string | null
+          cuerpo_texto?: string | null
+          enviada_en?: string | null
+          estado?: string
+          id?: string
+          lista_id?: string | null
+          nombre?: string
+          plantilla_id?: string | null
+          preencabezado?: string | null
+          programada_para?: string | null
+          remitente_email?: string | null
+          remitente_nombre?: string | null
+          segmento_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campanas_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campanas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campanas_lista_id_fkey"
+            columns: ["lista_id"]
+            isOneToOne: false
+            referencedRelation: "crm_listas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campanas_plantilla_id_fkey"
+            columns: ["plantilla_id"]
+            isOneToOne: false
+            referencedRelation: "crm_plantillas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campanas_segmento_id_fkey"
+            columns: ["segmento_id"]
+            isOneToOne: false
+            referencedRelation: "crm_segmentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_canales: {
+        Row: {
+          actualizado_en: string
+          canal: string
+          config: Json
+          cuenta_id: string
+          estado: string
+          proveedor: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          canal: string
+          config?: Json
+          cuenta_id?: string
+          estado?: string
+          proveedor?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          canal?: string
+          config?: Json
+          cuenta_id?: string
+          estado?: string
+          proveedor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_canales_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_envios: {
+        Row: {
+          campana_id: string
+          cliente_id: string
+          creado_en: string
+          cuenta_id: string
+          email_norm: string
+          enviado_en: string | null
+          error: string | null
+          estado: string
+          id: string
+          proveedor_id: string | null
+        }
+        Insert: {
+          campana_id: string
+          cliente_id: string
+          creado_en?: string
+          cuenta_id?: string
+          email_norm: string
+          enviado_en?: string | null
+          error?: string | null
+          estado?: string
+          id?: string
+          proveedor_id?: string | null
+        }
+        Update: {
+          campana_id?: string
+          cliente_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          email_norm?: string
+          enviado_en?: string | null
+          error?: string | null
+          estado?: string
+          id?: string
+          proveedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_envios_campana_id_fkey"
+            columns: ["campana_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campanas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_envios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_envios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_consentimiento_vigente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "crm_envios_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_eventos_envio: {
+        Row: {
+          cuenta_id: string
+          datos: Json | null
+          envio_id: string
+          id: string
+          ocurrido_en: string
+          tipo: string
+        }
+        Insert: {
+          cuenta_id?: string
+          datos?: Json | null
+          envio_id: string
+          id?: string
+          ocurrido_en?: string
+          tipo: string
+        }
+        Update: {
+          cuenta_id?: string
+          datos?: Json | null
+          envio_id?: string
+          id?: string
+          ocurrido_en?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_eventos_envio_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_eventos_envio_envio_id_fkey"
+            columns: ["envio_id"]
+            isOneToOne: false
+            referencedRelation: "crm_envios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_lista_clientes: {
+        Row: {
+          anadido_en: string
+          cliente_id: string
+          cuenta_id: string
+          lista_id: string
+        }
+        Insert: {
+          anadido_en?: string
+          cliente_id: string
+          cuenta_id?: string
+          lista_id: string
+        }
+        Update: {
+          anadido_en?: string
+          cliente_id?: string
+          cuenta_id?: string
+          lista_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_lista_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lista_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_consentimiento_vigente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "crm_lista_clientes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lista_clientes_lista_id_fkey"
+            columns: ["lista_id"]
+            isOneToOne: false
+            referencedRelation: "crm_listas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_listas: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          descripcion: string | null
+          id: string
+          nombre: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          id?: string
+          nombre: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_listas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_plantillas: {
+        Row: {
+          actualizado_en: string
+          asunto: string | null
+          canal: string
+          creado_en: string
+          cuenta_id: string
+          cuerpo_html: string | null
+          id: string
+          nombre: string
+        }
+        Insert: {
+          actualizado_en?: string
+          asunto?: string | null
+          canal?: string
+          creado_en?: string
+          cuenta_id?: string
+          cuerpo_html?: string | null
+          id?: string
+          nombre: string
+        }
+        Update: {
+          actualizado_en?: string
+          asunto?: string | null
+          canal?: string
+          creado_en?: string
+          cuenta_id?: string
+          cuerpo_html?: string | null
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_plantillas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_segmentos: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          definicion: Json
+          descripcion: string | null
+          id: string
+          nombre: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id?: string
+          definicion?: Json
+          descripcion?: string | null
+          id?: string
+          nombre: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          definicion?: Json
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_segmentos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cuentas: {
         Row: {
           creada_en: string
@@ -790,6 +1364,7 @@ export type Database = {
       reservas_clientes: {
         Row: {
           alergias: string | null
+          cliente_id: string | null
           creado_en: string
           cuenta_id: string
           email: string | null
@@ -801,6 +1376,7 @@ export type Database = {
         }
         Insert: {
           alergias?: string | null
+          cliente_id?: string | null
           creado_en?: string
           cuenta_id?: string
           email?: string | null
@@ -812,6 +1388,7 @@ export type Database = {
         }
         Update: {
           alergias?: string | null
+          cliente_id?: string | null
           creado_en?: string
           cuenta_id?: string
           email?: string | null
@@ -822,6 +1399,20 @@ export type Database = {
           vip?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "reservas_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_consentimiento_vigente"
+            referencedColumns: ["cliente_id"]
+          },
           {
             foreignKeyName: "reservas_clientes_cuenta_id_fkey"
             columns: ["cuenta_id"]
@@ -1351,6 +1942,61 @@ export type Database = {
           },
         ]
       }
+      supresiones: {
+        Row: {
+          canal: string
+          cliente_id: string | null
+          creado_en: string
+          cuenta_id: string
+          detalle: string | null
+          id: string
+          motivo: string
+          valor_norm: string
+        }
+        Insert: {
+          canal: string
+          cliente_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          detalle?: string | null
+          id?: string
+          motivo?: string
+          valor_norm: string
+        }
+        Update: {
+          canal?: string
+          cliente_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          detalle?: string | null
+          id?: string
+          motivo?: string
+          valor_norm?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supresiones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supresiones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_consentimiento_vigente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "supresiones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visitas_bonos: {
         Row: {
           agora_registrado_at: string | null
@@ -1508,6 +2154,7 @@ export type Database = {
           cancelada_at: string | null
           check_in_at: string | null
           cliente_email: string
+          cliente_id: string | null
           cliente_nombre: string
           cliente_pais: string | null
           cliente_telefono: string | null
@@ -1529,6 +2176,7 @@ export type Database = {
           cancelada_at?: string | null
           check_in_at?: string | null
           cliente_email: string
+          cliente_id?: string | null
           cliente_nombre: string
           cliente_pais?: string | null
           cliente_telefono?: string | null
@@ -1552,6 +2200,7 @@ export type Database = {
           cancelada_at?: string | null
           check_in_at?: string | null
           cliente_email?: string
+          cliente_id?: string | null
           cliente_nombre?: string
           cliente_pais?: string | null
           cliente_telefono?: string | null
@@ -1576,6 +2225,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "visitas_bonos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_reservas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_reservas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_consentimiento_vigente"
+            referencedColumns: ["cliente_id"]
           },
           {
             foreignKeyName: "visitas_reservas_cuenta_id_fkey"
@@ -1659,7 +2322,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      clientes_consentimiento_vigente: {
+        Row: {
+          cliente_id: string | null
+          cuenta_id: string | null
+          email: boolean | null
+          sms: boolean | null
+          whatsapp: boolean | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          cuenta_id?: string | null
+          email?: never
+          sms?: never
+          whatsapp?: never
+        }
+        Update: {
+          cliente_id?: string | null
+          cuenta_id?: string | null
+          email?: never
+          sms?: never
+          whatsapp?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       buscar_cuenta_a3: {
@@ -1671,11 +2365,14 @@ export type Database = {
           via: string
         }[]
       }
+      cliente_apto_email: { Args: { p_cliente_id: string }; Returns: boolean }
       compras_next_codigo: { Args: never; Returns: string }
       cuenta_actual: { Args: never; Returns: string }
       es_operador: { Args: never; Returns: boolean }
+      norm_email: { Args: { t: string }; Returns: string }
       norm_nif: { Args: { t: string }; Returns: string }
       norm_nom: { Args: { t: string }; Returns: string }
+      norm_telefono: { Args: { t: string }; Returns: string }
       reservas_apuntar_lista_espera: {
         Args: {
           p_fecha: string
@@ -1760,6 +2457,7 @@ export type Database = {
           cancelada_at: string | null
           check_in_at: string | null
           cliente_email: string
+          cliente_id: string | null
           cliente_nombre: string
           cliente_pais: string | null
           cliente_telefono: string | null
@@ -1800,6 +2498,7 @@ export type Database = {
           cancelada_at: string | null
           check_in_at: string | null
           cliente_email: string
+          cliente_id: string | null
           cliente_nombre: string
           cliente_pais: string | null
           cliente_telefono: string | null
