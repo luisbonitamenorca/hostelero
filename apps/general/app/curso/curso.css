@@ -1,5 +1,25 @@
 /* Panel de Formación — estilos propios sobre los compartidos de globals.css */
 
+.curso-pestanas {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.curso-pestana {
+  padding: 6px 14px;
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 8px;
+  background: var(--blanco, #fff);
+  font-size: 13px;
+  cursor: pointer;
+}
+.curso-pestana.activa {
+  background: #1a2332;
+  color: #fff;
+  border-color: #1a2332;
+  font-weight: 500;
+}
+
 .curso-cabecera-fila {
   display: flex;
   justify-content: space-between;

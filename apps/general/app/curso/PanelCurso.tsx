@@ -35,9 +35,11 @@ export default function PanelCurso({
   inscripciones: Inscripcion[];
   centros: Centro[];
 }) {
+  const [vista, setVista] = useState<"inscripciones" | "front">("inscripciones");
   const [texto, setTexto] = useState("");
   const [centro, setCentro] = useState("");
   const [estado, setEstado] = useState("");
+  const [copiado, setCopiado] = useState(false);
 
   const nombreCentro = useMemo(
     () => Object.fromEntries(centros.map((c) => [c.id, c.nombre])),
@@ -109,13 +111,79 @@ export default function PanelCurso({
     URL.revokeObjectURL(url);
   }
 
+  async function copiarEnlace() {
+    await navigator.clipboard.writeText(`${window.location.origin}/formacion`);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
+  if (vista === "front") {
+    return (
+      <main className="contenido curso-panel">
+        <div className="curso-pestanas">
+          <button className="curso-pestana" onClick={() => setVista("inscripciones")}>
+            Inscripciones
+          </button>
+          <button className="curso-pestana activa">Front</button>
+        </div>
+        <div className="curso-cabecera-fila">
+          <div>
+            <h1 className="titulo">Front del curso</h1>
+            <p className="curso-suave" style={{ margin: "4px 0 0" }}>
+              La misma página que ve el empleado (/formacion). Lo que registres aquí es
+              real: aparecerá en Inscripciones.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="boton-secundario" onClick={copiarEnlace}>
+              {copiado ? "✓ Copiado" : "Copiar enlace"}
+            </button>
+            <a
+              className="boton-secundario"
+              style={{ textDecoration: "none" }}
+              href="/formacion"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir en pestaña nueva ↗
+            </a>
+          </div>
+        </div>
+        <div className="curso-tabla-envoltorio" style={{ overflow: "hidden" }}>
+          <iframe
+            src="/formacion"
+            title="Front público del curso"
+            style={{
+              width: "100%",
+              height: "calc(100vh - 280px)",
+              minHeight: 600,
+              border: 0,
+              display: "block",
+            }}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="contenido curso-panel">
+      <div className="curso-pestanas">
+        <button className="curso-pestana activa">Inscripciones</button>
+        <button className="curso-pestana" onClick={() => setVista("front")}>
+          Front
+        </button>
+      </div>
       <div className="curso-cabecera-fila">
         <h1 className="titulo">Inscripciones</h1>
-        <button className="boton-secundario" onClick={exportarCSV}>
-          Exportar CSV
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="boton-secundario" onClick={copiarEnlace}>
+            {copiado ? "✓ Copiado" : "Copiar enlace del curso"}
+          </button>
+          <button className="boton-secundario" onClick={exportarCSV}>
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
       <div className="curso-stats">
