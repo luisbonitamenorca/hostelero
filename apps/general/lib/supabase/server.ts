@@ -57,7 +57,7 @@ export async function exigirPerfil() {
 export const ACCESO_POR_ROL: Record<string, string[] | null> = {
   direccion: null,
   jefe_sala: ["reservas", "visitas", "tpv", "rrhh"],
-  administracion: ["compras", "docs", "crm"],
+  administracion: ["compras", "docs", "crm", "curso"],
   empleado: [],
 };
 

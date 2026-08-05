@@ -1,0 +1,97 @@
+/* Panel de Formación — estilos propios sobre los compartidos de globals.css */
+
+.curso-cabecera-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 20px;
+}
+
+.curso-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.curso-stat {
+  background: var(--blanco, #fff);
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.curso-stat .lbl {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gris, #6b7280);
+  margin-bottom: 4px;
+}
+.curso-stat .num {
+  font-size: 26px;
+  font-weight: 600;
+}
+.curso-stat.ok .num { color: #3d6b35; }
+.curso-stat.aviso .num { color: #a64729; }
+
+.curso-filtros {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.curso-filtros input,
+.curso-filtros select {
+  padding: 8px 10px;
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--blanco, #fff);
+}
+.curso-filtros input { flex: 1; min-width: 220px; }
+
+.curso-tabla-envoltorio {
+  background: var(--blanco, #fff);
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.curso-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.curso-tabla th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde, #e2e4e8);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gris, #6b7280);
+  white-space: nowrap;
+}
+.curso-tabla td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde, #eef0f3);
+  vertical-align: top;
+}
+.curso-tabla tr:last-child td { border-bottom: none; }
+.curso-suave { color: var(--gris, #6b7280); font-size: 12px; }
+.curso-vacio { text-align: center; color: var(--gris, #6b7280); padding: 40px !important; }
+
+.curso-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.curso-badge.iniciado { background: #eef2f7; color: #3d4a5c; }
+.curso-badge.aprobado { background: rgba(107, 122, 63, 0.14); color: #3d6b35; }
+.curso-badge.suspenso_intento { background: rgba(200, 155, 74, 0.16); color: #8a6420; }
+.curso-badge.suspenso_definitivo { background: rgba(196, 89, 58, 0.14); color: #a64729; }
+
+@media (max-width: 800px) {
+  .curso-stats { grid-template-columns: repeat(2, 1fr); }
+}

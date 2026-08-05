@@ -1248,6 +1248,148 @@ export type Database = {
         }
         Relationships: []
       }
+      curso_inscripciones: {
+        Row: {
+          actualizado_en: string
+          apellidos: string
+          centro_id: string
+          centro_trabajo_legado: string | null
+          codigo_certificado: string | null
+          creado_en: string
+          cuenta_id: string
+          dni: string | null
+          dni_purgado_en: string | null
+          email: string
+          empleado_id: string | null
+          estado: Database["public"]["Enums"]["curso_estado_inscripcion"]
+          fecha_certificado: string | null
+          id: string
+          nombre: string
+          nota_final: number | null
+          puesto: string
+          rgpd_aceptado: boolean
+          telefono: string
+        }
+        Insert: {
+          actualizado_en?: string
+          apellidos: string
+          centro_id: string
+          centro_trabajo_legado?: string | null
+          codigo_certificado?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          dni?: string | null
+          dni_purgado_en?: string | null
+          email: string
+          empleado_id?: string | null
+          estado?: Database["public"]["Enums"]["curso_estado_inscripcion"]
+          fecha_certificado?: string | null
+          id?: string
+          nombre: string
+          nota_final?: number | null
+          puesto: string
+          rgpd_aceptado?: boolean
+          telefono: string
+        }
+        Update: {
+          actualizado_en?: string
+          apellidos?: string
+          centro_id?: string
+          centro_trabajo_legado?: string | null
+          codigo_certificado?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          dni?: string | null
+          dni_purgado_en?: string | null
+          email?: string
+          empleado_id?: string | null
+          estado?: Database["public"]["Enums"]["curso_estado_inscripcion"]
+          fecha_certificado?: string | null
+          id?: string
+          nombre?: string
+          nota_final?: number | null
+          puesto?: string
+          rgpd_aceptado?: boolean
+          telefono?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_inscripciones_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curso_inscripciones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curso_inscripciones_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curso_intentos: {
+        Row: {
+          aciertos: number
+          aprobado: boolean
+          cuenta_id: string
+          duracion_segundos: number | null
+          fecha: string
+          id: string
+          inscripcion_id: string
+          intento: number
+          respuestas: Json | null
+          total: number
+        }
+        Insert: {
+          aciertos: number
+          aprobado: boolean
+          cuenta_id?: string
+          duracion_segundos?: number | null
+          fecha?: string
+          id?: string
+          inscripcion_id: string
+          intento: number
+          respuestas?: Json | null
+          total?: number
+        }
+        Update: {
+          aciertos?: number
+          aprobado?: boolean
+          cuenta_id?: string
+          duracion_segundos?: number | null
+          fecha?: string
+          id?: string
+          inscripcion_id?: string
+          intento?: number
+          respuestas?: Json | null
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_intentos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curso_intentos_inscripcion_id_fkey"
+            columns: ["inscripcion_id"]
+            isOneToOne: false
+            referencedRelation: "curso_inscripciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departamentos: {
         Row: {
           activo: boolean
@@ -1276,6 +1418,169 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "departamentos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      docs_categorias: {
+        Row: {
+          activo: boolean
+          creado_en: string
+          cuenta_id: string
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activo?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activo?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docs_categorias_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      docs_documentos: {
+        Row: {
+          actualizado_en: string
+          archivo_nombre: string
+          archivo_path: string
+          archivo_tamano: number | null
+          archivo_tipo: string | null
+          categoria_id: string
+          centro_id: string | null
+          creado_en: string
+          cuenta_id: string
+          descripcion: string | null
+          id: string
+          nombre: string
+          subcategoria_id: string | null
+          subido_por: string | null
+          subido_por_legado: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          archivo_nombre: string
+          archivo_path: string
+          archivo_tamano?: number | null
+          archivo_tipo?: string | null
+          categoria_id: string
+          centro_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          subcategoria_id?: string | null
+          subido_por?: string | null
+          subido_por_legado?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          archivo_nombre?: string
+          archivo_path?: string
+          archivo_tamano?: number | null
+          archivo_tipo?: string | null
+          categoria_id?: string
+          centro_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          subcategoria_id?: string | null
+          subido_por?: string | null
+          subido_por_legado?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docs_documentos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "docs_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "docs_documentos_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "docs_documentos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "docs_documentos_subcategoria_id_fkey"
+            columns: ["subcategoria_id"]
+            isOneToOne: false
+            referencedRelation: "docs_subcategorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      docs_subcategorias: {
+        Row: {
+          activo: boolean
+          categoria_id: string
+          creado_en: string
+          cuenta_id: string
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activo?: boolean
+          categoria_id: string
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activo?: boolean
+          categoria_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docs_subcategorias_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "docs_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "docs_subcategorias_cuenta_id_fkey"
             columns: ["cuenta_id"]
             isOneToOne: false
             referencedRelation: "cuentas"
@@ -3083,6 +3388,15 @@ export type Database = {
           },
         ]
       }
+      curso_dni_pendiente_purga: {
+        Row: {
+          con_dni_vivo: number | null
+          proxima_purga: string | null
+          vencidas_hoy: number | null
+          ya_purgadas: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       buscar_cuenta_a3: {
@@ -3097,6 +3411,12 @@ export type Database = {
       cliente_apto_email: { Args: { p_cliente_id: string }; Returns: boolean }
       compras_next_codigo: { Args: never; Returns: string }
       cuenta_actual: { Args: never; Returns: string }
+      curso_purgar_dni: {
+        Args: { p_anios?: number }
+        Returns: {
+          purgadas: number
+        }[]
+      }
       es_operador: { Args: never; Returns: boolean }
       mi_empleado_id: { Args: never; Returns: string }
       norm_email: { Args: { t: string }; Returns: string }
@@ -3296,6 +3616,11 @@ export type Database = {
     }
     Enums: {
       area_funcional: "primera" | "segunda" | "tercera" | "cuarta" | "quinta"
+      curso_estado_inscripcion:
+        | "iniciado"
+        | "aprobado"
+        | "suspenso_intento"
+        | "suspenso_definitivo"
       rrhh_estado_ausencia: "solicitada" | "aprobada" | "rechazada"
       rrhh_estado_turno: "borrador" | "publicado"
       rrhh_metodo_fichaje: "tablet_pin" | "movil_geo" | "correccion"
@@ -3436,6 +3761,12 @@ export const Constants = {
   public: {
     Enums: {
       area_funcional: ["primera", "segunda", "tercera", "cuarta", "quinta"],
+      curso_estado_inscripcion: [
+        "iniciado",
+        "aprobado",
+        "suspenso_intento",
+        "suspenso_definitivo",
+      ],
       rrhh_estado_ausencia: ["solicitada", "aprobada", "rechazada"],
       rrhh_estado_turno: ["borrador", "publicado"],
       rrhh_metodo_fichaje: ["tablet_pin", "movil_geo", "correccion"],
@@ -3451,3 +3782,4 @@ export const Constants = {
     },
   },
 } as const
+

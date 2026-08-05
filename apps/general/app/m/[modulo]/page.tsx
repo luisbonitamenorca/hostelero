@@ -10,6 +10,8 @@ const RUTAS_MODULO: Record<string, string> = {
   reservas: "/reservas",
   crm: "/crm",
   rrhh: "/rrhh",
+  curso: "/curso",
+  docs: "/docs",
 };
 
 export default async function PaginaModulo({

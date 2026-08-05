@@ -1,0 +1,207 @@
+/* Módulo Documentos — estilos propios sobre los compartidos de globals.css */
+
+.docs-cabecera-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.docs-filtros {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.docs-filtros input,
+.docs-filtros select {
+  padding: 8px 10px;
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--blanco, #fff);
+}
+.docs-filtros input { flex: 1; min-width: 220px; }
+
+.docs-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.docs-tab {
+  padding: 6px 12px;
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 8px;
+  background: var(--blanco, #fff);
+  font-size: 13px;
+  cursor: pointer;
+}
+.docs-tab.activa {
+  background: #1a2332;
+  color: #fff;
+  border-color: #1a2332;
+  font-weight: 500;
+}
+
+.docs-pildoras {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.docs-pildora {
+  padding: 4px 10px;
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 999px;
+  background: var(--blanco, #fff);
+  font-size: 12px;
+  cursor: pointer;
+}
+.docs-pildora.activa {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+.docs-tabla-envoltorio {
+  background: var(--blanco, #fff);
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.docs-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.docs-tabla th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde, #e2e4e8);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gris, #6b7280);
+  white-space: nowrap;
+}
+.docs-tabla td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde, #eef0f3);
+  vertical-align: top;
+}
+.docs-tabla tr:last-child td { border-bottom: none; }
+.docs-tabla .tr { text-align: right; }
+.docs-suave { color: var(--gris, #6b7280); font-size: 12px; }
+.docs-vacio { text-align: center; color: var(--gris, #6b7280); padding: 40px; }
+
+.docs-boton-mini {
+  background: transparent;
+  border: 1px solid var(--borde, #e2e4e8);
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.docs-boton-mini:hover { background: #f5f5f2; }
+.docs-rojo { color: #a64729; }
+
+.docs-aviso {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 10px 0;
+  font-size: 13px;
+  background: rgba(196, 89, 58, 0.1);
+  color: #a64729;
+  border: 1px solid rgba(196, 89, 58, 0.3);
+}
+
+/* Gestión de carpetas */
+.docs-gestion {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  background: var(--blanco, #fff);
+  border: 1px dashed var(--borde, #e2e4e8);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.docs-gestion-titulo {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gris, #6b7280);
+  margin-bottom: 8px;
+}
+.docs-gestion-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--borde, #eef0f3);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.docs-gestion-fila .docs-boton-mini { margin-left: 2px; }
+
+/* Modal de subida */
+.docs-modal-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 35, 50, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+.docs-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.docs-modal h2 { margin: 0 0 16px; font-size: 18px; }
+.docs-modal label {
+  display: block;
+  font-size: 12px;
+  color: var(--gris, #6b7280);
+  margin: 12px 0 4px;
+}
+.docs-modal input[type="text"],
+.docs-modal select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--borde, #e2e4e8);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.docs-modal-fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.docs-modal-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+.docs-primario {
+  background: #1a2332 !important;
+  color: #fff !important;
+  border-color: #1a2332 !important;
+}
+
+@media (max-width: 700px) {
+  .docs-gestion { grid-template-columns: 1fr; }
+  .docs-modal-fila { grid-template-columns: 1fr; }
+}
