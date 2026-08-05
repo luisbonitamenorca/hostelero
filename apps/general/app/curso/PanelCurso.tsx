@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { borrarInscripcion } from "./acciones";
 
 export type Inscripcion = {
   id: string;
@@ -35,6 +37,7 @@ export default function PanelCurso({
   inscripciones: Inscripcion[];
   centros: Centro[];
 }) {
+  const router = useRouter();
   const [vista, setVista] = useState<"inscripciones" | "front">("inscripciones");
   const [texto, setTexto] = useState("");
   const [centro, setCentro] = useState("");
@@ -109,6 +112,18 @@ export default function PanelCurso({
     a.download = `manipulador_alimentos_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function eliminar(d: Inscripcion) {
+    if (
+      !confirm(
+        `¿Eliminar la inscripción de ${d.nombre} ${d.apellidos} (${ETIQUETA_ESTADO[d.estado]}) y sus intentos? Esta acción no se puede deshacer.`
+      )
+    )
+      return;
+    const r = await borrarInscripcion(d.id);
+    if (!r.ok && r.error) alert(r.error);
+    router.refresh();
   }
 
   async function copiarEnlace() {
@@ -242,12 +257,13 @@ export default function PanelCurso({
               <th>Nota</th>
               <th>Certificado</th>
               <th>Fecha</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {filtradas.length === 0 ? (
               <tr>
-                <td colSpan={9} className="curso-vacio">
+                <td colSpan={10} className="curso-vacio">
                   No hay registros que coincidan con los filtros.
                 </td>
               </tr>
@@ -275,6 +291,17 @@ export default function PanelCurso({
                   <td>{d.nota_final != null ? `${d.nota_final}/20` : "—"}</td>
                   <td>{d.codigo_certificado ?? "—"}</td>
                   <td>{new Date(d.creado_en).toLocaleDateString("es-ES")}</td>
+                  <td>
+                    {d.estado !== "aprobado" && (
+                      <button
+                        className="curso-boton-mini curso-rojo"
+                        title="Eliminar inscripción no acabada"
+                        onClick={() => eliminar(d)}
+                      >
+                        🗑
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))
             )}

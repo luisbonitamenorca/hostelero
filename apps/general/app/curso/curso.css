@@ -112,6 +112,17 @@
 .curso-badge.suspenso_intento { background: rgba(200, 155, 74, 0.16); color: #8a6420; }
 .curso-badge.suspenso_definitivo { background: rgba(196, 89, 58, 0.14); color: #a64729; }
 
+.curso-boton-mini {
+  background: transparent;
+  border: 1px solid var(--borde, #e2e4e8);
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.curso-boton-mini:hover { background: #f5f5f2; }
+.curso-rojo { color: #a64729; }
+
 @media (max-width: 800px) {
   .curso-stats { grid-template-columns: repeat(2, 1fr); }
 }
