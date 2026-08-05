@@ -250,7 +250,6 @@ export default function PanelCurso({
             <tr>
               <th>Nombre</th>
               <th>DNI</th>
-              <th>Email</th>
               <th>Centro</th>
               <th>Puesto</th>
               <th>Estado</th>
@@ -263,7 +262,7 @@ export default function PanelCurso({
           <tbody>
             {filtradas.length === 0 ? (
               <tr>
-                <td colSpan={10} className="curso-vacio">
+                <td colSpan={9} className="curso-vacio">
                   No hay registros que coincidan con los filtros.
                 </td>
               </tr>
@@ -275,12 +274,11 @@ export default function PanelCurso({
                       {d.nombre} {d.apellidos}
                     </strong>
                     <br />
-                    <span className="curso-suave">{d.telefono}</span>
+                    <span className="curso-suave">
+                      <a href={`mailto:${d.email}`}>{d.email}</a> · {d.telefono}
+                    </span>
                   </td>
                   <td>{d.dni ?? (d.dni_purgado_en ? "(purgado)" : "—")}</td>
-                  <td>
-                    <a href={`mailto:${d.email}`}>{d.email}</a>
-                  </td>
                   <td>{nombreCentro[d.centro_id] ?? "—"}</td>
                   <td>{d.puesto}</td>
                   <td>

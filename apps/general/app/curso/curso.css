@@ -82,18 +82,18 @@
 }
 .curso-tabla th {
   text-align: left;
-  padding: 10px 12px;
+  padding: 10px 10px;
   border-bottom: 1px solid var(--borde, #e2e4e8);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--gris, #6b7280);
-  white-space: nowrap;
 }
 .curso-tabla td {
-  padding: 10px 12px;
+  padding: 10px 10px;
   border-bottom: 1px solid var(--borde, #eef0f3);
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 .curso-tabla tr:last-child td { border-bottom: none; }
 .curso-suave { color: var(--gris, #6b7280); font-size: 12px; }
