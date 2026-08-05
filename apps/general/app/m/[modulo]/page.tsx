@@ -1,18 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { exigirPerfil, ACCESO_POR_ROL } from "@/lib/supabase/server";
+import { RUTAS_MODULO } from "@/lib/modulos";
 
 export const dynamic = "force-dynamic";
-
-/** Módulos que ya tienen su propia app dentro del esqueleto: su tarjeta entra ahí. */
-const RUTAS_MODULO: Record<string, string> = {
-  visitas: "/visitas",
-  reservas: "/reservas",
-  crm: "/crm",
-  rrhh: "/rrhh",
-  curso: "/curso",
-  docs: "/docs",
-};
 
 export default async function PaginaModulo({
   params,

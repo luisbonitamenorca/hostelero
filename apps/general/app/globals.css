@@ -382,6 +382,22 @@ details.pliegue > summary:hover { background: var(--papel); }
   padding: 18px 16px;
 }
 .tarjeta-modulo:hover { border-color: var(--verde); }
+.tarjeta-modulo.no-disponible {
+  opacity: 0.55;
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+}
+.tarjeta-modulo.no-disponible:hover { border-color: var(--borde); }
+.etiqueta-proximamente {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gris);
+}
 .tarjeta-modulo .nombre-modulo {
   font-family: var(--display);
   font-size: 16px;

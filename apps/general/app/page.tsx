@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirPerfil, ACCESO_POR_ROL } from "@/lib/supabase/server";
+import { RUTAS_MODULO } from "@/lib/modulos";
 import { cerrarSesion } from "./acciones";
 
 export const dynamic = "force-dynamic";
@@ -99,11 +100,19 @@ export default async function Portada() {
               <div className="rejilla-lanzadera">
                 {visibles
                   .filter((m) => m.area === area)
-                  .map((m) => (
-                    <Link key={m.id} href={`/m/${m.id}`} className="tarjeta-modulo">
-                      <span className="nombre-modulo">{m.nombre}</span>
-                    </Link>
-                  ))}
+                  .map((m) =>
+                    RUTAS_MODULO[m.id] ? (
+                      <Link key={m.id} href={`/m/${m.id}`} className="tarjeta-modulo">
+                        <span className="nombre-modulo">{m.nombre}</span>
+                      </Link>
+                    ) : (
+                      // Contratado pero aún sin app en el esqueleto: sombreado, sin enlace.
+                      <div key={m.id} className="tarjeta-modulo no-disponible">
+                        <span className="nombre-modulo">{m.nombre}</span>
+                        <span className="etiqueta-proximamente">Próximamente</span>
+                      </div>
+                    )
+                  )}
               </div>
             </section>
           ))
