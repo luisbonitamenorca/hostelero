@@ -383,12 +383,13 @@ details.pliegue > summary:hover { background: var(--papel); }
 }
 .tarjeta-modulo:hover { border-color: var(--verde); }
 .tarjeta-modulo.no-disponible {
-  opacity: 0.55;
+  opacity: 0.75;
   background: transparent;
   border-style: dashed;
+  border-color: var(--gris);
   cursor: default;
 }
-.tarjeta-modulo.no-disponible:hover { border-color: var(--borde); }
+.tarjeta-modulo.no-disponible:hover { border-color: var(--gris); }
 .etiqueta-proximamente {
   display: block;
   margin-top: 4px;
