@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import type { Database } from "@hostelero/db";
+import { ruta } from "@/lib/rutas";
 
 export async function crearClienteServidor() {
   const almacenCookies = await cookies();
@@ -39,7 +40,7 @@ export async function exigirPerfil() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) redirect(ruta("/login"));
 
   const { data: perfil } = await supabase
     .from("perfiles")
@@ -47,7 +48,7 @@ export async function exigirPerfil() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!perfil || !perfil.cuentas) redirect("/no-autorizado");
+  if (!perfil || !perfil.cuentas) redirect(ruta("/no-autorizado"));
 
   return { supabase, perfil, cuenta: perfil.cuentas };
 }

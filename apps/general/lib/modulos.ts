@@ -11,4 +11,8 @@ export const RUTAS_MODULO: Record<string, string> = {
   rrhh: "/rrhh",
   curso: "/curso",
   docs: "/docs",
+  // Finanzas vive en apps/finanzas y se sirve por rewrite bajo este dominio
+  // (ver next.config.mjs). Las dos entradas apuntan a la misma app.
+  facturacion: "/finanzas",
+  contabilidad: "/finanzas/plan-cuentas",
 };

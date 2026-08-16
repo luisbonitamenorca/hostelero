@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { cerrarSesion } from "../acciones";
 import Navegacion from "./navegacion";
@@ -47,9 +46,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </button>
           </form>
           <p className="volver">
-            <Link className="enlace-tenue" href="https://hostelero-app.vercel.app">
+            {/* <a> y no <Link>: hay que salir del basePath /finanzas para
+                volver a la portada, que es la raíz del mismo dominio. */}
+            <a className="enlace-tenue" href="/">
               ← Volver a Hostelero
-            </Link>
+            </a>
           </p>
         </div>
       </aside>
