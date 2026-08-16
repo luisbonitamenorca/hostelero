@@ -106,6 +106,7 @@ fin_anular_factura(p_factura_id, p_motivo): análogo, con registro tipo anulacio
 - **Los plazos de pago de los proveedores no existen en ninguna parte.** `fin_proveedor_condiciones` está creada pero vacía: hasta que se rellene, los vencimientos de compra salen a 30 días por defecto.
 - **Ningun fichero SEPA se sube al banco sin que la entidad valide antes uno de prueba.** La version exacta de esquema que acepta cada banco es un dato suyo. Y para cobros hacen falta dos cosas que no son codigo: mandatos firmados por cada cliente y el identificador de acreedor que asigna el banco.
 - **El desglose por tipo de IVA no está en `compras_doc`**, que guarda un único importe. Hará falta para el libro de IVA soportado y para el 303.
+- **De un fichero con `"use server"` solo pueden salir funciones async.** Ni `tsc` ni `next build` avisan: Next lo valida al EJECUTAR, así que el fallo aparece en producción al cargar el módulo (`A "use server" file can only export async functions, found object`) y tumba toda pantalla que lo importe, no solo la que usa la exportación. Pasó el 16-08-2026: `CAUSAS_RECTIFICACION` vivía en `app/acciones.ts` y dejó `/facturas/nueva` y `/facturas-recibidas` con un «Application error» desde que entró con las rectificativas. Las constantes van a un módulo normal de `lib/`. La guardia es `pruebas/use-server.test.ts`, dentro de `npm test`.
 
 ## No hacer nunca
 - Tocar los proyectos Vercel hostelero-app / hostelero-consola, ni escribir en tablas ajenas a fin_*.
