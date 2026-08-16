@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import { euros, fecha, numero } from "@/lib/importes";
 import BotonAnular from "./boton-anular";
+import { ruta } from "@/lib/rutas.ts";
 
 type Linea = {
   orden: number;
@@ -263,6 +264,13 @@ export default async function DetalleFactura({ factura }: { factura: FacturaExpe
           la AEAT.
         </p>
       </fieldset>
+
+      <div className="acciones" style={{ marginTop: 16 }}>
+        {/* <a> y no <Link>: es una descarga, no una navegación de la app. */}
+        <a className="boton boton-auto" href={ruta(`/facturas/${factura.id}/pdf`)} target="_blank" rel="noreferrer">
+          Ver PDF
+        </a>
+      </div>
 
       {factura.estado === "expedida" && <BotonAnular id={factura.id} numero={factura.numero_completo ?? ""} />}
     </>

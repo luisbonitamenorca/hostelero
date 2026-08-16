@@ -13,6 +13,10 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    // Permite importar con extension .ts explicita. Hace falta porque lib/ se
+    // ejecuta tal cual desde pruebas/ con el borrado de tipos nativo de Node,
+    // que en ESM exige la extension. Solo es valido con noEmit, que ya esta.
+    "allowImportingTsExtensions": true,
     "plugins": [{ "name": "next" }],
     "paths": { "@/*": ["./*"] }
   },
