@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor, exigirFacturacion } from "@/lib/supabase/server";
+import { ruta } from "@/lib/rutas";
 import { errorDeIban, errorDeNif } from "@/lib/nif";
 import { calcularLinea, calcularTotales, type LineaBruta } from "@/lib/importes";
 
@@ -23,7 +24,7 @@ export async function iniciarSesion(formData: FormData) {
   const correo = String(formData.get("correo") ?? "").trim();
   const clave = String(formData.get("clave") ?? "");
 
-  if (!correo || !clave) redirect("/login?error=datos");
+  if (!correo || !clave) redirect(ruta("/login?error=datos"));
 
   const supabase = await crearClienteServidor();
   const { error } = await supabase.auth.signInWithPassword({
@@ -31,15 +32,15 @@ export async function iniciarSesion(formData: FormData) {
     password: clave,
   });
 
-  if (error) redirect("/login?error=credenciales");
+  if (error) redirect(ruta("/login?error=credenciales"));
 
-  redirect("/panel");
+  redirect(ruta("/panel"));
 }
 
 export async function cerrarSesion() {
   const supabase = await crearClienteServidor();
   await supabase.auth.signOut();
-  redirect("/login");
+  redirect(ruta("/login"));
 }
 
 // --------------------------------------------------------------- clientes
@@ -105,7 +106,7 @@ export async function guardarCliente(_previo: EstadoAccion, formData: FormData):
   if (error) return { error: `No se pudo guardar: ${error.message}` };
 
   revalidatePath("/clientes");
-  redirect("/clientes");
+  redirect(ruta("/clientes"));
 }
 
 // ----------------------------------------------------------------- series
@@ -315,5 +316,5 @@ export async function borrarBorrador(id: string) {
   if (error) return { error: `No se pudo borrar: ${error.message}` };
 
   revalidatePath("/facturas");
-  redirect("/facturas");
+  redirect(ruta("/facturas"));
 }

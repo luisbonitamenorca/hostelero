@@ -6,6 +6,14 @@ Módulo financiero de la plataforma Hostelero (multi-tenant sobre Supabase). Pri
 ## Dónde vive esto
 Es `apps/finanzas` del monorepo `luisbonitamenorca/hostelero`, junto a `apps/general` (hostelero-app) y `apps/consola`. Comparte `packages/db` (tipos generados de Supabase) y `packages/ui` (tokens). Se movió aquí el 16-08-2026: antes era un repo suelto, lo que duplicaba cliente de Supabase y tokens y obligaba a un segundo login.
 
+## Cómo se sirve (multizona) — leer antes de tocar rutas
+La app tiene `basePath: "/finanzas"` y se sirve **bajo el dominio de hostelero-app** por un rewrite de `apps/general/next.config.mjs`. El motivo es la sesión: las cookies son por dominio, así que con dos dominios habría que entrar dos veces. Consecuencias:
+
+- La dirección buena es `hostelero-app.vercel.app/finanzas`. En su dominio propio la app ya solo responde bajo el prefijo: `hostelero-finanzas.vercel.app/finanzas/login`.
+- El guard de `apps/general` **excluye** `/finanzas` a propósito: el módulo trae el suyo y comparte cookies. Si no se excluyera, cada fichero estático suyo dispararía una llamada a Supabase.
+- `serverActions.allowedOrigins` incluye el dominio de hostelero-app. Sin eso, Next rechaza todas las acciones de servidor tras el proxy, porque el Host que llega no es el suyo.
+- **El prefijo NO se aplica solo en todas partes**: `Link` y `router.push` lo añaden; `NextResponse.redirect` del middleware también; el `redirect()` de next/navigation en acciones de servidor y guards **no**. Para eso está `lib/rutas.ts` con `ruta()`. Verificado en local: sin ello, un login fallido acababa en la portada de hostelero-app.
+
 ## Estado actual (verificado 16-08-2026)
 - Migración F0 APLICADA en producción (copia exacta en supabase/migrations/): 14 tablas fin_* con RLS, facturas expedidas inmutables por trigger, registros Verifactu de solo inserción.
 - Datos sembrados y cuadrados: plan de cuentas migrado desde A3 (635 = 635), ejercicio 2026 con 12 periodos, series F-2026 y R-2026, fin_config con la serie F por defecto.

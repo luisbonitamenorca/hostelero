@@ -8,6 +8,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
+  // La zona de finanzas trae su propio guard (apps/finanzas/middleware.ts) y
+  // comparte estas mismas cookies. Si la comprobásemos también aquí, cada
+  // fichero estático suyo (/finanzas/_next/...) haría una llamada a Supabase.
+  if (ruta === "/finanzas" || ruta.startsWith("/finanzas/")) {
+    return NextResponse.next({ request });
+  }
+
   let respuesta = NextResponse.next({ request });
 
   const supabase = createServerClient(
