@@ -1,4 +1,4 @@
-import { cerrarSesion } from "../acciones";
+import BotonSalir from "../(app)/boton-salir";
 
 export default function NoAutorizado() {
   return (
@@ -9,11 +9,7 @@ export default function NoAutorizado() {
           Tu usuario no está vinculado a ninguna cuenta de Hostelero, o esa cuenta no tiene
           contratado el módulo de facturación.
         </p>
-        <form action={cerrarSesion}>
-          <button className="boton" type="submit">
-            Salir
-          </button>
-        </form>
+        <BotonSalir />
       </div>
     </main>
   );

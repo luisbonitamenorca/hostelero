@@ -101,6 +101,10 @@ export function numero(valor: number, decimales = 2): string {
       }).format(valor);
 }
 
+/** dd/mm/aaaa con dos dígitos siempre (regla 6 de la casa). El formato corto
+ *  de es-ES no rellena con cero: da "16/8/2026" en vez de "16/08/2026". */
+const FECHA = new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
+
 export function fecha(valor: string | null): string {
-  return valor ? new Date(valor).toLocaleDateString("es-ES") : "—";
+  return valor ? FECHA.format(new Date(valor)) : "—";
 }

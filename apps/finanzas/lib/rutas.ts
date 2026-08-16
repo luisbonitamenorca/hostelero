@@ -1,15 +1,19 @@
 /**
  * Prefijo con el que se sirve esta app (basePath en next.config.ts).
  *
- * Hace falta escrito porque Next NO lo aplica en todas partes:
- *  · Link y router.push  → lo añaden solos. No usar `ruta()` con ellos.
- *  · NextResponse.redirect en middleware → lo añade solo (viene de nextUrl).
- *  · redirect() de next/navigation en acciones de servidor y guards → NO lo
- *    añade. Ahí hay que usar `ruta()`, o el usuario acaba en la portada de
- *    hostelero-app en vez de en el módulo.
+ * SOLO se usa en enlaces <a> crudos, que el navegador resuelve tal cual y a los
+ * que Next no les añade nada — por ejemplo la descarga del PDF.
  *
- * Verificado el 16-08-2026 contra las dos apps levantadas: un login fallido
- * devolvía 303 a /login en vez de a /finanzas/login.
+ * NO se usa en Link, router.push ni redirect():
+ *  · Link y router.push añaden el prefijo ellos solos.
+ *  · redirect() de una acción de servidor devuelve el destino TAL CUAL, y
+ *    cuando la acción la lanza JavaScript (que es siempre, en un navegador
+ *    real) el router del cliente le añade el prefijo al navegar. Prefijarlo
+ *    aquí lo duplicaba: /finanzas/finanzas/clientes.
+ *
+ * Por eso las acciones ya no redirigen: devuelven a dónde ir y navega el
+ * cliente con router.push, que es determinista. Verificado en producción el
+ * 16-08-2026, después de que el fallo saliera creando un cliente de verdad.
  */
 export const BASE = "/finanzas";
 

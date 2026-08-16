@@ -227,7 +227,12 @@ export default function EditorFactura({
     setError(null);
     iniciarBorrado(async () => {
       const resultado = await borrarBorrador(borrador.id);
-      if (resultado?.error) setError(resultado.error);
+      if (resultado?.error) {
+        setError(resultado.error);
+        return;
+      }
+      router.push("/facturas");
+      router.refresh();
     });
   }
 

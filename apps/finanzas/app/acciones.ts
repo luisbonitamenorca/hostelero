@@ -1,9 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { crearClienteServidor, exigirFacturacion } from "@/lib/supabase/server";
-import { ruta } from "@/lib/rutas";
 import { errorDeIban, errorDeNif } from "@/lib/nif";
 import { calcularLinea, calcularTotales, type LineaBruta } from "@/lib/importes";
 
@@ -20,11 +18,18 @@ function numeroDe(v: FormDataEntryValue | null, porDefecto = 0): number {
 
 // ---------------------------------------------------------------- sesión
 
-export async function iniciarSesion(formData: FormData) {
+/**
+ * Las acciones NO redirigen: devuelven a dónde ir en `ir` y navega el cliente.
+ * El motivo está en lib/rutas.ts — redirect() y el basePath no se llevan bien
+ * y el destino acababa duplicado.
+ */
+export type EstadoAccion = { error?: string; ok?: boolean; ir?: string } | null;
+
+export async function iniciarSesion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   const correo = String(formData.get("correo") ?? "").trim();
   const clave = String(formData.get("clave") ?? "");
 
-  if (!correo || !clave) redirect(ruta("/login?error=datos"));
+  if (!correo || !clave) return { error: "Escribe el correo y la contraseña." };
 
   const supabase = await crearClienteServidor();
   const { error } = await supabase.auth.signInWithPassword({
@@ -32,20 +37,18 @@ export async function iniciarSesion(formData: FormData) {
     password: clave,
   });
 
-  if (error) redirect(ruta("/login?error=credenciales"));
+  if (error) return { error: "No se pudo iniciar sesión. Revisa el correo y la contraseña." };
 
-  redirect(ruta("/panel"));
+  return { ok: true, ir: "/panel" };
 }
 
-export async function cerrarSesion() {
+export async function cerrarSesion(): Promise<EstadoAccion> {
   const supabase = await crearClienteServidor();
   await supabase.auth.signOut();
-  redirect(ruta("/login"));
+  return { ok: true, ir: "/login" };
 }
 
 // --------------------------------------------------------------- clientes
-
-export type EstadoAccion = { error?: string; ok?: boolean } | null;
 
 export async function guardarCliente(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   const { supabase, cuenta } = await exigirFacturacion();
@@ -106,7 +109,7 @@ export async function guardarCliente(_previo: EstadoAccion, formData: FormData):
   if (error) return { error: `No se pudo guardar: ${error.message}` };
 
   revalidatePath("/clientes");
-  redirect(ruta("/clientes"));
+  return { ok: true, ir: "/clientes" };
 }
 
 // ----------------------------------------------------------------- series
@@ -361,5 +364,5 @@ export async function borrarBorrador(id: string) {
   if (error) return { error: `No se pudo borrar: ${error.message}` };
 
   revalidatePath("/facturas");
-  redirect(ruta("/facturas"));
+  return { ok: true, ir: "/facturas" };
 }

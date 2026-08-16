@@ -6,13 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node pruebas/nif.test.ts && node pruebas/importes.test.ts"
+    "test": "node pruebas/nif.test.ts && node pruebas/importes.test.ts && node pruebas/pdf.test.ts"
   },
   "dependencies": {
     "@hostelero/db": "*",
     "@hostelero/ui": "*",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.45.0",
+    "jspdf": "^4.2.1",
     "next": "^15.4.8",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",

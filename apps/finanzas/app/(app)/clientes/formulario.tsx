@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { guardarCliente, type EstadoAccion } from "../../acciones";
 import { errorDeIban, errorDeNif, formatearIban } from "@/lib/nif";
 import { TIPOS_IVA } from "@/lib/constantes";
@@ -27,7 +28,15 @@ export type ClienteFicha = {
 };
 
 export default function FormularioCliente({ cliente }: { cliente?: ClienteFicha }) {
+  const router = useRouter();
   const [estado, accion, pendiente] = useActionState<EstadoAccion, FormData>(guardarCliente, null);
+
+  useEffect(() => {
+    if (estado?.ok && estado.ir) {
+      router.push(estado.ir);
+      router.refresh();
+    }
+  }, [estado, router]);
 
   // Aviso inmediato mientras se escribe. La validación que manda es la del
   // servidor, en acciones.ts: esta solo evita el viaje de ida y vuelta.
@@ -192,8 +201,8 @@ export default function FormularioCliente({ cliente }: { cliente?: ClienteFicha 
       {estado?.error && <p className="error-texto">{estado.error}</p>}
 
       <div className="acciones">
-        <button className="boton boton-auto" type="submit" disabled={pendiente}>
-          {pendiente ? "Guardando…" : cliente ? "Guardar cambios" : "Crear cliente"}
+        <button className="boton boton-auto" type="submit" disabled={pendiente || estado?.ok}>
+          {pendiente || estado?.ok ? "Guardando…" : cliente ? "Guardar cambios" : "Crear cliente"}
         </button>
         <Link className="boton-secundario" href="/clientes">
           Cancelar
