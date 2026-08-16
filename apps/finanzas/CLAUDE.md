@@ -45,7 +45,7 @@ Es `apps/finanzas` del monorepo `luisbonitamenorca/hostelero`, junto a `apps/gen
 2. ~~Clientes~~ HECHA (16-08-2026), pendiente de que Luis cree un cliente real desde la UI para cerrar el criterio.
 3. ~~Series~~ HECHA (16-08-2026). Listado, alta y activar/desactivar.
 4. ~~Factura borrador~~ HECHA (16-08-2026). Cabecera + líneas dinámicas con totales en vivo; guardar, reeditar y borrar.
-5. Migración F1a (enseñar el SQL a Luis antes de aplicar): funciones SECURITY DEFINER fin_expedir_factura y fin_anular_factura según la especificación de abajo. Dejarla en supabase/migrations/ y pasarla al chat de claude.ai para aplicarla por MCP tras el OK.
+5. Migración F1a ESCRITA y probada, SIN APLICAR: supabase/migrations/20260816150000_fin_f1a_expedir_y_anular.sql. Falta el OK de Luis y aplicarla desde el chat de claude.ai. Probada creando las funciones dentro de una transacción con rollback: los tres vectores oficiales de la AEAT coinciden, el ejemplo de «URL encoding» del QR también, y el ciclo completo (dos expediciones encadenadas + una anulación) deja la cadena correcta. Punto abierto: ImporteTotal del registro con retención de IRPF (ver cabecera del archivo).
 6. Detalle y expedición: vista de factura con botón Expedir (con confirmación); tras expedir mostrar número asignado, huella, QR y estado de envío "pendiente". Criterio: expedir una factura DE PRUEBA y comprobar su registro en fin_verifactu_registros con orden y huella_anterior correctos.
 7. PDF: generación en el servidor (route handler) con los datos congelados, QR y la leyenda de factura verificable; guardar en Storage (bucket facturas) y enlazar desde el detalle. Criterio: el PDF cuadra al céntimo con la factura.
 
@@ -63,7 +63,7 @@ fin_anular_factura(p_factura_id, p_motivo): análogo, con registro tipo anulacio
 
 ## Verifactu — reglas duras
 - Normativa: RD 1007/2023 y Orden HAC/1177/2024. Modo elegido: VERI*FACTU (remisión a la AEAT).
-- La cadena exacta de la huella (campos, orden, formato de fechas e importes, separadores) y el contenido del QR están definidos en la especificación técnica oficial de la sede de la AEAT. Descargarla y seguirla al pie de la letra. No improvisar ni aproximar: una huella mal formada invalida la cadena entera.
+- La cadena de la huella y el QR ya NO son una incógnita: están implementados en la F1a siguiendo los documentos oficiales (huella v0.1.2 de 27-08-2024 y QR v0.5.0), y contrastados con sus ejemplos. Resumen: campos concatenados como `nombre=valor&...` sin `&` final, valores recortados, importes con punto decimal, fechas DD-MM-AAAA, fecha-hora ISO 8601 con huso, UTF-8, SHA-256 en hexadecimal y MAYÚSCULAS. Campo ausente = solo `nombre=`. Cualquier cambio ahí se revalida contra los tres vectores del documento.
 - PROHIBIDO expedir facturas reales este fin de semana. Solo pruebas con cliente "PRUEBAS — NO FISCAL". La validación contra el entorno de pruebas de la AEAT va la semana siguiente; hasta que una factura de prueba pase ese entorno, nada de producción real.
 - La remisión (Edge Function con certificado) NO se implementa aún. El certificado lo subirá Luis a los secretos de Supabase; jamás al repo ni a un chat.
 
