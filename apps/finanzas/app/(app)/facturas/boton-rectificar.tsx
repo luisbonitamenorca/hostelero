@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CAUSAS_RECTIFICACION, crearRectificativa } from "../../acciones";
+import { crearRectificativa } from "../../acciones";
+import { CAUSAS_RECTIFICACION } from "@/lib/rectificativas";
 
 export default function BotonRectificar({ id, numero }: { id: string; numero: string }) {
   const router = useRouter();

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { crearClienteServidor, exigirFacturacion } from "@/lib/supabase/server";
 import { errorDeIban, errorDeNif } from "@/lib/nif";
 import { calcularLinea, calcularTotales, type LineaBruta } from "@/lib/importes";
+import { CAUSAS_RECTIFICACION } from "@/lib/rectificativas";
 
 /** Recorta y convierte vacío en null. */
 function limpio(v: FormDataEntryValue | null): string | null {
@@ -336,16 +337,6 @@ export async function anularFactura(id: string, motivo: string) {
   revalidatePath(`/facturas/${id}`);
   return { ok: true };
 }
-
-/** Códigos de la AEAT (mismas listas que el SII). El texto es el suyo, no una
- *  interpretación: quien elige la causa es quien factura. */
-export const CAUSAS_RECTIFICACION = [
-  { codigo: "R1", texto: "Error fundado en derecho y art. 80 Uno, Dos y Seis de la Ley del IVA" },
-  { codigo: "R2", texto: "Concurso de acreedores (art. 80 Tres)" },
-  { codigo: "R3", texto: "Créditos incobrables (art. 80 Cuatro)" },
-  { codigo: "R4", texto: "Resto de causas" },
-  { codigo: "R5", texto: "Rectificación de facturas simplificadas" },
-] as const;
 
 /**
  * Crea el BORRADOR de una rectificativa a partir de una factura expedida.
