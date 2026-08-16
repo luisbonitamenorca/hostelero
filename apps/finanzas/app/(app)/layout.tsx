@@ -1,5 +1,5 @@
 import { exigirFacturacion } from "@/lib/supabase/server";
-import { cerrarSesion } from "../acciones";
+import BotonSalir from "./boton-salir";
 import Navegacion from "./navegacion";
 
 /** Cada entrada declara de qué módulo depende: si la cuenta no lo tiene
@@ -63,11 +63,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <a className="boton-fantasma" href="/">
               ← Inicio
             </a>
-            <form action={cerrarSesion} style={{ flex: 1 }}>
-              <button className="boton-fantasma" type="submit">
-                Salir
-              </button>
-            </form>
+            <BotonSalir />
           </div>
         </div>
       </aside>
