@@ -45,9 +45,14 @@ Es `apps/finanzas` del monorepo `luisbonitamenorca/hostelero`, junto a `apps/gen
 2. ~~Clientes~~ HECHA (16-08-2026), pendiente de que Luis cree un cliente real desde la UI para cerrar el criterio.
 3. ~~Series~~ HECHA (16-08-2026). Listado, alta y activar/desactivar.
 4. ~~Factura borrador~~ HECHA (16-08-2026). Cabecera + líneas dinámicas con totales en vivo; guardar, reeditar y borrar.
-5. Migración F1a ESCRITA y probada, SIN APLICAR: supabase/migrations/20260816150000_fin_f1a_expedir_y_anular.sql. Falta el OK de Luis y aplicarla desde el chat de claude.ai. Probada creando las funciones dentro de una transacción con rollback: los tres vectores oficiales de la AEAT coinciden, el ejemplo de «URL encoding» del QR también, y el ciclo completo (dos expediciones encadenadas + una anulación) deja la cadena correcta. Punto abierto: ImporteTotal del registro con retención de IRPF (ver cabecera del archivo).
+5. Migración F1a ESCRITA y probada, SIN APLICAR: supabase/migrations/20260816150000_fin_f1a_expedir_y_anular.sql. Falta el OK de Luis y aplicarla desde el chat de claude.ai. Probada creando las funciones dentro de una transacción con rollback: los tres vectores oficiales de la AEAT coinciden, el ejemplo de «URL encoding» del QR también, y el ciclo completo (dos expediciones encadenadas + una anulación) deja la cadena correcta. ImporteTotal con retención RESUELTO con fuente (aclaraciones de desarrolladores de la AEAT, 04-12-2025, apartado 20): el IRPF no entra en el registro; ImporteTotal = base + cuota de IVA, y el total a pagar va aparte en fin_facturas.total.
 6. Detalle y expedición: vista de factura con botón Expedir (con confirmación); tras expedir mostrar número asignado, huella, QR y estado de envío "pendiente". Criterio: expedir una factura DE PRUEBA y comprobar su registro en fin_verifactu_registros con orden y huella_anterior correctos.
-7. PDF: generación en el servidor (route handler) con los datos congelados, QR y la leyenda de factura verificable; guardar en Storage (bucket facturas) y enlazar desde el detalle. Criterio: el PDF cuadra al céntimo con la factura.
+7. PDF: generación en el servidor (route handler) con los datos congelados, QR y la leyenda de factura verificable; guardar en Storage (bucket facturas) y enlazar desde el detalle. Criterio: el PDF cuadra al céntimo con la factura. OJO: cuando haya retención, el PDF debe mostrar los DOS importes etiquetados y distinguidos — «Total factura» (el del QR, sin IRPF) y «Total a pagar» —; lo recomienda la propia AEAT porque es lo que el cliente verá al cotejar el QR.
+
+## Documentos oficiales de la AEAT ya leídos (no volver a improvisar)
+- Huella/hash de los registros, v0.1.2 (27-08-2024): campos y orden del alta y de la anulación, separadores, formatos, UTF-8, SHA-256 hex en mayúsculas. Sus tres vectores de ejemplo están al final de la migración F1a como comprobación.
+- Código QR de la factura, v0.5.0: URL de cotejo (pruebas y producción), los cuatro parámetros, «URL encoding», tamaño 30-40 mm, nivel M, texto «QR tributario:» encima y la frase «Factura verificable en la sede electrónica de la AEAT» debajo.
+- Aclaraciones a dudas de los desarrolladores (04-12-2025): apartado 20, concepto de Importe Total y tratamiento del IRPF.
 
 ## Especificación de fin_expedir_factura(p_factura_id uuid)
 Transacción única, SECURITY DEFINER, set search_path = public:

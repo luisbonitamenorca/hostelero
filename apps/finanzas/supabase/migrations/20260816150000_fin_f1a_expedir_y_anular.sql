@@ -17,11 +17,30 @@
 -- con estas funciones; la comprobación está al final del archivo para poder
 -- repetirla después de aplicar.
 --
--- PENDIENTE DE CONFIRMAR (marcado también en el código, más abajo):
--- el valor de ImporteTotal cuando la factura lleva retención de IRPF. Aquí se
--- toma base + cuota de IVA, SIN restar la retención, porque el registro de
--- facturación de la AEAT no contempla el IRPF. Contrastar con el documento de
--- diseño de registro antes de expedir nada real.
+-- IMPORTETOTAL CON RETENCIÓN — RESUELTO, con fuente:
+-- "Aclaraciones a dudas de los desarrolladores", AEAT, 04/12/2025, apartado 20
+-- ("Concepto «Importe total» en el registro de facturación"):
+--
+--   ImporteTotal = Σ (BaseImponibleOimporteNoSujeto + CuotaRepercutida
+--                     + CuotaRecargoEquivalencia) de las líneas de desglose.
+--
+--   "En conclusión la retención a cuenta del IRPF o IS que vaya en factura, no
+--    se incluirá en el registro de facturación, ya que no es uno de los
+--    elementos constitutivos de la factura."
+--
+-- Es decir: el IRPF, los suplidos y el recargo financiero alteran el "total a
+-- pagar", pero NO el "Importe total factura". Por eso aquí ImporteTotal es
+-- base + cuota de IVA, y el total a pagar (que sí resta el IRPF) se guarda
+-- aparte en fin_facturas.total. La AEAT valida ese importe con un margen de
+-- ±10 €, y el mismo valor es el que viaja en el QR.
+--
+-- Consecuencia para el PDF (tarea 7): la propia AEAT recomienda que la factura
+-- muestre AMBOS importes, etiquetados y distinguidos — "Total factura" (el del
+-- QR) y "Total a pagar" —, porque es lo que verá el cliente al cotejar el QR.
+--
+-- Lo que sí queda fuera de alcance hoy: el recargo de equivalencia, que suma a
+-- ImporteTotal cuando aplica. No se factura con recargo en Bonita; si algún día
+-- se hace, hay que añadirlo a esta suma.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -239,10 +258,9 @@ begin
   v_numero_completo := v_serie.codigo || '-' || v_serie.ejercicio || '-' || lpad(v_numero::text, 6, '0');
   v_fecha_exp := v_ahora::date;
 
-  -- PENDIENTE DE CONFIRMAR: ImporteTotal del registro = base + cuota de IVA,
-  -- SIN restar la retención de IRPF, que no forma parte del registro de la
-  -- AEAT. El total a pagar de la factura (que sí resta el IRPF) se guarda
-  -- aparte, en fin_facturas.total.
+  -- ImporteTotal del registro = base + cuota de IVA. El IRPF NO entra: lo dice
+  -- el apartado 20 de las aclaraciones de la AEAT (ver cabecera). El total a
+  -- pagar, que sí lo resta, se guarda aparte en fin_facturas.total.
   v_importe_total := v_base + v_cuota_iva;
 
   -- Una cadena de huellas por obligado tributario. El advisory lock serializa
