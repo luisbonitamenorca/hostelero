@@ -39,7 +39,10 @@ const grupos = [
   },
   {
     titulo: "Contabilidad",
-    items: [{ ruta: "/plan-cuentas", nombre: "Plan de cuentas", modulo: "contabilidad" }],
+    items: [
+      { ruta: "/activos", nombre: "Activos", modulo: "contabilidad" },
+      { ruta: "/plan-cuentas", nombre: "Plan de cuentas", modulo: "contabilidad" },
+    ],
   },
 ];
 
