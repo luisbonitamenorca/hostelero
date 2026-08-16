@@ -2,19 +2,23 @@ import { exigirFacturacion } from "@/lib/supabase/server";
 import { cerrarSesion } from "../acciones";
 import Navegacion from "./navegacion";
 
+/** Cada entrada declara de qué módulo depende: si la cuenta no lo tiene
+ *  contratado, no se enseña. Antes se enseñaba siempre, y una cuenta con
+ *  facturación pero sin contabilidad veía «Plan de cuentas» y se comía un
+ *  «no encontrado» al pincharlo. */
 const grupos = [
-  { titulo: null, items: [{ ruta: "/panel", nombre: "Panel" }] },
+  { titulo: null, items: [{ ruta: "/panel", nombre: "Panel", modulo: null }] },
   {
     titulo: "Facturación",
     items: [
-      { ruta: "/facturas", nombre: "Facturas" },
-      { ruta: "/clientes", nombre: "Clientes" },
-      { ruta: "/series", nombre: "Series" },
+      { ruta: "/facturas", nombre: "Facturas", modulo: "facturacion" },
+      { ruta: "/clientes", nombre: "Clientes", modulo: "facturacion" },
+      { ruta: "/series", nombre: "Series", modulo: "facturacion" },
     ],
   },
   {
     titulo: "Contabilidad",
-    items: [{ ruta: "/plan-cuentas", nombre: "Plan de cuentas" }],
+    items: [{ ruta: "/plan-cuentas", nombre: "Plan de cuentas", modulo: "contabilidad" }],
   },
 ];
 
@@ -26,7 +30,19 @@ const enCamino = [
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Guard del servidor: sesión + módulo contratado + rol. Nada se pinta antes.
-  const { perfil } = await exigirFacturacion();
+  const { supabase, perfil, cuenta } = await exigirFacturacion();
+
+  const { data: contratados } = await supabase
+    .from("modulos_contratados")
+    .select("modulo_id")
+    .eq("cuenta_id", cuenta.id)
+    .eq("activo", true);
+
+  const activos = new Set((contratados ?? []).map((m) => m.modulo_id));
+
+  const gruposVisibles = grupos
+    .map((g) => ({ ...g, items: g.items.filter((it) => !it.modulo || activos.has(it.modulo)) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <div className="aplicacion">
@@ -35,23 +51,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <span className="marca-nombre">Hostelero</span>
           <span className="marca-modulo">Finanzas</span>
         </div>
-        <Navegacion grupos={grupos} enCamino={enCamino} />
+        <Navegacion grupos={gruposVisibles} enCamino={enCamino} />
         <div className="lateral-pie">
           <p className="usuario" title={perfil.correo ?? undefined}>
             {perfil.correo}
           </p>
-          <form action={cerrarSesion}>
-            <button className="boton-fantasma" type="submit">
-              Salir
-            </button>
-          </form>
-          <p className="volver">
-            {/* <a> y no <Link>: hay que salir del basePath /finanzas para
-                volver a la portada, que es la raíz del mismo dominio. */}
-            <a className="enlace-tenue" href="/">
-              ← Volver a Hostelero
+          <div className="lateral-botones">
+            {/* <a> y no <Link>: hay que salir del basePath /finanzas para volver
+                a la portada, que es la raíz del mismo dominio. Mismo sitio y
+                mismo peso visual que el «← Inicio» del resto de módulos. */}
+            <a className="boton-fantasma" href="/">
+              ← Inicio
             </a>
-          </p>
+            <form action={cerrarSesion} style={{ flex: 1 }}>
+              <button className="boton-fantasma" type="submit">
+                Salir
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
       <main className="contenido">{children}</main>

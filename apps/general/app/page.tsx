@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirPerfil, ACCESO_POR_ROL } from "@/lib/supabase/server";
-import { RUTAS_MODULO } from "@/lib/modulos";
+import { RUTAS_MODULO, GRUPOS_PORTADA, grupoDe } from "@/lib/modulos";
 import { cerrarSesion } from "./acciones";
 
 export const dynamic = "force-dynamic";
@@ -94,13 +94,24 @@ export default async function Portada() {
             </p>
           </div>
         ) : (
-          areas.map((area) => (
-            <section key={area} style={{ marginBottom: 26 }}>
-              <h2 className="rotulo">{area}</h2>
-              <div className="rejilla-lanzadera">
-                {visibles
-                  .filter((m) => m.area === area)
-                  .map((m) =>
+          areas.map((area) => {
+            const delArea = visibles.filter((m) => m.area === area);
+            // Los módulos que comparten app se colapsan en una sola ficha.
+            const grupos = GRUPOS_PORTADA.filter((g) =>
+              delArea.some((m) => g.modulos.includes(m.id))
+            );
+            const sueltos = delArea.filter((m) => !grupoDe(m.id));
+
+            return (
+              <section key={area} style={{ marginBottom: 26 }}>
+                <h2 className="rotulo">{area}</h2>
+                <div className="rejilla-lanzadera">
+                  {grupos.map((g) => (
+                    <Link key={g.id} href={g.ruta} className="tarjeta-modulo">
+                      <span className="nombre-modulo">{g.nombre}</span>
+                    </Link>
+                  ))}
+                  {sueltos.map((m) =>
                     RUTAS_MODULO[m.id] ? (
                       <Link key={m.id} href={`/m/${m.id}`} className="tarjeta-modulo">
                         <span className="nombre-modulo">{m.nombre}</span>
@@ -113,9 +124,10 @@ export default async function Portada() {
                       </div>
                     )
                   )}
-              </div>
-            </section>
-          ))
+                </div>
+              </section>
+            );
+          })
         )}
       </main>
 

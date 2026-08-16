@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 type Grupo = { titulo: string | null; items: { ruta: string; nombre: string }[] };
+
 type Futuro = { nombre: string; fase: string };
 
 /** Solo marca cuál está activo: por eso es lo único del armazón que va al cliente. */

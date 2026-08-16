@@ -188,6 +188,12 @@ button { font: inherit; cursor: pointer; }
 
 .lateral-pie { border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 12px 10px 0; }
 
+.lateral-botones { display: flex; gap: 8px; }
+
+.lateral-botones > a, .lateral-botones form { flex: 1; }
+
+.lateral-botones a.boton-fantasma { display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+
 .usuario { font-size: 12px; color: var(--chrome-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 8px; }
 
 .boton-fantasma {
@@ -477,13 +483,6 @@ input.celda.a-derecha { text-align: right; }
   .acciones { flex-direction: column-reverse; align-items: stretch; }
   .boton-auto, .boton-secundario { width: 100%; justify-content: center; text-align: center; }
 }
-
-/* Vuelta al lanzador de la plataforma desde el pie del lateral. */
-.volver { margin-top: 10px; }
-
-.enlace-tenue { color: var(--chrome-suave); font-size: 12px; }
-
-.enlace-tenue:hover { color: #fff; }
 
 /* ---- Detalle de factura expedida ---- */
 
