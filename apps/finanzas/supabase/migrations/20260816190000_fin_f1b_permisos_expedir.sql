@@ -1,4 +1,5 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: APLICADA en producción el 16-08-2026 desde el chat de claude.ai.
+-- No reaplicar.
 -- ============================================================================
 -- MIGRACIÓN F1b — Cerrar el permiso de expedir y anular al rol anónimo
 -- Proyecto: hostelero · Fecha: 16-08-2026

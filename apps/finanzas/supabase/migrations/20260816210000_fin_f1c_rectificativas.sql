@@ -1,4 +1,5 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: APLICADA en producción el 16-08-2026 desde el chat de claude.ai.
+-- No reaplicar.
 -- ============================================================================
 -- MIGRACIÓN F1c — Rectificativas: falta decir de qué forma se rectifica
 -- Proyecto: hostelero · Fecha: 16-08-2026
@@ -60,13 +61,13 @@ create index if not exists fin_facturas_rectifica_idx
   where factura_rectificada_id is not null;
 
 -- ----------------------------------------------------------------------------
--- Comprobación posterior sugerida (en una transacción con rollback):
+-- COMPROBADA tras aplicar, en una transacción con rollback (16-08-2026):
 --
---   begin;
---   -- Debe FALLAR: rectificativa sin decir a quién rectifica ni de qué forma.
---   insert into fin_facturas (cuenta_id, sociedad_id, serie_id, ejercicio, tipo, estado)
---   values ('<cuenta>', '<sociedad>', '<serie>', 2026, 'R1', 'borrador');
---   rollback;
+--   R1 sin factura_rectificada_id ni tipo_rectificativa ... rechazada  ✓
+--   R1 con los dos datos ............................... aceptada    ✓
+--   tipo_rectificativa = 'X' (solo valen S e I) ........ rechazada   ✓
+--   F1 normal, sin ninguno de los dos .................. aceptada    ✓
 --
---   -- Y debe FUNCIONAR con los dos datos puestos.
+-- El último importa tanto como los otros: la restricción no debía estorbar a
+-- las facturas que no son rectificativas, que son la mayoría.
 -- ----------------------------------------------------------------------------

@@ -2893,6 +2893,7 @@ export type Database = {
           serie_id: string
           sociedad_id: string
           tipo: string
+          tipo_rectificativa: string | null
           total: number
         }
         Insert: {
@@ -2923,6 +2924,7 @@ export type Database = {
           serie_id: string
           sociedad_id: string
           tipo?: string
+          tipo_rectificativa?: string | null
           total?: number
         }
         Update: {
@@ -2953,6 +2955,7 @@ export type Database = {
           serie_id?: string
           sociedad_id?: string
           tipo?: string
+          tipo_rectificativa?: string | null
           total?: number
         }
         Relationships: [
