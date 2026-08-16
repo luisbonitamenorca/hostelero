@@ -53,6 +53,761 @@ export type Database = {
           },
         ]
       }
+      agentes_activos: {
+        Row: {
+          activo: boolean
+          agente_id: string
+          config: Json
+          creado_en: string
+          cuenta_id: string
+        }
+        Insert: {
+          activo?: boolean
+          agente_id: string
+          config?: Json
+          creado_en?: string
+          cuenta_id: string
+        }
+        Update: {
+          activo?: boolean
+          agente_id?: string
+          config?: Json
+          creado_en?: string
+          cuenta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_activos_agente_id_fkey"
+            columns: ["agente_id"]
+            isOneToOne: false
+            referencedRelation: "agentes_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_activos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_catalogo: {
+        Row: {
+          ambito: string
+          descripcion: string
+          estado: string
+          id: string
+          nombre: string
+          orden: number
+          usa_web: boolean
+        }
+        Insert: {
+          ambito?: string
+          descripcion?: string
+          estado?: string
+          id: string
+          nombre: string
+          orden?: number
+          usa_web?: boolean
+        }
+        Update: {
+          ambito?: string
+          descripcion?: string
+          estado?: string
+          id?: string
+          nombre?: string
+          orden?: number
+          usa_web?: boolean
+        }
+        Relationships: []
+      }
+      agentes_competidores: {
+        Row: {
+          activo: boolean
+          ambito: string
+          creado_en: string
+          cuenta_id: string
+          id: string
+          nombre: string
+          notas: string | null
+          ultima_revision: string | null
+          web: string | null
+        }
+        Insert: {
+          activo?: boolean
+          ambito?: string
+          creado_en?: string
+          cuenta_id: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          ultima_revision?: string | null
+          web?: string | null
+        }
+        Update: {
+          activo?: boolean
+          ambito?: string
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          ultima_revision?: string | null
+          web?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_competidores_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_conocimiento: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          centro_id: string
+          contenido: string
+          cuenta_id: string
+          id: string
+          origen: string
+          titulo: string
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          centro_id: string
+          contenido?: string
+          cuenta_id: string
+          id?: string
+          origen?: string
+          titulo: string
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          centro_id?: string
+          contenido?: string
+          cuenta_id?: string
+          id?: string
+          origen?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_conocimiento_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_conocimiento_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_hallazgos: {
+        Row: {
+          competidor_id: string
+          creado_en: string
+          cuenta_id: string
+          detalle: string | null
+          estado: string
+          id: string
+          relevancia: number | null
+          tipo: string
+          titulo: string
+          url: string | null
+        }
+        Insert: {
+          competidor_id: string
+          creado_en?: string
+          cuenta_id: string
+          detalle?: string | null
+          estado?: string
+          id?: string
+          relevancia?: number | null
+          tipo?: string
+          titulo: string
+          url?: string | null
+        }
+        Update: {
+          competidor_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          detalle?: string | null
+          estado?: string
+          id?: string
+          relevancia?: number | null
+          tipo?: string
+          titulo?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_hallazgos_competidor_id_fkey"
+            columns: ["competidor_id"]
+            isOneToOne: false
+            referencedRelation: "agentes_competidores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_hallazgos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_perfil_subvenciones: {
+        Row: {
+          actualizado_en: string
+          cuenta_id: string
+          perfil: string
+          territorio: string
+        }
+        Insert: {
+          actualizado_en?: string
+          cuenta_id: string
+          perfil?: string
+          territorio?: string
+        }
+        Update: {
+          actualizado_en?: string
+          cuenta_id?: string
+          perfil?: string
+          territorio?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_perfil_subvenciones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: true
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_prospectos: {
+        Row: {
+          actualizado_en: string
+          angulo: string | null
+          ciudad: string | null
+          creado_en: string
+          cuenta_id: string
+          email: string | null
+          etapa: string
+          id: string
+          nombre: string
+          notas: string | null
+          perfil: string | null
+          razon: string | null
+          score: number | null
+          telefono: string | null
+          web: string | null
+          zona: string
+        }
+        Insert: {
+          actualizado_en?: string
+          angulo?: string | null
+          ciudad?: string | null
+          creado_en?: string
+          cuenta_id: string
+          email?: string | null
+          etapa?: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          perfil?: string | null
+          razon?: string | null
+          score?: number | null
+          telefono?: string | null
+          web?: string | null
+          zona: string
+        }
+        Update: {
+          actualizado_en?: string
+          angulo?: string | null
+          ciudad?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          email?: string | null
+          etapa?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          perfil?: string | null
+          razon?: string | null
+          score?: number | null
+          telefono?: string | null
+          web?: string | null
+          zona?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_prospectos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_resenas: {
+        Row: {
+          actualizado_en: string
+          autor: string | null
+          borrador: string | null
+          centro_id: string
+          creado_en: string
+          cuenta_id: string
+          estado: string
+          externo_id: string
+          fecha: string | null
+          id: string
+          idioma: string | null
+          origen: string
+          plataforma: string
+          texto: string
+          valoracion: number | null
+        }
+        Insert: {
+          actualizado_en?: string
+          autor?: string | null
+          borrador?: string | null
+          centro_id: string
+          creado_en?: string
+          cuenta_id: string
+          estado?: string
+          externo_id: string
+          fecha?: string | null
+          id?: string
+          idioma?: string | null
+          origen?: string
+          plataforma: string
+          texto: string
+          valoracion?: number | null
+        }
+        Update: {
+          actualizado_en?: string
+          autor?: string | null
+          borrador?: string | null
+          centro_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          estado?: string
+          externo_id?: string
+          fecha?: string | null
+          id?: string
+          idioma?: string | null
+          origen?: string
+          plataforma?: string
+          texto?: string
+          valoracion?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_resenas_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_resenas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_runs: {
+        Row: {
+          agente_id: string
+          busquedas: number
+          centro_id: string | null
+          coste: number
+          cuenta_id: string
+          duracion_ms: number | null
+          error: string | null
+          id: string
+          items: number
+          ok: boolean
+          tokens_in: number
+          tokens_out: number
+          ts: string
+        }
+        Insert: {
+          agente_id: string
+          busquedas?: number
+          centro_id?: string | null
+          coste?: number
+          cuenta_id: string
+          duracion_ms?: number | null
+          error?: string | null
+          id?: string
+          items?: number
+          ok?: boolean
+          tokens_in?: number
+          tokens_out?: number
+          ts?: string
+        }
+        Update: {
+          agente_id?: string
+          busquedas?: number
+          centro_id?: string | null
+          coste?: number
+          cuenta_id?: string
+          duracion_ms?: number | null
+          error?: string | null
+          id?: string
+          items?: number
+          ok?: boolean
+          tokens_in?: number
+          tokens_out?: number
+          ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_runs_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_runs_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_subvenciones: {
+        Row: {
+          actualizado_en: string
+          ambito: string
+          bdns: string | null
+          creado_en: string
+          cuenta_id: string
+          detalle: string | null
+          encaje: number | null
+          estado: string
+          fecha_pub: string | null
+          fuente: string
+          id: string
+          importe: string | null
+          materia: string | null
+          notas: string | null
+          organo: string | null
+          plazo: string | null
+          razon: string | null
+          titulo: string
+          url: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          ambito?: string
+          bdns?: string | null
+          creado_en?: string
+          cuenta_id: string
+          detalle?: string | null
+          encaje?: number | null
+          estado?: string
+          fecha_pub?: string | null
+          fuente?: string
+          id?: string
+          importe?: string | null
+          materia?: string | null
+          notas?: string | null
+          organo?: string | null
+          plazo?: string | null
+          razon?: string | null
+          titulo: string
+          url?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          ambito?: string
+          bdns?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          detalle?: string | null
+          encaje?: number | null
+          estado?: string
+          fecha_pub?: string | null
+          fuente?: string
+          id?: string
+          importe?: string | null
+          materia?: string | null
+          notas?: string | null
+          organo?: string | null
+          plazo?: string | null
+          razon?: string | null
+          titulo?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_subvenciones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_sync_alertas: {
+        Row: {
+          centro_id: string
+          creado_en: string
+          cuenta_id: string
+          detalle: string | null
+          encontrado: string | null
+          esperado: string | null
+          estado: string
+          id: string
+          plataforma: Database["public"]["Enums"]["agentes_plataforma"]
+          resuelto_en: string | null
+        }
+        Insert: {
+          centro_id: string
+          creado_en?: string
+          cuenta_id: string
+          detalle?: string | null
+          encontrado?: string | null
+          esperado?: string | null
+          estado?: string
+          id?: string
+          plataforma: Database["public"]["Enums"]["agentes_plataforma"]
+          resuelto_en?: string | null
+        }
+        Update: {
+          centro_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          detalle?: string | null
+          encontrado?: string | null
+          esperado?: string | null
+          estado?: string
+          id?: string
+          plataforma?: Database["public"]["Enums"]["agentes_plataforma"]
+          resuelto_en?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_sync_alertas_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_sync_alertas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_sync_checks: {
+        Row: {
+          centro_id: string
+          comprobadas: number
+          creado_en: string
+          cuenta_id: string
+          discrepancias: number
+          id: string
+          ok: boolean
+          resumen: string | null
+        }
+        Insert: {
+          centro_id: string
+          comprobadas?: number
+          creado_en?: string
+          cuenta_id: string
+          discrepancias?: number
+          id?: string
+          ok: boolean
+          resumen?: string | null
+        }
+        Update: {
+          centro_id?: string
+          comprobadas?: number
+          creado_en?: string
+          cuenta_id?: string
+          discrepancias?: number
+          id?: string
+          ok?: boolean
+          resumen?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_sync_checks_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_sync_checks_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_tonos: {
+        Row: {
+          actualizado_en: string
+          centro_id: string
+          cuenta_id: string
+          id: string
+          orden: number
+          tono: string
+        }
+        Insert: {
+          actualizado_en?: string
+          centro_id: string
+          cuenta_id: string
+          id?: string
+          orden?: number
+          tono?: string
+        }
+        Update: {
+          actualizado_en?: string
+          centro_id?: string
+          cuenta_id?: string
+          id?: string
+          orden?: number
+          tono?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_tonos_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_tonos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_wa_chats: {
+        Row: {
+          centro_id: string
+          cliente: string
+          creado_en: string
+          cuenta_id: string
+          estado: string
+          externo_id: string | null
+          id: string
+          origen: string
+          telefono_mask: string | null
+          ultimo_ts: string
+        }
+        Insert: {
+          centro_id: string
+          cliente: string
+          creado_en?: string
+          cuenta_id: string
+          estado?: string
+          externo_id?: string | null
+          id?: string
+          origen?: string
+          telefono_mask?: string | null
+          ultimo_ts?: string
+        }
+        Update: {
+          centro_id?: string
+          cliente?: string
+          creado_en?: string
+          cuenta_id?: string
+          estado?: string
+          externo_id?: string | null
+          id?: string
+          origen?: string
+          telefono_mask?: string | null
+          ultimo_ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_wa_chats_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_wa_chats_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agentes_wa_mensajes: {
+        Row: {
+          chat_id: string
+          cuenta_id: string
+          emisor: string
+          id: string
+          texto: string
+          ts: string
+        }
+        Insert: {
+          chat_id: string
+          cuenta_id: string
+          emisor: string
+          id?: string
+          texto: string
+          ts?: string
+        }
+        Update: {
+          chat_id?: string
+          cuenta_id?: string
+          emisor?: string
+          id?: string
+          texto?: string
+          ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_wa_mensajes_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "agentes_wa_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agentes_wa_mensajes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       centros: {
         Row: {
           creado_en: string
@@ -1672,6 +2427,885 @@ export type Database = {
             columns: ["departamento_id"]
             isOneToOne: false
             referencedRelation: "departamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_apuntes: {
+        Row: {
+          asiento_id: string
+          cuenta_id: string
+          cuenta_plan_id: string
+          debe: number
+          descripcion: string | null
+          haber: number
+          id: string
+          orden: number
+        }
+        Insert: {
+          asiento_id: string
+          cuenta_id: string
+          cuenta_plan_id: string
+          debe?: number
+          descripcion?: string | null
+          haber?: number
+          id?: string
+          orden?: number
+        }
+        Update: {
+          asiento_id?: string
+          cuenta_id?: string
+          cuenta_plan_id?: string
+          debe?: number
+          descripcion?: string | null
+          haber?: number
+          id?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_apuntes_asiento_id_fkey"
+            columns: ["asiento_id"]
+            isOneToOne: false
+            referencedRelation: "fin_asientos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_apuntes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_apuntes_cuenta_plan_id_fkey"
+            columns: ["cuenta_plan_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plan_cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_asientos: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          descripcion: string | null
+          ejercicio_id: string
+          estado: string
+          fecha: string
+          id: string
+          numero: number | null
+          origen_id: string | null
+          origen_tipo: string
+          sociedad_id: string
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id: string
+          descripcion?: string | null
+          ejercicio_id: string
+          estado?: string
+          fecha: string
+          id?: string
+          numero?: number | null
+          origen_id?: string | null
+          origen_tipo?: string
+          sociedad_id: string
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          descripcion?: string | null
+          ejercicio_id?: string
+          estado?: string
+          fecha?: string
+          id?: string
+          numero?: number | null
+          origen_id?: string | null
+          origen_tipo?: string
+          sociedad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_asientos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_asientos_ejercicio_id_fkey"
+            columns: ["ejercicio_id"]
+            isOneToOne: false
+            referencedRelation: "fin_ejercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_asientos_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_clientes: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          codigo_postal: string | null
+          comensal_id: string | null
+          creado_en: string
+          cuenta_id: string
+          dias_vencimiento: number
+          direccion: string | null
+          email: string | null
+          iban: string | null
+          id: string
+          municipio: string | null
+          nif: string | null
+          nif_norm: string | null
+          nombre_comercial: string | null
+          nombre_fiscal: string
+          notas: string | null
+          pais: string
+          provincia: string | null
+          retencion_pct: number
+          telefono: string | null
+          tipo_iva_defecto: number
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          codigo_postal?: string | null
+          comensal_id?: string | null
+          creado_en?: string
+          cuenta_id: string
+          dias_vencimiento?: number
+          direccion?: string | null
+          email?: string | null
+          iban?: string | null
+          id?: string
+          municipio?: string | null
+          nif?: string | null
+          nif_norm?: string | null
+          nombre_comercial?: string | null
+          nombre_fiscal: string
+          notas?: string | null
+          pais?: string
+          provincia?: string | null
+          retencion_pct?: number
+          telefono?: string | null
+          tipo_iva_defecto?: number
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          codigo_postal?: string | null
+          comensal_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          dias_vencimiento?: number
+          direccion?: string | null
+          email?: string | null
+          iban?: string | null
+          id?: string
+          municipio?: string | null
+          nif?: string | null
+          nif_norm?: string | null
+          nombre_comercial?: string | null
+          nombre_fiscal?: string
+          notas?: string | null
+          pais?: string
+          provincia?: string | null
+          retencion_pct?: number
+          telefono?: string | null
+          tipo_iva_defecto?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_clientes_comensal_id_fkey"
+            columns: ["comensal_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_clientes_comensal_id_fkey"
+            columns: ["comensal_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_consentimiento_vigente"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "fin_clientes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_config: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          cuenta_id: string
+          pie_factura: string | null
+          regimen_iva: string
+          retencion_defecto: number
+          serie_defecto_id: string | null
+          sociedad_id: string
+          verifactu_modo: string
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          cuenta_id: string
+          pie_factura?: string | null
+          regimen_iva?: string
+          retencion_defecto?: number
+          serie_defecto_id?: string | null
+          sociedad_id: string
+          verifactu_modo?: string
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          cuenta_id?: string
+          pie_factura?: string | null
+          regimen_iva?: string
+          retencion_defecto?: number
+          serie_defecto_id?: string | null
+          sociedad_id?: string
+          verifactu_modo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_config_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_config_serie_fk"
+            columns: ["serie_defecto_id"]
+            isOneToOne: false
+            referencedRelation: "fin_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_config_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: true
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_ejercicios: {
+        Row: {
+          anio: number
+          cuenta_id: string
+          estado: string
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          sociedad_id: string
+        }
+        Insert: {
+          anio: number
+          cuenta_id: string
+          estado?: string
+          fecha_fin: string
+          fecha_inicio: string
+          id?: string
+          sociedad_id: string
+        }
+        Update: {
+          anio?: number
+          cuenta_id?: string
+          estado?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          sociedad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_ejercicios_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_ejercicios_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_factura_impuestos: {
+        Row: {
+          base: number
+          cuenta_id: string
+          cuota: number
+          factura_id: string
+          id: string
+          impuesto: string
+          tipo_pct: number
+        }
+        Insert: {
+          base: number
+          cuenta_id: string
+          cuota: number
+          factura_id: string
+          id?: string
+          impuesto?: string
+          tipo_pct: number
+        }
+        Update: {
+          base?: number
+          cuenta_id?: string
+          cuota?: number
+          factura_id?: string
+          id?: string
+          impuesto?: string
+          tipo_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_factura_impuestos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_factura_impuestos_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "fin_facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_factura_lineas: {
+        Row: {
+          base: number
+          cantidad: number
+          concepto: string
+          cuenta_id: string
+          cuota_iva: number
+          cuota_retencion: number
+          descuento_pct: number
+          factura_id: string
+          id: string
+          orden: number
+          precio_unitario: number
+          tipo_iva: number
+          tipo_retencion: number
+          total: number
+        }
+        Insert: {
+          base?: number
+          cantidad?: number
+          concepto: string
+          cuenta_id: string
+          cuota_iva?: number
+          cuota_retencion?: number
+          descuento_pct?: number
+          factura_id: string
+          id?: string
+          orden?: number
+          precio_unitario?: number
+          tipo_iva?: number
+          tipo_retencion?: number
+          total?: number
+        }
+        Update: {
+          base?: number
+          cantidad?: number
+          concepto?: string
+          cuenta_id?: string
+          cuota_iva?: number
+          cuota_retencion?: number
+          descuento_pct?: number
+          factura_id?: string
+          id?: string
+          orden?: number
+          precio_unitario?: number
+          tipo_iva?: number
+          tipo_retencion?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_factura_lineas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_factura_lineas_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "fin_facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_facturas: {
+        Row: {
+          actualizado_en: string
+          base_total: number
+          centro_id: string | null
+          cliente_id: string | null
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          cuota_iva_total: number
+          cuota_retencion: number
+          descripcion_operacion: string | null
+          ejercicio: number
+          estado: string
+          estado_cobro: string
+          expedida_por: string | null
+          factura_rectificada_id: string | null
+          fecha_expedicion: string | null
+          fecha_operacion: string | null
+          id: string
+          importe_cobrado: number
+          moneda: string
+          motivo_rectificacion: string | null
+          notas_internas: string | null
+          numero: number | null
+          numero_completo: string | null
+          serie_id: string
+          sociedad_id: string
+          tipo: string
+          total: number
+        }
+        Insert: {
+          actualizado_en?: string
+          base_total?: number
+          centro_id?: string | null
+          cliente_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id: string
+          cuota_iva_total?: number
+          cuota_retencion?: number
+          descripcion_operacion?: string | null
+          ejercicio: number
+          estado?: string
+          estado_cobro?: string
+          expedida_por?: string | null
+          factura_rectificada_id?: string | null
+          fecha_expedicion?: string | null
+          fecha_operacion?: string | null
+          id?: string
+          importe_cobrado?: number
+          moneda?: string
+          motivo_rectificacion?: string | null
+          notas_internas?: string | null
+          numero?: number | null
+          numero_completo?: string | null
+          serie_id: string
+          sociedad_id: string
+          tipo?: string
+          total?: number
+        }
+        Update: {
+          actualizado_en?: string
+          base_total?: number
+          centro_id?: string | null
+          cliente_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          cuota_iva_total?: number
+          cuota_retencion?: number
+          descripcion_operacion?: string | null
+          ejercicio?: number
+          estado?: string
+          estado_cobro?: string
+          expedida_por?: string | null
+          factura_rectificada_id?: string | null
+          fecha_expedicion?: string | null
+          fecha_operacion?: string | null
+          id?: string
+          importe_cobrado?: number
+          moneda?: string
+          motivo_rectificacion?: string | null
+          notas_internas?: string | null
+          numero?: number | null
+          numero_completo?: string | null
+          serie_id?: string
+          sociedad_id?: string
+          tipo?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_facturas_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_facturas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "fin_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_facturas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_facturas_factura_rectificada_id_fkey"
+            columns: ["factura_rectificada_id"]
+            isOneToOne: false
+            referencedRelation: "fin_facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_facturas_serie_id_fkey"
+            columns: ["serie_id"]
+            isOneToOne: false
+            referencedRelation: "fin_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_facturas_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_periodos: {
+        Row: {
+          bloqueado: boolean
+          cuenta_id: string
+          ejercicio_id: string
+          id: string
+          mes: number
+        }
+        Insert: {
+          bloqueado?: boolean
+          cuenta_id: string
+          ejercicio_id: string
+          id?: string
+          mes: number
+        }
+        Update: {
+          bloqueado?: boolean
+          cuenta_id?: string
+          ejercicio_id?: string
+          id?: string
+          mes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_periodos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_periodos_ejercicio_id_fkey"
+            columns: ["ejercicio_id"]
+            isOneToOne: false
+            referencedRelation: "fin_ejercicios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_plan_cuentas: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          codigo: string
+          contrapartida: string | null
+          creado_en: string
+          cuenta_id: string
+          id: string
+          nif: string | null
+          nombre: string
+          origen: string
+          sociedad_id: string
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          codigo: string
+          contrapartida?: string | null
+          creado_en?: string
+          cuenta_id: string
+          id?: string
+          nif?: string | null
+          nombre: string
+          origen?: string
+          sociedad_id: string
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          codigo?: string
+          contrapartida?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nif?: string | null
+          nombre?: string
+          origen?: string
+          sociedad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_plan_cuentas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_plan_cuentas_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_series: {
+        Row: {
+          activa: boolean
+          codigo: string
+          creado_en: string
+          cuenta_id: string
+          descripcion: string | null
+          ejercicio: number
+          id: string
+          siguiente_numero: number
+          sociedad_id: string
+          tipo_defecto: string
+        }
+        Insert: {
+          activa?: boolean
+          codigo: string
+          creado_en?: string
+          cuenta_id: string
+          descripcion?: string | null
+          ejercicio: number
+          id?: string
+          siguiente_numero?: number
+          sociedad_id: string
+          tipo_defecto?: string
+        }
+        Update: {
+          activa?: boolean
+          codigo?: string
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          ejercicio?: number
+          id?: string
+          siguiente_numero?: number
+          sociedad_id?: string
+          tipo_defecto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_series_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_series_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_verifactu_envios: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          csv_aeat: string | null
+          cuenta_id: string
+          enviado_en: string | null
+          estado: string
+          id: string
+          intento: number
+          registro_id: string
+          respuesta: Json | null
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          csv_aeat?: string | null
+          cuenta_id: string
+          enviado_en?: string | null
+          estado?: string
+          id?: string
+          intento?: number
+          registro_id: string
+          respuesta?: Json | null
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          csv_aeat?: string | null
+          cuenta_id?: string
+          enviado_en?: string | null
+          estado?: string
+          id?: string
+          intento?: number
+          registro_id?: string
+          respuesta?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_verifactu_envios_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_verifactu_envios_registro_id_fkey"
+            columns: ["registro_id"]
+            isOneToOne: false
+            referencedRelation: "fin_verifactu_registros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_verifactu_eventos: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          detalle: Json | null
+          id: string
+          sociedad_id: string | null
+          tipo: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id: string
+          detalle?: Json | null
+          id?: string
+          sociedad_id?: string | null
+          tipo: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          detalle?: Json | null
+          id?: string
+          sociedad_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_verifactu_eventos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_verifactu_eventos_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_verifactu_registros: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          factura_id: string
+          fecha_hora_registro: string
+          huella: string
+          huella_anterior: string | null
+          id: string
+          orden: number
+          payload: Json
+          sociedad_id: string
+          tipo_registro: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id: string
+          factura_id: string
+          fecha_hora_registro?: string
+          huella: string
+          huella_anterior?: string | null
+          id?: string
+          orden: number
+          payload: Json
+          sociedad_id: string
+          tipo_registro: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          factura_id?: string
+          fecha_hora_registro?: string
+          huella?: string
+          huella_anterior?: string | null
+          id?: string
+          orden?: number
+          payload?: Json
+          sociedad_id?: string
+          tipo_registro?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_verifactu_registros_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_verifactu_registros_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "fin_facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_verifactu_registros_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
             referencedColumns: ["id"]
           },
         ]
@@ -3615,6 +5249,14 @@ export type Database = {
       }
     }
     Enums: {
+      agentes_plataforma:
+        | "google"
+        | "tripadvisor"
+        | "thefork"
+        | "web"
+        | "instagram"
+        | "facebook"
+        | "otro"
       area_funcional: "primera" | "segunda" | "tercera" | "cuarta" | "quinta"
       curso_estado_inscripcion:
         | "iniciado"
@@ -3760,6 +5402,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agentes_plataforma: [
+        "google",
+        "tripadvisor",
+        "thefork",
+        "web",
+        "instagram",
+        "facebook",
+        "otro",
+      ],
       area_funcional: ["primera", "segunda", "tercera", "cuarta", "quinta"],
       curso_estado_inscripcion: [
         "iniciado",
@@ -3782,4 +5433,3 @@ export const Constants = {
     },
   },
 } as const
-
