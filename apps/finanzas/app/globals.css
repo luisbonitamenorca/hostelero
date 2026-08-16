@@ -484,3 +484,52 @@ input.celda.a-derecha { text-align: right; }
 .enlace-tenue { color: var(--chrome-suave); font-size: 12px; }
 
 .enlace-tenue:hover { color: #fff; }
+
+/* ---- Detalle de factura expedida ---- */
+
+.aviso-banda {
+  background: #FFF7ED;
+  border: 1px solid var(--aviso);
+  border-radius: var(--radio);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--tinta);
+}
+
+.bloque .campo .valor { font-size: 15px; font-weight: 600; margin-top: 2px; }
+
+.bloque .campo .detalle { font-size: 13px; color: var(--gris); margin-top: 2px; }
+
+.bloque .campo > span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gris);
+}
+
+.verifactu { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: start; }
+
+.verifactu-datos p { display: flex; justify-content: space-between; gap: 24px; padding: 5px 0; font-size: 14px; }
+
+.verifactu-datos p > span { color: var(--gris); white-space: nowrap; }
+
+.huella { font-size: 12px; word-break: break-all; text-align: right; }
+
+.verifactu-qr { text-align: center; min-width: 200px; }
+
+.qr-titulo { font-size: 12px; color: var(--gris); margin-bottom: 6px; }
+
+/* Entre 30 y 40 mm en papel, con al menos 2 mm de margen alrededor: lo fija
+   el artículo 21 de la orden. En pantalla se aproxima. */
+.qr { display: inline-block; background: #fff; padding: 6px; border: 1px solid var(--borde); border-radius: 4px; }
+
+.qr svg { display: block; width: 150px; height: 150px; }
+
+.qr-leyenda { font-size: 11px; color: var(--tinta); margin-top: 6px; max-width: 190px; }
+
+@media (max-width: 700px) {
+  .verifactu { grid-template-columns: 1fr; }
+  .verifactu-qr { text-align: left; }
+  .huella { text-align: left; }
+}
