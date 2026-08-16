@@ -1,4 +1,5 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: APLICADA en producción el 16-08-2026 (registrada como 20260816203038).
+-- No reaplicar. Los arreglos van en una migración nueva, nunca editando esta.
 -- ============================================================================
 -- MIGRACIÓN F2b — Una factura solo puede nacer como borrador, y arreglos de F2a
 -- Proyecto: hostelero · Fecha: 16-08-2026
