@@ -1,6 +1,8 @@
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
 import Buscador from "../clientes/buscador";
+import BotonVencimiento from "./boton-vencimiento";
+import { clienteCartera } from "@/lib/cartera";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,16 @@ export default async function FacturasRecibidas({
     consulta,
     supabase.from("centros").select("id, nombre"),
   ]);
+
+  // Cuáles ya están en cartera. Si la migración F2a aún no está aplicada, la
+  // tabla no existe: se sigue adelante sin la columna en vez de romper la
+  // pantalla entera.
+  const { data: enCartera } = await clienteCartera(supabase)
+    .from("fin_vencimientos")
+    .select("compra_doc_id")
+    .eq("sentido", "pago");
+
+  const conVencimiento = new Set((enCartera ?? []).map((v: { compra_doc_id: string }) => v.compra_doc_id));
 
   const nombreCentro = new Map((centros ?? []).map((c) => [c.id, c.nombre]));
   const filas = data ?? [];
@@ -81,6 +93,7 @@ export default async function FacturasRecibidas({
                   <th className="a-derecha">IVA</th>
                   <th className="a-derecha">Total</th>
                   <th></th>
+                  <th className="a-derecha">Cartera</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,6 +117,9 @@ export default async function FacturasRecibidas({
                         </a>
                       )}
                     </td>
+                    <td className="a-derecha">
+                      <BotonVencimiento id={f.id} yaTiene={conVencimiento.has(f.id)} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -118,8 +134,9 @@ export default async function FacturasRecibidas({
 
       <p className="pista" style={{ marginTop: 12 }}>
         Solo lectura, y a propósito: el maestro de proveedores y la entrada de facturas viven en el
-        módulo de compras. Duplicar el alta aquí daría dos verdades. Lo que falta por construir es
-        lo financiero — vencimiento, estado de pago y conciliación —, que engancha con bancos.
+        módulo de compras. Duplicar el alta aquí daría dos verdades. Lo que sí es nuestro es lo
+        financiero: «A cartera» crea el vencimiento de pago con los días que tenga ese proveedor en
+        sus condiciones, o 30 si no los tiene puestos.
       </p>
     </>
   );

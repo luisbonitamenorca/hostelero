@@ -1,6 +1,8 @@
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros } from "@/lib/importes";
 import Buscador from "../clientes/buscador";
+import Condiciones from "./condiciones";
+import { clienteCartera } from "@/lib/cartera";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +33,18 @@ export default async function Proveedores({
     consulta = consulta.or(`nombre.ilike.%${termino}%,nif.ilike.%${termino}%,categoria.ilike.%${termino}%`);
   }
 
-  const [{ data, error }, { data: docs }] = await Promise.all([
+  const [{ data, error }, { data: docs }, { data: condiciones }] = await Promise.all([
     consulta,
     supabase.from("compras_doc").select("proveedor_id, total").eq("tipo", "factura"),
+    clienteCartera(supabase).from("fin_proveedor_condiciones").select("proveedor_id, dias_pago, forma_pago"),
   ]);
+
+  const cond = new Map(
+    (condiciones ?? []).map((c: { proveedor_id: string; dias_pago: number; forma_pago: string | null }) => [
+      c.proveedor_id,
+      c,
+    ]),
+  );
 
   // Cuántas facturas y cuánto lleva gastado cada proveedor.
   const resumen = new Map<string, { n: number; total: number }>();
@@ -53,7 +63,8 @@ export default async function Proveedores({
       <div className="cabecera-pagina">
         <h1>Proveedores</h1>
         <p className="sub">
-          El maestro vive en el módulo de compras. Aquí se consulta y se ve lo que llevan facturado.
+          El maestro vive en el módulo de compras. Aquí se consulta, se ve lo que llevan facturado y
+          se ponen sus condiciones de pago, que son las que calculan los vencimientos.
         </p>
       </div>
 
@@ -85,6 +96,7 @@ export default async function Proveedores({
                   <th>Cuenta</th>
                   <th className="a-derecha">Facturas</th>
                   <th className="a-derecha">Facturado</th>
+                  <th>Pago</th>
                 </tr>
               </thead>
               <tbody>
@@ -102,6 +114,13 @@ export default async function Proveedores({
                       <td className="dato">{p.cuenta_contable ?? "—"}</td>
                       <td className="numero">{r?.n ?? 0}</td>
                       <td className="numero">{r ? euros(r.total) : "—"}</td>
+                      <td>
+                        <Condiciones
+                          proveedorId={p.id}
+                          dias={cond.get(p.id)?.dias_pago ?? null}
+                          forma={cond.get(p.id)?.forma_pago ?? null}
+                        />
+                      </td>
                     </tr>
                   );
                 })}

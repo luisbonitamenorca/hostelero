@@ -29,6 +29,7 @@ La app tiene `basePath: "/finanzas"` y se sirve **bajo el dominio de hostelero-a
 - Migraciones aplicadas: F0 (14-08), F1a, F1b (permisos de expedir/anular cerrados a anon) y F1c (tipo_rectificativa S/I + restricción que impide una rectificativa incompleta). La única SIN aplicar es la F0b.
 - Rectificativas: botón Rectificar en el detalle de una expedida. Crea el borrador con causa R1–R5 y forma S (sustitución, copia las líneas) o I (diferencias, sin líneas). La original nunca se toca.
 - Compras: pantallas de solo lectura de proveedores y facturas recibidas sobre compras_proveedor y compras_doc. El maestro vive en el módulo de compras; aquí no se da de alta nada. Falta lo financiero: vencimiento, estado de pago y conciliación.
+- Cartera (F2a, SIN aplicar): fin_vencimientos (cobros y pagos en una sola tabla) y fin_proveedor_condiciones. El vencimiento de venta lo crea un disparador al expedir, desde fin_clientes.dias_vencimiento; al anular la factura se anula. El de compra se crea a mano desde Facturas recibidas. Cobrar y pagar se marca a mano hasta que llegue la conciliación bancaria (F2).
 - FALLO CONOCIDO de la F0: un borrador CON líneas no se puede borrar. El `on delete cascade` dispara el trigger de las líneas cuando la cabecera ya no existe, y lo interpreta como factura expedida. La app lo esquiva borrando las líneas antes; la corrección está propuesta en supabase/migrations/20260816130000_fin_f0b_borrado_de_borradores.sql, SIN aplicar.
 
 ## Conexiones e IDs
