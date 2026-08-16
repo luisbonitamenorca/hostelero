@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
-import { clienteActivos, MESES, type Activo, type FilaAmortizacion } from "@/lib/activos";
+import { MESES, type Activo, type FilaAmortizacion } from "@/lib/activos";
 import BotonBaja from "./boton-baja";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function DetalleActivo({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await exigirModulo("contabilidad");
-  const db = clienteActivos(supabase);
+  const db = supabase;
 
   const { data: fila } = await db
     .from("fin_activos")

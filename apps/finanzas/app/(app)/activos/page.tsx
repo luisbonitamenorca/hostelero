@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
-import { clienteActivos, type Activo } from "@/lib/activos";
+import { type Activo } from "@/lib/activos";
 
 export const dynamic = "force-dynamic";
 
 export default async function Activos() {
   const { supabase } = await exigirModulo("contabilidad");
-  const db = clienteActivos(supabase);
+  const db = supabase;
 
   const [{ data, error }, { data: centros }, { data: cuentas }] = await Promise.all([
     db.from("fin_activos")

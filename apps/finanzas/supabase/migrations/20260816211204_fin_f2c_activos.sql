@@ -1,4 +1,5 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: APLICADA en producción el 16-08-2026 (registrada como 20260816211204).
+-- No reaplicar. Los arreglos van en una migración nueva.
 -- ============================================================================
 -- MIGRACIÓN F2c — Inmovilizado: activos y su amortización
 -- Proyecto: hostelero · Fecha: 17-08-2026
@@ -196,7 +197,10 @@ create policy fin_amortizaciones_acceso on fin_amortizaciones for all
 -- ----------------------------------------------------------------------------
 -- Comprobación posterior sugerida (en una transacción con rollback):
 --
---   · Que aparecen las 24 cuentas del PGC sembradas, con origen 'pgc'.
+--   · Que aparecen las 23 cuentas del PGC sembradas, con origen 'pgc'.
+--     (Son 23, no 24: NO existe la 2810, porque su contrapartida serían los
+--      terrenos, y los terrenos no se amortizan. La lista de arriba es
+--      correcta; el que estaba mal era este comentario.)
 --   · Que un activo con valor residual mayor que el de adquisición se rechaza.
 --   · Que un activo 'baja' sin fecha_baja se rechaza.
 --   · Que un periodo contabilizado no se puede modificar ni borrar.

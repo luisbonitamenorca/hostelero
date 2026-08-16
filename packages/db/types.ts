@@ -2431,6 +2431,198 @@ export type Database = {
           },
         ]
       }
+      fin_activos: {
+        Row: {
+          actualizado_en: string
+          anios_vida_util: number
+          centro_id: string | null
+          codigo: string | null
+          compra_doc_id: string | null
+          creado_en: string
+          cuenta_activo_id: string
+          cuenta_amortizacion_id: string | null
+          cuenta_dotacion_id: string | null
+          cuenta_id: string
+          descripcion: string | null
+          estado: string
+          fecha_alta: string
+          fecha_baja: string | null
+          id: string
+          motivo_baja: string | null
+          nombre: string
+          notas: string | null
+          proveedor: string | null
+          sociedad_id: string
+          valor_adquisicion: number
+          valor_baja: number | null
+          valor_residual: number
+        }
+        Insert: {
+          actualizado_en?: string
+          anios_vida_util: number
+          centro_id?: string | null
+          codigo?: string | null
+          compra_doc_id?: string | null
+          creado_en?: string
+          cuenta_activo_id: string
+          cuenta_amortizacion_id?: string | null
+          cuenta_dotacion_id?: string | null
+          cuenta_id: string
+          descripcion?: string | null
+          estado?: string
+          fecha_alta: string
+          fecha_baja?: string | null
+          id?: string
+          motivo_baja?: string | null
+          nombre: string
+          notas?: string | null
+          proveedor?: string | null
+          sociedad_id: string
+          valor_adquisicion: number
+          valor_baja?: number | null
+          valor_residual?: number
+        }
+        Update: {
+          actualizado_en?: string
+          anios_vida_util?: number
+          centro_id?: string | null
+          codigo?: string | null
+          compra_doc_id?: string | null
+          creado_en?: string
+          cuenta_activo_id?: string
+          cuenta_amortizacion_id?: string | null
+          cuenta_dotacion_id?: string | null
+          cuenta_id?: string
+          descripcion?: string | null
+          estado?: string
+          fecha_alta?: string
+          fecha_baja?: string | null
+          id?: string
+          motivo_baja?: string | null
+          nombre?: string
+          notas?: string | null
+          proveedor?: string | null
+          sociedad_id?: string
+          valor_adquisicion?: number
+          valor_baja?: number | null
+          valor_residual?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_activos_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_activos_compra_doc_id_fkey"
+            columns: ["compra_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_activos_cuenta_activo_id_fkey"
+            columns: ["cuenta_activo_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plan_cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_activos_cuenta_amortizacion_id_fkey"
+            columns: ["cuenta_amortizacion_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plan_cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_activos_cuenta_dotacion_id_fkey"
+            columns: ["cuenta_dotacion_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plan_cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_activos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_activos_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_amortizaciones: {
+        Row: {
+          activo_id: string
+          actualizado_en: string
+          acumulado: number
+          asiento_id: string | null
+          contabilizado: boolean
+          creado_en: string
+          cuenta_id: string
+          ejercicio: number
+          id: string
+          importe: number
+          periodo: number
+        }
+        Insert: {
+          activo_id: string
+          actualizado_en?: string
+          acumulado: number
+          asiento_id?: string | null
+          contabilizado?: boolean
+          creado_en?: string
+          cuenta_id: string
+          ejercicio: number
+          id?: string
+          importe: number
+          periodo: number
+        }
+        Update: {
+          activo_id?: string
+          actualizado_en?: string
+          acumulado?: number
+          asiento_id?: string | null
+          contabilizado?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          ejercicio?: number
+          id?: string
+          importe?: number
+          periodo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_amortizaciones_activo_id_fkey"
+            columns: ["activo_id"]
+            isOneToOne: false
+            referencedRelation: "fin_activos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_amortizaciones_asiento_id_fkey"
+            columns: ["asiento_id"]
+            isOneToOne: false
+            referencedRelation: "fin_asientos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_amortizaciones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_apuntes: {
         Row: {
           asiento_id: string

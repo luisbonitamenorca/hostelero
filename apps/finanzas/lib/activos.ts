@@ -1,10 +1,4 @@
-/**
- * Tipos del inmovilizado y el único punto donde se esquiva el tipado.
- * fin_activos y fin_amortizaciones no están todavía en packages/db/types.ts
- * porque la migración F2c no está aplicada. Al aplicarla y regenerar, sobra.
- */
-import type { SupabaseClient } from "@supabase/supabase-js";
-
+/** Tipos y ayudas del inmovilizado. */
 export type Activo = {
   id: string;
   codigo: string | null;
@@ -32,12 +26,6 @@ export type FilaAmortizacion = {
   acumulado: number;
   contabilizado: boolean;
 };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function clienteActivos(supabase: unknown): SupabaseClient<any, "public", any> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return supabase as SupabaseClient<any, "public", any>;
-}
 
 export const MESES = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
