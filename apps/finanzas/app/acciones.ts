@@ -289,6 +289,64 @@ export async function guardarBorrador(datos: FacturaEnviada) {
   return { ok: true, id };
 }
 
+/**
+ * Las funciones de la F1a todavía no están en packages/db/types.ts porque la
+ * migración no se ha aplicado: los tipos se generan desde la base real. Este
+ * es el ÚNICO punto donde se esquiva el tipado, y desaparece en cuanto se
+ * apliquen y se regeneren los tipos.
+ */
+type ClienteConRpcFiscal = {
+  rpc: (
+    nombre: "fin_expedir_factura" | "fin_anular_factura",
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
+};
+
+export type ResultadoExpedicion =
+  | { error: string; ok?: undefined; id?: undefined }
+  | { ok: true; id: string; error?: undefined };
+
+/**
+ * Guarda el borrador y lo expide en la misma acción. Se guarda antes a
+ * propósito: la función de la base recalcula los totales DESDE LAS LÍNEAS
+ * guardadas, así que expedir sin guardar congelaría datos viejos.
+ */
+export async function guardarYExpedir(datos: FacturaEnviada): Promise<ResultadoExpedicion> {
+  const guardado = await guardarBorrador(datos);
+  if (guardado?.error) return guardado;
+  if (!guardado?.id) return { error: "No se pudo guardar el borrador antes de expedir." };
+
+  const { supabase } = await exigirFacturacion();
+  const { error } = await (supabase as unknown as ClienteConRpcFiscal).rpc("fin_expedir_factura", {
+    p_factura_id: guardado.id,
+  });
+
+  if (error) {
+    // La función valida y aborta la transacción entera: si algo falla, la
+    // factura sigue siendo borrador y la serie no ha gastado número.
+    return { error: `No se pudo expedir: ${error.message}` };
+  }
+
+  revalidatePath("/facturas");
+  return { ok: true, id: guardado.id };
+}
+
+export async function anularFactura(id: string, motivo: string) {
+  if (!motivo.trim()) return { error: "La anulación necesita un motivo." };
+
+  const { supabase } = await exigirFacturacion();
+  const { error } = await (supabase as unknown as ClienteConRpcFiscal).rpc("fin_anular_factura", {
+    p_factura_id: id,
+    p_motivo: motivo.trim(),
+  });
+
+  if (error) return { error: `No se pudo anular: ${error.message}` };
+
+  revalidatePath("/facturas");
+  revalidatePath(`/facturas/${id}`);
+  return { ok: true };
+}
+
 export async function borrarBorrador(id: string) {
   const { supabase } = await exigirFacturacion();
 

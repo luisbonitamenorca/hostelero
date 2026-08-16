@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { aNumero, calcularLinea, calcularTotales, euros, numero } from "@/lib/importes";
 import { TIPOS_IVA } from "@/lib/constantes";
-import { borrarBorrador, guardarBorrador } from "../../acciones";
+import { borrarBorrador, guardarBorrador, guardarYExpedir } from "../../acciones";
 
 export type SerieBreve = { id: string; codigo: string; ejercicio: number; tipo_defecto: string; activa: boolean };
 export type ClienteBreve = { id: string; nombre_fiscal: string; nif: string | null; tipo_iva_defecto: number; retencion_pct: number };
@@ -109,6 +109,7 @@ export default function EditorFactura({
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
   const [borrando, iniciarBorrado] = useTransition();
+  const [expidiendo, iniciarExpedicion] = useTransition();
 
   const lineasBrutas = useMemo(
     () =>
@@ -154,30 +155,68 @@ export default function EditorFactura({
   function guardar() {
     setError(null);
     iniciar(async () => {
-      const resultado = await guardarBorrador({
-        id: borrador?.id,
-        serie_id: serieId,
-        tipo,
-        cliente_id: clienteId || null,
-        centro_id: centroId || null,
-        fecha_operacion: fechaOperacion || null,
-        descripcion_operacion: descripcion.trim() || null,
-        notas_internas: notas.trim() || null,
-        lineas: lineas.map((l, i) => ({
-          concepto: l.concepto,
-          cantidad: lineasBrutas[i].cantidad,
-          precio_unitario: lineasBrutas[i].precio_unitario,
-          descuento_pct: lineasBrutas[i].descuento_pct,
-          tipo_iva: lineasBrutas[i].tipo_iva,
-          tipo_retencion: lineasBrutas[i].tipo_retencion,
-        })),
-      });
+      const resultado = await guardarBorrador(datosActuales());
 
       if (resultado?.error) {
         setError(resultado.error);
         return;
       }
       router.push("/facturas");
+      router.refresh();
+    });
+  }
+
+  function datosActuales() {
+    return {
+      id: borrador?.id,
+      serie_id: serieId,
+      tipo,
+      cliente_id: clienteId || null,
+      centro_id: centroId || null,
+      fecha_operacion: fechaOperacion || null,
+      descripcion_operacion: descripcion.trim() || null,
+      notas_internas: notas.trim() || null,
+      lineas: lineas.map((l, i) => ({
+        concepto: l.concepto,
+        cantidad: lineasBrutas[i].cantidad,
+        precio_unitario: lineasBrutas[i].precio_unitario,
+        descuento_pct: lineasBrutas[i].descuento_pct,
+        tipo_iva: lineasBrutas[i].tipo_iva,
+        tipo_retencion: lineasBrutas[i].tipo_retencion,
+      })),
+    };
+  }
+
+  function expedir() {
+    setError(null);
+
+    const serie = series.find((s) => s.id === serieId);
+    const cliente = clientes.find((c) => c.id === clienteId);
+
+    const aviso = [
+      "EXPEDIR ES IRREVERSIBLE.",
+      "",
+      `Serie ${serie ? `${serie.codigo}-${serie.ejercicio}` : "?"} · ${euros(totales.total)}`,
+      `Cliente: ${cliente?.nombre_fiscal ?? "(sin cliente)"}`,
+      "",
+      "Se asigna número, se congela el contenido y se genera el registro Verifactu",
+      "encadenado. A partir de ahí la factura no se edita ni se borra: solo se",
+      "anula o se rectifica.",
+      "",
+      "Solo facturas de PRUEBA hasta que se valide contra el entorno de la AEAT.",
+      "",
+      "¿Expedir?",
+    ].join("\n");
+
+    if (!confirm(aviso)) return;
+
+    iniciarExpedicion(async () => {
+      const resultado = await guardarYExpedir(datosActuales());
+      if (resultado?.error) {
+        setError(resultado.error);
+        return;
+      }
+      router.push(`/facturas/${resultado.id}`);
       router.refresh();
     });
   }
@@ -422,8 +461,21 @@ export default function EditorFactura({
       {error && <p className="error-texto">{error}</p>}
 
       <div className="acciones">
-        <button className="boton boton-auto" type="button" onClick={guardar} disabled={pendiente}>
+        <button className="boton boton-auto" type="button" onClick={guardar} disabled={pendiente || expidiendo}>
           {pendiente ? "Guardando…" : esNueva ? "Guardar borrador" : "Guardar cambios"}
+        </button>
+        <button
+          className="boton-secundario"
+          type="button"
+          onClick={expedir}
+          disabled={expidiendo || pendiente || faltaCliente || sinLineas || !serieId}
+          title={
+            faltaCliente || sinLineas
+              ? "Faltan datos obligatorios para expedir"
+              : "Asigna número y genera el registro Verifactu"
+          }
+        >
+          {expidiendo ? "Expidiendo…" : "Expedir"}
         </button>
         <Link className="boton-secundario" href="/facturas">
           Cancelar
