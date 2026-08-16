@@ -1,6 +1,6 @@
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { fecha } from "@/lib/importes";
-import { clienteRemesas, type Mandato } from "@/lib/remesas";
+import { type Mandato } from "@/lib/remesas";
 import FormularioMandato from "./formulario-mandato";
 import BotonRevocar from "./boton-revocar";
 
@@ -10,7 +10,7 @@ export default async function Mandatos() {
   const { supabase } = await exigirFacturacion();
 
   const [{ data, error }, { data: clientes }] = await Promise.all([
-    clienteRemesas(supabase)
+    supabase
       .from("fin_mandatos")
       .select("id, cliente_id, referencia, tipo, fecha_firma, iban, estado, usado")
       .order("fecha_firma", { ascending: false }),

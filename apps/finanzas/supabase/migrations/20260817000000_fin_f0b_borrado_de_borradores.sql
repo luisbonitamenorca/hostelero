@@ -1,4 +1,10 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: PROPUESTA. La ÚNICA sin aplicar. Para revisión de Luis.
+--
+-- Llevaba el número 20260816130000, que la ponía por delante de la F1a. Como no
+-- está aplicada, un entorno nuevo levantado desde el repo la habría ejecutado en
+-- un orden distinto al de producción: repo y producción dejaban de ser el mismo
+-- sistema. Renumerada al final para que ese riesgo desaparezca mientras se
+-- decide si se aplica.
 -- ============================================================================
 -- MIGRACIÓN F0b — Arreglo: borrar un borrador con líneas era imposible
 -- Proyecto: hostelero · Fecha: 16-08-2026

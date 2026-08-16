@@ -1,12 +1,12 @@
 import { exigirFacturacion } from "@/lib/supabase/server";
-import { clienteRemesas, type CuentaBancaria } from "@/lib/remesas";
+import { type CuentaBancaria } from "@/lib/remesas";
 import FormularioCuenta from "./formulario-cuenta";
 
 export const dynamic = "force-dynamic";
 
 export default async function Bancos() {
   const { supabase } = await exigirFacturacion();
-  const { data, error } = await clienteRemesas(supabase)
+  const { data, error } = await supabase
     .from("fin_bancos_cuentas")
     .select("id, nombre, iban, bic, activa, sociedad_id")
     .order("nombre");
