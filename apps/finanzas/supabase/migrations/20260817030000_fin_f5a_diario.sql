@@ -2,6 +2,9 @@
 -- Revisada 17-08-2026: se cierra el UPDATE directo que confirmaba sin pasar por
 -- fin_confirmar_asiento(), se bloquea el padre al insertar apuntes y se valida
 -- que el ejercicio sea de la sociedad del asiento.
+-- Revisada 17-08-2026 (2): se bloquea también el borrado de apuntes (la misma
+-- carrera que el insert, por el otro lado), se cambia v_existe por found, y la
+-- ausencia de fila de periodo pasa a ser excepción en vez de mes abierto.
 -- ============================================================================
 -- MIGRACIÓN F5a — El diario: confirmar un asiento
 -- Proyecto: hostelero · Fecha: 17-08-2026
@@ -37,10 +40,10 @@
 --
 -- QUÉ NO ENTRA
 --   · Nada de contabilización automática de facturas, activos o cobros. Eso es
---     la F5b y necesita antes el plan de cuentas real de A3: hoy el plan tiene
+--     la F5c y necesita antes el plan de cuentas real de A3: hoy el plan tiene
 --     635 subcuentas de proveedor y solo dos cuentas de resultado (680 y 681),
 --     así que no hay dónde llevar una venta ni una compra.
---   · Nada de cierre de ejercicio ni asiento de regularización (F5c).
+--   · Nada de cierre de ejercicio ni asiento de regularización (F5d).
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -60,7 +63,10 @@ create or replace function fin_asientos_nacer_borrador() returns trigger
 language plpgsql set search_path = public as $$
 begin
   -- Confirmar es SIEMPRE un UPDATE, y solo lo hace fin_confirmar_asiento().
-  if new.estado <> 'borrador' then
+  -- `is distinct from` y no `<>`: con `<>`, un `estado = null` explícito da NULL,
+  -- que no es cierto, y la fila se colaría por aquí. Hoy la pararía el NOT NULL
+  -- de la columna, pero con el error de la restricción en vez de este mensaje.
+  if new.estado is distinct from 'borrador' then
     raise exception 'Un asiento solo puede nacer en borrador. Para confirmarlo, fin_confirmar_asiento()';
   end if;
   if new.numero is not null then
@@ -102,6 +108,17 @@ begin
       -- La marca la pone fin_confirmar_asiento() justo antes de su update, y es
       -- local a la transacción. Se compara contra el id para que la marca de un
       -- asiento no sirva para colar otro en la misma transacción.
+      --
+      -- Y conviene no prometer de más: la marca es un GUARDARRAÍL, no una
+      -- barrera. set_config() lo puede llamar cualquiera, así que quien tenga
+      -- UPDATE por RLS y acceso SQL directo podría ponérsela él y hacer el
+      -- update a mano. Por PostgREST no es alcanzable — set_config vive en
+      -- pg_catalog y no se expone como RPC —, y eso es lo que hoy la sostiene.
+      -- Deuda consciente: la barrera de verdad son privilegios de columna,
+      --   revoke update on fin_asientos from authenticated;
+      --   grant  update (<columnas editables>) on fin_asientos to authenticated;
+      -- que a cambio obliga a mantener esa lista cada vez que se añada una
+      -- columna. Decisión de Luis; no se implementa aquí.
       if coalesce(current_setting('fin.confirmando', true), '') <> old.id::text then
         raise exception 'El estado y el número los asigna fin_confirmar_asiento()';
       end if;
@@ -109,7 +126,9 @@ begin
     return new;
   end if;
 
-  raise exception 'El asiento % está confirmado y no se modifica', old.numero;
+  -- Se nombra el estado en vez de darlo por hecho: hoy solo existen 'borrador' y
+  -- 'confirmado', pero si mañana aparece un 'anulado' este mensaje mentiría.
+  raise exception 'El asiento % está en estado % y no se modifica', old.numero, old.estado;
 end $$;
 
 create trigger fin_asientos_proteger_upd before update on fin_asientos
@@ -120,37 +139,42 @@ create trigger fin_asientos_proteger_del before delete on fin_asientos
 -- ----------------------------------------------------------------------------
 -- 3) Los apuntes solo se tocan mientras el asiento es borrador
 --
--- OJO con el borrado en cascada, que es la trampa que ya mordió en las líneas
--- de factura (fallo de la F0, arreglado en la F0b): al borrar el asiento, el
--- cascade dispara este trigger cuando el padre YA NO existe, el select no
--- encuentra fila y un `is distinct from 'borrador'` daría cierto sobre NULL.
--- Por eso se distingue explícitamente «no hay padre» de «el padre no es
--- borrador»: sin padre, se deja pasar.
+-- Las DOS ramas bloquean la cabecera, no solo la de insertar. La carrera es
+-- simétrica y da el mismo destrozo por el otro lado: T1 está confirmando y ya
+-- ha sumado dos apuntes que cuadran; T2 borra uno, lee la cabecera sin lock,
+-- ve 'borrador' en su instantánea y lo borra; T1 confirma. Queda un asiento
+-- confirmado, inmutable y con un solo apunte. Vale igual para mover un apunte
+-- de un asiento a otro: sin esto se comprueba con lock el padre nuevo y sin él
+-- el viejo.
+--
+-- Se usa `found` y no una variable propia porque `select true, … into v_existe`
+-- deja v_existe en NULL cuando no hay fila, no en false — y `not NULL` no es
+-- cierto, así que la comprobación de «el asiento no existe» era código muerto
+-- que tapaba la clave ajena.
+--
+-- El orden de bloqueos es el mismo en todos los caminos (cabecera primero), así
+-- que esto no introduce interbloqueos. En un UPDATE que no cambia de asiento se
+-- pide `for share` dos veces sobre la misma fila, que es inocuo.
 -- ----------------------------------------------------------------------------
 
 create or replace function fin_apuntes_proteger() returns trigger
 language plpgsql set search_path = public as $$
 declare
   v_estado text;
-  v_existe boolean;
 begin
   if tg_op in ('UPDATE','DELETE') then
-    select true, estado into v_existe, v_estado from fin_asientos where id = old.asiento_id;
-    if v_existe and v_estado <> 'borrador' then
+    -- Si no hay fila es el cascade al borrar el asiento entero: el trigger salta
+    -- con el padre ya borrado, `found` es false y se deja pasar. Es el mismo
+    -- caso que la F0b tuvo que arreglar en las líneas de factura.
+    select estado into v_estado from fin_asientos where id = old.asiento_id for share;
+    if found and v_estado <> 'borrador' then
       raise exception 'Los apuntes de un asiento confirmado son inmutables';
     end if;
   end if;
 
   if tg_op in ('INSERT','UPDATE') then
-    -- `for share` serializa contra el `for update` de fin_confirmar_asiento().
-    -- Sin él, el `for update` bloquea la CABECERA pero no impide que otra
-    -- transacción meta un apunte DESPUÉS de que se hayan sumado el debe y el
-    -- haber: quedaría un asiento confirmado, inmutable y descuadrado, que es
-    -- justo el estado que esta migración existe para hacer imposible.
-    -- Con el bloqueo, ese insert espera y, cuando entra, ya ve 'confirmado'.
-    select true, estado into v_existe, v_estado
-      from fin_asientos where id = new.asiento_id for share;
-    if not v_existe then
+    select estado into v_estado from fin_asientos where id = new.asiento_id for share;
+    if not found then
       raise exception 'El apunte apunta a un asiento que no existe';
     end if;
     if v_estado <> 'borrador' then
@@ -229,16 +253,16 @@ begin
     from fin_periodos
    where ejercicio_id = v_a.ejercicio_id
      and mes = extract(month from v_a.fecha)::int;
-  --
-  -- DECISIÓN PENDIENTE DE LUIS: el coalesce trata «no hay fila de periodo» como
-  -- «mes abierto». Si un ejercicio se creara sin sembrar sus doce periodos, el
-  -- bloqueo mensual no protegería nada, y en silencio. Hoy no muerde (el único
-  -- ejercicio tiene sus 12, y fin_periodos es unique por (ejercicio_id, mes)).
-  -- Las dos salidas: (a) que el alta de ejercicio siembre los doce periodos —
-  -- preferible, el fallo se ve donde nace — o (b) que la ausencia sea excepción
-  -- aquí, más defensivo pero convierte un dato de configuración que falta en un
-  -- error a pie de asiento. Se deja como está hasta que Luis elija.
-  if coalesce(v_bloq, false) then
+  -- Sin fila NO se asume «mes abierto»: sería apagar el bloqueo mensual en
+  -- silencio. Es un fallo de configuración del ejercicio, y el mensaje apunta
+  -- ahí y no al asiento, que no tiene la culpa. La siembra de los doce periodos
+  -- la garantiza el alta de ejercicio (migración F5b); esto es la segunda capa.
+  if not found then
+    raise exception 'El ejercicio % no tiene sembrado el periodo del mes %: revisar la configuración del ejercicio',
+      v_ej.anio, extract(month from v_a.fecha)::int;
+  end if;
+  -- Sin coalesce: fin_periodos.bloqueado es NOT NULL con default false.
+  if v_bloq then
     raise exception 'El mes % de % está bloqueado: no admite asientos nuevos',
       extract(month from v_a.fecha)::int, v_ej.anio;
   end if;
@@ -272,7 +296,13 @@ begin
 
   -- Numeración correlativa por ejercicio. El lock serializa dos confirmaciones
   -- simultáneas: sin él, ambas leerían el mismo max() y chocarían contra el
-  -- índice único fin_asientos_numero_unico.
+  -- índice único fin_asientos_numero_unico, que va por (ejercicio_id, numero) —
+  -- comprobado: el ámbito del índice y el de este lock coinciden.
+  --
+  -- Se usa la forma de UN argumento, aunque la de dos daría espacio de claves
+  -- propio, porque es la convención que la F1a ya tiene en producción para la
+  -- cadena Verifactu: hashtext('prefijo_' || uuid). Tener dos convenciones para
+  -- lo mismo se paga más caro que el riesgo teórico de colisión.
   perform pg_advisory_xact_lock(hashtext('fin_asiento_' || v_a.ejercicio_id::text));
 
   select coalesce(max(numero), 0) + 1 into v_numero
@@ -324,6 +354,12 @@ revoke execute on function fin_confirmar_asiento(uuid) from anon;
 --   · Cambiarle la descripción una vez confirmado ............. debe FALLAR
 --   · Añadirle un apunte una vez confirmado ................... debe FALLAR
 --   · Borrar el asiento confirmado ............................ debe FALLAR
+--   · Insertar un asiento con estado = null explícito ......... debe FALLAR
+--     con NUESTRO mensaje, no con el del NOT NULL de la columna
+--   · Insertar un apunte con un asiento_id inventado .......... debe FALLAR
+--     con NUESTRO mensaje, no con el de la clave ajena
+--   · Confirmar en un mes cuya fila de fin_periodos no existe .. debe FALLAR
+--     señalando la configuración del ejercicio
 --   · Borrar un asiento EN BORRADOR que tiene apuntes ......... debe PASAR
 --     (este es el caso que falló en facturas y motivó la F0b; aquí el trigger
 --      de apuntes distingue «sin padre» de «padre no borrador»)
