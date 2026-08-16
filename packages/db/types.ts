@@ -5052,6 +5052,53 @@ export type Database = {
         }[]
       }
       es_operador: { Args: never; Returns: boolean }
+      fin_anular_factura: {
+        Args: { p_factura_id: string; p_motivo: string }
+        Returns: Json
+      }
+      fin_expedir_factura: { Args: { p_factura_id: string }; Returns: Json }
+      fin_vf_cadena_alta: {
+        Args: {
+          p_cuota_total: number
+          p_fecha_expedicion: string
+          p_fecha_hora: string
+          p_huella_anterior: string
+          p_importe_total: number
+          p_nif_emisor: string
+          p_num_serie: string
+          p_tipo_factura: string
+        }
+        Returns: string
+      }
+      fin_vf_cadena_anulacion: {
+        Args: {
+          p_fecha_expedicion: string
+          p_fecha_hora: string
+          p_huella_anterior: string
+          p_nif_emisor: string
+          p_num_serie: string
+        }
+        Returns: string
+      }
+      fin_vf_campo: {
+        Args: { p_nombre: string; p_valor: string }
+        Returns: string
+      }
+      fin_vf_fecha: { Args: { p: string }; Returns: string }
+      fin_vf_fecha_hora: { Args: { p: string }; Returns: string }
+      fin_vf_huella: { Args: { p_cadena: string }; Returns: string }
+      fin_vf_importe: { Args: { p: number }; Returns: string }
+      fin_vf_qr: {
+        Args: {
+          p_fecha: string
+          p_importe: number
+          p_nif: string
+          p_num_serie: string
+          p_produccion?: boolean
+        }
+        Returns: string
+      }
+      fin_vf_url_encode: { Args: { p_valor: string }; Returns: string }
       mi_empleado_id: { Args: never; Returns: string }
       norm_email: { Args: { t: string }; Returns: string }
       norm_nif: { Args: { t: string }; Returns: string }

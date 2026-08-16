@@ -289,19 +289,6 @@ export async function guardarBorrador(datos: FacturaEnviada) {
   return { ok: true, id };
 }
 
-/**
- * Las funciones de la F1a todavía no están en packages/db/types.ts porque la
- * migración no se ha aplicado: los tipos se generan desde la base real. Este
- * es el ÚNICO punto donde se esquiva el tipado, y desaparece en cuanto se
- * apliquen y se regeneren los tipos.
- */
-type ClienteConRpcFiscal = {
-  rpc: (
-    nombre: "fin_expedir_factura" | "fin_anular_factura",
-    args: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: { message: string } | null }>;
-};
-
 export type ResultadoExpedicion =
   | { error: string; ok?: undefined; id?: undefined }
   | { ok: true; id: string; error?: undefined };
@@ -317,7 +304,7 @@ export async function guardarYExpedir(datos: FacturaEnviada): Promise<ResultadoE
   if (!guardado?.id) return { error: "No se pudo guardar el borrador antes de expedir." };
 
   const { supabase } = await exigirFacturacion();
-  const { error } = await (supabase as unknown as ClienteConRpcFiscal).rpc("fin_expedir_factura", {
+  const { error } = await supabase.rpc("fin_expedir_factura", {
     p_factura_id: guardado.id,
   });
 
@@ -335,7 +322,7 @@ export async function anularFactura(id: string, motivo: string) {
   if (!motivo.trim()) return { error: "La anulación necesita un motivo." };
 
   const { supabase } = await exigirFacturacion();
-  const { error } = await (supabase as unknown as ClienteConRpcFiscal).rpc("fin_anular_factura", {
+  const { error } = await supabase.rpc("fin_anular_factura", {
     p_factura_id: id,
     p_motivo: motivo.trim(),
   });
