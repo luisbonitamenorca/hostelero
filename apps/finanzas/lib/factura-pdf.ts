@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { euros, numero } from "./importes.ts";
+import { euros, fecha, numero } from "./importes.ts";
 
 /**
  * Construcción del PDF de una factura expedida. Función pura: recibe los datos
@@ -56,9 +56,7 @@ const MARGEN = 18;
 const ANCHO = 210;
 const LADO_QR = 35; // dentro del rango 30–40 mm que fija el artículo 21
 
-function fechaCorta(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString("es-ES") : "—";
-}
+
 
 export function construirPdfFactura(d: DatosPdf): Uint8Array {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -68,11 +66,14 @@ export function construirPdfFactura(d: DatosPdf): Uint8Array {
   // ---- QR arriba, antes del contenido, como manda el artículo 21 ----------
   if (d.qrPng) {
     doc.addImage(d.qrPng, "PNG", MARGEN, y, LADO_QR, LADO_QR);
-    doc.setFontSize(8).setTextColor(90);
-    doc.text("QR tributario:", MARGEN, y - 2);
-    doc.setFontSize(8).setTextColor(0);
-    doc.text("Factura verificable en la sede", MARGEN, y + LADO_QR + 4);
-    doc.text("electrónica de la AEAT", MARGEN, y + LADO_QR + 8);
+    // El artículo 21 exige que este texto y la leyenda de abajo tengan letra
+    // legible y de tamaño IGUAL O SUPERIOR al del resto de datos de la
+    // factura, que aquí van a 9. No pueden ir más pequeños.
+    doc.setFontSize(9).setTextColor(60);
+    doc.text("QR tributario:", MARGEN, y - 2.5);
+    doc.setFontSize(9).setTextColor(0);
+    doc.text("Factura verificable en la sede", MARGEN, y + LADO_QR + 5);
+    doc.text("electrónica de la AEAT", MARGEN, y + LADO_QR + 9.5);
   }
 
   // ---- Emisor, a la derecha del QR ---------------------------------------
@@ -93,10 +94,10 @@ export function construirPdfFactura(d: DatosPdf): Uint8Array {
   doc.text(d.numero_completo, xEmisor, yEmisor);
   doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(70);
   yEmisor += 5;
-  doc.text(`Fecha de expedición: ${fechaCorta(d.fecha_expedicion)}`, xEmisor, yEmisor);
+  doc.text(`Fecha de expedición: ${fecha(d.fecha_expedicion)}`, xEmisor, yEmisor);
   if (d.fecha_operacion) {
     yEmisor += 4;
-    doc.text(`Fecha de operación: ${fechaCorta(d.fecha_operacion)}`, xEmisor, yEmisor);
+    doc.text(`Fecha de operación: ${fecha(d.fecha_operacion)}`, xEmisor, yEmisor);
   }
 
   if (d.anulada) {
@@ -106,7 +107,7 @@ export function construirPdfFactura(d: DatosPdf): Uint8Array {
     doc.setFont("helvetica", "normal").setTextColor(0);
   }
 
-  y = Math.max(y + LADO_QR + 14, yEmisor + 10);
+  y = Math.max(y + LADO_QR + 17, yEmisor + 10);
 
   // ---- Destinatario -------------------------------------------------------
   doc.setFontSize(8).setTextColor(120);
@@ -175,15 +176,30 @@ export function construirPdfFactura(d: DatosPdf): Uint8Array {
   y += 6;
 
   // ---- Desglose y totales -------------------------------------------------
-  const xEtiqueta = 130;
-  doc.setFontSize(9).setTextColor(70);
-  doc.text("Base imponible", xEtiqueta, y);
-  doc.setTextColor(0).text(euros(d.base_total), derecha, y, { align: "right" });
+  const xEtiqueta = 118;
+
+  /** Escribe etiqueta e importe sin que se pisen. Si la etiqueta larga no cabe
+   *  en el hueco que deja el importe, se usa la corta. Pasaba con «Retención
+   *  IRPF 15% sobre 1.000,00 €»: se comía la cifra de la derecha. */
+  function filaTotal(larga: string, corta: string, importe: string, negrita = false) {
+    doc.setFont("helvetica", negrita ? "bold" : "normal");
+    const anchoImporte = doc.getTextWidth(importe);
+    const hueco = derecha - xEtiqueta - anchoImporte - 6;
+    const etiqueta = doc.getTextWidth(larga) <= hueco ? larga : corta;
+    doc.text(etiqueta, xEtiqueta, y);
+    doc.text(importe, derecha, y, { align: "right" });
+    doc.setFont("helvetica", "normal");
+  }
+  doc.setFontSize(9).setTextColor(0);
+  filaTotal("Base imponible", "Base imponible", euros(d.base_total));
   y += 5;
 
   for (const i of d.impuestos.filter((x) => x.impuesto === "IVA")) {
-    doc.setTextColor(70).text(`IVA ${numero(i.tipo_pct, 0)}% sobre ${euros(i.base)}`, xEtiqueta, y);
-    doc.setTextColor(0).text(euros(i.cuota), derecha, y, { align: "right" });
+    filaTotal(
+      `IVA ${numero(i.tipo_pct, 0)}% sobre ${euros(i.base)}`,
+      `IVA ${numero(i.tipo_pct, 0)}%`,
+      euros(i.cuota),
+    );
     y += 5;
   }
 
@@ -193,27 +209,25 @@ export function construirPdfFactura(d: DatosPdf): Uint8Array {
   y += 1;
   doc.setDrawColor(210).line(xEtiqueta, y, derecha, y);
   y += 5;
-  doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(0);
-  doc.text("Total factura", xEtiqueta, y);
-  doc.text(euros(totalFactura), derecha, y, { align: "right" });
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10).setTextColor(0);
+  filaTotal("Total factura", "Total factura", euros(totalFactura), true);
   y += 6;
 
   if (hayRetencion) {
-    doc.setFontSize(9).setTextColor(70);
+    doc.setFontSize(9).setTextColor(0);
     for (const i of d.impuestos.filter((x) => x.impuesto === "IRPF")) {
-      doc.text(`Retención IRPF ${numero(i.tipo_pct, 0)}% sobre ${euros(i.base)}`, xEtiqueta, y);
-      doc.setTextColor(0).text(`-${euros(i.cuota)}`, derecha, y, { align: "right" });
-      doc.setTextColor(70);
+      filaTotal(
+        `Retención IRPF ${numero(i.tipo_pct, 0)}% sobre ${euros(i.base)}`,
+        `Retención IRPF ${numero(i.tipo_pct, 0)}%`,
+        `-${euros(i.cuota)}`,
+      );
       y += 5;
     }
     y += 1;
     doc.setDrawColor(210).line(xEtiqueta, y, derecha, y);
     y += 5;
-    doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(0);
-    doc.text("Total a pagar", xEtiqueta, y);
-    doc.text(euros(d.total), derecha, y, { align: "right" });
-    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11).setTextColor(0);
+    filaTotal("Total a pagar", "Total a pagar", euros(d.total), true);
     y += 6;
   }
 
