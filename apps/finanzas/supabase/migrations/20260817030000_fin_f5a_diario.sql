@@ -5,6 +5,8 @@
 -- Revisada 17-08-2026 (2): se bloquea también el borrado de apuntes (la misma
 -- carrera que el insert, por el otro lado), se cambia v_existe por found, y la
 -- ausencia de fila de periodo pasa a ser excepción en vez de mes abierto.
+-- Revisada 17-08-2026 (4): privilegios de columna sobre fin_asientos, que es la
+-- barrera de verdad detrás del guardarraíl de la marca. Decisión de Luis.
 -- Revisada 17-08-2026 (3): el disparador de apuntes pasa a SECURITY DEFINER
 -- (sin eso `not found` significaba «no lo veo», no «no existe») y comprueba que
 -- el apunte sea de la misma cuenta que su asiento; se bloquean también el
@@ -337,7 +339,18 @@ begin
     raise exception 'Hay % apunte(s) con cuenta de otra sociedad o desactivada', v_ajenas;
   end if;
 
-  -- Numeración correlativa por ejercicio. El lock serializa dos confirmaciones
+  -- Numeración correlativa por ejercicio: reinicia en 1 cada año, y no deja
+  -- huecos porque sale de max()+1 sobre lo ya comprometido — una secuencia sí
+  -- los dejaría, porque un rollback no devuelve el número consumido.
+  --
+  -- Va por ORDEN DE CONFIRMACIÓN, no por fecha: un asiento de enero confirmado
+  -- en marzo se lleva número posterior a otro de febrero confirmado antes.
+  -- Decidido con Luis el 17-08-2026: se acepta durante el ejercicio y el diario
+  -- se RENUMERA POR FECHA al cerrarlo. Esa renumeración toca asientos
+  -- confirmados, que aquí son inmutables, así que tiene que vivir dentro de la
+  -- función de cierre de ejercicio (F5d) y dejar rastro — nunca un update suelto.
+  --
+  -- El lock serializa dos confirmaciones
   -- simultáneas: sin él, ambas leerían el mismo max() y chocarían contra el
   -- índice único fin_asientos_numero_unico, que va por (ejercicio_id, numero) —
   -- comprobado: el ámbito del índice y el de este lock coinciden.
@@ -374,6 +387,56 @@ end $$;
 -- quita. (Por dentro ya se comprueba cuenta_actual(), que para un anónimo es
 -- nulo; esto es la segunda capa.)
 revoke execute on function fin_confirmar_asiento(uuid) from anon;
+
+-- ----------------------------------------------------------------------------
+-- 5) La puerta cerrada, no el cartel de «no pasar»
+--
+-- La marca `fin.confirmando` de la sección 2 es un guardarraíl: impide el update
+-- accidental, pero quien tenga acceso SQL directo puede ponérsela él mismo.
+-- Esto es la barrera de verdad: sin permiso de UPDATE sobre `estado` y `numero`,
+-- da igual lo que intente — lo para el motor antes de llegar a ningún
+-- disparador. Las dos capas se quedan: los privilegios impiden, la marca explica
+-- por qué (el error de permisos de Postgres no dice a quién preguntar).
+--
+-- OJO al detalle que hace que esto funcione: un `revoke update (estado, numero)`
+-- NO sirve mientras exista el grant a nivel de TABLA. Hay que revocar la tabla
+-- entera y volver a conceder columna a columna.
+--
+-- La lista se calcula, no se escribe a mano: se conceden todas las columnas
+-- MENOS las protegidas. Consecuencia buscada de hacerlo en tiempo de migración:
+-- una columna añadida más adelante no queda concedida, y la app falla con
+-- «permission denied for column», que es ruidoso y se arregla en un minuto. Lo
+-- contrario — que se concediera sola — sería silencioso, y silencioso es peor.
+--
+-- fin_confirmar_asiento sigue pudiendo escribirlas porque es SECURITY DEFINER y
+-- corre como el propietario de la tabla, que conserva todos los privilegios.
+-- ----------------------------------------------------------------------------
+
+do $$
+declare
+  v_columnas text;
+begin
+  -- anon no escribe asientos en ningún caso: se le quita entero, sin devolverle
+  -- nada. Mismo criterio que la F1b con expedir y anular.
+  revoke update on fin_asientos from authenticated, anon;
+
+  select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
+    into v_columnas
+    from information_schema.columns
+   where table_schema = 'public'
+     and table_name   = 'fin_asientos'
+     and column_name not in (
+       'id',           -- mover un asiento de sitio no es editarlo
+       'cuenta_id',    -- cambiarlo se lo lleva a otro inquilino
+       'sociedad_id',  -- y esto, a otra sociedad del mismo inquilino
+       'numero',       -- los asigna
+       'estado',       --   fin_confirmar_asiento()
+       'creado_por',   -- rastro de quién y cuándo: no se reescribe
+       'creado_en'
+     );
+
+  execute format('grant update (%s) on fin_asientos to authenticated', v_columnas);
+end $$;
 
 -- ============================================================================
 -- COMPROBACIONES SUGERIDAS DESPUÉS DE APLICAR
