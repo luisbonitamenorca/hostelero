@@ -30,6 +30,14 @@ const grupos = [
     items: [{ ruta: "/cartera", nombre: "Cobros y pagos", modulo: "facturacion" }],
   },
   {
+    titulo: "Remesas",
+    items: [
+      { ruta: "/remesas", nombre: "Remesas", modulo: "facturacion" },
+      { ruta: "/mandatos", nombre: "Mandatos SEPA", modulo: "facturacion" },
+      { ruta: "/bancos", nombre: "Cuentas bancarias", modulo: "facturacion" },
+    ],
+  },
+  {
     titulo: "Contabilidad",
     items: [{ ruta: "/plan-cuentas", nombre: "Plan de cuentas", modulo: "contabilidad" }],
   },
@@ -38,7 +46,6 @@ const grupos = [
 const enCamino = [
   { nombre: "Bancos", fase: "F2" },
   { nombre: "Impuestos", fase: "F3" },
-  { nombre: "Remesas", fase: "F4" },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
