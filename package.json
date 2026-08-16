@@ -1,9 +1,15 @@
 {
   "name": "hostelero",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build:consola": "npm run build --workspace apps/consola",
-    "dev:consola": "npm run dev --workspace apps/consola"
+    "build:finanzas": "npm run build --workspace apps/finanzas",
+    "dev:consola": "npm run dev --workspace apps/consola",
+    "dev:finanzas": "npm run dev --workspace apps/finanzas",
+    "test:finanzas": "npm run test --workspace apps/finanzas"
   }
 }
