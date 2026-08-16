@@ -2,12 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { exigirFacturacion, exigirModulo } from "@/lib/supabase/server";
-import { clienteCartera } from "@/lib/cartera";
 
 /** Marca un cobro o un pago, entero o en parte. */
 export async function liquidarVencimiento(id: string, importe: number) {
   const { supabase } = await exigirFacturacion();
-  const db = clienteCartera(supabase);
+  const db = supabase;
 
   const { data: v } = await db
     .from("fin_vencimientos")
@@ -43,7 +42,7 @@ export async function liquidarVencimiento(id: string, importe: number) {
 /** Deshace una liquidación puesta por error. */
 export async function reabrirVencimiento(id: string) {
   const { supabase } = await exigirFacturacion();
-  const { error } = await clienteCartera(supabase)
+  const { error } = await supabase
     .from("fin_vencimientos")
     .update({ importe_liquidado: 0, estado: "pendiente" })
     .eq("id", id);
@@ -60,7 +59,7 @@ export async function reabrirVencimiento(id: string) {
  */
 export async function generarVencimientoCompra(compraDocId: string) {
   const { supabase, cuenta } = await exigirModulo("compras");
-  const db = clienteCartera(supabase);
+  const db = supabase;
 
   const { data: doc } = await db
     .from("compras_doc")
@@ -126,7 +125,7 @@ export async function guardarCondicionesProveedor(datos: {
     return { error: "Los días de pago van de 0 a 365." };
   }
 
-  const { error } = await clienteCartera(supabase)
+  const { error } = await supabase
     .from("fin_proveedor_condiciones")
     .upsert(
       {

@@ -1,4 +1,5 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: APLICADA en producción el 16-08-2026 (registrada como 20260816201811).
+-- No reaplicar. Sus defectos se corrigen en la F2b, no editando este archivo.
 -- ============================================================================
 -- MIGRACIÓN F2a — Cartera: vencimientos de cobro y de pago
 -- Proyecto: hostelero · Fecha: 16-08-2026

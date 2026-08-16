@@ -1,13 +1,4 @@
-/**
- * Tipos de la cartera y el único punto donde se esquiva el tipado.
- *
- * fin_vencimientos y fin_proveedor_condiciones no están todavía en
- * packages/db/types.ts porque los tipos se generan desde la base y la migración
- * F2a no está aplicada. En cuanto se aplique y se regeneren, este archivo se
- * queda solo con los tipos y `clienteCartera` sobra.
- */
-import type { SupabaseClient } from "@supabase/supabase-js";
-
+/** Tipos y ayudas de la cartera. */
 export type Vencimiento = {
   id: string;
   cuenta_id: string;
@@ -28,13 +19,6 @@ export type CondicionesProveedor = {
   forma_pago: string | null;
   iban: string | null;
 };
-
-/** Cliente sin tipar SOLO para las dos tablas nuevas. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function clienteCartera(supabase: unknown): SupabaseClient<any, "public", any> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return supabase as SupabaseClient<any, "public", any>;
-}
 
 /** Días que faltan (negativo si ya venció). */
 export function diasHasta(fecha: string): number {

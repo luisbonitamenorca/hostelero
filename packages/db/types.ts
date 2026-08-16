@@ -3099,6 +3099,54 @@ export type Database = {
           },
         ]
       }
+      fin_proveedor_condiciones: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          cuenta_id: string
+          dias_pago: number
+          forma_pago: string | null
+          iban: string | null
+          notas: string | null
+          proveedor_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          cuenta_id: string
+          dias_pago?: number
+          forma_pago?: string | null
+          iban?: string | null
+          notas?: string | null
+          proveedor_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          cuenta_id?: string
+          dias_pago?: number
+          forma_pago?: string | null
+          iban?: string | null
+          notas?: string | null
+          proveedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_proveedor_condiciones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_proveedor_condiciones_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: true
+            referencedRelation: "compras_proveedor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_series: {
         Row: {
           activa: boolean
@@ -3146,6 +3194,86 @@ export type Database = {
           },
           {
             foreignKeyName: "fin_series_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_vencimientos: {
+        Row: {
+          actualizado_en: string
+          compra_doc_id: string | null
+          creado_en: string
+          cuenta_id: string
+          estado: string
+          factura_id: string | null
+          fecha_vencimiento: string
+          forma_pago: string | null
+          id: string
+          importe: number
+          importe_liquidado: number
+          notas: string | null
+          sentido: string
+          sociedad_id: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          compra_doc_id?: string | null
+          creado_en?: string
+          cuenta_id: string
+          estado?: string
+          factura_id?: string | null
+          fecha_vencimiento: string
+          forma_pago?: string | null
+          id?: string
+          importe: number
+          importe_liquidado?: number
+          notas?: string | null
+          sentido: string
+          sociedad_id?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          compra_doc_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          estado?: string
+          factura_id?: string | null
+          fecha_vencimiento?: string
+          forma_pago?: string | null
+          id?: string
+          importe?: number
+          importe_liquidado?: number
+          notas?: string | null
+          sentido?: string
+          sociedad_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_vencimientos_compra_doc_id_fkey"
+            columns: ["compra_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_vencimientos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_vencimientos_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "fin_facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_vencimientos_sociedad_id_fkey"
             columns: ["sociedad_id"]
             isOneToOne: false
             referencedRelation: "sociedades"

@@ -32,6 +32,11 @@ La app tiene `basePath: "/finanzas"` y se sirve **bajo el dominio de hostelero-a
 - Cartera (F2a, SIN aplicar): fin_vencimientos (cobros y pagos en una sola tabla) y fin_proveedor_condiciones. El vencimiento de venta lo crea un disparador al expedir, desde fin_clientes.dias_vencimiento; al anular la factura se anula. El de compra se crea a mano desde Facturas recibidas. Cobrar y pagar se marca a mano hasta que llegue la conciliación bancaria (F2).
 - FALLO CONOCIDO de la F0: un borrador CON líneas no se puede borrar. El `on delete cascade` dispara el trigger de las líneas cuando la cabecera ya no existe, y lo interpreta como factura expedida. La app lo esquiva borrando las líneas antes; la corrección está propuesta en supabase/migrations/20260816130000_fin_f0b_borrado_de_borradores.sql, SIN aplicar.
 
+## Migraciones: cómo se nombran y se aplican
+Las escribe Claude Code en `supabase/migrations/`, las revisa Luis y las aplica el chat de claude.ai con `apply_migration`. Esa herramienta registra la migración con SU propia marca de tiempo, no con la del nombre del archivo, así que **después de aplicar hay que renombrar el archivo a la versión registrada** (se consulta en `supabase_migrations.schema_migrations`). Si no, un `supabase db push` la vería como pendiente e intentaría reaplicarla. También hay que cambiar la cabecera de PROPUESTA a APLICADA.
+
+Y una migración aplicada NO se edita: los arreglos van en una migración nueva.
+
 ## Conexiones e IDs
 - Supabase project ref: jwsvkjyjwocuksdgiqnv. La URL y la clave publicable van por variables de entorno, como en el resto del monorepo.
 - cuenta_id (Bonita Menorca): 082c5366-d9ae-49b9-a8b8-8caad73985bd
