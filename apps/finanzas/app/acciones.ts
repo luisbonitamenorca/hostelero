@@ -391,10 +391,9 @@ export async function crearRectificativa(datos: {
   const serieR = (series ?? []).find((s) => s.codigo.toUpperCase().startsWith("R"));
   const serieId = serieR?.id ?? original.serie_id;
 
-  // Mismo motivo que en la página del detalle: tipo_rectificativa no está aún
-  // en los tipos generados porque la migración F1c no se ha aplicado. Al
-  // aplicarla y regenerar, este `as` sobra.
-  const filaRectificativa = {
+  const { data: creada, error } = await supabase
+    .from("fin_facturas")
+    .insert({
       cuenta_id: cuenta.id,
       sociedad_id: original.sociedad_id,
       serie_id: serieId,
@@ -408,12 +407,7 @@ export async function crearRectificativa(datos: {
       tipo_rectificativa: datos.tipoRectificativa,
       motivo_rectificacion: datos.motivo.trim(),
       descripcion_operacion: `Rectifica a ${original.numero_completo ?? "factura anterior"}`,
-  };
-
-  const { data: creada, error } = await supabase
-    .from("fin_facturas")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .insert(filaRectificativa as never)
+    })
     .select("id")
     .single();
 
