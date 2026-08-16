@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node pruebas/nif.test.ts && node pruebas/importes.test.ts && node pruebas/pdf.test.ts && node pruebas/sepa.test.ts && node pruebas/amortizacion.test.ts && node pruebas/use-server.test.ts"
+    "test": "node pruebas/nif.test.ts && node pruebas/importes.test.ts && node pruebas/pdf.test.ts && node pruebas/sepa.test.ts && node pruebas/amortizacion.test.ts && node pruebas/contabilidad.test.ts && node pruebas/use-server.test.ts"
   },
   "dependencies": {
     "@hostelero/db": "*",
