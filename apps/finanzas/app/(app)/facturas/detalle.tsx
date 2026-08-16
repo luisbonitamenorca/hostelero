@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import { euros, fecha, numero } from "@/lib/importes";
 import BotonAnular from "./boton-anular";
+import BotonRectificar from "./boton-rectificar";
 import { ruta } from "@/lib/rutas.ts";
 
 type Linea = {
@@ -26,6 +27,8 @@ type Registro = {
   payload: { qr?: string; cadena?: string; motivo?: string } | null;
 };
 
+export type Rectificativa = { id: string; numero_completo: string | null; estado: string; tipo: string };
+
 export type FacturaExpedida = {
   id: string;
   numero_completo: string | null;
@@ -43,6 +46,10 @@ export type FacturaExpedida = {
   impuestos: Impuesto[];
   registros: Registro[];
   envio: { estado: string; csv_aeat: string | null; intento: number } | null;
+  rectificativas: Rectificativa[];
+  rectificaA: { id: string; numero_completo: string | null } | null;
+  tipo_rectificativa: string | null;
+  motivo_rectificacion: string | null;
 };
 
 const ESTADO_ENVIO: Record<string, string> = {
@@ -265,11 +272,32 @@ export default async function DetalleFactura({ factura }: { factura: FacturaExpe
         </p>
       </fieldset>
 
+      {factura.rectificaA && (
+        <p className="pista" style={{ marginTop: 12 }}>
+          Esta factura rectifica a <strong>{factura.rectificaA.numero_completo}</strong>
+          {factura.tipo_rectificativa === "S" ? " por sustitución" : " por diferencias"}
+          {factura.motivo_rectificacion ? `. Motivo: ${factura.motivo_rectificacion}` : "."}
+        </p>
+      )}
+
+      {factura.rectificativas.length > 0 && (
+        <div className="aviso-banda" style={{ marginTop: 12 }}>
+          <strong>Esta factura ya está rectificada.</strong>{" "}
+          {factura.rectificativas
+            .map((r) => `${r.tipo} ${r.numero_completo ?? "(borrador)"}`)
+            .join(", ")}
+          . La original sigue siendo válida: rectificar no la borra.
+        </div>
+      )}
+
       <div className="acciones" style={{ marginTop: 16 }}>
         {/* <a> y no <Link>: es una descarga, no una navegación de la app. */}
-        <a className="boton boton-auto" href={ruta(`/facturas/${factura.id}/pdf`)} target="_blank" rel="noreferrer">
+        <a className="boton-secundario" href={ruta(`/facturas/${factura.id}/pdf`)} target="_blank" rel="noreferrer">
           Ver PDF
         </a>
+        {factura.estado === "expedida" && (
+          <BotonRectificar id={factura.id} numero={factura.numero_completo ?? ""} />
+        )}
       </div>
 
       {factura.estado === "expedida" && <BotonAnular id={factura.id} numero={factura.numero_completo ?? ""} />}

@@ -337,6 +337,108 @@ export async function anularFactura(id: string, motivo: string) {
   return { ok: true };
 }
 
+/** Códigos de la AEAT (mismas listas que el SII). El texto es el suyo, no una
+ *  interpretación: quien elige la causa es quien factura. */
+export const CAUSAS_RECTIFICACION = [
+  { codigo: "R1", texto: "Error fundado en derecho y art. 80 Uno, Dos y Seis de la Ley del IVA" },
+  { codigo: "R2", texto: "Concurso de acreedores (art. 80 Tres)" },
+  { codigo: "R3", texto: "Créditos incobrables (art. 80 Cuatro)" },
+  { codigo: "R4", texto: "Resto de causas" },
+  { codigo: "R5", texto: "Rectificación de facturas simplificadas" },
+] as const;
+
+/**
+ * Crea el BORRADOR de una rectificativa a partir de una factura expedida.
+ * No expide nada: deja el borrador listo para revisar y, si procede, expedir.
+ *
+ *  · Por sustitución (S): se copian las líneas de la original para corregirlas,
+ *    porque la rectificativa contiene la factura correcta entera.
+ *  · Por diferencias (I): se deja sin líneas, porque solo lleva el ajuste, y
+ *    ese lo escribe quien factura (normalmente en negativo).
+ */
+export async function crearRectificativa(datos: {
+  facturaId: string;
+  tipo: string;
+  tipoRectificativa: "S" | "I";
+  motivo: string;
+}) {
+  const { supabase, cuenta } = await exigirFacturacion();
+
+  if (!CAUSAS_RECTIFICACION.some((c) => c.codigo === datos.tipo)) {
+    return { error: "Causa de rectificación no válida." };
+  }
+  if (!datos.motivo.trim()) return { error: "La rectificativa necesita un motivo." };
+
+  const { data: original } = await supabase
+    .from("fin_facturas")
+    .select("id, sociedad_id, serie_id, ejercicio, estado, cliente_id, centro_id, numero_completo")
+    .eq("id", datos.facturaId)
+    .maybeSingle();
+
+  if (!original) return { error: "La factura original ya no existe." };
+  if (original.estado === "borrador") {
+    return { error: "Un borrador no se rectifica: se corrige y ya está." };
+  }
+
+  // La rectificativa va en su propia serie si la hay (la R de la casa), y si no
+  // en la misma que la original. Nunca reutiliza el número de la original.
+  const { data: series } = await supabase
+    .from("fin_series")
+    .select("id, codigo, ejercicio, activa")
+    .eq("ejercicio", original.ejercicio)
+    .eq("activa", true);
+
+  const serieR = (series ?? []).find((s) => s.codigo.toUpperCase().startsWith("R"));
+  const serieId = serieR?.id ?? original.serie_id;
+
+  // Mismo motivo que en la página del detalle: tipo_rectificativa no está aún
+  // en los tipos generados porque la migración F1c no se ha aplicado. Al
+  // aplicarla y regenerar, este `as` sobra.
+  const filaRectificativa = {
+      cuenta_id: cuenta.id,
+      sociedad_id: original.sociedad_id,
+      serie_id: serieId,
+      ejercicio: original.ejercicio,
+      tipo: datos.tipo,
+      estado: "borrador",
+      cliente_id: original.cliente_id,
+      centro_id: original.centro_id,
+      fecha_operacion: new Date().toISOString().slice(0, 10),
+      factura_rectificada_id: original.id,
+      tipo_rectificativa: datos.tipoRectificativa,
+      motivo_rectificacion: datos.motivo.trim(),
+      descripcion_operacion: `Rectifica a ${original.numero_completo ?? "factura anterior"}`,
+  };
+
+  const { data: creada, error } = await supabase
+    .from("fin_facturas")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert(filaRectificativa as never)
+    .select("id")
+    .single();
+
+  if (error || !creada) {
+    return { error: `No se pudo crear la rectificativa: ${error?.message ?? "error desconocido"}` };
+  }
+
+  if (datos.tipoRectificativa === "S") {
+    const { data: lineas } = await supabase
+      .from("fin_factura_lineas")
+      .select("orden, concepto, cantidad, precio_unitario, descuento_pct, tipo_iva, tipo_retencion, base, cuota_iva, cuota_retencion, total")
+      .eq("factura_id", original.id)
+      .order("orden");
+
+    if (lineas && lineas.length > 0) {
+      await supabase.from("fin_factura_lineas").insert(
+        lineas.map((l) => ({ ...l, cuenta_id: cuenta.id, factura_id: creada.id })),
+      );
+    }
+  }
+
+  revalidatePath("/facturas");
+  return { ok: true, id: creada.id, ir: `/facturas/${creada.id}` };
+}
+
 export async function borrarBorrador(id: string) {
   const { supabase } = await exigirFacturacion();
 

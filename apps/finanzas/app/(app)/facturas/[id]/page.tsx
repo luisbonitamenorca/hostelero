@@ -6,18 +6,45 @@ import { cargarCatalogos } from "../datos";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * tipo_rectificativa no está todavía en packages/db/types.ts porque los tipos
+ * se generan desde la base y la migración F1c no está aplicada. Este es el
+ * ÚNICO punto donde se esquiva, y sobra en cuanto se aplique y se regeneren.
+ */
+type FilaFactura = {
+  id: string;
+  serie_id: string;
+  tipo: string;
+  estado: string;
+  cliente_id: string | null;
+  centro_id: string | null;
+  fecha_operacion: string | null;
+  descripcion_operacion: string | null;
+  notas_internas: string | null;
+  numero_completo: string | null;
+  fecha_expedicion: string | null;
+  base_total: number;
+  cuota_iva_total: number;
+  cuota_retencion: number;
+  total: number;
+  factura_rectificada_id: string | null;
+  tipo_rectificativa: string | null;
+  motivo_rectificacion: string | null;
+};
+
 export default async function Factura({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, series, clientes, centros, serieDefecto } = await cargarCatalogos();
 
-  const { data: factura } = await supabase
+  const { data: filaCruda } = await supabase
     .from("fin_facturas")
     .select(
-      "id, serie_id, tipo, estado, cliente_id, centro_id, fecha_operacion, descripcion_operacion, notas_internas, numero_completo, fecha_expedicion, base_total, cuota_iva_total, cuota_retencion, total",
+      "id, serie_id, tipo, estado, cliente_id, centro_id, fecha_operacion, descripcion_operacion, notas_internas, numero_completo, fecha_expedicion, base_total, cuota_iva_total, cuota_retencion, total, factura_rectificada_id, tipo_rectificativa, motivo_rectificacion",
     )
     .eq("id", id)
     .maybeSingle();
 
+  const factura = filaCruda as FilaFactura | null;
   if (!factura) notFound();
 
   const { data: lineas } = await supabase
@@ -70,6 +97,22 @@ export default async function Factura({ params }: { params: Promise<{ id: string
       .order("orden"),
   ]);
 
+  // ¿Alguien la ha rectificado ya? ¿Y ella a quién rectifica?
+  const [{ data: rectificativas }, { data: rectificaA }] = await Promise.all([
+    supabase
+      .from("fin_facturas")
+      .select("id, numero_completo, estado, tipo")
+      .eq("factura_rectificada_id", id)
+      .order("creado_en"),
+    factura.factura_rectificada_id
+      ? supabase
+          .from("fin_facturas")
+          .select("id, numero_completo")
+          .eq("id", factura.factura_rectificada_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
   const registroAlta = (registros ?? []).find((r) => r.tipo_registro === "alta");
   const { data: envio } = registroAlta
     ? await supabase
@@ -88,6 +131,8 @@ export default async function Factura({ params }: { params: Promise<{ id: string
     impuestos: impuestos ?? [],
     registros: registros ?? [],
     envio: envio ?? null,
+    rectificativas: rectificativas ?? [],
+    rectificaA: rectificaA ?? null,
   } as unknown as FacturaExpedida;
 
   return (
