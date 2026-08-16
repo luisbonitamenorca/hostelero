@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { exigirModulo } from "@/lib/supabase/server";
-import { clienteActivos } from "@/lib/activos";
 import { calcularCuadro } from "@/lib/amortizacion";
 
 /**
@@ -25,7 +24,7 @@ export async function crearActivo(datos: {
   proveedor: string | null;
 }) {
   const { supabase, cuenta } = await exigirModulo("contabilidad");
-  const db = clienteActivos(supabase);
+  const db = supabase;
 
   if (!datos.nombre.trim()) return { error: "Ponle un nombre al activo." };
   if (!datos.cuentaActivoId) return { error: "Elige la cuenta contable del activo." };
@@ -96,7 +95,7 @@ export async function darDeBajaActivo(id: string, fechaBaja: string, motivo: str
   if (!fechaBaja) return { error: "Falta la fecha de baja." };
   if (!motivo.trim()) return { error: "Di por qué se da de baja: venta, rotura, obsolescencia…" };
 
-  const { error } = await clienteActivos(supabase)
+  const { error } = await supabase
     .from("fin_activos")
     .update({ estado: "baja", fecha_baja: fechaBaja, motivo_baja: motivo.trim(), valor_baja: valorBaja })
     .eq("id", id);
