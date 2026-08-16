@@ -94,6 +94,11 @@ fin_anular_factura(p_factura_id, p_motivo): análogo, con registro tipo anulacio
 - Claude en claude.ai (chat con MCP): aplica migraciones tras el OK de Luis, verifica datos en producción, lleva normativa y decisiones de alcance.
 - Luis: revisa migraciones, prueba pantallas, custodia el certificado.
 
+## Trampas conocidas para más adelante
+- **Cargar el histórico de Ágora NO se puede hacer con un INSERT normal.** El disparador `fin_facturas_nacer_borrador` (F2b) rechaza cualquier factura que no nazca en borrador y sin número, que es justo lo que impide colar facturas expedidas sin registro Verifactu. Si algún día se cargan las facturas históricas, hay que desactivar ese disparador DENTRO de la propia migración de carga y volver a activarlo al terminar. Que sea incómodo es intencionado. Y antes de eso, decidir si esas facturas deben entrar como `fin_facturas` (las emitió Ágora, otro SIF) o como ventas externas en agregado, que es lo que se recomendó el 16-08-2026.
+- **Los plazos de pago de los proveedores no existen en ninguna parte.** `fin_proveedor_condiciones` está creada pero vacía: hasta que se rellene, los vencimientos de compra salen a 30 días por defecto.
+- **El desglose por tipo de IVA no está en `compras_doc`**, que guarda un único importe. Hará falta para el libro de IVA soportado y para el 303.
+
 ## No hacer nunca
 - Tocar los proyectos Vercel hostelero-app / hostelero-consola, ni escribir en tablas ajenas a fin_*.
 - Editar o borrar filas de fin_verifactu_* o facturas expedidas "para arreglar" algo.
