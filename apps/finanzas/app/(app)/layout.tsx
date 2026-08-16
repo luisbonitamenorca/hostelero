@@ -40,8 +40,17 @@ const grupos = [
   {
     titulo: "Contabilidad",
     items: [
+      { ruta: "/asientos", nombre: "Diario", modulo: "contabilidad" },
       { ruta: "/activos", nombre: "Activos", modulo: "contabilidad" },
       { ruta: "/plan-cuentas", nombre: "Plan de cuentas", modulo: "contabilidad" },
+    ],
+  },
+  {
+    titulo: "Informes",
+    items: [
+      { ruta: "/informes/sumas-y-saldos", nombre: "Sumas y saldos", modulo: "contabilidad" },
+      { ruta: "/informes/balance", nombre: "Balance de situación", modulo: "contabilidad" },
+      { ruta: "/informes/perdidas-y-ganancias", nombre: "Pérdidas y ganancias", modulo: "contabilidad" },
     ],
   },
 ];
