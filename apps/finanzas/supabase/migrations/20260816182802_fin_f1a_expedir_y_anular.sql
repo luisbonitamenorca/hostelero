@@ -1,4 +1,5 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: APLICADA en producción el 16-08-2026 desde el chat de claude.ai.
+-- Registrada en Supabase como 20260816182802 (ver nota al pie). No reaplicar.
 -- ============================================================================
 -- MIGRACIÓN F1a — Expedición y anulación de facturas con registro Verifactu
 -- Proyecto: hostelero · Fecha: 16-08-2026
@@ -451,4 +452,16 @@ grant execute on function fin_anular_factura(uuid, text) to authenticated;
 -- Y el ejemplo de «URL encoding» del documento del QR (numserie con '&'):
 --
 -- select fin_vf_url_encode('12345678&G33') = '12345678%26G33' as qr_encoding;
+-- ----------------------------------------------------------------------------
+
+-- ----------------------------------------------------------------------------
+-- NOTA DE APLICACIÓN (16-08-2026)
+-- Se aplicó con apply_migration y quedó registrada en la base con la versión
+-- 20260816182802, distinta del nombre de este archivo. Para que el repo y el
+-- remoto digan lo mismo, el archivo se renombró a esa versión: así un
+-- `supabase db push` no la ve como pendiente ni intenta reaplicarla.
+--
+-- Al aplicarla se detectó que el `revoke ... from public` de abajo NO quita la
+-- concesión que Supabase da por defecto a `anon`. Lo cierra la migración
+-- 20260816190000_fin_f1b_permisos_expedir.sql.
 -- ----------------------------------------------------------------------------
