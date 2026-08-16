@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { euros, fecha as formatoFecha } from "@/lib/importes";
-import { clienteCartera, diasHasta, tramo, NOMBRE_TRAMO, type Vencimiento } from "@/lib/cartera";
+import { diasHasta, tramo, NOMBRE_TRAMO, type Vencimiento } from "@/lib/cartera";
 import FilaVencimiento from "./fila-vencimiento";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export default async function Cartera({
 }) {
   const { ver = "pendientes" } = await searchParams;
   const { supabase } = await exigirFacturacion();
-  const db = clienteCartera(supabase);
+  const db = supabase;
 
   let consulta = db
     .from("fin_vencimientos")

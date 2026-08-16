@@ -2,7 +2,6 @@ import { exigirModulo } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
 import Buscador from "../clientes/buscador";
 import BotonVencimiento from "./boton-vencimiento";
-import { clienteCartera } from "@/lib/cartera";
 
 export const dynamic = "force-dynamic";
 
@@ -42,12 +41,12 @@ export default async function FacturasRecibidas({
   // Cuáles ya están en cartera. Si la migración F2a aún no está aplicada, la
   // tabla no existe: se sigue adelante sin la columna en vez de romper la
   // pantalla entera.
-  const { data: enCartera } = await clienteCartera(supabase)
+  const { data: enCartera } = await supabase
     .from("fin_vencimientos")
     .select("compra_doc_id")
     .eq("sentido", "pago");
 
-  const conVencimiento = new Set((enCartera ?? []).map((v: { compra_doc_id: string }) => v.compra_doc_id));
+  const conVencimiento = new Set((enCartera ?? []).map((v) => v.compra_doc_id).filter(Boolean));
 
   const nombreCentro = new Map((centros ?? []).map((c) => [c.id, c.nombre]));
   const filas = data ?? [];

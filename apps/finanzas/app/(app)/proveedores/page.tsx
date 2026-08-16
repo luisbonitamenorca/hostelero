@@ -2,7 +2,6 @@ import { exigirModulo } from "@/lib/supabase/server";
 import { euros } from "@/lib/importes";
 import Buscador from "../clientes/buscador";
 import Condiciones from "./condiciones";
-import { clienteCartera } from "@/lib/cartera";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +35,7 @@ export default async function Proveedores({
   const [{ data, error }, { data: docs }, { data: condiciones }] = await Promise.all([
     consulta,
     supabase.from("compras_doc").select("proveedor_id, total").eq("tipo", "factura"),
-    clienteCartera(supabase).from("fin_proveedor_condiciones").select("proveedor_id, dias_pago, forma_pago"),
+    supabase.from("fin_proveedor_condiciones").select("proveedor_id, dias_pago, forma_pago"),
   ]);
 
   const cond = new Map(
