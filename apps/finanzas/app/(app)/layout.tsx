@@ -26,6 +26,10 @@ const grupos = [
     ],
   },
   {
+    titulo: "Cartera",
+    items: [{ ruta: "/cartera", nombre: "Cobros y pagos", modulo: "facturacion" }],
+  },
+  {
     titulo: "Contabilidad",
     items: [{ ruta: "/plan-cuentas", nombre: "Plan de cuentas", modulo: "contabilidad" }],
   },

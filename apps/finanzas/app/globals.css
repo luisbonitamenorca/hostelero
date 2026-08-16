@@ -532,3 +532,9 @@ input.celda.a-derecha { text-align: right; }
   .verifactu-qr { text-align: left; }
   .huella { text-align: left; }
 }
+
+/* ---- Cartera ---- */
+
+.acciones-fila { display: inline-flex; align-items: center; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+.valor.alerta { color: var(--error); }
