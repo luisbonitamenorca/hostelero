@@ -9,11 +9,20 @@ import Navegacion from "./navegacion";
 const grupos = [
   { titulo: null, items: [{ ruta: "/panel", nombre: "Panel", modulo: null }] },
   {
-    titulo: "Facturación",
+    titulo: "Ventas",
     items: [
-      { ruta: "/facturas", nombre: "Facturas", modulo: "facturacion" },
+      { ruta: "/facturas", nombre: "Facturas emitidas", modulo: "facturacion" },
       { ruta: "/clientes", nombre: "Clientes", modulo: "facturacion" },
       { ruta: "/series", nombre: "Series", modulo: "facturacion" },
+    ],
+  },
+  {
+    // El maestro y la entrada de estos documentos viven en el módulo de
+    // compras; aquí se consultan con ojos de contabilidad.
+    titulo: "Compras",
+    items: [
+      { ruta: "/facturas-recibidas", nombre: "Facturas recibidas", modulo: "compras" },
+      { ruta: "/proveedores", nombre: "Proveedores", modulo: "compras" },
     ],
   },
   {
