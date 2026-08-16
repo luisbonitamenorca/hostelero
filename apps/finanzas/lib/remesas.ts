@@ -1,13 +1,4 @@
-/**
- * Tipos de remesas y el único punto donde se esquiva el tipado.
- *
- * fin_bancos_cuentas, fin_mandatos, fin_remesas y fin_remesas_items no están
- * todavía en packages/db/types.ts porque los tipos se generan desde la base y
- * la migración F4a no está aplicada. En cuanto se aplique y se regeneren, este
- * archivo se queda solo con los tipos y `clienteRemesas` sobra.
- */
-import type { SupabaseClient } from "@supabase/supabase-js";
-
+/** Tipos y ayudas de las remesas. */
 export type CuentaBancaria = {
   id: string;
   nombre: string;
@@ -53,12 +44,6 @@ export type ItemRemesa = {
   concepto: string | null;
   referencia: string | null;
 };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function clienteRemesas(supabase: unknown): SupabaseClient<any, "public", any> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return supabase as SupabaseClient<any, "public", any>;
-}
 
 export const ESTADO_REMESA: Record<string, string> = {
   borrador: "en borrador",

@@ -1,4 +1,5 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: APLICADA en producción el 16-08-2026 (registrada como 20260816205218).
+-- No reaplicar. Los arreglos van en una migración nueva.
 -- ============================================================================
 -- MIGRACIÓN F4a — Remesas SEPA: cuentas, mandatos y remesas de cobro y pago
 -- Proyecto: hostelero · Fecha: 17-08-2026

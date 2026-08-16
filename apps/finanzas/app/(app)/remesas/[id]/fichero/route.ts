@@ -1,5 +1,5 @@
 import { exigirFacturacion } from "@/lib/supabase/server";
-import { clienteRemesas, type ItemRemesa, type Remesa } from "@/lib/remesas";
+import { type ItemRemesa, type Remesa } from "@/lib/remesas";
 import { construirPain001, construirPain008, type LineaRemesa } from "@/lib/sepa";
 
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_p: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, cuenta } = await exigirFacturacion();
-  const db = clienteRemesas(supabase);
+  const db = supabase;
 
   const { data: fila } = await db
     .from("fin_remesas")

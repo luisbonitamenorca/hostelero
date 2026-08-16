@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
-import { clienteRemesas, ESTADO_REMESA, type Remesa } from "@/lib/remesas";
+import { ESTADO_REMESA, type Remesa } from "@/lib/remesas";
 
 export const dynamic = "force-dynamic";
 
 export default async function Remesas() {
   const { supabase } = await exigirFacturacion();
-  const { data, error } = await clienteRemesas(supabase)
+  const { data, error } = await supabase
     .from("fin_remesas")
     .select("id, sentido, banco_cuenta_id, concepto, fecha_ejecucion, estado, total, num_items, creado_en")
     .order("creado_en", { ascending: false })

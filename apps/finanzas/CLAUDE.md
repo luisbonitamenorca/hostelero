@@ -37,6 +37,8 @@ Las escribe Claude Code en `supabase/migrations/`, las revisa Luis y las aplica 
 
 Y una migración aplicada NO se edita: los arreglos van en una migración nueva.
 
+**Por qué la numeración salta de F2b a F4a**: la letra es la FASE del plan (F1 facturación, F2 bancos y cartera, F3 impuestos, F4 remesas), no un número de orden. No falta ningún archivo: la F3 no existe porque impuestos no está empezado. Lo que manda el orden real de ejecución es el timestamp del nombre, que debe coincidir con la versión registrada en la base.
+
 ## Conexiones e IDs
 - Supabase project ref: jwsvkjyjwocuksdgiqnv. La URL y la clave publicable van por variables de entorno, como en el resto del monorepo.
 - cuenta_id (Bonita Menorca): 082c5366-d9ae-49b9-a8b8-8caad73985bd

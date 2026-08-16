@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
 import { ruta } from "@/lib/rutas.ts";
-import { clienteRemesas, ESTADO_REMESA, type ItemRemesa, type Remesa } from "@/lib/remesas";
+import { ESTADO_REMESA, type ItemRemesa, type Remesa } from "@/lib/remesas";
 import AccionesRemesa from "./acciones-remesa";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function DetalleRemesa({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await exigirFacturacion();
-  const db = clienteRemesas(supabase);
+  const db = supabase;
 
   const { data: remesa } = await db
     .from("fin_remesas")

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { exigirFacturacion } from "@/lib/supabase/server";
-import { clienteRemesas } from "@/lib/remesas";
 
 /** Cuenta bancaria ordenante. Sin al menos una no hay remesas. */
 export async function guardarCuentaBancaria(datos: {
@@ -35,8 +34,8 @@ export async function guardarCuentaBancaria(datos: {
   };
 
   const { error } = datos.id
-    ? await clienteRemesas(supabase).from("fin_bancos_cuentas").update(fila).eq("id", datos.id)
-    : await clienteRemesas(supabase).from("fin_bancos_cuentas").insert(fila);
+    ? await supabase.from("fin_bancos_cuentas").update(fila).eq("id", datos.id)
+    : await supabase.from("fin_bancos_cuentas").insert(fila);
 
   if (error) {
     return {
@@ -64,7 +63,7 @@ export async function guardarMandato(datos: {
   const iban = datos.iban.toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!/^ES\d{22}$/.test(iban)) return { error: "El IBAN español tiene 24 caracteres." };
 
-  const { error } = await clienteRemesas(supabase).from("fin_mandatos").insert({
+  const { error } = await supabase.from("fin_mandatos").insert({
     cuenta_id: cuenta.id,
     cliente_id: datos.clienteId,
     referencia: datos.referencia.trim(),
@@ -85,7 +84,7 @@ export async function guardarMandato(datos: {
 
 export async function revocarMandato(id: string) {
   const { supabase } = await exigirFacturacion();
-  const { error } = await clienteRemesas(supabase).from("fin_mandatos").update({ estado: "revocado" }).eq("id", id);
+  const { error } = await supabase.from("fin_mandatos").update({ estado: "revocado" }).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/mandatos");
   return { ok: true };
@@ -108,7 +107,7 @@ export async function crearRemesa(datos: {
   if (datos.vencimientoIds.length === 0) return { error: "Elige al menos un vencimiento." };
   if (!datos.fechaEjecucion) return { error: "Falta la fecha de cargo o abono." };
 
-  const { data: banco } = await clienteRemesas(supabase)
+  const { data: banco } = await supabase
     .from("fin_bancos_cuentas")
     .select("id, sociedad_id")
     .eq("id", datos.bancoCuentaId)
@@ -153,7 +152,7 @@ export async function crearRemesa(datos: {
         : { data: null };
 
       const { data: mandato } = factura?.cliente_id
-        ? await clienteRemesas(supabase)
+        ? await supabase
             .from("fin_mandatos")
             .select("referencia, fecha_firma, iban, usado")
             .eq("cliente_id", factura.cliente_id)
@@ -221,7 +220,7 @@ export async function crearRemesa(datos: {
 
   const total = Number(lineas.reduce((s, l) => s + l.importe, 0).toFixed(2));
 
-  const { data: remesa, error } = await clienteRemesas(supabase)
+  const { data: remesa, error } = await supabase
     .from("fin_remesas")
     .insert({
       cuenta_id: cuenta.id,
@@ -238,7 +237,7 @@ export async function crearRemesa(datos: {
 
   if (error || !remesa) return { error: `No se pudo crear la remesa: ${error?.message}` };
 
-  const { error: errorItems } = await clienteRemesas(supabase).from("fin_remesas_items").insert(
+  const { error: errorItems } = await supabase.from("fin_remesas_items").insert(
     lineas.map((l, i) => ({
       cuenta_id: cuenta.id,
       remesa_id: remesa.id,
@@ -257,16 +256,19 @@ export async function crearRemesa(datos: {
 export async function marcarRemesa(id: string, estado: "generada" | "enviada" | "anulada") {
   const { supabase } = await exigirFacturacion();
 
-  const campos: Record<string, unknown> = { estado };
-  if (estado === "generada") campos.generada_en = new Date().toISOString();
-  if (estado === "enviada") campos.enviada_en = new Date().toISOString();
+  const ahora = new Date().toISOString();
+  const campos = {
+    estado,
+    ...(estado === "generada" ? { generada_en: ahora } : {}),
+    ...(estado === "enviada" ? { enviada_en: ahora } : {}),
+  };
 
-  const { error } = await clienteRemesas(supabase).from("fin_remesas").update(campos).eq("id", id);
+  const { error } = await supabase.from("fin_remesas").update(campos).eq("id", id);
   if (error) return { error: error.message };
 
   // Al enviarla, los mandatos usados dejan de ser "primer adeudo".
   if (estado === "enviada") {
-    const { data: items } = await clienteRemesas(supabase)
+    const { data: items } = await supabase
       .from("fin_remesas_items")
       .select("mandato_ref")
       .eq("remesa_id", id)
@@ -274,7 +276,7 @@ export async function marcarRemesa(id: string, estado: "generada" | "enviada" | 
 
     const refs = (items ?? []).map((i) => i.mandato_ref).filter(Boolean) as string[];
     if (refs.length > 0) {
-      await clienteRemesas(supabase)
+      await supabase
         .from("fin_mandatos")
         .update({ usado: true, fecha_ultimo_uso: new Date().toISOString().slice(0, 10) })
         .in("referencia", refs);

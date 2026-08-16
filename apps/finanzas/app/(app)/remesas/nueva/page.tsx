@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { exigirFacturacion } from "@/lib/supabase/server";
-import { clienteRemesas, type CuentaBancaria } from "@/lib/remesas";
+import { type CuentaBancaria } from "@/lib/remesas";
 import type { Vencimiento } from "@/lib/cartera";
 import FormularioRemesa from "./formulario-remesa";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NuevaRemesa() {
   const { supabase, cuenta } = await exigirFacturacion();
-  const db = clienteRemesas(supabase);
+  const db = supabase;
 
   const [{ data: cuentas }, { data: vencimientos }, { data: config }] = await Promise.all([
     db.from("fin_bancos_cuentas").select("id, nombre, iban, bic, activa, sociedad_id").eq("activa", true).order("nombre"),

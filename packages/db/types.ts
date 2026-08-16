@@ -2553,6 +2553,63 @@ export type Database = {
           },
         ]
       }
+      fin_bancos_cuentas: {
+        Row: {
+          activa: boolean
+          actualizado_en: string
+          bic: string | null
+          creado_en: string
+          cuenta_id: string
+          es_defecto: boolean
+          iban: string
+          id: string
+          nombre: string
+          sociedad_id: string
+          titular: string | null
+        }
+        Insert: {
+          activa?: boolean
+          actualizado_en?: string
+          bic?: string | null
+          creado_en?: string
+          cuenta_id: string
+          es_defecto?: boolean
+          iban: string
+          id?: string
+          nombre: string
+          sociedad_id: string
+          titular?: string | null
+        }
+        Update: {
+          activa?: boolean
+          actualizado_en?: string
+          bic?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          es_defecto?: boolean
+          iban?: string
+          id?: string
+          nombre?: string
+          sociedad_id?: string
+          titular?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_bancos_cuentas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bancos_cuentas_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_clientes: {
         Row: {
           activo: boolean
@@ -2655,6 +2712,7 @@ export type Database = {
           actualizado_en: string
           creado_en: string
           cuenta_id: string
+          identificador_acreedor: string | null
           pie_factura: string | null
           regimen_iva: string
           retencion_defecto: number
@@ -2666,6 +2724,7 @@ export type Database = {
           actualizado_en?: string
           creado_en?: string
           cuenta_id: string
+          identificador_acreedor?: string | null
           pie_factura?: string | null
           regimen_iva?: string
           retencion_defecto?: number
@@ -2677,6 +2736,7 @@ export type Database = {
           actualizado_en?: string
           creado_en?: string
           cuenta_id?: string
+          identificador_acreedor?: string | null
           pie_factura?: string | null
           regimen_iva?: string
           retencion_defecto?: number
@@ -3003,6 +3063,72 @@ export type Database = {
           },
         ]
       }
+      fin_mandatos: {
+        Row: {
+          actualizado_en: string
+          bic: string | null
+          cliente_id: string
+          creado_en: string
+          cuenta_id: string
+          estado: string
+          fecha_firma: string
+          fecha_ultimo_uso: string | null
+          iban: string
+          id: string
+          notas: string | null
+          referencia: string
+          tipo: string
+          usado: boolean
+        }
+        Insert: {
+          actualizado_en?: string
+          bic?: string | null
+          cliente_id: string
+          creado_en?: string
+          cuenta_id: string
+          estado?: string
+          fecha_firma: string
+          fecha_ultimo_uso?: string | null
+          iban: string
+          id?: string
+          notas?: string | null
+          referencia: string
+          tipo?: string
+          usado?: boolean
+        }
+        Update: {
+          actualizado_en?: string
+          bic?: string | null
+          cliente_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          estado?: string
+          fecha_firma?: string
+          fecha_ultimo_uso?: string | null
+          iban?: string
+          id?: string
+          notas?: string | null
+          referencia?: string
+          tipo?: string
+          usado?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_mandatos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "fin_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_mandatos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_periodos: {
         Row: {
           bloqueado: boolean
@@ -3143,6 +3269,155 @@ export type Database = {
             columns: ["proveedor_id"]
             isOneToOne: true
             referencedRelation: "compras_proveedor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_remesas: {
+        Row: {
+          actualizado_en: string
+          banco_cuenta_id: string
+          concepto: string | null
+          creado_en: string
+          cuenta_id: string
+          enviada_en: string | null
+          estado: string
+          fecha_ejecucion: string
+          generada_en: string | null
+          id: string
+          nombre_fichero: string | null
+          num_items: number
+          sentido: string
+          sociedad_id: string
+          total: number
+        }
+        Insert: {
+          actualizado_en?: string
+          banco_cuenta_id: string
+          concepto?: string | null
+          creado_en?: string
+          cuenta_id: string
+          enviada_en?: string | null
+          estado?: string
+          fecha_ejecucion: string
+          generada_en?: string | null
+          id?: string
+          nombre_fichero?: string | null
+          num_items?: number
+          sentido: string
+          sociedad_id: string
+          total?: number
+        }
+        Update: {
+          actualizado_en?: string
+          banco_cuenta_id?: string
+          concepto?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          enviada_en?: string | null
+          estado?: string
+          fecha_ejecucion?: string
+          generada_en?: string | null
+          id?: string
+          nombre_fichero?: string | null
+          num_items?: number
+          sentido?: string
+          sociedad_id?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_remesas_banco_cuenta_id_fkey"
+            columns: ["banco_cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_bancos_cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_remesas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_remesas_sociedad_id_fkey"
+            columns: ["sociedad_id"]
+            isOneToOne: false
+            referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_remesas_items: {
+        Row: {
+          bic: string | null
+          concepto: string | null
+          creado_en: string
+          cuenta_id: string
+          iban: string
+          id: string
+          importe: number
+          mandato_fecha: string | null
+          mandato_ref: string | null
+          nombre: string
+          referencia: string | null
+          remesa_id: string
+          secuencia: string | null
+          vencimiento_id: string
+        }
+        Insert: {
+          bic?: string | null
+          concepto?: string | null
+          creado_en?: string
+          cuenta_id: string
+          iban: string
+          id?: string
+          importe: number
+          mandato_fecha?: string | null
+          mandato_ref?: string | null
+          nombre: string
+          referencia?: string | null
+          remesa_id: string
+          secuencia?: string | null
+          vencimiento_id: string
+        }
+        Update: {
+          bic?: string | null
+          concepto?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          iban?: string
+          id?: string
+          importe?: number
+          mandato_fecha?: string | null
+          mandato_ref?: string | null
+          nombre?: string
+          referencia?: string | null
+          remesa_id?: string
+          secuencia?: string | null
+          vencimiento_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_remesas_items_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_remesas_items_remesa_id_fkey"
+            columns: ["remesa_id"]
+            isOneToOne: false
+            referencedRelation: "fin_remesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_remesas_items_vencimiento_id_fkey"
+            columns: ["vencimiento_id"]
+            isOneToOne: false
+            referencedRelation: "fin_vencimientos"
             referencedColumns: ["id"]
           },
         ]
