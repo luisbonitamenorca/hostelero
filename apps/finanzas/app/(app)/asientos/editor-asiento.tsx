@@ -4,11 +4,12 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { aNumero, euros } from "@/lib/importes";
-import type { CuentaPlan } from "@/lib/diario";
+import type { CentroBreve, CuentaPlan } from "@/lib/diario";
 import { borrarAsiento, confirmarAsiento, guardarAsiento } from "../../acciones-diario";
 
 export type ApunteGuardado = {
   cuenta_plan_id: string;
+  centro_id: string | null;
   descripcion: string | null;
   debe: number;
   haber: number;
@@ -21,12 +22,26 @@ export type BorradorAsiento = {
   apuntes: ApunteGuardado[];
 };
 
-type LineaForm = { clave: string; cuentaPlanId: string; descripcion: string; debe: string; haber: string };
+type LineaForm = {
+  clave: string;
+  cuentaPlanId: string;
+  centroId: string;
+  descripcion: string;
+  debe: string;
+  haber: string;
+};
 
 let contador = 0;
-function lineaVacia(): LineaForm {
+function lineaVacia(centroId = ""): LineaForm {
   contador += 1;
-  return { clave: `a${contador}`, cuentaPlanId: "", descripcion: "", debe: "", haber: "" };
+  return { clave: `a${contador}`, cuentaPlanId: "", centroId, descripcion: "", debe: "", haber: "" };
+}
+
+/** Solo los grupos 6 y 7 llevan centro: son los que forman el resultado. Una
+ *  cuenta de tesorería o de proveedores no tiene centro que valga, y ofrecerlo
+ *  invita a rellenarlo por rellenar. */
+function llevaCentro(codigo: string | undefined): boolean {
+  return codigo?.[0] === "6" || codigo?.[0] === "7";
 }
 
 function hoy(): string {
@@ -36,9 +51,11 @@ function hoy(): string {
 
 export default function EditorAsiento({
   cuentas,
+  centros,
   borrador,
 }: {
   cuentas: CuentaPlan[];
+  centros: CentroBreve[];
   borrador?: BorradorAsiento;
 }) {
   const router = useRouter();
@@ -52,6 +69,7 @@ export default function EditorAsiento({
       return {
         clave: `a${contador}`,
         cuentaPlanId: a.cuenta_plan_id,
+        centroId: a.centro_id ?? "",
         descripcion: a.descripcion ?? "",
         debe: Number(a.debe) ? String(Number(a.debe)).replace(".", ",") : "",
         haber: Number(a.haber) ? String(Number(a.haber)).replace(".", ",") : "",
@@ -72,6 +90,18 @@ export default function EditorAsiento({
 
   const cuadra = totales.diferencia === 0 && totales.debe > 0;
 
+  const codigoPorId = useMemo(
+    () => new Map(cuentas.map((c) => [c.id, c.codigo])),
+    [cuentas],
+  );
+  const codigoDe = (id: string) => codigoPorId.get(id);
+
+  // Solo se avisa, no se bloquea: hay asientos de resultado sin centro legítimos
+  // (los de estructura), y quien contabiliza sabe mejor que el formulario.
+  const sinCentro = lineas.filter(
+    (l) => llevaCentro(codigoDe(l.cuentaPlanId)) && !l.centroId,
+  ).length;
+
   function cambiar(clave: string, campo: keyof LineaForm, valor: string) {
     setLineas((ls) =>
       ls.map((l) => {
@@ -86,7 +116,10 @@ export default function EditorAsiento({
   }
 
   function anadir() {
-    setLineas((ls) => [...ls, lineaVacia()]);
+    // Hereda el centro de la última línea que lo tenga: en un asiento de gastos
+    // de un centro, lo normal es que todas las líneas de resultado sean del mismo.
+    const ultimoCentro = [...lineas].reverse().find((l) => l.centroId)?.centroId ?? "";
+    setLineas((ls) => [...ls, lineaVacia(ultimoCentro)]);
   }
 
   function quitar(clave: string) {
@@ -116,6 +149,9 @@ export default function EditorAsiento({
       descripcion,
       lineas: lineas.map((l) => ({
         cuentaPlanId: l.cuentaPlanId,
+        // El centro solo viaja si la cuenta lo admite: si alguien elige centro y
+        // luego cambia a una cuenta de balance, no se guarda un centro huérfano.
+        centroId: llevaCentro(codigoDe(l.cuentaPlanId)) ? l.centroId || null : null,
         descripcion: l.descripcion.trim() || null,
         debe: aNumero(l.debe) || 0,
         haber: aNumero(l.haber) || 0,
@@ -224,6 +260,7 @@ export default function EditorAsiento({
             <thead>
               <tr>
                 <th>Cuenta</th>
+                <th>Centro</th>
                 <th>Concepto</th>
                 <th className="dato">Debe</th>
                 <th className="dato">Haber</th>
@@ -245,6 +282,23 @@ export default function EditorAsiento({
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td>
+                    {llevaCentro(codigoDe(l.cuentaPlanId)) ? (
+                      <select
+                        value={l.centroId}
+                        onChange={(e) => cambiar(l.clave, "centroId", e.target.value)}
+                      >
+                        <option value="">— sin centro —</option>
+                        {centros.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="texto-suave">—</span>
+                    )}
                   </td>
                   <td>
                     <input
@@ -321,6 +375,16 @@ export default function EditorAsiento({
           <p className="pista">
             Mientras no cuadre no se puede guardar. Pulsa «cuadrar» en la línea donde
             deba ir la diferencia.
+          </p>
+        )}
+
+        {sinCentro > 0 && (
+          <p className="pista">
+            {sinCentro === 1
+              ? "Hay un apunte de resultado sin centro."
+              : `Hay ${sinCentro} apuntes de resultado sin centro.`}{" "}
+            No impide guardar — los gastos de estructura no llevan centro —, pero lo
+            que quede sin centro no aparecerá en la PyG de ningún centro.
           </p>
         )}
 

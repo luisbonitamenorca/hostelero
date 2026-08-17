@@ -5,16 +5,22 @@
 -- Revisada 17-08-2026 (2): se bloquea también el borrado de apuntes (la misma
 -- carrera que el insert, por el otro lado), se cambia v_existe por found, y la
 -- ausencia de fila de periodo pasa a ser excepción en vez de mes abierto.
--- Revisada 17-08-2026 (5): el revoke necesitaba las dos concesiones (public y
--- anon, no solo anon); se añaden confirmado_por y confirmado_en, porque después
--- de confirmar ya no hay forma de escribirlos; y dos bloqueos explícitos en vez
--- de apoyarse en la forma del plan.
--- Revisada 17-08-2026 (4): privilegios de columna sobre fin_asientos, que es la
--- barrera de verdad detrás del guardarraíl de la marca. Decisión de Luis.
 -- Revisada 17-08-2026 (3): el disparador de apuntes pasa a SECURITY DEFINER
 -- (sin eso `not found` significaba «no lo veo», no «no existe») y comprueba que
 -- el apunte sea de la misma cuenta que su asiento; se bloquean también el
 -- ejercicio y el periodo al confirmar, que se leían sin lock.
+-- Revisada 17-08-2026 (4): privilegios de columna sobre fin_asientos, que es la
+-- barrera de verdad detrás del guardarraíl de la marca. Decisión de Luis.
+-- Revisada 17-08-2026 (5): el revoke necesitaba las dos concesiones (public y
+-- anon, no solo anon); se añaden confirmado_por y confirmado_en, porque después
+-- de confirmar ya no hay forma de escribirlos; y dos bloqueos explícitos en vez
+-- de apoyarse en la forma del plan.
+-- Revisada 17-08-2026 (6): el ejercicio tiene que ser de la CUENTA del asiento,
+-- no solo de su sociedad; y el rastro (creado_*, confirmado_*) se escribe en el
+-- disparador de nacimiento, porque después de la sección 5 no hay otro sitio.
+-- Revisada 17-08-2026 (7): entran centro_id en los apuntes y el índice único de
+-- origen. Las dos por decisión de Luis, y las dos ahora porque hoy son gratis y
+-- dentro de unos meses no lo serían.
 -- ============================================================================
 -- MIGRACIÓN F5a — El diario: confirmar un asiento
 -- Proyecto: hostelero · Fecha: 17-08-2026
@@ -54,15 +60,14 @@
 --     635 subcuentas de proveedor y solo dos cuentas de resultado (680 y 681),
 --     así que no hay dónde llevar una venta ni una compra.
 --   · Nada de cierre de ejercicio ni asiento de regularización (F5d).
---   · Nada que impida contabilizar DOS VECES el mismo origen. origen_tipo y
---     origen_id los puede escribir authenticated, y en fin_asientos solo hay
---     tres índices: la clave primaria, fin_asientos_numero_unico y
---     fin_asientos_soc_fecha_idx. Mientras los asientos se teclean a mano da
---     igual; en cuanto exista la contabilización automática, contabilizar dos
---     veces la misma factura duplicaría el ingreso sin que salte nada. Lo cierra
---     un índice único parcial sobre (origen_tipo, origen_id) con
---     `origen_id is not null and estado = 'confirmado'`, y va en la migración que
---     traiga esa contabilización, no en esta: hoy no hay nada que indexar.
+--
+-- QUÉ SÍ ENTRA AUNQUE TODAVÍA NO SE USE, y por qué no espera
+--   · centro_id en fin_apuntes (sección 1) y el índice que impide contabilizar
+--     dos veces el mismo origen (sección 6). Ninguna de las dos hace falta hoy,
+--     y las dos son gratis hoy: las tablas están a cero filas. Dentro de unos
+--     meses, la primera exige repartir a mano miles de apuntes cerrados e
+--     inmutables, y la segunda, limpiar duplicados antes de poder crear el
+--     índice. Las decidió Luis el 17-08-2026 con ese argumento.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -91,6 +96,26 @@ alter table fin_asientos
   add column if not exists confirmado_por uuid,
   add column if not exists confirmado_en  timestamptz;
 
+-- El centro va en el APUNTE, no en el asiento: un mismo asiento puede repartir
+-- una factura entre varios centros, y de hecho es lo normal en una compra
+-- centralizada. Ponerlo en la cabecera obligaría a partir el asiento.
+--
+-- Decidido por Luis el 17-08-2026, y decidido AHORA por una razón de plazo, no
+-- de gana: hoy fin_apuntes está a 0 filas y esto son dos líneas. Con un
+-- ejercicio contabilizado dentro, añadirlo obliga a repartir a mano miles de
+-- apuntes ya cerrados e inmutables, y nadie puede reconstruir a posteriori a qué
+-- centro fue cada gasto.
+--
+-- Es opcional a propósito: las cuentas de balance (tesorería, clientes,
+-- proveedores) no tienen centro que valga, y forzarlo llevaría a inventarse uno.
+-- Lo que sí lo necesita es el resultado — los grupos 6 y 7 —, que es de donde
+-- sale la PyG por centro y donde tiene que aterrizar el centro_id que la F2c ya
+-- puso en fin_activos para que la amortización caiga en su centro.
+alter table fin_apuntes
+  add column if not exists centro_id uuid references centros(id);
+
+create index if not exists fin_apuntes_centro_idx on fin_apuntes (centro_id);
+
 create or replace function fin_asientos_nacer_borrador() returns trigger
 language plpgsql set search_path = public as $$
 begin
@@ -104,6 +129,25 @@ begin
   if new.numero is not null then
     raise exception 'El número de asiento lo asigna la confirmación, no quien inserta';
   end if;
+
+  -- El rastro se escribe AQUÍ porque es el único sitio donde se puede escribir.
+  -- La sección 5 revoca el UPDATE de estas cuatro columnas, y el INSERT sigue
+  -- siendo de tabla completa, así que salen dos consecuencias:
+  --   · un creado_por que nazca nulo se queda nulo PARA SIEMPRE — ya nadie tiene
+  --     privilegio para rellenarlo después, salvo con la service key;
+  --   · y lo que venga en el insert no es de fiar: se podría insertar un borrador
+  --     con el creado_por de otro, o con confirmado_* inventados. En un asiento
+  --     que luego se confirma se sobreescriben; en un borrador que se queda ahí,
+  --     no.
+  --
+  -- coalesce y no asignación directa: con un JWT manda auth.uid() y no lo que
+  -- traiga el cuerpo, pero un insert de servidor con la service key no lleva JWT
+  -- y allí auth.uid() es nulo — en ese caso vale lo que venga.
+  new.creado_por     := coalesce(auth.uid(), new.creado_por);
+  new.creado_en      := now();
+  new.confirmado_por := null;
+  new.confirmado_en  := null;
+
   return new;
 end $$;
 
@@ -143,14 +187,11 @@ begin
       --
       -- Y conviene no prometer de más: la marca es un GUARDARRAÍL, no una
       -- barrera. set_config() lo puede llamar cualquiera, así que quien tenga
-      -- UPDATE por RLS y acceso SQL directo podría ponérsela él y hacer el
-      -- update a mano. Por PostgREST no es alcanzable — set_config vive en
-      -- pg_catalog y no se expone como RPC —, y eso es lo que hoy la sostiene.
-      -- Deuda consciente: la barrera de verdad son privilegios de columna,
-      --   revoke update on fin_asientos from authenticated;
-      --   grant  update (<columnas editables>) on fin_asientos to authenticated;
-      -- que a cambio obliga a mantener esa lista cada vez que se añada una
-      -- columna. Decisión de Luis; no se implementa aquí.
+      -- UPDATE y acceso SQL directo podría ponérsela él y hacer el update a
+      -- mano. La barrera está en la SECCIÓN 5: sin privilegio de UPDATE sobre
+      -- estas dos columnas, ese intento se para antes de llegar aquí. Esta
+      -- comprobación se queda porque el error de permisos de Postgres no dice a
+      -- quién hay que preguntar, y este mensaje sí.
       if coalesce(current_setting('fin.confirmando', true), '') <> old.id::text then
         raise exception 'El estado y el número los asigna fin_confirmar_asiento()';
       end if;
@@ -196,8 +237,9 @@ create trigger fin_asientos_proteger_del before delete on fin_asientos
 -- Sobre interbloqueos: el orden cabecera-antes-que-apunte es el mismo en todos
 -- los caminos. Lo que no cubría era mover un apunte de A a B mientras otra
 -- transacción mueve otro de B a A — ahí se bloqueaba A→B y B→A. Por eso, cuando
--- intervienen dos asientos, se piden los dos bloqueos de golpe y ordenados por
--- id, que impone el mismo orden a las dos transacciones.
+-- intervienen dos asientos, se piden los dos bloqueos por separado y siempre el
+-- de id menor primero, que impone el mismo orden a las dos transacciones sin
+-- depender de la forma del plan.
 -- ----------------------------------------------------------------------------
 
 create or replace function fin_apuntes_proteger() returns trigger
@@ -310,6 +352,22 @@ begin
   -- mismo para las cuentas del plan más abajo; faltaba aquí.
   if v_ej.sociedad_id <> v_a.sociedad_id then
     raise exception 'El ejercicio % no pertenece a la sociedad del asiento', v_ej.anio;
+  end if;
+  -- Y a la CUENTA, que es otra comprobación y no la misma. La RLS de fin_asientos
+  -- solo mira cuenta_id, y sociedad_id no está atado a él por ninguna clave ajena
+  -- compuesta: un usuario de la cuenta A puede insertar un asiento con
+  -- cuenta_id = A (se lo exige la RLS) y la sociedad y el ejercicio de la cuenta
+  -- B. El permiso de arriba pasa, y la comprobación de sociedad también, porque
+  -- asiento y ejercicio son los dos de B. El asiento acabaría numerado dentro de
+  -- la serie del diario de B, que no lo verá nunca porque su RLS filtra por su
+  -- cuenta. Es el mismo agujero que esta migración cierra en los apuntes con
+  -- cuenta_id, un nivel más arriba.
+  --
+  -- Queda un residuo asumido: esto hereda la coherencia del propio ejercicio,
+  -- cuyo par (cuenta, sociedad) tampoco tiene clave ajena compuesta. Los
+  -- ejercicios los da de alta administración, no el usuario.
+  if v_ej.cuenta_id <> v_a.cuenta_id then
+    raise exception 'El ejercicio % no pertenece a la cuenta del asiento', v_ej.anio;
   end if;
   if v_ej.estado <> 'abierto' then
     raise exception 'El ejercicio % está cerrado', v_ej.anio;
@@ -503,6 +561,47 @@ begin
 
   execute format('grant update (%s) on fin_asientos to authenticated', v_columnas);
 end $$;
+
+-- ----------------------------------------------------------------------------
+-- 6) Un origen no se contabiliza dos veces
+--
+-- origen_tipo y origen_id existen desde la F0 y no tenían ningún índice único:
+-- en fin_asientos solo estaban la clave primaria, fin_asientos_numero_unico y
+-- (sociedad_id, fecha). Mientras los asientos se teclean a mano da igual, pero
+-- en cuanto exista la contabilización automática dos llamadas sobre la misma
+-- factura darían dos asientos confirmados e inmutables con el mismo ingreso, y
+-- la única salida sería un asiento de corrección.
+--
+-- Decidido por Luis el 17-08-2026: entra aquí y no en la migración de la
+-- contabilización, porque hoy la tabla está a cero filas y crear el índice es
+-- gratis. Más tarde habría que comprobar antes que no haya ya duplicados.
+--
+-- Tres decisiones dentro del índice:
+--   · `estado = 'confirmado'` deja convivir varios borradores del mismo origen
+--     y solo muerde al confirmar, que es cuando el hecho pasa a ser contable.
+--   · `origen_id is not null` deja fuera los asientos manuales, que no tienen
+--     origen y son la mayoría hoy.
+--   · Solo los tipos donde la relación es de VERDAD uno a uno. apertura,
+--     regularizacion y cierre quedan fuera porque un cierre de ejercicio genera
+--     legítimamente más de un asiento con el mismo origen_id; y banco, hasta
+--     saber qué va a apuntar ahí.
+-- ----------------------------------------------------------------------------
+
+create unique index if not exists fin_asientos_origen_unico
+  on fin_asientos (origen_tipo, origen_id)
+  where origen_id is not null
+    and estado = 'confirmado'
+    and origen_tipo in ('factura_emitida', 'compra');
+
+-- OJO si algún día se amplía la lista de exclusión: NO puede llegar a cubrir
+-- todas las columnas. Un `select … for share` o `for update` exige privilegio de
+-- UPDATE sobre al menos una columna de la tabla; sin ninguna concedida,
+-- authenticated dejaría de poder pedir esos bloqueos. Comprobado en la base: con
+-- UPDATE sobre dos columnas el `for share` pasa, y sin ninguna falla con
+-- «permission denied for table fin_asientos». Hoy quedan cinco concedidas
+-- (ejercicio_id, fecha, descripcion, origen_tipo, origen_id) y las funciones que
+-- bloquean son SECURITY DEFINER, así que no muerde — pero es de las cosas que se
+-- descubren tarde.
 
 -- ============================================================================
 -- COMPROBACIONES SUGERIDAS DESPUÉS DE APLICAR

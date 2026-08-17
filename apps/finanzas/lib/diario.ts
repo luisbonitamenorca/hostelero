@@ -10,10 +10,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type LineaAsiento = {
   cuentaPlanId: string;
+  centroId: string | null;
   descripcion: string | null;
   debe: number;
   haber: number;
 };
+
+export type CentroBreve = { id: string; nombre: string };
 
 export type CuentaPlan = { id: string; codigo: string; nombre: string };
 

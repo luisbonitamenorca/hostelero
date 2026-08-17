@@ -74,8 +74,10 @@ export default async function PerdidasYGanancias({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const { anio, modo, periodo, filas, error, hayApuntes } = await cargarSaldos(sp);
-  const pyg = perdidasYGanancias(filas);
+  const { anio, modo, periodo, filasDelCentro, centros, centroPedido, error, hayApuntes } =
+    await cargarSaldos(sp);
+  const pyg = perdidasYGanancias(filasDelCentro);
+  const nombreCentro = centros.find((c) => c.id === centroPedido)?.nombre;
 
   return (
     <>
@@ -83,11 +85,20 @@ export default async function PerdidasYGanancias({
         <h1>Pérdidas y ganancias</h1>
         {/* Al revés que el balance: aquí SÍ manda el tramo, no el acumulado.
             La PyG de marzo es lo que pasó en marzo. */}
-        <p className="sub">{periodo.titulo} · solo el movimiento del periodo</p>
+        <p className="sub">
+          {periodo.titulo} · solo el movimiento del periodo
+          {nombreCentro ? ` · ${nombreCentro}` : " · todos los centros"}
+        </p>
       </div>
 
       <div className="barra-filtros">
-        <SelectorPeriodo base="/informes/perdidas-y-ganancias" anio={anio} modo={modo} sp={sp} />
+        <SelectorPeriodo
+          base="/informes/perdidas-y-ganancias"
+          anio={anio}
+          modo={modo}
+          sp={sp}
+          centros={centros}
+        />
       </div>
 
       {error && (
@@ -127,6 +138,16 @@ export default async function PerdidasYGanancias({
             Agrupado por subgrupo contable, que es como se mira el negocio. No es el
             modelo oficial de cuentas anuales: ese lleva epígrafes normalizados y hace
             falta un mapa cuenta→epígrafe que decide la asesoría.
+            {nombreCentro && (
+              <>
+                {" "}
+                <strong>
+                  Al filtrar por un centro quedan fuera los apuntes sin centro
+                </strong>{" "}
+                — los gastos de estructura, sobre todo —, así que la suma de los centros
+                no tiene por qué dar el resultado de la empresa. Ese sale con «Todos».
+              </>
+            )}
           </p>
         </>
       )}

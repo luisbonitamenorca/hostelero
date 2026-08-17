@@ -18,7 +18,7 @@ export async function guardarAsiento(datos: {
   descripcion: string;
   lineas: LineaAsiento[];
 }) {
-  const { supabase, perfil, cuenta } = await exigirModulo("contabilidad");
+  const { supabase, cuenta } = await exigirModulo("contabilidad");
   const db = clienteDiario(supabase);
 
   if (!datos.fecha) return { error: "Falta la fecha del asiento." };
@@ -95,10 +95,10 @@ export async function guardarAsiento(datos: {
         fecha: datos.fecha,
         descripcion: datos.descripcion.trim() || null,
         origen_tipo: "manual",
-        // La columna existe desde la F0 y nadie la rellenaba: el rastro de quién
-        // creó el borrador estaba vacío, y la F5a lo protege de escrituras
-        // posteriores — así que si no se pone aquí, no se pone nunca.
-        creado_por: perfil.id,
+        // creado_por y creado_en NO se mandan: los pone el disparador de la F5a
+        // con auth.uid() y now(). Ahí es el único sitio donde se pueden escribir
+        // — después de nacer, la propia F5a revoca su UPDATE —, y ponerlos
+        // también aquí sería dar dos fuentes a un dato que solo tiene una.
       })
       .select("id")
       .single();
@@ -112,6 +112,7 @@ export async function guardarAsiento(datos: {
       asiento_id: asientoId,
       orden: i + 1,
       cuenta_plan_id: l.cuentaPlanId,
+      centro_id: l.centroId || null,
       descripcion: l.descripcion?.trim() || null,
       debe: redondear(l.debe),
       haber: redondear(l.haber),

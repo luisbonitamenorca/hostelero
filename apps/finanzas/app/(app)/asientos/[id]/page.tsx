@@ -12,12 +12,14 @@ type ApunteFila = {
   debe: number;
   haber: number;
   cuenta_plan_id: string;
+  centro_id: string | null;
   fin_plan_cuentas: { codigo: string; nombre: string } | null;
+  centros: { nombre: string } | null;
 };
 
 export default async function DetalleAsiento({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, cuentas } = await cargarCuentas();
+  const { supabase, cuentas, centros } = await cargarCuentas();
 
   const { data: asiento } = await supabase
     .from("fin_asientos")
@@ -29,7 +31,7 @@ export default async function DetalleAsiento({ params }: { params: Promise<{ id:
 
   const { data: apuntesData } = await supabase
     .from("fin_apuntes")
-    .select("orden, descripcion, debe, haber, cuenta_plan_id, fin_plan_cuentas(codigo, nombre)")
+    .select("orden, descripcion, debe, haber, cuenta_plan_id, centro_id, fin_plan_cuentas(codigo, nombre), centros(nombre)")
     .eq("asiento_id", id)
     .order("orden");
 
@@ -54,12 +56,14 @@ export default async function DetalleAsiento({ params }: { params: Promise<{ id:
 
         <EditorAsiento
           cuentas={cuentas}
+          centros={centros}
           borrador={{
             id: asiento.id,
             fecha: asiento.fecha,
             descripcion: asiento.descripcion,
             apuntes: apuntes.map((a) => ({
               cuenta_plan_id: a.cuenta_plan_id,
+              centro_id: a.centro_id,
               descripcion: a.descripcion,
               debe: Number(a.debe),
               haber: Number(a.haber),
@@ -92,6 +96,7 @@ export default async function DetalleAsiento({ params }: { params: Promise<{ id:
           <thead>
             <tr>
               <th>Cuenta</th>
+              <th>Centro</th>
               <th>Concepto</th>
               <th className="dato">Debe</th>
               <th className="dato">Haber</th>
@@ -104,6 +109,7 @@ export default async function DetalleAsiento({ params }: { params: Promise<{ id:
                   {a.fin_plan_cuentas?.codigo ?? "—"}
                   <span className="texto-suave"> {a.fin_plan_cuentas?.nombre ?? ""}</span>
                 </td>
+                <td className="texto-suave">{a.centros?.nombre ?? "—"}</td>
                 <td>{a.descripcion ?? "—"}</td>
                 <td className="dato">{Number(a.debe) ? euros(Number(a.debe)) : ""}</td>
                 <td className="dato">{Number(a.haber) ? euros(Number(a.haber)) : ""}</td>
@@ -112,7 +118,7 @@ export default async function DetalleAsiento({ params }: { params: Promise<{ id:
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={2}>
+              <td colSpan={3}>
                 <strong>Totales</strong>
               </td>
               <td className="dato">
