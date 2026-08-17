@@ -1,0 +1,2552 @@
+<!DOCTYPE html>
+<!-- Servido en /pyg por hostelero-app: la sesión y el rol (dirección)
+     los valida el route handler ANTES de entregar este HTML, por eso aquí ya
+     no hay pantalla de contraseña. Los datos siguen en el Storage del proyecto
+     Ratios (bucket 'pyg'), que es la única fuente: esta página solo pinta. -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyG Socios — Bonita Menorca</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Sistema de diseño unificado — mismo lenguaje que Ratios Food Cost
+   ═══════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* Superficies */
+  --bg:#f8f8f6;--surface:#fff;--panel:#f3f3f0;--hdr:#fafaf8;
+  --border:#e0e0e0;--border-med:#d6d6d0;
+  --text:#1a1a1a;--muted:#888;
+
+  /* Paleta Ratios */
+  --green:#1D9E75;--green-dark:#085041;--green-bg:#E1F5EE;
+  --blue:#185FA5;--blue-bg:#E6F1FB;
+  --purple:#534AB7;--purple-bg:#EEEDFE;
+  --amber:#BA7517;--amber-bg:#FAEEDA;
+  --red:#A32D2D;--red-bg:#FCEBEB;
+  --coral:#993C1D;--coral-bg:#FAECE7;
+
+  /* Tonos funcionales de la tabla PyG */
+  --acc-strong:#d9ede5;   /* cabecera columnas acumuladas */
+  --acc:#eaf5f0;          /* cabecera diferencia / filas de grupo */
+  --acc-cell:#eef7f3;     /* columna acumulada en celdas */
+  --acc-total:#cfe9de;    /* celda acumulada en filas de total */
+
+  --radius:8px;--radius-lg:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.06);
+}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+
+/* ── LOGIN ─────────────────────────────────────────────── */
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
+.brand{font-size:18px;font-weight:500;letter-spacing:-.2px;margin-bottom:4px}
+.brand span{color:var(--green)}
+.brand-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.login-card{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:32px 36px;max-width:380px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:left}
+.login-card h2{font-size:15px;font-weight:500;margin-bottom:4px}
+.login-card p{font-size:11px;color:var(--muted);margin-bottom:20px;text-transform:uppercase;letter-spacing:.05em}
+.login-input{width:100%;height:38px;border:0.5px solid var(--border);border-radius:7px;padding:0 12px;font-size:14px;margin-bottom:12px;background:var(--surface);font-family:inherit}
+.login-input:focus{outline:none;border-color:var(--green)}
+.login-btn{width:100%;height:38px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
+.login-btn:hover{background:var(--green-dark)}
+.login-error{font-size:12px;color:var(--red);margin-top:8px;min-height:18px;text-align:center}
+
+/* ── PANTALLA SIN DATOS ────────────────────────────────── */
+#upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;gap:0}
+.upload-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2.5rem;max-width:440px;width:100%;text-align:center;box-shadow:var(--shadow)}
+.upload-card h2{font-size:15px;font-weight:500;margin-bottom:8px}
+.upload-card p{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.drop-zone{border:2px dashed #c8c8c8;border-radius:var(--radius-lg);padding:2rem 1.5rem;cursor:pointer;transition:.2s;margin-bottom:14px;background:var(--hdr)}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--green);background:var(--green-bg)}
+.drop-zone p{color:var(--muted);font-size:13px;margin:0}
+.drop-zone strong{color:var(--green)}
+input[type=file]{display:none}
+.note{font-size:11px;color:var(--muted);line-height:1.6}
+.note code{background:var(--panel);padding:1px 5px;border-radius:3px;font-size:11px}
+
+/* ── LAYOUT: barra lateral + columna principal ─────────── */
+#app-screen{display:none}
+#app-screen.on{display:flex;align-items:flex-start;min-height:100vh}
+
+.side-nav{
+  width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
+  background:#fdfdfc;border-right:0.5px solid var(--border);
+  padding:18px 10px 18px 14px;display:flex;flex-direction:column;
+}
+.side-brand{padding:0 4px 14px;border-bottom:0.5px solid var(--border);margin-bottom:12px}
+.app-title{font-size:18px;font-weight:500;letter-spacing:-.2px}
+.app-title span{color:var(--green)}
+.app-subtitle{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.45}
+.side-badge{margin-top:8px;display:inline-block;padding:4px 10px;background:var(--green);color:#fff;font-size:11px;font-weight:500;border-radius:4px;letter-spacing:.3px}
+.side-foot{margin-top:auto;padding-top:14px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.side-status{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);padding:0 4px;line-height:1.3}
+.side-version{font-size:10px;color:#aaa;padding:0 4px}
+
+.main-col{flex:1;min-width:0;padding:0 16px 40px}
+.main-inner{max-width:1400px;margin:0 auto}
+
+.app-header{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding:14px 0 12px;border-bottom:0.5px solid var(--border)}
+.header-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.header-label{font-size:11px;color:var(--muted)}
+.content{padding-top:16px}
+
+/* ── MENÚ VERTICAL (pestañas) ──────────────────────────── */
+.tabs{display:flex;flex-direction:column;gap:1px}
+.tab{
+  padding:8px 10px;border:none;background:none;cursor:pointer;color:var(--muted);
+  font-size:12px;font-family:inherit;text-align:left;width:100%;
+  border-left:3px solid transparent;border-radius:0 6px 6px 0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:color .15s,border-color .15s,background .15s;
+}
+.tab.active{color:var(--green);border-left-color:var(--green);background:rgba(29,158,117,.09);font-weight:500}
+.tab:hover:not(.active){color:var(--text);background:rgba(0,0,0,.04)}
+.section{display:none}
+.section.active{display:block}
+
+/* ── TOOLBAR / FILTROS ─────────────────────────────────── */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.toolbar-group{display:flex;align-items:center;gap:6px}
+.toolbar-label{font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.seg{display:flex;gap:3px;flex-wrap:wrap}
+.seg button{
+  padding:4px 10px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;
+  border:0.5px solid var(--border);border-radius:4px;background:var(--panel);color:#555;transition:all .12s;
+}
+.seg button:hover:not(.active){border-color:#999;color:var(--text)}
+.seg button.active{background:var(--green);color:#fff;border-color:var(--green);font-weight:500}
+.sep{width:1px;background:var(--border);align-self:stretch;margin:2px 2px}
+
+/* ── MÉTRICAS ──────────────────────────────────────────── */
+.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.metric{background:var(--panel);border-radius:var(--radius);padding:11px 13px}
+.m-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.m-value{font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2}
+.m-delta{font-size:10px;margin-top:2px;font-weight:500}
+.pos{color:var(--green)}.neg{color:var(--red)}.neu{color:var(--muted)}
+
+/* ── TARJETAS ──────────────────────────────────────────── */
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:13px 14px;margin-bottom:12px}
+.card-title{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.card-sub{font-size:11px;color:#aaa;margin-bottom:10px}
+.chart-row{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:12px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* ── TABLAS ────────────────────────────────────────────── */
+.tbl-wrap{border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;overflow-x:auto}
+table.pyg{width:100%;border-collapse:collapse;font-size:12px}
+table.pyg th{
+  font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+  padding:6px 7px;text-align:right;border-bottom:0.5px solid var(--border);background:var(--hdr);
+  white-space:nowrap;position:sticky;top:0;z-index:1;
+}
+table.pyg th:first-child{text-align:left;min-width:180px;position:sticky;left:0;z-index:3;background:var(--hdr)}
+table.pyg th:nth-child(2){background:var(--acc);color:var(--green-dark)}
+table.pyg td{padding:5px 7px;text-align:right;border-bottom:0.5px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:top;line-height:1.3}
+table.pyg td:first-child{text-align:left}
+table.pyg td:nth-child(2){background:var(--acc-cell);font-weight:500}
+table.pyg tr:last-child td{border-bottom:none}
+table.pyg tr.r-ing td{background:#f5fbf8}
+table.pyg tr.r-ing td:nth-child(2){background:#dff0e8}
+table.pyg tr.r-gto td{background:#fdfaf8}
+table.pyg tr.r-gto td:nth-child(2){background:#f5ede8}
+table.pyg tr.r-grp td{background:var(--acc);font-weight:500;color:var(--text)}
+table.pyg tr.r-det td{background:var(--hdr)}
+table.pyg tr.r-det td:nth-child(2){background:var(--acc-cell)}
+table.pyg tr.r-total td{font-weight:500;background:var(--panel);border-top:0.5px solid var(--border-med)}
+table.pyg tr.r-total td:nth-child(2){background:var(--acc-total)}
+table.pyg tr.r-result td{font-weight:500;background:#fdf6e8;border-top:1.5px solid var(--amber)}
+table.pyg tr.r-result td:nth-child(2){background:#fbead0}
+table.pyg tr:hover td{filter:brightness(.975)}
+.dv-pos{color:var(--green);font-weight:500}
+.dv-neg{color:var(--red);font-weight:500}
+.expand-btn{cursor:pointer;user-select:none;color:var(--muted);font-size:10px;margin-right:4px;display:inline-block;width:12px}
+
+/* ── BOTONES ───────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .12s}
+.btn:hover{background:var(--panel)}
+.btn-g{background:var(--green);color:#fff;border-color:var(--green);font-weight:500}
+.btn-g:hover{background:var(--green-dark);border-color:var(--green-dark)}
+.btn-sm{padding:4px 10px;font-size:11px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);color:#555;cursor:pointer;font-family:inherit}
+.btn-sm:hover{background:var(--panel);color:var(--text)}
+select,input[type=password],input[type=text]{font-family:inherit}
+.hdr-select{height:30px;font-size:12px;padding:0 9px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);cursor:pointer}
+.hdr-select:focus{outline:none;border-color:var(--green)}
+
+/* ── CARGA ─────────────────────────────────────────────── */
+#loading{display:none;position:fixed;inset:0;background:rgba(248,248,246,.9);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#loading p{color:var(--muted);font-size:13px}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MODAL ADMIN ───────────────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:20px;width:min(480px,94vw);border:0.5px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.modal h3{font-size:15px;font-weight:500;margin-bottom:6px}
+.modal p{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.modal input[type=password]{width:100%;height:32px;border:0.5px solid var(--border);border-radius:var(--radius);padding:0 9px;font-size:12px;margin-bottom:10px;background:var(--surface)}
+.modal input[type=password]:focus{outline:none;border-color:var(--green)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.btn-cancel{background:none;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 14px;font-size:12px;cursor:pointer;color:var(--muted);font-family:inherit}
+.btn-cancel:hover{background:var(--panel)}
+.btn-upload{background:var(--green);color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;cursor:pointer;font-weight:500;font-family:inherit}
+.btn-upload:hover{background:var(--green-dark)}
+.btn-upload:disabled{opacity:.5;cursor:not-allowed}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-dot.ok{background:var(--green)}
+.status-dot.loading{background:var(--amber)}
+.status-dot.err{background:var(--red)}
+
+/* ── RESPONSIVE ────────────────────────────────────────── */
+@media(max-width:900px){
+  #app-screen.on{flex-direction:column}
+  .side-nav{position:static;width:100%;height:auto;border-right:none;border-bottom:0.5px solid var(--border);padding:12px 12px 0}
+  .side-brand{border-bottom:none;padding-bottom:8px;margin-bottom:4px}
+  .side-foot{margin-top:8px;border-top:none;flex-direction:row;align-items:center;justify-content:space-between;padding-top:0}
+  .side-version{display:none}
+  .tabs{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:2px;padding-bottom:6px}
+  .tab{width:auto;border-left:none;border-bottom:2px solid transparent;border-radius:0}
+  .tab.active{border-left:none;border-bottom-color:var(--green);background:none}
+}
+@media(max-width:700px){
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .chart-row{grid-template-columns:1fr}
+  .app-header{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+
+<div id="main-app">
+
+<div id="loading"><div class="spinner"></div><p id="loading-msg">Cargando datos…</p></div>
+
+<!-- AUTO-LOAD SCREEN (solo se ve si falla la carga) -->
+<div id="upload-screen">
+  <div class="brand">Bonita <span>Menorca</span></div>
+  <div class="brand-sub">Cuadro de Mando para Socios</div>
+  <div class="upload-card">
+    <div style="font-size:32px;margin-bottom:16px">⚠️</div>
+    <h2>No hay datos disponibles</h2>
+    <p>No se encontró ningún fichero en el servidor. Contacta con el administrador para subir los datos.</p>
+    <button class="btn-upload" style="margin-top:8px" onclick="openAdmin()">Subir datos (admin)</button>
+  </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div class="modal-overlay" id="admin-modal">
+  <div class="modal">
+    <h3>Actualizar datos</h3>
+    <p>Selecciona el Excel con las pestañas SUMAS Y SALDOS, PRESUPUESTO y PLAN DE CUENTAS.</p>
+    <div class="drop-zone" id="admin-drop" onclick="document.getElementById('admin-fi').click()" style="margin-bottom:10px;padding:1rem">
+      <p id="admin-drop-label"><strong>Seleccionar Excel</strong> o arrastrar aquí</p>
+    </div>
+    <input type="file" id="admin-fi" accept=".xlsx,.xls">
+    <div id="upload-status" style="font-size:12px;color:var(--muted);min-height:18px;margin-bottom:8px"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeAdmin()">Cancelar</button>
+      <button class="btn-upload" id="btn-do-upload" onclick="doUpload()" disabled>Subir</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+
+  <!-- BARRA LATERAL -->
+  <aside class="side-nav">
+    <div class="side-brand">
+      <div class="app-title">Bonita <span>Menorca</span></div>
+      <div class="app-subtitle">Cuadro de Mando para Socios</div>
+      <div class="side-badge" id="side-periodo">Ene–Dic 2026</div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" onclick="showTab('resumen',this)">📊 Resumen</button>
+      <button class="tab" onclick="showTab('pyg',this)">📋 PyG completo</button>
+      <button class="tab" onclick="showTab('evolucion',this)">📈 Evolución mensual</button>
+      <button class="tab" onclick="showTab('balance',this)">⚖️ Balance</button>
+      <button class="tab" onclick="showTab('tesoreria',this)">💶 Tesorería</button>
+      <button class="tab" onclick="showTab('pool',this)">🏦 Pool bancario</button>
+    </nav>
+    <div class="side-foot">
+      <div class="side-status">
+        <div class="status-dot ok" id="status-dot"></div>
+        <span id="status-label">—</span>
+      </div>
+      <button class="btn-sm" onclick="openAdmin()">Actualizar datos</button>
+      <a class="btn-sm" href="/" style="text-align:center;text-decoration:none;display:block">← Inicio</a>
+      <div class="side-version">PyG Socios · 2026</div>
+    </div>
+  </aside>
+
+  <!-- COLUMNA PRINCIPAL -->
+  <div class="main-col"><div class="main-inner">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-controls">
+      <label class="header-label" for="sel-mes">Mes hasta</label>
+      <select id="sel-mes" class="hdr-select" onchange="setMesHasta(this.value)">
+        <option value="1">Enero</option>
+        <option value="2">Febrero</option>
+        <option value="3">Marzo</option>
+        <option value="4">Abril</option>
+        <option value="5">Mayo</option>
+        <option value="6">Junio</option>
+        <option value="7">Julio</option>
+        <option value="8">Agosto</option>
+        <option value="9">Septiembre</option>
+        <option value="10">Octubre</option>
+        <option value="11">Noviembre</option>
+        <option value="12" selected>Diciembre</option>
+      </select>
+      <button class="btn btn-g" onclick="exportExcel()" title="Descargar el detalle en Excel (cuenta · centro · proveedor)">↓ Descargar Excel</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="toolbar-group" id="canal-group">
+        <span class="toolbar-label">Canal</span>
+        <div class="seg" id="canal-seg"></div>
+      </div>
+      <div class="sep" id="sep-canal"></div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">Vista PyG</span>
+        <div class="seg">
+          <button class="active" id="btn-mensual" onclick="setVistaPyg('mensual',this)">Mensual</button>
+          <button id="btn-negocio" onclick="setVistaPyg('negocio',this)">Por negocio</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">Modo</span>
+        <div class="seg">
+          <button class="active" id="btn-real" onclick="setModoPresup('real',this)">Real</button>
+          <button id="btn-comparativo" onclick="setModoPresup('comparativo',this)">Vs Presupuesto</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">Detalle</span>
+        <div class="seg">
+          <button class="active" id="btn-grupo" onclick="setDetalle('grupo',this)">Por grupo</button>
+          <button id="btn-cuenta" onclick="setDetalle('cuenta',this)">Por cuenta</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESUMEN -->
+    <div id="tab-resumen" class="section active">
+      <div class="metrics" id="metrics-area"></div>
+      <div class="card">
+        <div class="card-title">Ingresos vs Gastos mensual</div>
+        <div class="card-sub">Real vs Presupuesto</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#1D9E75"></div>Ingresos real</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#A32D2D"></div>Gastos real</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#B5D4F4;border:1px dashed #185FA5"></div>Ingresos presup.</div>
+        </div>
+        <div style="position:relative;height:220px"><canvas id="c-overview" role="img" aria-label="Ingresos y gastos mensuales"></canvas></div>
+        <div class="tbl-wrap" style="margin-top:16px"><table class="pyg" id="tbl-resumen"></table></div>
+      </div>
+    </div>
+
+    <!-- PYG COMPLETO -->
+    <div id="tab-pyg" class="section">
+      <div class="card">
+        <div class="card-title" id="pyg-title">Cuenta de resultados</div>
+        <div class="card-sub" id="pyg-sub"></div>
+        <div class="tbl-wrap"><table class="pyg" id="tbl-pyg"></table></div>
+      </div>
+    </div>
+
+    <!-- EVOLUCIÓN -->
+    <div id="tab-evolucion" class="section">
+      <div class="card">
+        <div class="card-title">Resultado mensual — Real vs Presupuesto</div>
+        <div class="card-sub">Resultado neto cada mes y acumulado</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#1D9E75"></div>Resultado real</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#FAC775;border:1px dashed #BA7517"></div>Resultado presup.</div>
+        </div>
+        <div style="position:relative;height:240px"><canvas id="c-resultado" role="img" aria-label="Resultado mensual"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Resultado acumulado — Real vs Presupuesto</div>
+        <div class="card-sub">Suma acumulada mes a mes</div>
+        <div style="position:relative;height:200px"><canvas id="c-acumulado" role="img" aria-label="Resultado acumulado"></canvas></div>
+      </div>
+    </div>
+
+    <!-- BALANCE -->
+    <div id="tab-balance" class="section">
+      <div class="metrics" id="balance-metrics" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+        <div class="card" style="margin:0">
+          <div class="card-title">Activo</div>
+          <div class="card-sub" id="balance-activo-sub"></div>
+          <div class="tbl-wrap"><table class="pyg" id="tbl-activo"></table></div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-title">Patrimonio Neto y Pasivo</div>
+          <div class="card-sub" id="balance-pasivo-sub"></div>
+          <div class="tbl-wrap"><table class="pyg" id="tbl-pasivo"></table></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title" style="font-size:12px;color:var(--muted);font-weight:500">Notas</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-top:4px">
+          Saldos a fin del mes seleccionado en el filtro <strong>“Mes hasta”</strong> (acumulando movimientos desde enero).
+          Las cuentas <strong>6xx y 7xx</strong> (PyG) se consolidan en el epígrafe <strong>Resultado del ejercicio</strong> dentro del Patrimonio Neto.
+          Las cuentas <strong>4xx y 5xx</strong> se clasifican como activo o pasivo según el signo de su saldo (deudor → activo, acreedor → pasivo).
+        </div>
+      </div>
+    </div>
+
+    <!-- TESORERÍA -->
+    <div id="tab-tesoreria" class="section">
+      <div class="metrics" id="tes-metrics" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+        <div class="card" style="margin:0">
+          <div class="card-title" style="color:var(--green)">Cobros previstos</div>
+          <div class="card-sub">Próximos vencimientos</div>
+          <div class="tbl-wrap"><table class="pyg" id="tbl-cobros"></table></div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-title" style="color:var(--red)">Pagos previstos</div>
+          <div class="card-sub">Próximos vencimientos</div>
+          <div class="tbl-wrap"><table class="pyg" id="tbl-pagos"></table></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">Saldos disponibles</div>
+        <div class="card-sub">Posición a fecha de actualización</div>
+        <div class="tbl-wrap"><table class="pyg" id="tbl-saldos"></table></div>
+      </div>
+      <div id="tes-balance-note" style="font-size:11px;color:var(--muted);text-align:right;margin-top:8px"></div>
+    </div>
+
+    <!-- POOL BANCARIO -->
+    <div id="tab-pool" class="section">
+      <div class="metrics" id="pool-metrics" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>
+      <div class="card" style="margin-top:4px">
+        <div class="card-title">Capital pendiente por préstamo</div>
+        <div class="card-sub">Evolución del capital vivo año a año</div>
+        <div class="tbl-wrap"><table class="pyg" id="tbl-pool-capital"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Cuotas anuales por préstamo</div>
+        <div class="card-sub">Servicio de la deuda proyectado</div>
+        <div class="tbl-wrap"><table class="pyg" id="tbl-pool-cuotas"></table></div>
+      </div>
+      <div id="pool-note" style="font-size:11px;color:var(--muted);text-align:right;margin-top:4px"></div>
+    </div>
+  </div><!-- /content -->
+
+  </div></div><!-- /main-inner /main-col -->
+</div><!-- /app-screen -->
+
+<script>
+const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const MS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const GRID = 'rgba(0,0,0,0.05)';
+const TC = '#999';
+// Base de datos unificada: proyecto "Ratios Bonita" (bucket privado 'pyg')
+const SUPABASE_URL = 'https://osmfedjemjmlxyifrreq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zbWZlZGplbWptbHh5aWZycmVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODc4MjEsImV4cCI6MjA5MTY2MzgyMX0.QWVY1XuHVizl5AUXoXSFebh--IAyrDxvKGWVZgK3uMU';
+const BUCKET = 'pyg';
+const FILE_NAME = 'datos.xlsx';
+
+let D = null;
+let canal = 'TODOS';
+let detalle = 'grupo';
+let vistaPyg = 'mensual';
+let modoPresup = 'real';
+let mesHasta = 12; // 1..12 — mes hasta el que se acumulan los datos
+let charts = {};
+let expanded = {};      // grupos expandidos en vista grupo (drill-down nivel 1)
+let expandedCta = {};   // cuentas expandidas para mostrar centros de coste (drill-down nivel 2)
+let expandedCC = {};    // centros de coste expandidos para mostrar proveedores (drill-down nivel 3). Clave: 'cuenta|canal'
+let adminFile = null;
+
+// ---- SUPABASE HELPERS ----
+function sbHeaders(extra={}) {
+  return { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, ...extra };
+}
+
+async function downloadFromSupabase() {
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${FILE_NAME}`;
+  const res = await fetch(url, { headers: sbHeaders() });
+  if (!res.ok) throw new Error('No hay datos subidos aún (HTTP ' + res.status + ')');
+  return await res.arrayBuffer();
+}
+
+async function uploadToSupabase(arrayBuffer) {
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${FILE_NAME}`;
+  let res = await fetch(url, {
+    method: 'PUT',
+    headers: sbHeaders({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'x-upsert': 'true' }),
+    body: arrayBuffer
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('Error subiendo fichero: ' + err);
+  }
+  return true;
+}
+
+// ---- AUTO-LOAD ON START ----
+async function autoLoad() {
+  setStatus('loading', 'Cargando datos…');
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = 'Cargando datos del servidor…';
+  try {
+    const buffer = await downloadFromSupabase();
+    processWorkbook(buffer, 'servidor');
+  } catch(err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('upload-screen').style.display = 'flex';
+    setStatus('err', 'Sin datos');
+    console.warn('Auto-load:', err.message);
+  }
+}
+
+function processWorkbook(buffer, source) {
+  try {
+    const wb = XLSX.read(buffer, {type:'array'});
+    D = parseWorkbook(wb);
+    D.filename = source;
+    document.getElementById('upload-screen').style.display = 'none';
+    document.getElementById('app-screen').classList.add('on');
+    buildToolbar();
+    updatePeriodoBadge();
+    refresh();
+    const now = new Date();
+    setStatus('ok', `Actualizado ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
+  } catch(err) {
+    // No bloquear con alert — mostrar la pantalla de upload con un mensaje claro
+    console.error('Error procesando workbook:', err);
+    document.getElementById('app-screen').classList.remove('on');
+    const us = document.getElementById('upload-screen');
+    us.style.display = 'flex';
+    const card = us.querySelector('.upload-card');
+    if (card) {
+      card.innerHTML = `
+        <div style="font-size:32px;margin-bottom:16px">⚠️</div>
+        <h2>El fichero no es válido</h2>
+        <p>${err.message}.<br>Sube un Excel con las pestañas <strong>SUMAS Y SALDOS</strong>, <strong>PRESUPUESTO</strong> y <strong>PLAN DE CUENTAS</strong>.</p>
+        <button class="btn-upload" style="margin-top:8px" onclick="openAdmin()">Subir datos (admin)</button>
+      `;
+    }
+    setStatus('err', 'Fichero no válido');
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+function setStatus(type, label) {
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot ' + type;
+  document.getElementById('status-label').textContent = label;
+}
+
+// ---- ADMIN MODAL ----
+function openAdmin() {
+  document.getElementById('admin-drop-label').innerHTML = '<strong>Seleccionar Excel</strong> o arrastrar aquí';
+  document.getElementById('upload-status').textContent = '';
+  document.getElementById('btn-do-upload').disabled = true;
+  adminFile = null;
+  document.getElementById('admin-modal').classList.add('open');
+}
+
+function closeAdmin() {
+  document.getElementById('admin-modal').classList.remove('open');
+}
+
+const adminDrop = document.getElementById('admin-drop');
+const adminFi = document.getElementById('admin-fi');
+adminDrop.addEventListener('dragover', e=>{e.preventDefault();adminDrop.classList.add('drag')});
+adminDrop.addEventListener('dragleave', ()=>adminDrop.classList.remove('drag'));
+adminDrop.addEventListener('drop', e=>{e.preventDefault();adminDrop.classList.remove('drag');setAdminFile(e.dataTransfer.files[0])});
+adminFi.addEventListener('change', e=>setAdminFile(e.target.files[0]));
+
+function setAdminFile(file) {
+  if (!file) return;
+  adminFile = file;
+  document.getElementById('admin-drop-label').innerHTML = `<strong>${file.name}</strong> (${(file.size/1024).toFixed(0)} KB)`;
+  checkAdminReady();
+}
+
+function checkAdminReady() {
+  document.getElementById('btn-do-upload').disabled = !adminFile;
+}
+
+async function doUpload() {
+  const btn = document.getElementById('btn-do-upload');
+  btn.disabled = true;
+  btn.textContent = 'Subiendo…';
+  document.getElementById('upload-status').textContent = '';
+
+  try {
+    const buffer = await adminFile.arrayBuffer();
+    await uploadToSupabase(buffer);
+    document.getElementById('upload-status').textContent = '✓ Subido correctamente';
+    document.getElementById('upload-status').style.color = 'var(--green)';
+    setTimeout(() => {
+      closeAdmin();
+      processWorkbook(buffer, adminFile.name);
+    }, 800);
+  } catch(err) {
+    document.getElementById('upload-status').textContent = '⚠️ ' + err.message;
+    document.getElementById('upload-status').style.color = 'var(--red)';
+    btn.disabled = false;
+    btn.textContent = 'Subir';
+  }
+}
+
+// =============================================================
+// PARSER — adaptado al nuevo Excel (origen: SUMAS Y SALDOS)
+// =============================================================
+function parseWorkbook(wb) {
+  const sheetSyS = findSheet(wb, ['SUMAS Y SALDOS','SUMAS_Y_SALDOS','SUMASYSALDOS','SyS']);
+  const sheetPRE = findSheet(wb, ['PRESUPUESTO','BUDGET']);
+  const sheetPDC = findSheet(wb, ['PLAN DE CUENTAS','PLAN_CUENTAS','PDC']);
+  const sheetPOOL = findSheet(wb, ['POOL BANCARIO','POOL_BANCARIO','POOL']);
+  const sheetTES  = findSheet(wb, ['TESORERIA','TESORERÍA','TES']);
+  const sheetPROV = findSheet(wb, ['POR PROVEEDOR','POR_PROVEEDOR','PROVEEDORES','GASTOS POR PROVEEDOR']);
+
+  if (!sheetSyS) throw new Error('No se encuentra la pestaña SUMAS Y SALDOS');
+
+  const pdc = sheetPDC ? parsePDC(wb.Sheets[sheetPDC]) : {};
+  // pyg = cuentas 6/7 (signo invertido en 7), tal cual venía
+  const pyg = parseSumasYSaldos(wb.Sheets[sheetSyS]);
+  // balanceRows = cuentas 1-5 sin invertir signo (necesario para el Balance)
+  const balanceRows = parseSumasYSaldosBalance(wb.Sheets[sheetSyS]);
+  const pre = sheetPRE ? parsePresupuesto(wb.Sheets[sheetPRE]) : null;
+  const pool = sheetPOOL ? parsePool(wb.Sheets[sheetPOOL]) : null;
+  const tes  = sheetTES  ? parseTesoreria(wb.Sheets[sheetTES])  : null;
+  const provData = sheetPROV ? parsePorProveedor(wb.Sheets[sheetPROV]) : null;
+  const prov      = provData ? provData.prov  : null;
+  const provIndex = provData ? provData.index : {};
+
+  const canales = [...new Set(pyg.map(r=>r.canal).filter(Boolean))].sort();
+
+  return {pyg, pre, pdc, canales, balanceRows, pool, tes, prov, provIndex};
+}
+
+// Parser específico para Balance: cuentas 1-5, sin invertir signo.
+// El signo del SyS español es: deudor (+), acreedor (-).
+function parseSumasYSaldosBalance(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  const hi = findHeaderRow(rows);
+  const headers = rows[hi].map(v => v ? String(v).toUpperCase().trim() : '');
+
+  const cuentaIdx = headers.findIndex(h => h === 'CUENTA');
+  const descIdx   = headers.findIndex(h => h.startsWith('DESCRIPCION') || h.startsWith('DESCRIPCIÓN') || h === 'DESC');
+
+  const mesIdx = {};
+  MESES.forEach(m => {
+    const i = headers.indexOf(m);
+    if (i >= 0) mesIdx[m] = i;
+  });
+
+  const result = [];
+  for (let r = hi + 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row || row[cuentaIdx] == null || row[cuentaIdx] === '') continue;
+    const cuenta = String(row[cuentaIdx]).trim();
+    if (!cuenta) continue;
+    const prefix = cuenta[0];
+    // Sólo cuentas de balance (1-5)
+    if (!'12345'.includes(prefix)) continue;
+
+    const desc = row[descIdx] != null ? String(row[descIdx]).trim() : cuenta;
+    const mensual = MESES.map(m => {
+      const idx = mesIdx[m];
+      if (idx == null) return 0;
+      const v = parseFloat(String(row[idx]).replace(',', '.'));
+      return isNaN(v) ? 0 : v;
+    });
+    // Saldo acumulado anual (suma de todos los movimientos del año)
+    const total = mensual.reduce((a,b)=>a+b, 0);
+    // Filtra ruido (todo 0)
+    if (Math.abs(total) < 0.005 && mensual.every(v => Math.abs(v) < 0.005)) continue;
+    result.push({cuenta, desc, mensual, total, prefix});
+  }
+  return result;
+}
+
+// Parser Pool Bancario: lee las DOS tablas (capital y cuotas).
+// Estructura conocida: tabla 1 empieza fila 1 (cabecera), tabla 2 empieza tras una fila vacía.
+// Cabeceras: TIPO, Nº PRESTAMO, ENTIDAD, VENCIMIENTO, IMPORTE, CAPITAL PENDIENTE, CAPITAL/CUOTAS <año>...
+function parsePool(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+
+  // Encuentra todas las filas que parecen cabecera (contienen "TIPO" y "Nº PRESTAMO" o "PRESTAMO")
+  const headerRows = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r) continue;
+    const first = r[0] ? String(r[0]).toUpperCase().trim() : '';
+    const second = r[1] ? String(r[1]).toUpperCase().trim() : '';
+    if (first === 'TIPO' && second.includes('PRESTAMO')) {
+      headerRows.push(i);
+    }
+  }
+  if (headerRows.length === 0) return null;
+
+  const extractTable = (hi) => {
+    const headers = rows[hi].map(v => v ? String(v).toUpperCase().trim() : '');
+    const data = [];
+    for (let r = hi+1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row) break;
+      const isAllEmpty = row.every(v => v == null || v === '');
+      if (isAllEmpty) break;
+      // Las filas de subtotal tienen "CAPITAL PENDIENTE" o "CUOTAS" en col A en lugar de TIPO=PRÉSTAMO
+      const tipo = row[0] ? String(row[0]).toUpperCase().trim() : '';
+      if (tipo !== 'PRÉSTAMO' && tipo !== 'PRESTAMO') {
+        // posible fila subtotal — la guardamos al final
+        if (tipo) data.push({_subtotal: true, _label: row[0], raw: row});
+        break;
+      }
+      data.push({raw: row});
+    }
+    return { headers, data };
+  };
+
+  const tablaCapital = extractTable(headerRows[0]);
+  const tablaCuotas  = headerRows[1] != null ? extractTable(headerRows[1]) : null;
+
+  // Footer note (busca "actualizados a" o similar)
+  let note = '';
+  for (let i = rows.length-1; i >= 0; i--) {
+    const r = rows[i];
+    if (!r) continue;
+    const txt = r[0] ? String(r[0]) : '';
+    if (txt.toLowerCase().includes('actualizad')) { note = txt; break; }
+  }
+
+  return { tablaCapital, tablaCuotas, note };
+}
+
+function parseTesoreria(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  // Localiza la fila de cabecera (la que contiene "CONCEPTO").
+  let hi = 0;
+  for (let i = 0; i < Math.min(rows.length, 6); i++) {
+    if (rows[i] && rows[i].some(c => c != null && String(c).toUpperCase().includes('CONCEPTO'))) { hi = i; break; }
+  }
+  // Mapeo de columnas por NOMBRE de cabecera (no por posición fija).
+  // Soporta el nuevo layout: TIPO | CONCEPTO | VENCIMIENTO | IMPORTE
+  // y también el antiguo (sin TIPO) por compatibilidad.
+  const header = (rows[hi] || []).map(c => c != null ? String(c).toUpperCase().trim() : '');
+  const idxTipo     = header.findIndex(h => h.includes('TIPO'));
+  const idxConcepto = header.findIndex(h => h.includes('CONCEPTO'));
+  const idxVenc     = header.findIndex(h => h.includes('VENC'));
+  const idxImporte  = header.findIndex(h => h.includes('IMPORTE'));
+  const cIdx = idxConcepto >= 0 ? idxConcepto : 0;
+  const vIdx = idxVenc     >= 0 ? idxVenc     : cIdx + 1;
+  const iIdx = idxImporte  >= 0 ? idxImporte  : cIdx + 2;
+
+  const items = [];
+  let balance = null;
+  let tipoActual = null; // se arrastra hacia abajo por si TIPO solo aparece al inicio del bloque
+  for (let r = hi+1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row) continue;
+    if (idxTipo >= 0 && row[idxTipo] != null && String(row[idxTipo]).trim() !== '') {
+      tipoActual = String(row[idxTipo]).toUpperCase();
+    }
+    const concepto = row[cIdx];
+    const venc = row[vIdx];
+    const imp  = row[iIdx];
+    if (concepto == null) continue;
+    const conceptoStr = String(concepto).trim();
+    if (!conceptoStr) continue;
+    // Línea de balance global (se ignora la dirección)
+    if (conceptoStr.toUpperCase().includes('BALANCE')) {
+      balance = { concepto: conceptoStr, venc, importe: parseFloat(imp) || 0 };
+      continue;
+    }
+    // Dirección según la columna TIPO: entrada suma, salida resta.
+    const dir = (tipoActual && tipoActual.includes('SALIDA')) ? 'salida' : 'entrada';
+    items.push({
+      tipo: dir,
+      concepto: conceptoStr,
+      venc: venc != null ? venc : '',
+      importe: imp != null ? (parseFloat(imp) || 0) : null
+    });
+  }
+  return { items, balance };
+}
+
+function findSheet(wb, names) {
+  for (const n of names) {
+    const found = wb.SheetNames.find(s => s.trim().toUpperCase() === n.toUpperCase());
+    if (found) return found;
+  }
+  // Búsqueda parcial: la cabecera buscada debe estar contenida en el nombre real,
+  // no al revés (eso causaba falsos positivos).
+  for (const n of names) {
+    const target = n.toUpperCase();
+    const found = wb.SheetNames.find(s => s.trim().toUpperCase().includes(target));
+    if (found) return found;
+  }
+  return null;
+}
+
+// Normaliza el nombre del canal: mayúsculas y sin acentos.
+// SyS trae "Bodega", "Producción"... y Presupuesto trae "BODEGA", "PRODUCCION".
+// Los normalizamos para que el cruce real vs presupuesto funcione.
+function normalizeCanal(s) {
+  if (!s) return 'ESTRUCTURA';
+  return String(s).trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// =============================================================
+// MAPEO CENTRO DE COSTE (POR PROVEEDOR) -> CANAL (SUMAS Y SALDOS)
+// -------------------------------------------------------------
+// En la pestaña POR PROVEEDOR el centro viene como número (CENTRO_COSTE_1)
+// y en SUMAS Y SALDOS como nombre de canal. Esta es la correspondencia.
+// Inferida y verificada cruzando las cuentas de compras (600/602/607/608).
+// >>> Si A3 dice otra cosa, basta cambiar este bloque. <<<
+const CC_MAP = {
+  '1': 'ESTRUCTURA',
+  '2': 'BODEGA',
+  '3': 'PRODUCCION',
+  '4': 'BINIFADET',
+  '5': 'TIENDA',
+  '6': 'TAMARINDOS',
+  '7': 'TAMARINDOS BAR',
+  '8': 'TIRANT'
+};
+function centroToCanal(v) {
+  if (v == null || v === '') return null;
+  const k = String(v).trim().replace(/\.0$/, '');
+  return CC_MAP[k] || normalizeCanal(k); // si no está mapeado, intenta usar el valor tal cual normalizado
+}
+
+// Parser de la pestaña POR PROVEEDOR -> agrega por cuenta x canal x proveedor,
+// repartiendo la Base imponible por MES de fecha de factura.
+// Devuelve filas {cuenta, canal, proveedor, mensual[12], total} y un índice
+// 'cuenta|canal' -> true para saber rápido qué centros tienen detalle.
+function parsePorProveedor(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  // Localiza la fila de cabecera (contiene CUENTA y BASE IMPONIBLE)
+  let hi = -1;
+  for (let i = 0; i < Math.min(rows.length, 8); i++) {
+    const r = (rows[i]||[]).map(v => v ? String(v).toUpperCase().trim() : '');
+    if (r.includes('CUENTA') && r.some(h => h.startsWith('BASE'))) { hi = i; break; }
+  }
+  if (hi < 0) return null;
+  const H = rows[hi].map(v => v ? String(v).toUpperCase().trim() : '');
+  const idxCuenta = H.indexOf('CUENTA');
+  const idxProv   = H.findIndex(h => h.includes('NOMBRE') && h.includes('PROVEEDOR'));
+  const idxCC     = H.indexOf('CENTRO_COSTE_1');
+  const idxFecha  = H.indexOf('FECHA');
+  const idxBase   = H.findIndex(h => h.startsWith('BASE'));
+  if (idxCuenta < 0 || idxBase < 0) return null;
+
+  const mesDe = (val) => {
+    if (val == null) return null;
+    if (typeof val === 'number') { // serial Excel -> mes
+      const d = new Date(Date.UTC(1899,11,30) + val*86400000);
+      return d.getUTCMonth(); // 0..11
+    }
+    const s = String(val).trim();
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); // DD/MM/AAAA
+    if (m) return Math.min(11, Math.max(0, parseInt(m[2],10)-1));
+    const d = new Date(s);
+    return isNaN(d) ? null : d.getMonth();
+  };
+
+  const map = {}; // clave cuenta|canal|prov
+  const index = {};
+  for (let r = hi+1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row) continue;
+    const c0 = row[0] ? String(row[0]).trim() : '';
+    if (c0.toUpperCase().startsWith('FECHA')) continue; // fila separadora de bucket
+    const cuenta = row[idxCuenta] != null ? String(row[idxCuenta]).trim().replace(/\.0$/, '') : '';
+    if (!cuenta) continue;
+    const base = parseFloat(String(row[idxBase]).replace(',', '.'));
+    if (isNaN(base)) continue;
+    const canal = centroToCanal(idxCC >= 0 ? row[idxCC] : null) || 'ESTRUCTURA';
+    const prov  = idxProv >= 0 && row[idxProv] ? String(row[idxProv]).trim() : '(sin proveedor)';
+    let mi = idxFecha >= 0 ? mesDe(row[idxFecha]) : null;
+    if (mi == null) mi = 0; // si no hay fecha, lo dejamos en enero (no debería pasar)
+
+    const key = cuenta + '|' + canal + '|' + prov;
+    if (!map[key]) map[key] = {cuenta, canal, proveedor: prov, mensual: new Array(12).fill(0), total: 0};
+    map[key].mensual[mi] += base;
+    map[key].total += base;
+    index[cuenta + '|' + canal] = true;
+  }
+  const prov = Object.values(map);
+  prov.forEach(p => { p.total = p.mensual.reduce((a,b)=>a+b,0); });
+  return {prov, index};
+}
+
+// Encuentra la fila de cabeceras (la que contiene 'ENERO' / 'Enero' / 'enero')
+function findHeaderRow(rows, maxScan=8) {
+  for (let i = 0; i < Math.min(rows.length, maxScan); i++) {
+    const r = rows[i];
+    if (!r) continue;
+    if (r.some(v => v && String(v).toUpperCase().trim() === 'ENERO')) return i;
+  }
+  return 0;
+}
+
+function parseSumasYSaldos(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  const hi = findHeaderRow(rows);
+  const headers = rows[hi].map(v => v ? String(v).toUpperCase().trim() : '');
+
+  const cuentaIdx = headers.findIndex(h => h === 'CUENTA');
+  const descIdx   = headers.findIndex(h => h.startsWith('DESCRIPCION') || h.startsWith('DESCRIPCIÓN') || h === 'DESC');
+  const canalIdx  = headers.findIndex(h => h === 'CANAL' || h === 'DEPARTAMENTO');
+
+  const mesIdx = {};
+  MESES.forEach(m => {
+    const i = headers.indexOf(m);
+    if (i >= 0) mesIdx[m] = i;
+  });
+
+  if (cuentaIdx < 0) throw new Error('SUMAS Y SALDOS: no se encuentra columna CUENTA');
+
+  const result = [];
+  for (let r = hi + 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row || row[cuentaIdx] == null || row[cuentaIdx] === '') continue;
+
+    const cuenta = String(row[cuentaIdx]).trim();
+    // Solo cuentas de PyG: ingresos (7) y gastos (6)
+    if (!(cuenta.startsWith('6') || cuenta.startsWith('7'))) continue;
+
+    const desc  = row[descIdx] != null ? String(row[descIdx]).trim() : cuenta;
+    const canal = normalizeCanal(canalIdx >= 0 ? row[canalIdx] : null);
+
+    // Inversión de signo en cuentas 7 (vienen en negativo en SyS)
+    const isIngreso = cuenta.startsWith('7');
+    const flip = isIngreso ? -1 : 1;
+
+    const mensual = MESES.map(m => {
+      const idx = mesIdx[m];
+      if (idx == null) return 0;
+      const v = parseFloat(row[idx]);
+      return isNaN(v) ? 0 : v * flip;
+    });
+
+    const total = mensual.reduce((a,b) => a+b, 0);
+
+    // Saltar filas completamente vacías para no ensuciar la salida
+    if (Math.abs(total) < 0.005 && mensual.every(v => Math.abs(v) < 0.005)) continue;
+
+    result.push({cuenta, desc, canal, mensual, total});
+  }
+  return result;
+}
+
+function parsePresupuesto(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  const hi = findHeaderRow(rows);
+  const headers = rows[hi].map(v => v ? String(v).toUpperCase().trim() : '');
+
+  const cuentaIdx = headers.findIndex(h => h === 'CUENTA' || h === 'ACCOUNT');
+  const descIdx   = headers.findIndex(h => h === 'DESCRIPCION' || h === 'DESCRIPCIÓN' || h === 'DESCRIPTION' || h === 'DESC');
+  const canalIdx  = headers.findIndex(h => h === 'CANAL' || h === 'CHANNEL' || h === 'DEPARTAMENTO');
+
+  const mesIdx = {};
+  MESES.forEach(m => {
+    const i = headers.indexOf(m);
+    if (i >= 0) mesIdx[m] = i;
+  });
+
+  const result = [];
+  for (let r = hi + 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row || !row[cuentaIdx]) continue;
+    const cuenta = String(row[cuentaIdx]).trim();
+    if (!(cuenta.startsWith('6') || cuenta.startsWith('7'))) continue;
+
+    const desc  = row[descIdx] ? String(row[descIdx]).trim() : cuenta;
+    const canal = normalizeCanal(canalIdx >= 0 ? row[canalIdx] : null);
+    const mensual = MESES.map(m => {
+      const idx = mesIdx[m];
+      if (idx == null) return 0;
+      const v = parseFloat(row[idx]);
+      return isNaN(v) ? 0 : v;
+    });
+    result.push({cuenta, desc, canal, mensual, total: mensual.reduce((a,b)=>a+b,0)});
+  }
+  return result;
+}
+
+function parsePDC(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  const map = {};
+  let hi = 0;
+  for (let i = 0; i < Math.min(rows.length, 3); i++) {
+    if (rows[i] && rows[i][0] && String(rows[i][0]).toUpperCase().includes('CUENTA')) { hi = i; break; }
+  }
+  const headers = rows[hi] ? rows[hi].map(v => v ? String(v).toUpperCase().trim() : '') : [];
+  const tipoIdx  = headers.findIndex(h => h.includes('TIPO'));
+  // La columna de DESCRIPCION GRUPO CUENTAS es la más legible para mostrar al usuario
+  let grupoIdx = headers.findIndex(h => h.includes('DESCRIPCION') && h.includes('GRUPO'));
+  if (grupoIdx < 0) grupoIdx = headers.findIndex(h => h.includes('DESCRIPCIÓN') && h.includes('GRUPO'));
+  if (grupoIdx < 0) grupoIdx = 4;  // fallback al layout conocido
+  const idGrupoIdx = headers.findIndex(h => h.includes('ID') && h.includes('GRUPO'));
+
+  for (let r = hi + 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row || !row[0]) continue;
+    const cuenta = String(row[0]).trim();
+    const grupoDesc = row[grupoIdx] ? String(row[grupoIdx]).trim() : '';
+    const grupoId   = idGrupoIdx >= 0 && row[idGrupoIdx] ? String(row[idGrupoIdx]).trim() : cuenta.slice(0,4);
+    const tipo = tipoIdx >= 0 && row[tipoIdx] ? String(row[tipoIdx]).toUpperCase().trim() : 'NORMAL';
+    map[cuenta] = {
+      grupo: grupoDesc || grupoId,
+      grupoId,
+      interno: tipo === 'MERCADO INTERNO'
+    };
+  }
+  return map;
+}
+
+function getGrupo(cuenta) {
+  if (D.pdc[cuenta]) return D.pdc[cuenta].grupo;
+  const pref = String(cuenta).slice(0,4);
+  for (const k of Object.keys(D.pdc)) {
+    if (k.startsWith(pref)) return D.pdc[k].grupo;
+  }
+  return pref;
+}
+
+// Devuelve el ID/número del grupo de una cuenta (para mostrarlo junto a la descripción)
+function getGrupoId(cuenta) {
+  if (D.pdc[cuenta]) return D.pdc[cuenta].grupoId;
+  const pref = String(cuenta).slice(0,4);
+  for (const k of Object.keys(D.pdc)) {
+    if (k.startsWith(pref)) return D.pdc[k].grupoId;
+  }
+  return pref;
+}
+
+function isInterno(cuenta) {
+  if (D.pdc[cuenta]) return D.pdc[cuenta].interno;
+  return false;
+}
+
+function getTipo(cuenta) {
+  const c = String(cuenta);
+  if (c.startsWith('7')) return 'ingreso';
+  if (c.startsWith('6')) return 'gasto';
+  return 'neutro';
+}
+
+// =============================================================
+// AGGREGATION
+// =============================================================
+function aggregate(dataset, canalFilter, excluirInternos=false) {
+  if (!dataset) return null;
+  let filtered = canalFilter==='TODOS' ? dataset : dataset.filter(r=>r.canal===canalFilter);
+  if (excluirInternos) filtered = filtered.filter(r=>!isInterno(r.cuenta));
+  const map = {};
+  filtered.forEach(r => {
+    if (!map[r.cuenta]) {
+      map[r.cuenta] = {
+        cuenta:r.cuenta, desc:r.desc,
+        grupo: getGrupo(r.cuenta),
+        grupoId: getGrupoId(r.cuenta),
+        tipo: getTipo(r.cuenta),
+        mensual:[...r.mensual], total:r.total
+      };
+    } else {
+      r.mensual.forEach((v,i)=>map[r.cuenta].mensual[i]+=v);
+      map[r.cuenta].total += r.total;
+    }
+  });
+  return Object.values(map);
+}
+
+function sumByTipo(rows, tipo) {
+  return rows.filter(r=>r.tipo===tipo).reduce((s,r)=>s+r.total,0);
+}
+
+function sumMensual(rows, tipo) {
+  return MESES.map((_,i)=>rows.filter(r=>r.tipo===tipo).reduce((s,r)=>s+r.mensual[i],0));
+}
+
+// ---- TOOLBAR ----
+function buildToolbar() {
+  const seg = document.getElementById('canal-seg');
+  const canales = ['TODOS', ...D.canales];
+  seg.innerHTML = canales.map((c,i)=>`<button class="${i===0?'active':''}" onclick="setCanal('${c}',this)">${c}</button>`).join('');
+}
+
+function setCanal(c, btn) {
+  canal=c;
+  document.querySelectorAll('#canal-seg button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  refresh();
+}
+
+function setModoPresup(m, btn) {
+  modoPresup = m;
+  document.querySelectorAll('#btn-real,#btn-comparativo').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  refresh();
+}
+
+function setVistaPyg(v, btn) {
+  vistaPyg = v;
+  document.querySelectorAll('#btn-mensual,#btn-negocio').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const showCanal = v === 'mensual';
+  document.getElementById('canal-group').style.display = showCanal ? 'flex' : 'none';
+  document.getElementById('sep-canal').style.display = showCanal ? 'block' : 'none';
+  buildPYGTable();
+}
+
+function setDetalle(d, btn) {
+  detalle=d;
+  document.querySelectorAll('#btn-grupo,#btn-cuenta').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // al cambiar de detalle, colapsar todo lo expandido para evitar estados inconsistentes
+  expanded = {};
+  expandedCta = {};
+  expandedCC = {};
+  buildPYGTable();
+}
+
+function setMesHasta(m) {
+  mesHasta = parseInt(m, 10) || 12;
+  updatePeriodoBadge();
+  refresh();
+  // Si la pestaña Balance está activa, también la re-renderizamos (depende del mes)
+  const balActive = document.getElementById('tab-balance');
+  if (balActive && balActive.classList.contains('active')) buildBalance();
+}
+
+// Suma los primeros `n` meses de un array mensual (n = mesHasta)
+function updatePeriodoBadge() {
+  const el = document.getElementById('side-periodo');
+  if (el) el.textContent = mesHasta === 1 ? 'Enero 2026' : `Ene–${MS[mesHasta-1]} 2026`;
+}
+
+function sumHasta(arr, n) {
+  if (!arr) return 0;
+  let s = 0;
+  for (let i = 0; i < Math.min(n, arr.length); i++) s += (arr[i] || 0);
+  return s;
+}
+
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  // Las pestañas Balance/Tesorería/Pool no usan los filtros de Canal/Vista/Modo/Detalle del PyG
+  // (sólo Mes hasta es relevante en Balance). Ocultamos los grupos para no confundir.
+  const isPyG = (id === 'resumen' || id === 'pyg' || id === 'evolucion');
+  // "Mes hasta" y la descarga viven en la cabecera y siempre están visibles.
+  const tb = document.querySelector('.toolbar');
+  if (tb) tb.style.display = isPyG ? '' : 'none';
+  // Render lazy de las pestañas nuevas (siempre re-render por si cambió mesHasta)
+  if (id === 'balance')   buildBalance();
+  if (id === 'tesoreria') buildTesoreria();
+  if (id === 'pool')      buildPool();
+}
+
+// ---- REFRESH ----
+function refresh() {
+  const excl = canal === 'TODOS';
+  const rows  = aggregate(D.pyg, canal, excl);
+  // Pasamos SIEMPRE el presupuesto si está disponible. Las funciones de render
+  // ya saben cuándo mostrar la comparativa (sólo en modo 'comparativo') y cuándo
+  // usar el presupuesto sólo para las columnas totalizadoras (siempre que exista).
+  const rowsP = D.pre ? aggregate(D.pre, canal, excl) : null;
+  buildMetrics(rows, rowsP);
+  buildResumenCharts(rows, rowsP);
+  buildPYGTable(rows, rowsP);
+  buildEvolucionCharts(rows, rowsP);
+}
+
+// ---- METRICS ----
+function fmt(v,d=0){if(v==null||isNaN(v))return'—';return new Intl.NumberFormat('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:true}).format(v<0?Math.ceil(v):Math.floor(v))}
+function fmtK(v){const a=Math.abs(v);if(a>=1e6)return(v/1e6).toFixed(2)+'M€';if(a>=1e3)return(v/1e3).toFixed(0)+'K€';return fmt(v)+'€'}
+function pctDiff(a,b){if(!b)return null;return((a-b)/Math.abs(b)*100)}
+
+// EBITDA = Resultado + Amortizaciones (68x) + Gastos financieros (66x/67x)
+function calcEbitda(rows) {
+  const res = sumByTipo(rows,'ingreso') - sumByTipo(rows,'gasto');
+  const amort = rows.filter(r=>r.tipo==='gasto' && String(r.cuenta).startsWith('68')).reduce((s,r)=>s+r.total,0);
+  const fin   = rows.filter(r=>r.tipo==='gasto' && (String(r.cuenta).startsWith('66')||String(r.cuenta).startsWith('67'))).reduce((s,r)=>s+r.total,0);
+  return res + amort + fin;
+}
+function calcEbitdaMensual(rows) {
+  const ingM = sumMensual(rows,'ingreso');
+  const gtoM = sumMensual(rows,'gasto');
+  const amortM = MESES.map((_,i)=>rows.filter(r=>r.tipo==='gasto'&&String(r.cuenta).startsWith('68')).reduce((s,r)=>s+r.mensual[i],0));
+  const finM   = MESES.map((_,i)=>rows.filter(r=>r.tipo==='gasto'&&(String(r.cuenta).startsWith('66')||String(r.cuenta).startsWith('67'))).reduce((s,r)=>s+r.mensual[i],0));
+  return ingM.map((v,i)=>v - gtoM[i] + amortM[i] + finM[i]);
+}
+
+function buildMetrics(rows, rowsP) {
+  // Acumulamos hasta el mes seleccionado (sumando los `mesHasta` primeros meses)
+  const sumTipoHasta = (rs, tipo) => rs ? rs.filter(r=>r.tipo===tipo).reduce((s,r)=>s+sumHasta(r.mensual, mesHasta), 0) : 0;
+  const ebitdaHasta = (rs) => {
+    if (!rs) return null;
+    const res = sumTipoHasta(rs,'ingreso') - sumTipoHasta(rs,'gasto');
+    const amort = rs.filter(r=>r.tipo==='gasto' && String(r.cuenta).startsWith('68')).reduce((s,r)=>s+sumHasta(r.mensual, mesHasta), 0);
+    const fin   = rs.filter(r=>r.tipo==='gasto' && (String(r.cuenta).startsWith('66')||String(r.cuenta).startsWith('67'))).reduce((s,r)=>s+sumHasta(r.mensual, mesHasta), 0);
+    return res + amort + fin;
+  };
+
+  const ing = sumTipoHasta(rows,'ingreso');
+  const gto = sumTipoHasta(rows,'gasto');
+  const res = ing - gto;
+  const ebitda = ebitdaHasta(rows);
+  // Solo mostramos el delta "vs presup." en las métricas cuando estamos en modo comparativo.
+  // (rowsP siempre llega cargado si hay datos de presupuesto, pero el delta es propio del modo.)
+  const verComp = modoPresup === 'comparativo' && rowsP;
+  const ingP = verComp ? sumTipoHasta(rowsP,'ingreso') : null;
+  const resP = verComp ? sumTipoHasta(rowsP,'ingreso') - sumTipoHasta(rowsP,'gasto') : null;
+  const ebitdaP = verComp ? ebitdaHasta(rowsP) : null;
+  const margen = ing ? (res/ing*100) : 0;
+  const margenEbitda = ing ? (ebitda/ing*100) : 0;
+  const pd = ingP != null ? pctDiff(ing,ingP) : null;
+  const rd = resP != null ? pctDiff(res,resP) : null;
+  const ed = ebitdaP != null ? pctDiff(ebitda,ebitdaP) : null;
+
+  const periodoLabel = mesHasta === 12 ? 'Acumulado año' : `Acum. Ene-${MS[mesHasta-1]}`;
+
+  document.getElementById('metrics-area').innerHTML = `
+    <div class="metric">
+      <div class="m-label">Ingresos</div>
+      <div class="m-value">${fmtK(ing)}</div>
+      ${pd!=null?`<div class="m-delta ${pd>=0?'pos':'neg'}">${pd>=0?'▲':'▼'} ${Math.abs(pd).toFixed(1)}% vs presup.</div>`:`<div class="m-delta neu">${periodoLabel}</div>`}
+    </div>
+    <div class="metric">
+      <div class="m-label">Gastos</div>
+      <div class="m-value">${fmtK(gto)}</div>
+      <div class="m-delta neu">${ing?((gto/ing)*100).toFixed(1):'—'}% s/ingresos</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">EBITDA</div>
+      <div class="m-value" style="color:${ebitda>=0?'var(--green)':'var(--red)'}">${fmtK(ebitda)}</div>
+      ${ed!=null?`<div class="m-delta ${ed>=0?'pos':'neg'}">${ed>=0?'▲':'▼'} ${Math.abs(ed).toFixed(1)}% vs presup.</div>`:`<div class="m-delta neu">${margenEbitda.toFixed(1)}% s/ingresos</div>`}
+    </div>
+    <div class="metric">
+      <div class="m-label">Resultado</div>
+      <div class="m-value" style="color:${res>=0?'var(--green)':'var(--red)'}">${fmtK(res)}</div>
+      ${rd!=null?`<div class="m-delta ${rd>=0?'pos':'neg'}">${rd>=0?'▲':'▼'} ${Math.abs(rd).toFixed(1)}% vs presup.</div>`:`<div class="m-delta neu">${periodoLabel}</div>`}
+    </div>
+    <div class="metric">
+      <div class="m-label">Margen neto</div>
+      <div class="m-value" style="color:${margen>=0?'var(--green)':'var(--red)'}">${margen.toFixed(1)}%</div>
+      <div class="m-delta neu">${periodoLabel}</div>
+    </div>
+  `;
+}
+
+// ---- RESUMEN CHARTS ----
+function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+const baseOpts = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:GRID},ticks:{color:TC,font:{size:11}}},y:{grid:{color:GRID},ticks:{color:TC,font:{size:11},callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1e3?(v/1e3).toFixed(0)+'K':v}}}};
+
+function buildResumenCharts(rows, rowsP) {
+  dc('overview');
+  const ingM  = sumMensual(rows,'ingreso');
+  const gtoM  = sumMensual(rows,'gasto');
+  const ingPM = rowsP ? sumMensual(rowsP,'ingreso') : null;
+  // El gráfico overview muestra la línea de presupuesto SOLO en modo comparativo
+  const ingPMChart = (modoPresup === 'comparativo' && ingPM) ? ingPM : null;
+  charts['overview'] = new Chart(document.getElementById('c-overview').getContext('2d'),{
+    type:'bar',
+    data:{labels:MS,datasets:[
+      {label:'Ingresos real',data:ingM,backgroundColor:'rgba(29,158,117,0.7)',borderRadius:3},
+      {label:'Gastos real',data:gtoM,backgroundColor:'rgba(163,45,45,0.6)',borderRadius:3},
+      ...(ingPMChart?[{type:'line',label:'Ingresos presup.',data:ingPMChart,borderColor:'#185FA5',borderDash:[4,3],backgroundColor:'transparent',pointRadius:3,tension:.3}]:[])
+    ]},
+    options:{...baseOpts,plugins:{legend:{display:false}}}
+  });
+
+  const resM    = ingM.map((v,i)=>v-gtoM[i]);
+  const ebitdaM = calcEbitdaMensual(rows);
+  const gtoPM   = rowsP ? sumMensual(rowsP,'gasto') : null;
+
+  const ingT   = ingM.reduce((a,b)=>a+b,0);
+  const gtoT   = gtoM.reduce((a,b)=>a+b,0);
+  const resT   = ingT - gtoT;
+  const ebitdaT= ebitdaM.reduce((a,b)=>a+b,0);
+  const ingPT  = ingPM ? ingPM.reduce((a,b)=>a+b,0) : null;
+  const gtoPT  = gtoPM ? gtoPM.reduce((a,b)=>a+b,0) : null;
+
+  // En el Resumen, las filas extra de presupuesto y % desviación SOLO aparecen
+  // en modo comparativo. Las 4 columnas totalizadoras (PPTO 31/12 y PPTO ENE-X)
+  // se llenan SIEMPRE que haya presupuesto disponible (independiente del modo).
+  const hasP = !!rowsP;
+  const showPresupRows = modoPresup === 'comparativo' && hasP;
+
+  const rows_tbl = [
+    { label:'Ingresos',           vals:ingM,    total:ingT,    color:'var(--green)', bold:false },
+    { label:'Gastos',             vals:gtoM,    total:gtoT,    color:'var(--red)',   bold:false },
+    { label:'Resultado',          vals:resM,    total:resT,    color: null,          bold:true  },
+    { label:'EBITDA',             vals:ebitdaM, total:ebitdaT, color: null,          bold:true  },
+    { label:'% Resultado',        vals:ingM.map((v,i)=>v?resM[i]/v*100:0),    total:ingT?resT/ingT*100:0,    pct:true, color:null },
+    { label:'% EBITDA',           vals:ingM.map((v,i)=>v?ebitdaM[i]/v*100:0), total:ingT?ebitdaT/ingT*100:0, pct:true, color:null },
+    ...(showPresupRows ? [
+      { label:'Ingresos presup.',  vals:ingPM,   total:ingPT,   color:'var(--muted)', sub:true },
+      { label:'% Desv. ingresos',  vals:ingM.map((v,i)=>ingPM[i]?pctDiff(v,ingPM[i]):null), total:ingPT?pctDiff(ingT,ingPT):null, pct:true, desv:true, favDir:true },
+      { label:'Gastos presup.',    vals:gtoPM,   total:gtoPT,   color:'var(--muted)', sub:true },
+      { label:'% Desv. gastos',    vals:gtoM.map((v,i)=>gtoPM[i]?pctDiff(v,gtoPM[i]):null), total:gtoPT?pctDiff(gtoT,gtoPT):null, pct:true, desv:true, favDir:false },
+    ] : [])
+  ];
+
+  const fmtCell = (v, pct, desv, favDir) => {
+    if (v==null) return '<td>—</td>';
+    if (pct) {
+      const cls = desv ? ((favDir?v<=0:v>=0)?'dv-pos':'dv-neg') : '';
+      return `<td class="${cls}">${v>=0?'':'-'}${Math.abs(v).toFixed(1)}%</td>`;
+    }
+    const style = (v<0)?'color:var(--red)':'';
+    return `<td ${style?`style="${style}"`:''}>${fmt(v)}</td>`;
+  };
+
+  let html = `<thead><tr>
+    <th style="text-align:left;position:sticky;left:0;background:var(--bg);min-width:160px"></th>
+    <th style="background:var(--acc-strong);color:var(--green-dark);font-weight:600">REAL ENE-${MS[mesHasta-1].toUpperCase()}</th>
+    <th style="background:var(--acc-strong);color:var(--green-dark);font-weight:600">PPTO ENE-${MS[mesHasta-1].toUpperCase()}</th>
+    <th style="background:var(--acc);color:var(--green-dark);font-weight:600">DIFERENCIA</th>
+    <th style="background:var(--acc);color:var(--green-dark);font-weight:600">VARIACIÓN %</th>
+    ${MS.map((m,i)=>`<th style="${i>=mesHasta?'opacity:.45':''}">${m}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  rows_tbl.forEach(r => {
+    const style = r.bold ? 'font-weight:700;' : r.sub ? 'color:var(--muted);font-size:11px;' : '';
+    // Total Real 31/12 = ya viene calculado en r.total (sólo se usa para no-presupuesto)
+    // Para filas de presupuesto reales (Ingresos/Gastos presup.) r.total ya es el ppto anual
+    // Para filas de % desviación necesitamos cálculos especiales
+    const totalReal12 = r.total;
+
+    // PPTO 31/12: depende de la fila
+    let pptoReal12 = null;
+    let realHasta = null;
+    let pptoHasta = null;
+
+    if (r.pct && r.desv) {
+      // Fila de % desviación: cálculo especial
+      // No mostramos PPTO 31/12 separado, pero sí los acumulados de desviación
+      pptoReal12 = null;
+      const isIng = r.label.includes('ingresos');
+      const realAcum = isIng ? sumHasta(ingM, mesHasta) : sumHasta(gtoM, mesHasta);
+      const pptoAcum = isIng ? (ingPM?sumHasta(ingPM, mesHasta):null) : (gtoPM?sumHasta(gtoPM, mesHasta):null);
+      realHasta = pptoAcum ? pctDiff(realAcum, pptoAcum) : null;
+      pptoHasta = null; // sólo una columna agregada para esta métrica
+    } else if (r.pct) {
+      // Fila de % (% Resultado o % EBITDA): mostramos % sobre ingresos acumulados hasta mes
+      pptoReal12 = null;
+      const ingAcum = sumHasta(ingM, mesHasta);
+      if (r.label.includes('Resultado')) {
+        const acum = sumHasta(resM, mesHasta);
+        realHasta = ingAcum ? acum/ingAcum*100 : 0;
+      } else {
+        const acum = sumHasta(ebitdaM, mesHasta);
+        realHasta = ingAcum ? acum/ingAcum*100 : 0;
+      }
+      pptoHasta = null;
+    } else {
+      // Filas normales (Ingresos, Gastos, Resultado, EBITDA, presup.)
+      // PPTO 31/12: emparejamos por label
+      if (r.sub && r.label.includes('Ingresos')) { pptoReal12 = ingPT; }
+      else if (r.sub && r.label.includes('Gastos')) { pptoReal12 = gtoPT; }
+      else if (r.label === 'Ingresos') { pptoReal12 = ingPT; }
+      else if (r.label === 'Gastos') { pptoReal12 = gtoPT; }
+      else if (r.label === 'Resultado') { pptoReal12 = (ingPT!=null&&gtoPT!=null) ? (ingPT-gtoPT) : null; }
+      else if (r.label === 'EBITDA') { pptoReal12 = null; /* no calculamos ebitda presupuesto aquí */ }
+
+      // Acumulado hasta mes (sumamos los primeros mesHasta meses de r.vals)
+      realHasta = sumHasta(r.vals, mesHasta);
+      // PPTO acumulado: igual que pptoReal12 pero hasta mes
+      if (r.sub && r.label.includes('Ingresos')) { pptoHasta = ingPM ? sumHasta(ingPM, mesHasta) : null; }
+      else if (r.sub && r.label.includes('Gastos')) { pptoHasta = gtoPM ? sumHasta(gtoPM, mesHasta) : null; }
+      else if (r.label === 'Ingresos') { pptoHasta = ingPM ? sumHasta(ingPM, mesHasta) : null; }
+      else if (r.label === 'Gastos') { pptoHasta = gtoPM ? sumHasta(gtoPM, mesHasta) : null; }
+      else if (r.label === 'Resultado') { pptoHasta = (ingPM&&gtoPM) ? (sumHasta(ingPM,mesHasta)-sumHasta(gtoPM,mesHasta)) : null; }
+      else { pptoHasta = null; }
+    }
+
+    const fmtTotalCell = (v, isPct, bgColor) => {
+      if (v == null) return `<td style="background:${bgColor};font-weight:600">—</td>`;
+      if (isPct) {
+        return `<td style="background:${bgColor};font-weight:600">${v>=0?'':'-'}${Math.abs(v).toFixed(1)}%</td>`;
+      }
+      const color = v < 0 ? 'color:var(--red);' : '';
+      return `<td style="background:${bgColor};font-weight:600;${color}">${fmt(v)}</td>`;
+    };
+
+    const favDirRow = !(r.label && r.label.toLowerCase().includes('gastos'));
+    let difH = null, varH = null;
+    if (!r.pct && realHasta != null && pptoHasta != null) {
+      difH = realHasta - pptoHasta;
+      varH = Math.abs(pptoHasta) > 0.005 ? (realHasta - pptoHasta) / Math.abs(pptoHasta) * 100 : null;
+    }
+    html += `<tr>
+      <td style="text-align:left;position:sticky;left:0;background:var(--surface);${style}">${r.label}</td>
+      ${fmtTotalCell(realHasta, r.pct, '#e3ecf6')}
+      ${fmtTotalCell(pptoHasta, r.pct, '#e3ecf6')}
+      ${difCell(difH, favDirRow)}
+      ${varCell(varH, favDirRow)}
+      ${r.vals.map((v,i)=>{
+        const dim = i>=mesHasta ? 'opacity:.45;' : '';
+        if (v==null) return `<td style="${dim}">—</td>`;
+        if (r.pct) {
+          const cls = r.desv ? ((r.favDir?v<=0:v>=0)?'dv-pos':'dv-neg') : '';
+          return `<td class="${cls}" style="${dim}">${v>=0?'':'-'}${Math.abs(v).toFixed(1)}%</td>`;
+        }
+        const sty = (v<0)?'color:var(--red);':'';
+        return `<td style="${sty}${dim}">${fmt(v)}</td>`;
+      }).join('')}
+    </tr>`;
+  });
+
+  html += '</tbody>';
+  document.getElementById('tbl-resumen').innerHTML = html;
+}
+
+// ---- PYG TABLE ----
+function buildPYGTable(rows, rowsP) {
+  if (vistaPyg === 'negocio') {
+    buildNegocioTable();
+    return;
+  }
+  if (!rows) {
+    const excl = canal === 'TODOS';
+    rows  = aggregate(D.pyg, canal, excl);
+    // Cargamos SIEMPRE el presupuesto si existe — las 4 columnas totalizadoras
+    // (PPTO 31/12 y PPTO ENE-X) deben mostrarse en ambos modos. El modo
+    // "Vs Presupuesto" solo controla si en las celdas mensuales aparecen
+    // las cifras de presupuesto entre paréntesis y la desviación.
+    rowsP = D.pre ? aggregate(D.pre, canal, excl) : null;
+  }
+
+  const title = canal==='TODOS'?'Global':'Canal: '+canal;
+  document.getElementById('pyg-title').textContent = `Cuenta de resultados — ${title}`;
+  const hayComparativa = (modoPresup === 'comparativo') && D.pre;
+  document.getElementById('pyg-sub').textContent = hayComparativa ? 'Real · con presupuesto entre paréntesis' : 'Real';
+
+  const monthLabel = MS[mesHasta-1].toUpperCase();
+  let html = `<thead><tr>
+    <th style="text-align:left;min-width:240px;position:sticky;left:0;z-index:2;background:var(--bg)">${detalle==='grupo'?'Grupo':'Cuenta'}</th>
+    <th style="background:var(--acc-strong);color:var(--green-dark);font-weight:600">REAL ENE-${monthLabel}</th>
+    <th style="background:var(--acc-strong);color:var(--green-dark);font-weight:600">PPTO ENE-${monthLabel}</th>
+    <th style="background:var(--acc);color:var(--green-dark);font-weight:600">DIFERENCIA</th>
+    <th style="background:var(--acc);color:var(--green-dark);font-weight:600">VARIACIÓN %</th>
+    ${MS.map((m,i)=>`<th style="${i>=mesHasta?'opacity:.45':''}">${m}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  if (detalle === 'grupo') {
+    html += buildGroupedRows(rows, rowsP);
+  } else {
+    html += buildDetailRows(rows, rowsP);
+  }
+
+  const ingR = sumMensual(rows,'ingreso');
+  const gtoR = sumMensual(rows,'gasto');
+  const resR = ingR.map((v,i)=>v-gtoR[i]);
+  const ingP = rowsP ? sumMensual(rowsP,'ingreso') : null;
+  const gtoP = rowsP ? sumMensual(rowsP,'gasto') : null;
+  const resP = ingP ? ingP.map((v,i)=>v-gtoP[i]) : null;
+
+  html += monthlySumRow('TOTAL INGRESOS', ingR, ingP, true, 'r-total');
+  html += monthlySumRow('TOTAL GASTOS', gtoR, gtoP, false, 'r-total');
+  html += monthlySumRow('RESULTADO NETO', resR, resP, true, 'r-result');
+
+  html += '</tbody>';
+  document.getElementById('tbl-pyg').innerHTML = html;
+}
+
+function cell(vR, vP, favDir, opts) {
+  const dim = opts && opts.dim ? 'opacity:.45;' : '';
+  const sty = dim ? ` style="${dim}"` : '';
+  // Solo mostramos la comparativa entre paréntesis si estamos en modo comparativo
+  const verComparativa = modoPresup === 'comparativo' && D.pre && vP != null;
+  if (!verComparativa) return `<td${sty}>${fmt(vR)}</td>`;
+  const d = vR - vP;
+  const cls = (favDir ? d>=0 : d<=0) ? 'dv-pos' : 'dv-neg';
+  return `<td${sty}><span>${fmt(vR)}</span><br><span style="font-size:10px;color:var(--muted)">(${fmt(vP)})</span>${Math.abs(d)>0.5?`<br><span class="${cls}" style="font-size:10px">${d>=0?'+':''}${fmt(d)}</span>`:''}</td>`;
+}
+
+// Celda totalizadora: real y presupuesto en celdas separadas
+// kind: 'realH'|'pptoH'  (controla fondo)
+function totCell(v, kind, favDir, pVal) {
+  const bg = '#e3ecf6';
+  if (v == null) return `<td style="background:${bg};font-weight:600">—</td>`;
+  const color = v < 0 ? 'color:var(--red);' : '';
+  return `<td style="background:${bg};font-weight:600;${color}">${fmt(v)}</td>`;
+}
+
+// Celda de DIFERENCIA (Real - Ppto, acumulado). Color favorable/desfavorable según favDir.
+function difCell(v, favDir) {
+  const bg = 'var(--acc)';
+  if (v == null) return `<td style="background:${bg};font-weight:600">—</td>`;
+  const cls = (favDir ? v>=0 : v<=0) ? 'dv-pos' : 'dv-neg';
+  return `<td class="${cls}" style="background:${bg};font-weight:600">${v>=0?'+':''}${fmt(v)}</td>`;
+}
+// Celda de VARIACIÓN % ((Real - Ppto)/|Ppto|). Mismo criterio de color.
+function varCell(v, favDir) {
+  const bg = 'var(--acc)';
+  if (v == null) return `<td style="background:${bg};font-weight:600">—</td>`;
+  const cls = (favDir ? v>=0 : v<=0) ? 'dv-pos' : 'dv-neg';
+  return `<td class="${cls}" style="background:${bg};font-weight:600">${v>=0?'+':''}${v.toFixed(1)}%</td>`;
+}
+
+// Construye las 4 celdas totalizadoras: Diferencia · Variación % · Real Ene-X · Ppto Ene-X
+function buildTotalCells(valsR, valsP, favDir) {
+  const realH = sumHasta(valsR, mesHasta);
+  const pptoH = valsP ? sumHasta(valsP, mesHasta) : null;
+  const dif    = pptoH != null ? realH - pptoH : null;
+  const varPct = (pptoH != null && Math.abs(pptoH) > 0.005) ? (realH - pptoH) / Math.abs(pptoH) * 100 : null;
+  return totCell(realH, 'realH', favDir) +
+         totCell(pptoH, 'pptoH', favDir) +
+         difCell(dif, favDir) +
+         varCell(varPct, favDir);
+}
+
+function monthlySumRow(label, valsR, valsP, favDir, cls) {
+  const sticky = `style="text-align:left;position:sticky;left:0;z-index:1;background:${cls==='r-result'?'#fdf6e8':'var(--acc-cell)'}"`;
+  return `<tr class="${cls}">
+    <td ${sticky}>${label}</td>
+    ${buildTotalCells(valsR, valsP, favDir)}
+    ${valsR.map((v,i)=>cell(v, valsP?valsP[i]:null, favDir, {dim: i>=mesHasta})).join('')}
+  </tr>`;
+}
+
+// Devuelve el número mínimo de cuenta de un grupo (para ordenar grupos numéricamente)
+function minCuentaGrupo(rs, grupo, tipo) {
+  let min = null;
+  rs.filter(r=>r.tipo===tipo && r.grupo===grupo).forEach(r=>{
+    if (min === null || String(r.cuenta) < String(min)) min = r.cuenta;
+  });
+  return min || '';
+}
+
+// Construye filas de detalle por centro de coste de una cuenta (drill-down nivel 2).
+// Usa SIEMPRE el dataset global (D.pyg/D.pre), no el filtrado por canal,
+// porque queremos ver el desglose por centro.
+function buildCentrosRows(cuenta, favDir, indent) {
+  const sty = `style="text-align:left;position:sticky;left:0;background:#fbfbf9;padding-left:${indent}px;color:var(--muted);font-style:italic;font-size:11px"`;
+  // Agrupamos las filas brutas de D.pyg por canal para esa cuenta
+  // Si canal != TODOS, sólo mostramos ese canal (no tiene sentido desglosar uno solo, pero respetamos consistencia)
+  const filas = D.pyg.filter(r => r.cuenta === cuenta && (canal === 'TODOS' || r.canal === canal));
+  // Agrupar por canal
+  const porCanal = {};
+  filas.forEach(r => {
+    if (!porCanal[r.canal]) porCanal[r.canal] = new Array(12).fill(0);
+    r.mensual.forEach((v,i)=> porCanal[r.canal][i] += v);
+  });
+  const porCanalP = {};
+  if (D.pre) {
+    D.pre.filter(r => r.cuenta === cuenta && (canal === 'TODOS' || r.canal === canal)).forEach(r => {
+      if (!porCanalP[r.canal]) porCanalP[r.canal] = new Array(12).fill(0);
+      r.mensual.forEach((v,i)=> porCanalP[r.canal][i] += v);
+    });
+  }
+  const canalesCta = Object.keys(porCanal)
+    .filter(c => Math.abs(sumHasta(porCanal[c], mesHasta)) > 0.01)
+    .sort();
+  if (canalesCta.length === 0) {
+    return `<tr class="r-det"><td ${sty} colspan="17">— sin movimiento en el periodo —</td></tr>`;
+  }
+  // El presupuesto se pasa SIEMPRE (si existe) a las 4 columnas totalizadoras.
+  // Para las celdas mensuales, cell() ya respeta modoPresup internamente.
+  const hayPresup = !!D.pre;
+  let html = '';
+  canalesCta.forEach(c => {
+    const valsR = porCanal[c];
+    const valsP = hayPresup ? (porCanalP[c] || new Array(12).fill(0)) : null;
+    // ¿Hay detalle de proveedor para esta cuenta y este centro?
+    const tieneProv = !!(D.provIndex && D.provIndex[cuenta + '|' + c]);
+    const ccKey = cuenta + '|' + c;
+    const isOpenCC = !!expandedCC[ccKey];
+    const caret = tieneProv ? `<span class="expand-btn">${isOpenCC ? '▼' : '▶'}</span>` : '<span class="expand-btn"></span>';
+    const cEsc = String(c).replace(/'/g,"\\'");
+    const click = tieneProv ? ` onclick="toggleCentro('${String(cuenta).replace(/'/g,"\\'")}','${cEsc}')" style="cursor:pointer"` : '';
+    const styClick = tieneProv ? sty.replace('font-style:italic', 'font-style:italic;cursor:pointer') : sty;
+    html += `<tr class="r-det"${click}>
+      <td ${styClick}>${caret}↳ ${c}</td>
+      ${buildTotalCells(valsR, valsP, favDir)}
+      ${valsR.map((v,i)=>cell(v, valsP?valsP[i]:null, favDir, {dim: i>=mesHasta})).join('')}
+    </tr>`;
+    if (tieneProv && isOpenCC) {
+      html += buildProveedoresRows(cuenta, c, favDir, indent + 18);
+    }
+  });
+  return html;
+}
+
+// Construye filas de detalle por PROVEEDOR de una cuenta y un centro (drill-down nivel 4).
+// Reparte la Base imponible por mes de fecha de factura. No lleva presupuesto.
+function buildProveedoresRows(cuenta, canalC, favDir, indent) {
+  const sty = `style="text-align:left;position:sticky;left:0;background:#fafaf8;padding-left:${indent}px;color:#8c8c88;font-size:11px"`;
+  if (!D.prov) return '';
+  const filas = D.prov
+    .filter(p => p.cuenta === cuenta && p.canal === canalC)
+    .filter(p => Math.abs(sumHasta(p.mensual, mesHasta)) > 0.01)
+    .sort((a,b) => Math.abs(sumHasta(b.mensual, mesHasta)) - Math.abs(sumHasta(a.mensual, mesHasta)));
+  if (filas.length === 0) {
+    return `<tr class="r-det"><td ${sty} colspan="17">— sin facturas en el periodo —</td></tr>`;
+  }
+  let html = '';
+  filas.forEach(p => {
+    html += `<tr class="r-det">
+      <td ${sty}>· ${p.proveedor}</td>
+      ${buildTotalCells(p.mensual, null, favDir)}
+      ${p.mensual.map((v,i)=>cell(v, null, favDir, {dim: i>=mesHasta})).join('')}
+    </tr>`;
+  });
+  return html;
+}
+
+function buildGroupedRows(rows, rowsP) {
+  const tipos = [
+    {tipo:'ingreso', label:'INGRESOS'},
+    {tipo:'gasto',   label:'GASTOS'}
+  ];
+  let html = '';
+  const colSpan = 17; // 1 concepto + 4 totalizadoras + 12 meses
+  tipos.forEach(({tipo, label}) => {
+    const favDir = tipo==='ingreso';
+    html += `<tr class="r-grp" style="background:var(--acc)">
+      <td colspan="${colSpan}" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--green-dark);position:sticky;left:0">${label}</td>
+    </tr>`;
+
+    // Agregamos por grupo
+    const gruposMap = {};
+    rows.filter(r=>r.tipo===tipo).forEach(r=>{
+      if (!gruposMap[r.grupo]) gruposMap[r.grupo] = {mensual:new Array(12).fill(0), cuentas:[]};
+      r.mensual.forEach((v,i)=>gruposMap[r.grupo].mensual[i]+=v);
+      gruposMap[r.grupo].cuentas.push(r);
+    });
+
+    // Orden por número de cuenta mínima del grupo (ascendente, estable año a año).
+    // Mostramos SIEMPRE todos los grupos, tengan saldo o no en el periodo —
+    // así el orden y el conjunto de filas no cambian al mover "Mes hasta".
+    const entries = Object.entries(gruposMap)
+      .map(([g,d])=>([g, d, sumHasta(d.mensual, mesHasta), minCuentaGrupo(rows, g, tipo)]))
+      .sort((a,b)=> String(a[3]).localeCompare(String(b[3])));
+
+    entries.forEach(([grp, gd, , minCta]) => {
+      const gid = getGrupoId(minCta);
+      const gLabel = (gid && grp !== gid) ? `${gid} · ${grp}` : grp;
+      const valsR = gd.mensual;
+      let valsP = null;
+      if (rowsP) {
+        valsP = new Array(12).fill(0);
+        rowsP.filter(r=>r.tipo===tipo&&r.grupo===grp).forEach(r=>{
+          r.mensual.forEach((v,i)=>valsP[i]+=v);
+        });
+      }
+      const cls = tipo==='ingreso'?'r-ing':'r-gto';
+      const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#f5fbf8':'#fdfaf8'};cursor:pointer;user-select:none"`;
+      const isOpen = !!expanded[grp];
+      const caret = isOpen ? '▼' : '▶';
+      const grpEsc = grp.replace(/"/g,'&quot;');
+      html += `<tr class="${cls}" onclick="toggleGrupo('${grpEsc.replace(/'/g,"\\'")}', '${tipo}')">
+        <td ${sticky}><span class="expand-btn">${caret}</span>${gLabel}</td>
+        ${buildTotalCells(valsR, valsP, favDir)}
+        ${valsR.map((v,i)=>cell(v, valsP?valsP[i]:null, favDir, {dim: i>=mesHasta})).join('')}
+      </tr>`;
+
+      // Si el grupo está expandido, listar sus cuentas (ordenadas por número)
+      // También filtradas por saldo acumulado hasta mesHasta
+      if (isOpen) {
+        const cuentasGrp = rows.filter(r=>r.tipo===tipo && r.grupo===grp)
+          .sort((a,b)=> String(a.cuenta).localeCompare(String(b.cuenta)));
+        cuentasGrp.forEach(r => {
+          const pRow = rowsP ? rowsP.find(x=>x.cuenta===r.cuenta) : null;
+          const ctaValsP = pRow ? pRow.mensual : null;
+          const ctaSticky = `style="text-align:left;position:sticky;left:0;background:#fafafa;padding-left:24px;cursor:pointer;user-select:none"`;
+          const isOpenCta = !!expandedCta[r.cuenta];
+          const caretCta = isOpenCta ? '▼' : '▶';
+          html += `<tr class="r-det" onclick="toggleCuenta('${r.cuenta}')">
+            <td ${ctaSticky}><span class="expand-btn">${caretCta}</span>${r.cuenta} · ${r.desc}</td>
+            ${buildTotalCells(r.mensual, ctaValsP, favDir)}
+            ${r.mensual.map((v,i)=>cell(v, ctaValsP?ctaValsP[i]:null, favDir, {dim: i>=mesHasta})).join('')}
+          </tr>`;
+          if (isOpenCta) {
+            html += buildCentrosRows(r.cuenta, favDir, 40);
+          }
+        });
+      }
+    });
+  });
+  return html;
+}
+
+function buildDetailRows(rows, rowsP) {
+  let html = '';
+  const colSpan = 17;
+  // Orden: primero ingresos, luego gastos; dentro de cada tipo por número de cuenta.
+  // Mostramos SIEMPRE todas las cuentas, tengan saldo o no en el periodo.
+  const sorted = [...rows].filter(r=>r.tipo!=='neutro')
+    .sort((a,b)=>{
+      if (a.tipo!==b.tipo) return a.tipo==='ingreso'?-1:1;
+      return String(a.cuenta).localeCompare(String(b.cuenta));
+    });
+  let lastTipo = null;
+  sorted.forEach(r => {
+    if (r.tipo !== lastTipo) {
+      html += `<tr class="r-grp" style="background:var(--acc)"><td colspan="${colSpan}" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--green-dark);position:sticky;left:0">${r.tipo==='ingreso'?'INGRESOS':'GASTOS'}</td></tr>`;
+      lastTipo = r.tipo;
+    }
+    const favDir = r.tipo==='ingreso';
+    const pRow = rowsP ? rowsP.find(x=>x.cuenta===r.cuenta) : null;
+    const svalsP = pRow ? pRow.mensual : null;
+    const cls = r.tipo==='ingreso'?'r-ing':'r-gto';
+    const sticky = `style="text-align:left;position:sticky;left:0;background:${r.tipo==='ingreso'?'#f5fbf8':'#fdfaf8'};cursor:pointer;user-select:none"`;
+    const isOpenCta = !!expandedCta[r.cuenta];
+    const caretCta = isOpenCta ? '▼' : '▶';
+    html += `<tr class="${cls}" onclick="toggleCuenta('${r.cuenta}')" title="${r.cuenta}">
+      <td ${sticky}><span class="expand-btn">${caretCta}</span>${r.cuenta} · ${r.desc}</td>
+      ${buildTotalCells(r.mensual, svalsP, favDir)}
+      ${r.mensual.map((v,i)=>cell(v, svalsP?svalsP[i]:null, favDir, {dim: i>=mesHasta})).join('')}
+    </tr>`;
+    if (isOpenCta) {
+      html += buildCentrosRows(r.cuenta, favDir, 24);
+    }
+  });
+  return html;
+}
+
+function toggleGrupo(grp, tipo) {
+  expanded[grp] = !expanded[grp];
+  // Si colapsamos un grupo, también colapsamos las cuentas que tenía abiertas
+  if (!expanded[grp]) {
+    // Buscar las cuentas de ese grupo en el dataset actual y cerrarlas
+    const excl = canal === 'TODOS';
+    const rows = aggregate(D.pyg, canal, excl);
+    rows.filter(r=>r.grupo===grp && r.tipo===tipo).forEach(r => {
+      delete expandedCta[r.cuenta];
+      Object.keys(expandedCC).forEach(k => { if (k.startsWith(r.cuenta + '|')) delete expandedCC[k]; });
+    });
+  }
+  buildPYGTable();
+}
+
+function toggleCuenta(cuenta) {
+  expandedCta[cuenta] = !expandedCta[cuenta];
+  // Si colapsamos la cuenta, cerramos también los centros que tuviera abiertos
+  if (!expandedCta[cuenta]) {
+    Object.keys(expandedCC).forEach(k => { if (k.startsWith(cuenta + '|')) delete expandedCC[k]; });
+  }
+  buildPYGTable();
+}
+
+function toggleCentro(cuenta, canalC) {
+  const k = cuenta + '|' + canalC;
+  expandedCC[k] = !expandedCC[k];
+  buildPYGTable();
+}
+
+// =============================================================
+// EXPORTAR A EXCEL — detalle del PyG por cuenta · centro · proveedor
+// Genera el libro en el navegador con la librería XLSX ya cargada.
+// No hay backend ni claves: usa los datos ya cargados en memoria (D).
+// =============================================================
+function expRound2(v){ return Math.round((Number(v)||0)*100)/100; }
+
+function expStyleSheet(ws, header){
+  const wide = new Set(['Grupo','Cuenta','Proveedor']);
+  ws['!cols'] = header.map(h => ({ wch: wide.has(h) ? 32 : (String(h).length > 9 ? 13 : 11) }));
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  ws['!autofilter'] = { ref: ws['!ref'] };
+  for (let R = 1; R <= range.e.r; R++) {
+    for (let C = 0; C <= range.e.c; C++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+      if (cell && typeof cell.v === 'number') cell.z = '#,##0.00';
+    }
+  }
+}
+
+function exportExcel(){
+  if (!D || !D.pyg || !D.pyg.length) { alert('No hay datos cargados todavía.'); return; }
+  const MESES_TXT = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mh = mesHasta;
+  const acumLabel = mh === 12 ? 'Total año' : 'Acum. Ene-' + MS[mh-1];
+  const tipoTxt = c => getTipo(c) === 'ingreso' ? 'Ingreso' : (getTipo(c) === 'gasto' ? 'Gasto' : 'Otro');
+
+  // descripción de cuenta a partir del PyG y del Balance (cubre también inmovilizado), con PDC de respaldo
+  const descByCuenta = {};
+  D.pyg.forEach(r => { if (!descByCuenta[r.cuenta]) descByCuenta[r.cuenta] = r.desc; });
+  if (D.balanceRows) D.balanceRows.forEach(r => { if (!descByCuenta[r.cuenta]) descByCuenta[r.cuenta] = r.desc; });
+  const descDe = c => descByCuenta[c] || (D.pdc[c] ? (D.pdc[c].desc || c) : c);
+
+  // ---- Hoja 1: PyG por cuenta y centro (origen: Sumas y Saldos; oficial y completo) ----
+  const head1 = ['Tipo','Grupo','Nº Cuenta','Cuenta','Centro de coste', ...MESES_TXT, 'Total año', acumLabel];
+  const rows1 = [head1];
+  [...D.pyg].sort((a,b)=>{
+    const ta=getTipo(a.cuenta), tb=getTipo(b.cuenta);
+    if (ta!==tb) return ta==='ingreso'?-1:1;
+    if (a.cuenta!==b.cuenta) return String(a.cuenta).localeCompare(String(b.cuenta));
+    return String(a.canal).localeCompare(String(b.canal));
+  }).forEach(r=>{
+    rows1.push([ tipoTxt(r.cuenta), getGrupo(r.cuenta), r.cuenta, r.desc, r.canal,
+      ...r.mensual.map(expRound2), expRound2(r.mensual.reduce((a,b)=>a+b,0)), expRound2(sumHasta(r.mensual, mh)) ]);
+  });
+
+  // ---- Hoja 2: Detalle por proveedor (origen: Por proveedor; por fecha de factura) ----
+  let rows2 = null, head2 = null;
+  if (D.prov && D.prov.length) {
+    head2 = ['Tipo','Grupo','Nº Cuenta','Cuenta','Centro de coste','Proveedor', ...MESES_TXT, 'Total año', acumLabel];
+    rows2 = [head2];
+    [...D.prov].sort((a,b)=>{
+      if (a.cuenta!==b.cuenta) return String(a.cuenta).localeCompare(String(b.cuenta));
+      if (a.canal!==b.canal) return String(a.canal).localeCompare(String(b.canal));
+      return b.total - a.total;
+    }).forEach(p=>{
+      rows2.push([ tipoTxt(p.cuenta), getGrupo(p.cuenta), p.cuenta, descDe(p.cuenta), p.canal, p.proveedor,
+        ...p.mensual.map(expRound2), expRound2(p.mensual.reduce((a,b)=>a+b,0)), expRound2(sumHasta(p.mensual, mh)) ]);
+    });
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+  expStyleSheet(ws1, head1);
+  XLSX.utils.book_append_sheet(wb, ws1, 'PyG cuenta-centro');
+  if (rows2) {
+    const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+    expStyleSheet(ws2, head2);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Detalle proveedor');
+  }
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `PyG_Bonita_detalle_${fecha}.xlsx`);
+}
+
+// Mantenemos toggleExpand por si alguna versión antigua lo invoca (compat.)
+function toggleExpand(grp, btn) {
+  if (btn) btn.textContent = !expanded[grp] ? '▼' : '▶';
+  expanded[grp] = !expanded[grp];
+  buildPYGTable();
+}
+
+// ---- VISTA POR NEGOCIO ----
+function buildNegocioTable() {
+  const canales = D.canales;
+  const hayPresup = !!D.pre;
+  const usePresup = modoPresup === 'comparativo' && hayPresup;
+  const rowsTotal  = aggregate(D.pyg,  'TODOS', true);
+  const rowsPC     = canales.map(c => aggregate(D.pyg,  c, false));
+  // Cargamos SIEMPRE el presupuesto si existe — necesario para las 4 columnas totalizadoras.
+  // El modo "Vs Presupuesto" solo controla si las celdas de centros muestran la comparativa.
+  const rowsPTotal = hayPresup ? aggregate(D.pre, 'TODOS', true)              : null;
+  const rowsPC_P   = hayPresup ? canales.map(c => aggregate(D.pre, c, false)) : null;
+
+  const monthLabel = MS[mesHasta-1].toUpperCase();
+  document.getElementById('pyg-title').textContent = 'Vista por negocio';
+  document.getElementById('pyg-sub').textContent = `Columnas: 4 totalizadoras + ${canales.join(' · ')}${usePresup ? ' · vs presupuesto' : ''}`;
+
+  const CANAL_COLS = ['#185FA5','#1D9E75','#BA7517','#7F77DD','#A32D2D','#0F6E56','#D4537E','#5B6770'];
+  let html = `<thead><tr>
+    <th style="text-align:left;min-width:240px;position:sticky;left:0;z-index:2;background:var(--bg)">Concepto</th>
+    <th style="background:var(--acc-strong);color:var(--green-dark);font-weight:600">REAL ENE-${monthLabel}</th>
+    <th style="background:var(--acc-strong);color:var(--green-dark);font-weight:600">PPTO ENE-${monthLabel}</th>
+    <th style="background:var(--acc);color:var(--green-dark);font-weight:600">DIFERENCIA</th>
+    <th style="background:var(--acc);color:var(--green-dark);font-weight:600">VARIACIÓN %</th>
+    ${canales.map((c,i)=>`<th style="color:${CANAL_COLS[i%CANAL_COLS.length]}">${c}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  // Helpers locales para esta vista
+  const sumMensRowsTipo = (rs, tipo) => {
+    const out = new Array(12).fill(0);
+    if (!rs) return out;
+    rs.filter(r=>r.tipo===tipo).forEach(r => r.mensual.forEach((v,i)=>out[i]+=v));
+    return out;
+  };
+  const sumMensRowsGrp = (rs, tipo, grp) => {
+    const out = new Array(12).fill(0);
+    if (!rs) return out;
+    rs.filter(r=>r.tipo===tipo&&r.grupo===grp).forEach(r => r.mensual.forEach((v,i)=>out[i]+=v));
+    return out;
+  };
+
+  // Construye las 4 celdas totalizadoras a partir de arrays mensuales totales y de ppto
+  const negTotCells = (mR, mP, favDir) => {
+    const rH  = sumHasta(mR, mesHasta);
+    const pH  = mP ? sumHasta(mP, mesHasta) : null;
+    const dif = pH != null ? rH - pH : null;
+    const varPct = (pH != null && Math.abs(pH) > 0.005) ? (rH - pH) / Math.abs(pH) * 100 : null;
+    return totCell(rH, 'realH', favDir) +
+           totCell(pH, 'pptoH', favDir) +
+           difCell(dif, favDir) +
+           varCell(varPct, favDir);
+  };
+
+  // Celda de centro de coste: muestra valor ACUMULADO HASTA MES SELECCIONADO
+  // (antes mostraba el total anual, ahora respetamos el selector de mes)
+  const negCellCentro = (vR, vP, favDir) => {
+    if (!usePresup || vP == null) return `<td>${fmt(vR)}</td>`;
+    const d = vR - vP;
+    const cls = (favDir ? d>=0 : d<=0) ? 'dv-pos' : 'dv-neg';
+    return `<td><span>${fmt(vR)}</span><br><span style="font-size:10px;color:var(--muted)">(${fmt(vP)})</span>${Math.abs(d)>0.5?`<br><span class="${cls}" style="font-size:10px">${d>=0?'+':''}${fmt(d)}</span>`:''}</td>`;
+  };
+
+  const tipos = [{tipo:'ingreso',label:'INGRESOS'},{tipo:'gasto',label:'GASTOS'}];
+  const colSpanTotal = 5 + canales.length; // 1 concepto + 4 totalizadoras + N canales
+
+  tipos.forEach(({tipo, label}) => {
+    const favDir = tipo === 'ingreso';
+    html += `<tr class="r-grp" style="background:var(--acc)">
+      <td colspan="${colSpanTotal}" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--green-dark);position:sticky;left:0">${label}</td>
+    </tr>`;
+
+    if (detalle === 'grupo') {
+      // Lista de grupos ordenados por número de cuenta mínima.
+      // Mostramos SIEMPRE todos los grupos (mismo orden y conjunto en todas las vistas).
+      const grupos = [...new Set(rowsTotal.filter(r=>r.tipo===tipo).map(r=>r.grupo))]
+        .map(g => [g, minCuentaGrupo(rowsTotal, g, tipo)])
+        .sort((a,b)=> String(a[1]).localeCompare(String(b[1])));
+
+      grupos.forEach(([grp, minCta]) => {
+        const gid = getGrupoId(minCta);
+        const gLabel = (gid && grp !== gid) ? `${gid} · ${grp}` : grp;
+        const mensTotal  = sumMensRowsGrp(rowsTotal, tipo, grp);
+        const mensTotalP = rowsPTotal ? sumMensRowsGrp(rowsPTotal, tipo, grp) : null;
+
+        const cls = tipo==='ingreso'?'r-ing':'r-gto';
+        const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#f5fbf8':'#fdfaf8'};cursor:pointer;user-select:none"`;
+        const isOpen = !!expanded[grp];
+        const caret = isOpen ? '▼' : '▶';
+        const grpEsc = grp.replace(/"/g,'&quot;').replace(/'/g,"\\'");
+        html += `<tr class="${cls}" onclick="toggleGrupo('${grpEsc}', '${tipo}')">
+          <td ${sticky}><span class="expand-btn">${caret}</span>${gLabel}</td>
+          ${negTotCells(mensTotal, mensTotalP, favDir)}
+          ${canales.map((c,ci) => {
+            const vR = sumHasta(sumMensRowsGrp(rowsPC[ci], tipo, grp), mesHasta);
+            const vP = rowsPC_P ? sumHasta(sumMensRowsGrp(rowsPC_P[ci], tipo, grp), mesHasta) : null;
+            return negCellCentro(vR, vP, favDir);
+          }).join('')}
+        </tr>`;
+
+        // Drill-down: cuentas del grupo (ordenadas por número, filtradas por saldo hasta mes)
+        if (isOpen) {
+          const cuentasGrp = rowsTotal.filter(r=>r.tipo===tipo && r.grupo===grp)
+            .sort((a,b)=> String(a.cuenta).localeCompare(String(b.cuenta)));
+          cuentasGrp.forEach(r => {
+            const pRow = rowsPTotal ? rowsPTotal.find(x=>x.cuenta===r.cuenta) : null;
+            const mensP = pRow ? pRow.mensual : null;
+            const ctaSticky = `style="text-align:left;position:sticky;left:0;background:#fafafa;padding-left:24px"`;
+            html += `<tr class="r-det">
+              <td ${ctaSticky}>${r.cuenta} · ${r.desc}</td>
+              ${negTotCells(r.mensual, mensP, favDir)}
+              ${canales.map((c,ci) => {
+                const cRow = rowsPC[ci] ? rowsPC[ci].find(x=>x.cuenta===r.cuenta) : null;
+                const vR = cRow ? sumHasta(cRow.mensual, mesHasta) : 0;
+                const pCRow = rowsPC_P ? rowsPC_P[ci].find(x=>x.cuenta===r.cuenta) : null;
+                const vP = pCRow ? sumHasta(pCRow.mensual, mesHasta) : null;
+                return negCellCentro(vR, vP, favDir);
+              }).join('')}
+            </tr>`;
+          });
+        }
+      });
+
+    } else {
+      // detalle === 'cuenta' — ordenado por número de cuenta; mostramos todas
+      const cuentas = rowsTotal.filter(r=>r.tipo===tipo)
+        .sort((a,b)=> String(a.cuenta).localeCompare(String(b.cuenta)));
+      cuentas.forEach(r => {
+        const pRow = rowsPTotal ? rowsPTotal.find(x=>x.cuenta===r.cuenta) : null;
+        const mensP = pRow ? pRow.mensual : null;
+        const cls = tipo==='ingreso'?'r-ing':'r-gto';
+        const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#f5fbf8':'#fdfaf8'}"`;
+        html += `<tr class="${cls}" title="${r.cuenta}">
+          <td ${sticky}>${r.cuenta} · ${r.desc}</td>
+          ${negTotCells(r.mensual, mensP, favDir)}
+          ${canales.map((c,ci) => {
+            const cRow = rowsPC[ci] ? rowsPC[ci].find(x=>x.cuenta===r.cuenta) : null;
+            const vR = cRow ? sumHasta(cRow.mensual, mesHasta) : 0;
+            const pCRow = rowsPC_P ? rowsPC_P[ci].find(x=>x.cuenta===r.cuenta) : null;
+            const vP = pCRow ? sumHasta(pCRow.mensual, mesHasta) : null;
+            return negCellCentro(vR, vP, favDir);
+          }).join('')}
+        </tr>`;
+      });
+    }
+  });
+
+  // Filas de totales: usan los meses totales por canal para construir las 4 totalizadoras
+  const totIngMens = sumMensRowsTipo(rowsTotal, 'ingreso');
+  const totGtoMens = sumMensRowsTipo(rowsTotal, 'gasto');
+  const totResMens = totIngMens.map((v,i)=>v - totGtoMens[i]);
+  const totIngMensP = rowsPTotal ? sumMensRowsTipo(rowsPTotal, 'ingreso') : null;
+  const totGtoMensP = rowsPTotal ? sumMensRowsTipo(rowsPTotal, 'gasto') : null;
+  const totResMensP = totIngMensP ? totIngMensP.map((v,i)=>v - totGtoMensP[i]) : null;
+
+  const negTotalRow = (label, mR, mP, favDir, cls, tipo) => {
+    const sticky = `style="text-align:left;position:sticky;left:0;background:${cls==='r-result'?'#fdf6e8':'var(--acc-cell)'}"`;
+    return `<tr class="${cls}">
+      <td ${sticky}>${label}</td>
+      ${negTotCells(mR, mP, favDir)}
+      ${canales.map((c,ci) => {
+        let cvR, cvP;
+        if (tipo) {
+          cvR = sumHasta(sumMensRowsTipo(rowsPC[ci], tipo), mesHasta);
+          cvP = rowsPC_P ? sumHasta(sumMensRowsTipo(rowsPC_P[ci], tipo), mesHasta) : null;
+        } else {
+          const ingM = sumMensRowsTipo(rowsPC[ci],'ingreso');
+          const gtoM = sumMensRowsTipo(rowsPC[ci],'gasto');
+          cvR = sumHasta(ingM.map((v,i)=>v-gtoM[i]), mesHasta);
+          if (rowsPC_P) {
+            const ingMP = sumMensRowsTipo(rowsPC_P[ci],'ingreso');
+            const gtoMP = sumMensRowsTipo(rowsPC_P[ci],'gasto');
+            cvP = sumHasta(ingMP.map((v,i)=>v-gtoMP[i]), mesHasta);
+          } else cvP = null;
+        }
+        return negCellCentro(cvR, cvP, favDir);
+      }).join('')}
+    </tr>`;
+  };
+
+  html += negTotalRow('TOTAL INGRESOS', totIngMens, totIngMensP, true,  'r-total', 'ingreso');
+  html += negTotalRow('TOTAL GASTOS',   totGtoMens, totGtoMensP, false, 'r-total', 'gasto');
+  html += negTotalRow('RESULTADO NETO', totResMens, totResMensP, true,  'r-result', null);
+
+  html += '</tbody>';
+  document.getElementById('tbl-pyg').innerHTML = html;
+}
+
+// ---- EVOLUCIÓN CHARTS ----
+function buildEvolucionCharts(rows, rowsP) {
+  // La línea de presupuesto en los gráficos sólo se dibuja en modo comparativo,
+  // aunque rowsP esté cargado por defecto para las columnas totalizadoras.
+  const verComp = modoPresup === 'comparativo' && rowsP;
+  const resM = MESES.map((_,i)=>sumMensual(rows,'ingreso')[i]-sumMensual(rows,'gasto')[i]);
+  const resPM = verComp ? MESES.map((_,i)=>sumMensual(rowsP,'ingreso')[i]-sumMensual(rowsP,'gasto')[i]) : null;
+  const acumR = resM.reduce((a,v,i)=>{a.push((a[i-1]||0)+v);return a;},[]);
+  const acumP = resPM ? resPM.reduce((a,v,i)=>{a.push((a[i-1]||0)+v);return a;},[]) : null;
+
+  dc('resultado');
+  charts['resultado'] = new Chart(document.getElementById('c-resultado').getContext('2d'),{
+    type:'bar',
+    data:{labels:MS,datasets:[
+      {label:'Real',data:resM,backgroundColor:resM.map(v=>v>=0?'rgba(29,158,117,0.75)':'rgba(192,57,43,0.65)'),borderRadius:4},
+      ...(resPM?[{type:'line',label:'Presup.',data:resPM,borderColor:'#BA7517',borderDash:[4,3],backgroundColor:'transparent',pointRadius:3,tension:.3}]:[])
+    ]},
+    options:{...baseOpts}
+  });
+
+  dc('acumulado');
+  charts['acumulado'] = new Chart(document.getElementById('c-acumulado').getContext('2d'),{
+    type:'line',
+    data:{labels:MS,datasets:[
+      {label:'Real',data:acumR,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.07)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#1D9E75'},
+      ...(acumP?[{label:'Presup.',data:acumP,borderColor:'#BA7517',borderDash:[4,3],backgroundColor:'transparent',tension:.3,pointRadius:3}]:[])
+    ]},
+    options:{...baseOpts}
+  });
+}
+
+// =============================================================
+// BALANCE DE SITUACIÓN — generado a partir del SyS
+// =============================================================
+
+// Mapa de epígrafes de balance según prefijo de cuenta (PGC español).
+// El signo determina si va a Activo o a Pasivo/PN cuando es ambiguo.
+function balanceEpigrafe(cuenta, saldo) {
+  const c = String(cuenta);
+  const p3 = c.slice(0, 3);
+  const p2 = c.slice(0, 2);
+  const p1 = c.slice(0, 1);
+
+  // PATRIMONIO NETO (grupo 1, excepto 14x prov. y 17x deudas)
+  if (p1 === '1') {
+    if (p2 === '17' || p2 === '18') return { side: 'pas', cat: 'Pasivo no corriente', sub: 'Deudas a L/P' };
+    if (p2 === '14') return { side: 'pas', cat: 'Pasivo no corriente', sub: 'Provisiones L/P' };
+    if (p2 === '10') return { side: 'pas', cat: 'Patrimonio neto', sub: 'Capital' };
+    if (p2 === '11') return { side: 'pas', cat: 'Patrimonio neto', sub: 'Reservas' };
+    if (p2 === '12') return { side: 'pas', cat: 'Patrimonio neto', sub: 'Resultados ejerc. anteriores' };
+    if (p2 === '13') return { side: 'pas', cat: 'Patrimonio neto', sub: 'Subv./donaciones' };
+    if (p2 === '15') return { side: 'pas', cat: 'Patrimonio neto', sub: 'Capital pendiente desembolso' };
+    if (p2 === '19') return { side: 'pas', cat: 'Patrimonio neto', sub: 'Situaciones transitorias' };
+    return { side: 'pas', cat: 'Patrimonio neto', sub: 'Otros fondos propios' };
+  }
+
+  // INMOVILIZADO (grupo 2 = ACTIVO no corriente)
+  if (p1 === '2') {
+    // Las cuentas de amortización acumulada (28x) van con signo opuesto: restan al activo
+    if (p2 === '28' || p2 === '29') return { side: 'act', cat: 'Activo no corriente', sub: 'Amortización / deterioro (-)' };
+    if (p2 === '20') return { side: 'act', cat: 'Activo no corriente', sub: 'Inmovilizado intangible' };
+    if (p2 === '21') return { side: 'act', cat: 'Activo no corriente', sub: 'Inmovilizado material' };
+    if (p2 === '22') return { side: 'act', cat: 'Activo no corriente', sub: 'Inversiones inmobiliarias' };
+    if (p2 === '23') return { side: 'act', cat: 'Activo no corriente', sub: 'Inmovil. en curso' };
+    if (p2 === '24' || p2 === '25' || p2 === '26') return { side: 'act', cat: 'Activo no corriente', sub: 'Inversiones financieras L/P' };
+    return { side: 'act', cat: 'Activo no corriente', sub: 'Otros activos no corrientes' };
+  }
+
+  // EXISTENCIAS (grupo 3 = ACTIVO corriente)
+  if (p1 === '3') {
+    return { side: 'act', cat: 'Activo corriente', sub: 'Existencias' };
+  }
+
+  // ACREEDORES Y DEUDORES (grupo 4) — clasificación por sub-grupo y signo
+  if (p1 === '4') {
+    // 40x = Proveedores → Pasivo corriente
+    // 41x = Acreedores varios → Pasivo corriente
+    // 43x = Clientes → Activo corriente
+    // 44x = Deudores varios → Activo corriente
+    // 46x = Personal (47x es Admin Pcas)
+    // 47x = Administraciones Públicas — depende del signo
+    // 48x = Ajustes por periodificación
+    if (p2 === '40' || p2 === '41') return { side: 'pas', cat: 'Pasivo corriente', sub: 'Proveedores y acreedores' };
+    if (p2 === '43' || p2 === '44') return { side: 'act', cat: 'Activo corriente', sub: 'Clientes y deudores' };
+    if (p2 === '46') {
+      return saldo >= 0
+        ? { side: 'act', cat: 'Activo corriente', sub: 'Personal (deudor)' }
+        : { side: 'pas', cat: 'Pasivo corriente', sub: 'Personal (acreedor)' };
+    }
+    if (p2 === '47') {
+      return saldo >= 0
+        ? { side: 'act', cat: 'Activo corriente', sub: 'Admin. públicas deudoras' }
+        : { side: 'pas', cat: 'Pasivo corriente', sub: 'Admin. públicas acreedoras' };
+    }
+    if (p2 === '48') {
+      return saldo >= 0
+        ? { side: 'act', cat: 'Activo corriente', sub: 'Periodificaciones' }
+        : { side: 'pas', cat: 'Pasivo corriente', sub: 'Periodificaciones' };
+    }
+    // 49x = Deterioro de valor de créditos comerciales (resta activo)
+    if (p2 === '49') return { side: 'act', cat: 'Activo corriente', sub: 'Deterioro créditos (-)' };
+    // Fallback por signo
+    return saldo >= 0
+      ? { side: 'act', cat: 'Activo corriente', sub: 'Otros deudores' }
+      : { side: 'pas', cat: 'Pasivo corriente', sub: 'Otros acreedores' };
+  }
+
+  // FINANCIEROS (grupo 5)
+  if (p1 === '5') {
+    // 52x, 51x = Deudas a corto plazo → Pasivo corriente
+    // 57x = Tesorería → Activo corriente
+    // 53x, 54x = Inversiones financieras a C/P → Activo corriente
+    // 56x = Fianzas y depósitos C/P
+    if (p2 === '57') return { side: 'act', cat: 'Activo corriente', sub: 'Efectivo y bancos' };
+    if (p2 === '52' || p2 === '51') {
+      return saldo >= 0
+        ? { side: 'act', cat: 'Activo corriente', sub: 'Inversiones financieras C/P' }
+        : { side: 'pas', cat: 'Pasivo corriente', sub: 'Deudas a C/P' };
+    }
+    if (p2 === '53' || p2 === '54') return { side: 'act', cat: 'Activo corriente', sub: 'Inversiones financieras C/P' };
+    if (p2 === '55') {
+      return saldo >= 0
+        ? { side: 'act', cat: 'Activo corriente', sub: 'Otras cuentas C/P' }
+        : { side: 'pas', cat: 'Pasivo corriente', sub: 'Otras cuentas C/P' };
+    }
+    if (p2 === '56') return { side: 'act', cat: 'Activo corriente', sub: 'Fianzas y depósitos C/P' };
+    if (p2 === '58' || p2 === '59') return { side: 'act', cat: 'Activo corriente', sub: 'Otros activos financieros' };
+    return saldo >= 0
+      ? { side: 'act', cat: 'Activo corriente', sub: 'Otros financieros' }
+      : { side: 'pas', cat: 'Pasivo corriente', sub: 'Otros financieros' };
+  }
+
+  return { side: 'act', cat: 'Activo corriente', sub: 'Sin clasificar' };
+}
+
+// Genera el balance acumulado hasta `mesHasta`. Devuelve la estructura para renderizar.
+function buildBalanceData() {
+  if (!D || !D.balanceRows) return null;
+
+  // Saldo acumulado por cuenta hasta el mes seleccionado.
+  // El signo del SyS español ya es correcto: deudor (+) / acreedor (-).
+  // Para el Balance: cuentas de Activo se muestran con su saldo en positivo;
+  // cuentas de Pasivo/PN se muestran con signo invertido (porque en SyS van en negativo).
+  const cuentas = D.balanceRows.map(r => ({
+    cuenta: r.cuenta,
+    desc: r.desc,
+    saldo: sumHasta(r.mensual, mesHasta)
+  })).filter(r => Math.abs(r.saldo) > 0.005);
+
+  // Resultado del ejercicio (cuentas 6 y 7) acumulado hasta mes
+  let resultadoEjercicio = 0;
+  if (D.pyg) {
+    D.pyg.forEach(r => {
+      // En D.pyg los ingresos (7) ya están con signo positivo y los gastos (6) positivos también
+      // Resultado = ingresos - gastos. Pero r.mensual ya está orientado al PyG (con flip de 7).
+      const acum = sumHasta(r.mensual, mesHasta);
+      if (String(r.cuenta).startsWith('7')) resultadoEjercicio += acum;
+      else if (String(r.cuenta).startsWith('6')) resultadoEjercicio -= acum;
+    });
+  }
+
+  // Agrupar por categoría y subepígrafe
+  const activo = {};
+  const pasivo = {};
+  cuentas.forEach(r => {
+    const ep = balanceEpigrafe(r.cuenta, r.saldo);
+    // En Activo el saldo se muestra positivo (deudor); en Pasivo, invertimos signo
+    const valor = ep.side === 'act' ? r.saldo : -r.saldo;
+    const bucket = ep.side === 'act' ? activo : pasivo;
+    if (!bucket[ep.cat]) bucket[ep.cat] = {};
+    if (!bucket[ep.cat][ep.sub]) bucket[ep.cat][ep.sub] = { total: 0, cuentas: [] };
+    bucket[ep.cat][ep.sub].total += valor;
+    bucket[ep.cat][ep.sub].cuentas.push({ cuenta: r.cuenta, desc: r.desc, valor });
+  });
+
+  // Añadimos el resultado del ejercicio al Patrimonio Neto
+  if (Math.abs(resultadoEjercicio) > 0.005) {
+    if (!pasivo['Patrimonio neto']) pasivo['Patrimonio neto'] = {};
+    pasivo['Patrimonio neto']['Resultado del ejercicio'] = {
+      total: resultadoEjercicio,
+      cuentas: [{ cuenta: '129', desc: 'Resultado del ejercicio (calculado de PyG)', valor: resultadoEjercicio }]
+    };
+  }
+
+  // Totalizar
+  const totalCat = (bucket) => {
+    const out = {};
+    let grand = 0;
+    Object.entries(bucket).forEach(([cat, subs]) => {
+      let t = 0;
+      Object.values(subs).forEach(s => t += s.total);
+      out[cat] = t;
+      grand += t;
+    });
+    return { porCat: out, total: grand };
+  };
+
+  return {
+    activo, pasivo,
+    activoTotal: totalCat(activo),
+    pasivoTotal: totalCat(pasivo),
+    resultadoEjercicio
+  };
+}
+
+function buildBalance() {
+  const data = buildBalanceData();
+  if (!data) {
+    document.getElementById('balance-metrics').innerHTML = '<div style="color:var(--muted);padding:1rem">No hay datos de balance disponibles.</div>';
+    return;
+  }
+
+  const monthLabel = MS[mesHasta-1];
+  document.getElementById('balance-activo-sub').textContent = `Saldos a 30/${monthLabel}`;
+  document.getElementById('balance-pasivo-sub').textContent = `Saldos a 30/${monthLabel}`;
+
+  // Métricas: Activo total, PN+Pasivo total, diferencia (cuadre), Resultado del ejercicio
+  const at = data.activoTotal.total;
+  const pt = data.pasivoTotal.total;
+  const diff = at - pt;
+  const pn = data.pasivoTotal.porCat['Patrimonio neto'] || 0;
+
+  document.getElementById('balance-metrics').innerHTML = `
+    <div class="metric">
+      <div class="m-label">Activo total</div>
+      <div class="m-value">${fmtK(at)}</div>
+      <div class="m-delta neu">a 30/${monthLabel}</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">PN + Pasivo</div>
+      <div class="m-value">${fmtK(pt)}</div>
+      <div class="m-delta neu">a 30/${monthLabel}</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Patrimonio neto</div>
+      <div class="m-value" style="color:${pn>=0?'var(--green)':'var(--red)'}">${fmtK(pn)}</div>
+      <div class="m-delta neu">Fondos propios</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Resultado ejercicio</div>
+      <div class="m-value" style="color:${data.resultadoEjercicio>=0?'var(--green)':'var(--red)'}">${fmtK(data.resultadoEjercicio)}</div>
+      ${Math.abs(diff)>1 ? `<div class="m-delta neg">Descuadre: ${fmt(diff)}€</div>` : '<div class="m-delta pos">Balance cuadrado ✓</div>'}
+    </div>
+  `;
+
+  // Render de cada lado del balance: jerarquía Categoría → Subepígrafe → Cuentas (colapsable)
+  const renderLado = (bucket, totales, tblId) => {
+    let html = `<thead><tr>
+      <th style="text-align:left;min-width:200px">Concepto</th>
+      <th>Importe</th>
+    </tr></thead><tbody>`;
+
+    // Orden fijo de categorías
+    const ordenAct = ['Activo no corriente', 'Activo corriente'];
+    const ordenPas = ['Patrimonio neto', 'Pasivo no corriente', 'Pasivo corriente'];
+    const orden = tblId === 'tbl-activo' ? ordenAct : ordenPas;
+
+    orden.forEach(cat => {
+      if (!bucket[cat]) return;
+      const tCat = totales.porCat[cat] || 0;
+      html += `<tr class="r-grp" style="background:var(--acc)">
+        <td style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);font-weight:600">${cat}</td>
+        <td style="font-weight:700;background:var(--acc-strong)">${fmt(tCat)}</td>
+      </tr>`;
+
+      // Subepígrafes ordenados por importe absoluto descendente
+      const subs = Object.entries(bucket[cat])
+        .sort((a,b) => Math.abs(b[1].total) - Math.abs(a[1].total));
+
+      subs.forEach(([sub, info]) => {
+        const cls = tblId === 'tbl-activo' ? 'r-ing' : 'r-gto';
+        const bgSub = tblId === 'tbl-activo' ? '#f5fbf8' : '#fdfaf8';
+        const subBg = tblId === 'tbl-activo' ? '#dff0e8' : '#f5ede8';
+        html += `<tr class="${cls}">
+          <td style="background:${bgSub};padding-left:18px">${sub}</td>
+          <td style="background:${subBg};font-weight:600">${fmt(info.total)}</td>
+        </tr>`;
+        // Detalle de cuentas (siempre visible — son pocas, mejor verlas)
+        info.cuentas.sort((a,b)=> String(a.cuenta).localeCompare(String(b.cuenta))).forEach(c => {
+          html += `<tr class="r-det">
+            <td style="padding-left:36px;color:var(--muted);font-size:11px" title="${c.cuenta}">${c.cuenta} · ${c.desc}</td>
+            <td style="color:var(--muted);font-size:11px">${fmt(c.valor)}</td>
+          </tr>`;
+        });
+      });
+    });
+
+    // TOTAL
+    html += `<tr class="r-total">
+      <td style="font-weight:700">TOTAL</td>
+      <td style="font-weight:700;background:var(--acc-total)">${fmt(totales.total)}</td>
+    </tr></tbody>`;
+    return html;
+  };
+
+  document.getElementById('tbl-activo').innerHTML = renderLado(data.activo, data.activoTotal, 'tbl-activo');
+  document.getElementById('tbl-pasivo').innerHTML = renderLado(data.pasivo, data.pasivoTotal, 'tbl-pasivo');
+}
+
+// =============================================================
+// TESORERÍA
+// =============================================================
+function buildTesoreria() {
+  const tes = D.tes;
+  if (!tes) {
+    document.getElementById('tes-metrics').innerHTML = '<div style="color:var(--muted);padding:1rem">No hay datos de tesorería disponibles.</div>';
+    return;
+  }
+
+  // Clasificación según la columna TIPO del Excel (entrada/salida).
+  // - Salidas de caja            -> Pagos previstos
+  // - Entradas sin vencimiento   -> Saldos disponibles (liquidez actual)
+  // - Entradas con vencimiento   -> Cobros previstos (entrarán en el futuro)
+  const saldos = [];
+  const cobrosFinal = [];
+  const pagosFinal = [];
+  const tieneVenc = (it) => it.venc != null && String(it.venc).trim() !== '';
+  tes.items.forEach(it => {
+    if (it.tipo === 'salida') {
+      pagosFinal.push(it);
+      return;
+    }
+    // Entrada de caja: separamos liquidez actual de cobros futuros.
+    const c = it.concepto.toLowerCase();
+    const esSaldo = c.includes('saldo') || c.includes('disponible') || c.includes('confirming');
+    if (esSaldo || !tieneVenc(it)) {
+      saldos.push(it);
+    } else {
+      cobrosFinal.push(it);
+    }
+  });
+
+  const sum = (arr) => arr.reduce((s,i) => s + (i.importe || 0), 0);
+  const totSaldos = sum(saldos);
+  const totCobros = sum(cobrosFinal);
+  const totPagos  = sum(pagosFinal);
+  const posicion  = totSaldos + totCobros - totPagos;
+
+  document.getElementById('tes-metrics').innerHTML = `
+    <div class="metric">
+      <div class="m-label">Saldos disponibles</div>
+      <div class="m-value">${fmtK(totSaldos)}</div>
+      <div class="m-delta neu">${saldos.length} fuente${saldos.length===1?'':'s'}</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Cobros previstos</div>
+      <div class="m-value" style="color:var(--green)">${fmtK(totCobros)}</div>
+      <div class="m-delta neu">${cobrosFinal.length} concepto${cobrosFinal.length===1?'':'s'}</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Pagos previstos</div>
+      <div class="m-value" style="color:var(--red)">${fmtK(totPagos)}</div>
+      <div class="m-delta neu">${pagosFinal.length} concepto${pagosFinal.length===1?'':'s'}</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Posición proyectada</div>
+      <div class="m-value" style="color:${posicion>=0?'var(--green)':'var(--red)'}">${fmtK(posicion)}</div>
+      <div class="m-delta neu">Saldos + cobros − pagos</div>
+    </div>
+  `;
+
+  const renderItems = (arr, tblId, totalLabel, colorTotal) => {
+    let html = `<thead><tr>
+      <th style="text-align:left;min-width:240px">Concepto</th>
+      <th style="text-align:left">Vencimiento</th>
+      <th>Importe</th>
+    </tr></thead><tbody>`;
+    arr.forEach(it => {
+      const venc = it.venc instanceof Date
+        ? it.venc.toLocaleDateString('es-ES', {day:'2-digit',month:'short'})
+        : (it.venc || '—');
+      html += `<tr>
+        <td style="text-align:left">${it.concepto}</td>
+        <td style="text-align:left;color:var(--muted)">${venc}</td>
+        <td>${it.importe != null ? fmt(it.importe) : '<span style="color:var(--muted)">—</span>'}</td>
+      </tr>`;
+    });
+    const total = sum(arr);
+    html += `<tr class="r-total">
+      <td style="font-weight:700" colspan="2">${totalLabel}</td>
+      <td style="font-weight:700;color:${colorTotal}">${fmt(total)}</td>
+    </tr></tbody>`;
+    document.getElementById(tblId).innerHTML = html;
+  };
+
+  renderItems(cobrosFinal, 'tbl-cobros', 'Total cobros previstos', 'var(--green)');
+  renderItems(pagosFinal,  'tbl-pagos',  'Total pagos previstos',  'var(--red)');
+  renderItems(saldos,      'tbl-saldos', 'Total saldos disponibles', 'var(--text)');
+
+  if (tes.balance) {
+    const fechaStr = tes.balance.venc instanceof Date
+      ? tes.balance.venc.toLocaleDateString('es-ES')
+      : (tes.balance.venc || '');
+    document.getElementById('tes-balance-note').innerHTML =
+      `${tes.balance.concepto}${fechaStr ? ` · referencia: <strong>${fmt(tes.balance.importe)}€</strong>` : ''}`;
+  } else {
+    document.getElementById('tes-balance-note').textContent = '';
+  }
+}
+
+// =============================================================
+// POOL BANCARIO
+// =============================================================
+function buildPool() {
+  const pool = D.pool;
+  if (!pool) {
+    document.getElementById('pool-metrics').innerHTML = '<div style="color:var(--muted);padding:1rem">No hay datos de pool bancario disponibles.</div>';
+    return;
+  }
+
+  // Métricas top
+  // Capital pendiente actual = primer año (CAPITAL <año actual>) o segunda columna numérica
+  const capHeaders = pool.tablaCapital.headers; // ['TIPO','Nº PRESTAMO','ENTIDAD','VENCIMIENTO','IMPORTE','CAPITAL PENDIENTE','CAPITAL 2025',...]
+  const cuoHeaders = pool.tablaCuotas ? pool.tablaCuotas.headers : [];
+  const capData = pool.tablaCapital.data.filter(r => !r._subtotal);
+  const cuoData = pool.tablaCuotas ? pool.tablaCuotas.data.filter(r => !r._subtotal) : [];
+
+  // Capital pendiente total = suma de col "CAPITAL PENDIENTE" (idx 5)
+  const idxCapPendiente = capHeaders.indexOf('CAPITAL PENDIENTE');
+  const idxImporte = capHeaders.indexOf('IMPORTE');
+  const sumCol = (data, idx) => data.reduce((s,r) => s + (parseFloat(r.raw[idx]) || 0), 0);
+
+  const totalImporteOriginal = sumCol(capData, idxImporte);
+  const totalCapPendiente    = sumCol(capData, idxCapPendiente);
+  const numPrestamos         = capData.length;
+  // Próximas cuotas: primera columna de "CUOTAS XXXX" (idx 6 en adelante)
+  let cuotasProxAnio = 0;
+  let proxAnio = null;
+  if (cuoHeaders.length > 6) {
+    proxAnio = cuoHeaders[6].replace(/[^0-9]/g,'');
+    cuotasProxAnio = sumCol(cuoData, 6);
+  }
+
+  document.getElementById('pool-metrics').innerHTML = `
+    <div class="metric">
+      <div class="m-label">Capital pendiente</div>
+      <div class="m-value">${fmtK(totalCapPendiente)}</div>
+      <div class="m-delta neu">de ${fmtK(totalImporteOriginal)} originales</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Préstamos vivos</div>
+      <div class="m-value">${numPrestamos}</div>
+      <div class="m-delta neu">${[...new Set(capData.map(r => r.raw[2]))].length} entidades</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Cuotas ${proxAnio || ''}</div>
+      <div class="m-value" style="color:var(--red)">${fmtK(cuotasProxAnio)}</div>
+      <div class="m-delta neu">Servicio próximo año</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">% Amortizado</div>
+      <div class="m-value">${totalImporteOriginal ? (100 - totalCapPendiente/totalImporteOriginal*100).toFixed(1) : '—'}%</div>
+      <div class="m-delta neu">sobre importe inicial</div>
+    </div>
+  `;
+
+  // Render tablas. Conservamos columnas TIPO no, son redundantes (todos PRÉSTAMO).
+  // Columnas: Nº PRESTAMO, ENTIDAD, VENCIMIENTO, IMPORTE, CAPITAL PENDIENTE, CAPITAL <año>...
+  const renderPoolTabla = (tabla, tblId) => {
+    if (!tabla) { document.getElementById(tblId).innerHTML = ''; return; }
+    const heads = tabla.headers;
+    // Mostramos desde la columna 1 (Nº PRESTAMO) en adelante
+    let html = `<thead><tr>`;
+    heads.forEach((h, i) => {
+      if (i === 0) return; // saltar TIPO
+      const align = i <= 3 ? 'text-align:left' : 'text-align:right';
+      html += `<th style="${align}">${h}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    tabla.data.filter(r => !r._subtotal).forEach(r => {
+      html += `<tr>`;
+      r.raw.forEach((v, i) => {
+        if (i === 0) return;
+        if (i === 3 && v instanceof Date) {
+          html += `<td style="text-align:left">${v.toLocaleDateString('es-ES')}</td>`;
+        } else if (i <= 2) {
+          html += `<td style="text-align:left">${v != null ? v : ''}</td>`;
+        } else if (i === 3) {
+          html += `<td style="text-align:left">${v != null ? v : ''}</td>`;
+        } else {
+          const num = parseFloat(v);
+          html += `<td>${isNaN(num) ? '' : fmt(num)}</td>`;
+        }
+      });
+      html += `</tr>`;
+    });
+    // Fila subtotal: sumamos numéricos del idx 4 (IMPORTE) en adelante
+    html += `<tr class="r-total">`;
+    heads.forEach((h, i) => {
+      if (i === 0) return;
+      if (i < 4) {
+        const label = i === 1 ? 'TOTAL' : '';
+        html += `<td style="text-align:left;font-weight:700">${label}</td>`;
+      } else {
+        const total = tabla.data.filter(r=>!r._subtotal).reduce((s,r) => s + (parseFloat(r.raw[i]) || 0), 0);
+        html += `<td style="font-weight:700;background:var(--acc-total)">${fmt(total)}</td>`;
+      }
+    });
+    html += `</tr></tbody>`;
+    document.getElementById(tblId).innerHTML = html;
+  };
+
+  renderPoolTabla(pool.tablaCapital, 'tbl-pool-capital');
+  renderPoolTabla(pool.tablaCuotas,  'tbl-pool-cuotas');
+
+  document.getElementById('pool-note').textContent = pool.note || '';
+}
+
+function resetApp() {
+  D=null;
+  document.getElementById('app-screen').classList.remove('on');
+  Object.values(charts).forEach(c=>c.destroy());
+  charts={};canal='TODOS';detalle='grupo';vistaPyg='mensual';modoPresup='real';mesHasta=12;expanded={};expandedCta={};expandedCC={};
+  const sel = document.getElementById('sel-mes'); if (sel) sel.value = '12';
+  autoLoad();
+}
+
+// La sesión la valida Hostelero en el servidor: se arranca directamente.
+autoLoad();
+</script>
+</div><!-- /main-app -->
+</body>
+</html>
