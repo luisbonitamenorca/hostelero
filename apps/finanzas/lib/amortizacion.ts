@@ -102,12 +102,23 @@ export function amortizadoHasta(cuadro: PeriodoAmortizacion[], hasta: Date = new
 
 /** Cuenta de amortización acumulada y de dotación que corresponden al activo.
  *  En el PGC se forman metiendo un 8 detrás del 2: 213 → 2813 → 681. */
+/**
+ * Sugerencias para el plan REAL de A3, que es de 9 dígitos y lleva el centro en
+ * el sufijo. La regla sale de sus propios datos, no del PGC de libro:
+ *
+ *   activo 213000700 (MAQUINARIA BODEGA)
+ *     → acumulada 281300700 (28 + subcuenta 13 + sufijo 00700)
+ *     → dotación  681000700 (681 + sufijo de centro 000700)
+ *
+ * Si la cuenta construida no existe en el plan, el formulario simplemente no
+ * preselecciona nada y elige quien da el alta — la sugerencia es una comodidad,
+ * no una regla.
+ */
 export function cuentasSugeridas(codigoActivo: string): { acumulada: string; dotacion: string } | null {
   const c = codigoActivo.trim();
-  if (!/^2\d{2,}$/.test(c)) return null;
+  if (!/^2[01]\d{7}$/.test(c)) return null; // 20x intangible, 21x material, 9 dígitos
 
-  const grupo = c[1]; // 0 intangible, 1 material
-  if (grupo === "0") return { acumulada: "280" + c.slice(2), dotacion: "680" };
-  if (grupo === "1") return { acumulada: "281" + c.slice(2), dotacion: "681" };
-  return null;
+  const dotacion = (c[1] === "0" ? "680" : "681") + c.slice(3);
+  const acumulada = "28" + c.slice(1, 3) + c.slice(4);
+  return { acumulada, dotacion };
 }

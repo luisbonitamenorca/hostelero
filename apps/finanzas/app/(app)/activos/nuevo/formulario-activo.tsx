@@ -37,7 +37,8 @@ export default function FormularioActivo({
   const sugeridas = cuentasSugeridas(codigoElegido);
 
   // Las cuentas de amortización y dotación se proponen desde la del activo
-  // (213 → 2813 y 681), que es como se forman en el plan contable.
+  // (213000700 → 281300700 y 681000700), conservando el sufijo de centro,
+  // que es como Lucía desglosa el plan real de A3.
   const idAmortizacion = useMemo(
     () => cuentasAmortizacion.find((c) => c.codigo === sugeridas?.acumulada)?.id ?? null,
     [cuentasAmortizacion, sugeridas],

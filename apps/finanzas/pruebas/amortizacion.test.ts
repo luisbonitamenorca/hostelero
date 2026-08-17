@@ -48,9 +48,16 @@ comprueba("residual igual al valor: no hay cuadro", calcularCuadro({ fechaAlta: 
 comprueba("a 30/06/2026 lleva 6 meses", amortizadoHasta(c1, new Date(2026, 5, 30)) === 600, String(amortizadoHasta(c1, new Date(2026, 5, 30))));
 
 // --- Cuentas sugeridas del PGC ---
-comprueba("213 -> 2813 y 681", JSON.stringify(cuentasSugeridas("213")) === JSON.stringify({ acumulada: "2813", dotacion: "681" }));
-comprueba("206 -> 2806 y 680", JSON.stringify(cuentasSugeridas("206")) === JSON.stringify({ acumulada: "2806", dotacion: "680" }));
-comprueba("una cuenta que no es de inmovilizado no sugiere nada", cuentasSugeridas("600") === null);
+// Los casos salen del plan REAL de A3: la sugerencia conserva el sufijo del
+// centro, que es como Lucia desglosa la amortizacion.
+comprueba("maquinaria bodega -> su acumulada y su dotacion",
+  JSON.stringify(cuentasSugeridas("213000700")) === JSON.stringify({ acumulada: "281300700", dotacion: "681000700" }));
+comprueba("aplicaciones informaticas -> intangible",
+  JSON.stringify(cuentasSugeridas("206000800")) === JSON.stringify({ acumulada: "280600800", dotacion: "680000800" }));
+comprueba("mobiliario bar tamarindos conserva el sufijo",
+  cuentasSugeridas("216001000")?.acumulada === "281601000");
+comprueba("una cuenta que no es de inmovilizado no sugiere nada", cuentasSugeridas("600000000") === null);
+comprueba("un codigo corto ya no vale", cuentasSugeridas("213") === null);
 
 console.log(fallos === 0 ? "\nTODO CORRECTO" : `\n${fallos} FALLOS`);
 process.exit(fallos === 0 ? 0 : 1);
