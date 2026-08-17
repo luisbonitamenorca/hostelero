@@ -18,13 +18,17 @@
 -- Revisada 17-08-2026 (6): el ejercicio tiene que ser de la CUENTA del asiento,
 -- no solo de su sociedad; y el rastro (creado_*, confirmado_*) se escribe en el
 -- disparador de nacimiento, porque después de la sección 5 no hay otro sitio.
+-- Revisada 17-08-2026 (7): entran centro_id en los apuntes y el índice único de
+-- origen. Las dos por decisión de Luis, y las dos ahora porque hoy son gratis y
+-- dentro de unos meses no lo serían.
 -- Revisada 17-08-2026 (8): el centro del apunte tiene que ser de la sociedad del
 -- asiento — al añadir centro_id en la ronda 7 se añadió también la forma de
 -- colarlo —, y el origen duplicado responde en castellano diciendo en qué asiento
 -- está ya contabilizado.
--- Revisada 17-08-2026 (7): entran centro_id en los apuntes y el índice único de
--- origen. Las dos por decisión de Luis, y las dos ahora porque hoy son gratis y
--- dentro de unos meses no lo serían.
+-- Revisada 17-08-2026 (9): se revoca TRUNCATE, que se saltaba entera la
+-- inmutabilidad sin pasar por disparadores ni RLS; los disparadores pasan a
+-- `create or replace`; y el mensaje de origen duplicado deja de poder señalar a
+-- un asiento de otro inquilino y dice de qué ejercicio habla.
 -- ============================================================================
 -- MIGRACIÓN F5a — El diario: confirmar un asiento
 -- Proyecto: hostelero · Fecha: 17-08-2026
@@ -160,7 +164,7 @@ begin
   return new;
 end $$;
 
-create trigger fin_asientos_nacer_borrador_ins before insert on fin_asientos
+create or replace trigger fin_asientos_nacer_borrador_ins before insert on fin_asientos
   for each row execute function fin_asientos_nacer_borrador();
 
 -- ----------------------------------------------------------------------------
@@ -213,9 +217,9 @@ begin
   raise exception 'El asiento % está en estado % y no se modifica', old.numero, old.estado;
 end $$;
 
-create trigger fin_asientos_proteger_upd before update on fin_asientos
+create or replace trigger fin_asientos_proteger_upd before update on fin_asientos
   for each row execute function fin_asientos_proteger();
-create trigger fin_asientos_proteger_del before delete on fin_asientos
+create or replace trigger fin_asientos_proteger_del before delete on fin_asientos
   for each row execute function fin_asientos_proteger();
 
 -- ----------------------------------------------------------------------------
@@ -304,11 +308,11 @@ begin
   return old;
 end $$;
 
-create trigger fin_apuntes_proteger_ins before insert on fin_apuntes
+create or replace trigger fin_apuntes_proteger_ins before insert on fin_apuntes
   for each row execute function fin_apuntes_proteger();
-create trigger fin_apuntes_proteger_upd before update on fin_apuntes
+create or replace trigger fin_apuntes_proteger_upd before update on fin_apuntes
   for each row execute function fin_apuntes_proteger();
-create trigger fin_apuntes_proteger_del before delete on fin_apuntes
+create or replace trigger fin_apuntes_proteger_del before delete on fin_apuntes
   for each row execute function fin_apuntes_proteger();
 
 -- ----------------------------------------------------------------------------
@@ -330,6 +334,7 @@ declare
   v_bloq     boolean;
   v_numero   bigint;
   v_otro     bigint;
+  v_otro_anio fin_ejercicios.anio%type;
 begin
   select * into v_a from fin_asientos where id = p_asiento_id for update;
   if not found then
@@ -482,18 +487,30 @@ begin
   -- aquí. Ahí muerde el índice, que es donde tiene que morder.
   --
   -- Esta lista de tipos tiene que moverse con la del índice de la sección 6.
+  --
+  -- Dos decisiones dentro de la consulta:
+  --   · Se filtra por cuenta_id porque esta función corre SIN RLS, y sin el
+  --     filtro el mensaje podría revelar el número de asiento de otro inquilino.
+  --     Consecuencia asumida: un duplicado ENTRE inquilinos daría el error crudo
+  --     del índice, no este mensaje — pero exigiría que dos inquilinos compartan
+  --     un origen_id, que es un uuid: no ocurre.
+  --   · Se dice también el ejercicio, porque `numero` solo es único dentro de
+  --     uno: «el asiento 47» a secas no dice de qué año habla, y el caso que el
+  --     advisory lock no cubre es justamente el de dos ejercicios distintos.
   if v_a.origen_id is not null
      and v_a.origen_tipo in ('factura_emitida', 'compra') then
-    select numero into v_otro
-      from fin_asientos
-     where origen_tipo = v_a.origen_tipo
-       and origen_id   = v_a.origen_id
-       and estado      = 'confirmado'
-       and id <> v_a.id
+    select a.numero, e.anio into v_otro, v_otro_anio
+      from fin_asientos a
+      join fin_ejercicios e on e.id = a.ejercicio_id
+     where a.origen_tipo = v_a.origen_tipo
+       and a.origen_id   = v_a.origen_id
+       and a.estado      = 'confirmado'
+       and a.cuenta_id   = v_a.cuenta_id
+       and a.id         <> v_a.id
      limit 1;
     if found then
-      raise exception 'Este origen (%) ya está contabilizado en el asiento %',
-        v_a.origen_tipo, v_otro;
+      raise exception 'Este origen (%) ya está contabilizado en el asiento % del ejercicio %',
+        v_a.origen_tipo, v_otro, v_otro_anio;
     end if;
   end if;
 
@@ -604,13 +621,44 @@ revoke execute on function fin_confirmar_asiento(uuid) from public, anon;
 -- que esa clave no salga nunca del sitio donde vive.
 -- ----------------------------------------------------------------------------
 
+-- TRUNCATE se lleva por delante todo lo anterior: no pasa por los disparadores de
+-- fila (solo por los de sentencia, que aquí no hay) y tampoco por la RLS. Un
+-- `truncate fin_asientos cascade` vacía el diario entero —confirmados incluidos y
+-- de todos los inquilinos— sin que salte ninguna guarda de las secciones 2 y 3.
+-- Comprobado en la base el 17-08-2026: anon y authenticated tienen el privilegio,
+-- porque el grant por defecto de Supabase es arwdDxtm y la D es TRUNCATE.
+--
+-- Hoy no es alcanzable desde la app —PostgREST no expone TRUNCATE y ninguno de los
+-- dos roles es de conexión—, y por eso es lo mismo que hace el resto de esta
+-- sección: quitar el privilegio que nadie usa, para que la inmutabilidad no
+-- dependa de que el cliente siga siendo PostgREST.
+--
+-- El mismo grant está en TODAS las tablas del proyecto. Limpiarlo entero es una
+-- migración de higiene aparte; aquí se quita solo en las dos tablas cuya
+-- inmutabilidad promete esta migración.
+revoke truncate on fin_asientos, fin_apuntes from anon, authenticated;
+
 do $$
 declare
-  v_columnas text;
+  v_columnas   text;
+  v_protegidas int;
 begin
   -- anon no escribe asientos en ningún caso: se le quita entero, sin devolverle
   -- nada. Mismo criterio que la F1b con expedir y anular.
   revoke update on fin_asientos from authenticated, anon;
+
+  -- La lista de exclusión de abajo es un `not in`: si una de estas columnas se
+  -- renombrara, no fallaría — simplemente saldría de la exclusión y quedaría
+  -- CONCEDIDA. Este archivo presume de fallar de forma ruidosa, y por ese lado
+  -- fallaba en silencio y de menos a más. La aserción lo cierra.
+  select count(*) into v_protegidas
+    from information_schema.columns
+   where table_schema = 'public' and table_name = 'fin_asientos'
+     and column_name in ('id','cuenta_id','sociedad_id','numero','estado',
+                         'creado_por','creado_en','confirmado_por','confirmado_en');
+  if v_protegidas <> 9 then
+    raise exception 'Esperaba 9 columnas protegidas en fin_asientos y encuentro %: revisar la lista de exclusión', v_protegidas;
+  end if;
 
   select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
     into v_columnas
@@ -706,6 +754,14 @@ create unique index if not exists fin_asientos_origen_unico
 --     señalando la configuración del ejercicio
 --   · Confirmar con el ejercicio cerrado ...................... debe FALLAR
 --   · Insertar un apunte con cuenta_id distinto al del asiento . debe FALLAR
+--   · `truncate fin_asientos` como authenticated ............... debe FALLAR
+--     (permiso denegado, no disparador: es justo lo que se cierra)
+--   · Confirmar con un apunte con centro de OTRA sociedad ...... debe FALLAR
+--   · Insertar ese mismo apunte estando en borrador ............ debe PASAR
+--     (el centro se valida al confirmar, no al insertar: está escrito para que
+--      no se lea como un olvido)
+--   · Confirmar dos veces el mismo origen (misma factura) ...... debe FALLAR
+--     con el mensaje en castellano, no con el del índice único
 --   · Mover un apunte de un asiento a otro, los dos borradores . debe PASAR
 --   · Borrar un asiento EN BORRADOR que tiene apuntes ......... debe PASAR
 --     (este es el caso que falló en facturas y motivó la F0b; aquí el trigger
