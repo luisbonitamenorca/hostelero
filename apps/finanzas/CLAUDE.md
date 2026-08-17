@@ -54,6 +54,26 @@ modulo; 2023-2025 no interesan. Vale para toda carga futura salvo que Luis diga
 lo contrario. Los ficheros fuente llevan NIFs y nombres reales: se leen en
 local y JAMAS se suben a este repo, que es publico.
 
+**Estado de la carga (17-08-2026, via MCP):**
+- Plan de cuentas: 3.166 cuentas (plan A3 de 9 digitos completo).
+- Clientes de contabilidad: 78 en fin_clientes. OJO: son los clientes con
+  factura NOMINATIVA (empresas, fiscal). Los contactos de reservas/visitas/
+  Shopify/CRM son particulares con factura simplificada: viven en sus propios
+  modulos y NUNCA se mezclan ni se sincronizan con fin_clientes.
+- Proveedores: condiciones de pago en 83 compras_proveedor (match por NIF).
+- Diario 2026: cargado AGREGADO por cuenta y mes — 8 asientos confirmados
+  (n.1-7 = enero-julio a fin de mes; n.8 = agosto parcial hasta 17-08),
+  neteados por cuenta dentro de cada mes porque fin_apuntes no admite debe y
+  haber en la misma fila. El neteo conserva exactamente los saldos por cuenta
+  (balance, sumas y saldos y PyG identicos al detalle) pero no el volumen
+  bruto de movimientos. Verificado contra A3 al centimo: resultado ene-ago
+  722.826,10 / gastos g6 2.834.841,38 / ingresos g7 3.557.667,48 / saldo
+  CaixaBank (572000001) 1.013.239,49. Si algun dia se quiere el detalle
+  (27.000 apuntes), hay que borrar estos 8 asientos con una migracion que
+  desactive triggers (los confirmados son inmutables) y cargar via Edge
+  Function temporal.
+- Extracto CaixaBank 2026: pendiente, espera al modulo de bancos (F2).
+
 ## Flujo de trabajo con Luis (desde 17-08-2026)
 Code hace commit y push DIRECTO a main para el trabajo rutinario: Luis no
 revisa los PRs (revisa las migraciones via chat), asi que el merge manual solo
