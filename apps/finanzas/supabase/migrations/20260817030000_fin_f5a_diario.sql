@@ -5,6 +5,10 @@
 -- Revisada 17-08-2026 (2): se bloquea también el borrado de apuntes (la misma
 -- carrera que el insert, por el otro lado), se cambia v_existe por found, y la
 -- ausencia de fila de periodo pasa a ser excepción en vez de mes abierto.
+-- Revisada 17-08-2026 (5): el revoke necesitaba las dos concesiones (public y
+-- anon, no solo anon); se añaden confirmado_por y confirmado_en, porque después
+-- de confirmar ya no hay forma de escribirlos; y dos bloqueos explícitos en vez
+-- de apoyarse en la forma del plan.
 -- Revisada 17-08-2026 (4): privilegios de columna sobre fin_asientos, que es la
 -- barrera de verdad detrás del guardarraíl de la marca. Decisión de Luis.
 -- Revisada 17-08-2026 (3): el disparador de apuntes pasa a SECURITY DEFINER
@@ -50,6 +54,15 @@
 --     635 subcuentas de proveedor y solo dos cuentas de resultado (680 y 681),
 --     así que no hay dónde llevar una venta ni una compra.
 --   · Nada de cierre de ejercicio ni asiento de regularización (F5d).
+--   · Nada que impida contabilizar DOS VECES el mismo origen. origen_tipo y
+--     origen_id los puede escribir authenticated, y en fin_asientos solo hay
+--     tres índices: la clave primaria, fin_asientos_numero_unico y
+--     fin_asientos_soc_fecha_idx. Mientras los asientos se teclean a mano da
+--     igual; en cuanto exista la contabilización automática, contabilizar dos
+--     veces la misma factura duplicaría el ingreso sin que salte nada. Lo cierra
+--     un índice único parcial sobre (origen_tipo, origen_id) con
+--     `origen_id is not null and estado = 'confirmado'`, y va en la migración que
+--     traiga esa contabilización, no en esta: hoy no hay nada que indexar.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -64,6 +77,19 @@
 -- ----------------------------------------------------------------------------
 
 alter table fin_asientos alter column estado set default 'borrador';
+
+-- Rastro de la confirmación. `creado_*` dice cuándo se tecleó el borrador; esto
+-- dice cuándo se cerró y quién lo cerró, que es el hecho con consecuencias: fija
+-- la serie y es lo que se revisa. Después de confirmar el asiento es inmutable,
+-- así que este es el único momento en que se pueden escribir.
+--
+-- Sin clave ajena, por coherencia con `creado_por`, que hoy tampoco la tiene. Y
+-- por delante del bloque de la sección 5, que calcula su lista de columnas
+-- leyendo information_schema en tiempo de migración: si estas dos no existieran
+-- todavía, quedarían fuera de la lista y por tanto sin proteger.
+alter table fin_asientos
+  add column if not exists confirmado_por uuid,
+  add column if not exists confirmado_en  timestamptz;
 
 create or replace function fin_asientos_nacer_borrador() returns trigger
 language plpgsql set search_path = public as $$
@@ -185,11 +211,15 @@ declare
   v_estado text;
   v_cuenta uuid;
 begin
-  -- Los dos bloqueos de golpe y en orden de id: el LockRows va por encima del
-  -- Sort, así que se bloquea en el orden del `order by` y dos movimientos
-  -- cruzados no pueden quedarse esperándose el uno al otro.
+  -- Los dos bloqueos, pedidos uno a uno y siempre el menor primero. Un
+  -- `where id in (…) order by id for share` también funciona, pero se apoya en
+  -- que el nodo LockRows quede por encima del Sort — y lo que se está evitando
+  -- aquí es precisamente un interbloqueo, así que no conviene que dependa de la
+  -- forma del plan. Así las dos transacciones piden los mismos bloqueos en el
+  -- mismo orden, y eso no lo decide el planificador.
   if v_viejo is not null and v_nuevo is not null and v_viejo <> v_nuevo then
-    perform 1 from fin_asientos where id in (v_viejo, v_nuevo) order by id for share;
+    perform 1 from fin_asientos where id = least(v_viejo, v_nuevo) for share;
+    perform 1 from fin_asientos where id = greatest(v_viejo, v_nuevo) for share;
   end if;
 
   if v_viejo is not null then
@@ -350,6 +380,21 @@ begin
   -- confirmados, que aquí son inmutables, así que tiene que vivir dentro de la
   -- función de cierre de ejercicio (F5d) y dejar rastro — nunca un update suelto.
   --
+  -- CÓMO LO HARÁ LA F5d, para que quien la escriba no busque un atajo: no tiene
+  -- que desactivar el disparador (eso es de sesión, no de transacción: con
+  -- concurrencia deja de proteger a todos) ni reabrir esta migración. Basta un
+  -- `create or replace function fin_asientos_proteger()` en la propia F5d que
+  -- añada su rama, que es como se evolucionan las funciones de disparador y lo
+  -- que ya manda la regla de la casa: una migración aplicada no se edita, los
+  -- cambios van en una nueva. Aquí no se deja preparada ninguna puerta para eso
+  -- a propósito — un hueco abierto hoy en la guarda de inmutabilidad, para una
+  -- función que todavía no existe, es más riesgo que el que ahorra.
+  --
+  -- La numeración se apoya en READ COMMITTED, que es lo que hay. Bajo
+  -- REPEATABLE READ el max() saldría de una instantánea anterior al lock y
+  -- chocaría contra fin_asientos_numero_unico: falla en seguro (error, ni hueco
+  -- ni duplicado), pero conviene que esté escrito.
+  --
   -- El lock serializa dos confirmaciones
   -- simultáneas: sin él, ambas leerían el mismo max() y chocarían contra el
   -- índice único fin_asientos_numero_unico, que va por (ejercicio_id, numero) —
@@ -368,10 +413,19 @@ begin
   -- cambio de estado y número. Sin ella, un update a mano no confirma.
   perform set_config('fin.confirmando', v_a.id::text, true);
 
+  -- auth.uid() funciona dentro de SECURITY DEFINER: lee la reclamación del JWT de
+  -- la petición, no el rol con el que se ejecuta la función.
   update fin_asientos
-     set numero = v_numero,
-         estado = 'confirmado'
+     set numero         = v_numero,
+         estado         = 'confirmado',
+         confirmado_por = auth.uid(),
+         confirmado_en  = now()
    where id = v_a.id;
+
+  -- La marca ya ha hecho su trabajo. Hoy es inocuo dejarla puesta — el asiento
+  -- pasa a confirmado y la rama de borrador no vuelve a entrar —, pero una marca
+  -- viva durante el resto de la transacción es una invitación a un accidente.
+  perform set_config('fin.confirmando', '', true);
 
   return jsonb_build_object(
     'numero', v_numero,
@@ -382,11 +436,15 @@ begin
 end $$;
 
 -- El mismo cinturón que la F1b puso a expedir y anular: que anon no pueda ni
--- llamarla. Supabase concede EXECUTE a anon por defecto en cada función nueva
--- del esquema public, y esa concesión es explícita: revocar de PUBLIC no la
--- quita. (Por dentro ya se comprueba cuenta_actual(), que para un anónimo es
+-- llamarla. Hacen falta las DOS revocaciones, y por eso allí hicieron falta dos
+-- migraciones: Postgres concede EXECUTE a PUBLIC en toda función nueva, y
+-- Supabase concede además EXECUTE a anon explícitamente. anon es miembro de
+-- PUBLIC, así que quitar una no quita la otra. Comprobado en la base: las 18
+-- funciones fin_* llevan las dos concesiones; las únicas limpias son
+-- fin_expedir_factura y fin_anular_factura, que pasaron por F1a (public) y F1b
+-- (anon). (Por dentro ya se comprueba cuenta_actual(), que para un anónimo es
 -- nulo; esto es la segunda capa.)
-revoke execute on function fin_confirmar_asiento(uuid) from anon;
+revoke execute on function fin_confirmar_asiento(uuid) from public, anon;
 
 -- ----------------------------------------------------------------------------
 -- 5) La puerta cerrada, no el cartel de «no pasar»
@@ -410,6 +468,12 @@ revoke execute on function fin_confirmar_asiento(uuid) from anon;
 --
 -- fin_confirmar_asiento sigue pudiendo escribirlas porque es SECURITY DEFINER y
 -- corre como el propietario de la tabla, que conserva todos los privilegios.
+--
+-- Y NO es absoluto, conviene no leerlo así: `service_role` conserva el UPDATE de
+-- tabla (comprobado). La puerta queda cerrada para authenticated y para anon, que
+-- son los roles con los que entra la app. Cualquier código de servidor que use la
+-- service key sigue pudiendo escribir estado y numero a mano — razón de más para
+-- que esa clave no salga nunca del sitio donde vive.
 -- ----------------------------------------------------------------------------
 
 do $$
@@ -431,8 +495,10 @@ begin
        'sociedad_id',  -- y esto, a otra sociedad del mismo inquilino
        'numero',       -- los asigna
        'estado',       --   fin_confirmar_asiento()
-       'creado_por',   -- rastro de quién y cuándo: no se reescribe
-       'creado_en'
+       'creado_por',      -- rastro de quién y cuándo: no se reescribe
+       'creado_en',
+       'confirmado_por',  -- los escribe fin_confirmar_asiento()
+       'confirmado_en'    --   y nadie más
      );
 
   execute format('grant update (%s) on fin_asientos to authenticated', v_columnas);
