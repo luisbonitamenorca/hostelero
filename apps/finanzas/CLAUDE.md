@@ -61,17 +61,18 @@ local y JAMAS se suben a este repo, que es publico.
   Shopify/CRM son particulares con factura simplificada: viven en sus propios
   modulos y NUNCA se mezclan ni se sincronizan con fin_clientes.
 - Proveedores: condiciones de pago en 83 compras_proveedor (match por NIF).
-- Diario 2026: cargado AGREGADO por cuenta y mes — 8 asientos confirmados
-  (n.1-7 = enero-julio a fin de mes; n.8 = agosto parcial hasta 17-08),
-  neteados por cuenta dentro de cada mes porque fin_apuntes no admite debe y
-  haber en la misma fila. El neteo conserva exactamente los saldos por cuenta
-  (balance, sumas y saldos y PyG identicos al detalle) pero no el volumen
-  bruto de movimientos. Verificado contra A3 al centimo: resultado ene-ago
-  722.826,10 / gastos g6 2.834.841,38 / ingresos g7 3.557.667,48 / saldo
-  CaixaBank (572000001) 1.013.239,49. Si algun dia se quiere el detalle
-  (27.000 apuntes), hay que borrar estos 8 asientos con una migracion que
-  desactive triggers (los confirmados son inmutables) y cargar via Edge
-  Function temporal.
+- Diario 2026: cargado con DETALLE COMPLETO (17-08-2026) — 6.978 asientos
+  confirmados (numeros 1-6978, sin huecos, orden de fecha) con 20.910
+  apuntes y sus conceptos reales; la descripcion termina en "· A3 n" con el
+  numero original. Carga via scripts/cargar-diario-finanzas.mjs (JSON local
+  + service key en .env.local; el script es REANUDABLE) y confirmacion via
+  MCP en tandas con las claims de Luis. OJO A3: los abonos vienen como
+  importes NEGATIVOS (2 casos en 2026) y hay que normalizarlos (debe
+  negativo = haber positivo) porque fin_apuntes exige debe/haber >= 0.
+  Verificado contra A3 al centimo: resultado ene-ago 722.826,10 / gastos g6
+  2.834.841,38 / ingresos g7 3.557.667,48 / CaixaBank (572000001)
+  1.013.239,49 / debe = haber = 18.183.659,42 (el bruto difiere del listado
+  A3 en +47,49 por los 2 negativos normalizados; los saldos son identicos).
 - Extracto CaixaBank 2026: pendiente, espera al modulo de bancos (F2).
 
 ## Flujo de trabajo con Luis (desde 17-08-2026)
