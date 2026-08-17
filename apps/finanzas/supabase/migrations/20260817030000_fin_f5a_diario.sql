@@ -15,6 +15,9 @@
 -- anon, no solo anon); se añaden confirmado_por y confirmado_en, porque después
 -- de confirmar ya no hay forma de escribirlos; y dos bloqueos explícitos en vez
 -- de apoyarse en la forma del plan.
+-- Revisada 17-08-2026 (6): el ejercicio tiene que ser de la CUENTA del asiento,
+-- no solo de su sociedad; y el rastro (creado_*, confirmado_*) se escribe en el
+-- disparador de nacimiento, porque después de la sección 5 no hay otro sitio.
 -- ============================================================================
 -- MIGRACIÓN F5a — El diario: confirmar un asiento
 -- Proyecto: hostelero · Fecha: 17-08-2026
@@ -104,6 +107,25 @@ begin
   if new.numero is not null then
     raise exception 'El número de asiento lo asigna la confirmación, no quien inserta';
   end if;
+
+  -- El rastro se escribe AQUÍ porque es el único sitio donde se puede escribir.
+  -- La sección 5 revoca el UPDATE de estas cuatro columnas, y el INSERT sigue
+  -- siendo de tabla completa, así que salen dos consecuencias:
+  --   · un creado_por que nazca nulo se queda nulo PARA SIEMPRE — ya nadie tiene
+  --     privilegio para rellenarlo después, salvo con la service key;
+  --   · y lo que venga en el insert no es de fiar: se podría insertar un borrador
+  --     con el creado_por de otro, o con confirmado_* inventados. En un asiento
+  --     que luego se confirma se sobreescriben; en un borrador que se queda ahí,
+  --     no.
+  --
+  -- coalesce y no asignación directa: con un JWT manda auth.uid() y no lo que
+  -- traiga el cuerpo, pero un insert de servidor con la service key no lleva JWT
+  -- y allí auth.uid() es nulo — en ese caso vale lo que venga.
+  new.creado_por     := coalesce(auth.uid(), new.creado_por);
+  new.creado_en      := now();
+  new.confirmado_por := null;
+  new.confirmado_en  := null;
+
   return new;
 end $$;
 
@@ -309,6 +331,22 @@ begin
   if v_ej.sociedad_id <> v_a.sociedad_id then
     raise exception 'El ejercicio % no pertenece a la sociedad del asiento', v_ej.anio;
   end if;
+  -- Y a la CUENTA, que es otra comprobación y no la misma. La RLS de fin_asientos
+  -- solo mira cuenta_id, y sociedad_id no está atado a él por ninguna clave ajena
+  -- compuesta: un usuario de la cuenta A puede insertar un asiento con
+  -- cuenta_id = A (se lo exige la RLS) y la sociedad y el ejercicio de la cuenta
+  -- B. El permiso de arriba pasa, y la comprobación de sociedad también, porque
+  -- asiento y ejercicio son los dos de B. El asiento acabaría numerado dentro de
+  -- la serie del diario de B, que no lo verá nunca porque su RLS filtra por su
+  -- cuenta. Es el mismo agujero que esta migración cierra en los apuntes con
+  -- cuenta_id, un nivel más arriba.
+  --
+  -- Queda un residuo asumido: esto hereda la coherencia del propio ejercicio,
+  -- cuyo par (cuenta, sociedad) tampoco tiene clave ajena compuesta. Los
+  -- ejercicios los da de alta administración, no el usuario.
+  if v_ej.cuenta_id <> v_a.cuenta_id then
+    raise exception 'El ejercicio % no pertenece a la cuenta del asiento', v_ej.anio;
+  end if;
   if v_ej.estado <> 'abierto' then
     raise exception 'El ejercicio % está cerrado', v_ej.anio;
   end if;
@@ -501,6 +539,16 @@ begin
 
   execute format('grant update (%s) on fin_asientos to authenticated', v_columnas);
 end $$;
+
+-- OJO si algún día se amplía la lista de exclusión: NO puede llegar a cubrir
+-- todas las columnas. Un `select … for share` o `for update` exige privilegio de
+-- UPDATE sobre al menos una columna de la tabla; sin ninguna concedida,
+-- authenticated dejaría de poder pedir esos bloqueos. Comprobado en la base: con
+-- UPDATE sobre dos columnas el `for share` pasa, y sin ninguna falla con
+-- «permission denied for table fin_asientos». Hoy quedan cinco concedidas
+-- (ejercicio_id, fecha, descripcion, origen_tipo, origen_id) y las funciones que
+-- bloquean son SECURITY DEFINER, así que no muerde — pero es de las cosas que se
+-- descubren tarde.
 
 -- ============================================================================
 -- COMPROBACIONES SUGERIDAS DESPUÉS DE APLICAR
