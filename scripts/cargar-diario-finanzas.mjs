@@ -11,6 +11,11 @@
  * confirmación (numeración correlativa bajo advisory lock) se lanza después
  * con fin_confirmar_asiento, en orden de fecha.
  *
+ * ES REANUDABLE: si el proceso se corta a medias, se relanza con el mismo
+ * JSON y continúa donde iba. Los asientos se reconocen por el «· A3 n» del
+ * final de su descripción, y los apuntes se insertan en un orden determinista,
+ * así que el número de filas ya insertadas dice exactamente por dónde seguir.
+ *
  * Claves: SOLO desde .env.local (en .gitignore): HOSTELERO_URL y
  * HOSTELERO_SERVICE_KEY. Uso:
  *   node scripts/cargar-diario-finanzas.mjs <ruta-al-json>
@@ -43,39 +48,67 @@ if (!rutaJson) {
   process.exit(1);
 }
 
+/** fetch con timeout y reintentos: una petición colgada no puede matar la carga. */
 async function api(camino, opciones = {}) {
-  const r = await fetch(`${URL_BASE}/rest/v1/${camino}`, {
-    ...opciones,
-    headers: {
-      apikey: KEY,
-      Authorization: `Bearer ${KEY}`,
-      "Content-Type": "application/json",
-      ...(opciones.headers ?? {}),
-    },
-  });
-  if (!r.ok) {
-    const cuerpo = await r.text();
-    throw new Error(`${opciones.method ?? "GET"} ${camino} → ${r.status}: ${cuerpo.slice(0, 500)}`);
+  for (let intento = 1; ; intento++) {
+    try {
+      const r = await fetch(`${URL_BASE}/rest/v1/${camino}`, {
+        ...opciones,
+        signal: AbortSignal.timeout(60_000),
+        headers: {
+          apikey: KEY,
+          Authorization: `Bearer ${KEY}`,
+          "Content-Type": "application/json",
+          ...(opciones.headers ?? {}),
+        },
+      });
+      if (!r.ok) {
+        const cuerpo = await r.text();
+        throw new Error(`${opciones.method ?? "GET"} ${camino} → ${r.status}: ${cuerpo.slice(0, 300)}`);
+      }
+      return r;
+    } catch (e) {
+      // Un POST de inserción que falla por red puede haber llegado a medias…
+      // no: cada POST es UNA sentencia SQL y es atómico. Reintentar un lote que
+      // sí entró daría error de clave duplicada solo en fin_asientos (id); en
+      // fin_apuntes no hay unicidad, así que ahí NO se reintenta a ciegas: se
+      // relee el contador y se sigue desde donde diga la base.
+      if (intento >= 3 || opciones.sinReintento) throw e;
+      console.log(`  aviso: ${e.message ?? e} — reintento ${intento + 1}/3 en 5 s`);
+      await new Promise((r2) => setTimeout(r2, 5000));
+    }
   }
-  return r;
+}
+
+async function contar(tabla, filtro = "") {
+  const r = await api(`${tabla}?select=id${filtro}&limit=1`, {
+    method: "HEAD",
+    headers: { Prefer: "count=exact" },
+  });
+  return Number((r.headers.get("content-range") ?? "/0").split("/")[1]);
 }
 
 const asientos = JSON.parse(readFileSync(resolve(rutaJson), "utf8"));
-console.log(`JSON: ${asientos.length} asientos, ${asientos.reduce((s, a) => s + a.lineas.length, 0)} apuntes`);
+const totalApuntes = asientos.reduce((s, a) => s + a.lineas.length, 0);
+console.log(`JSON: ${asientos.length} asientos, ${totalApuntes} apuntes`);
 
-// ---------- seguridad: no cargar encima de un diario que ya tiene asientos ----------
-const rExistentes = await api(`fin_asientos?select=id&limit=1`, {
-  method: "HEAD",
-  headers: { Prefer: "count=exact" },
-});
-const existentes = Number((rExistentes.headers.get("content-range") ?? "/0").split("/")[1]);
-if (existentes > 0) {
+// ---------- ¿carga nueva o reanudación? ----------
+const asientosExistentes = await contar("fin_asientos");
+const apuntesExistentes = await contar("fin_apuntes");
+
+if (asientosExistentes > 0 && asientosExistentes !== asientos.length) {
   console.error(
-    `El diario ya tiene ${existentes} asientos. Este script solo carga sobre un diario VACÍO:\n` +
-      `bórralos antes a propósito (no lo hace él solo, para que borrar sea siempre una decisión).`,
+    `El diario tiene ${asientosExistentes} asientos y el JSON trae ${asientos.length}: ni vacío ni ` +
+      `una carga a medias de ESTE fichero. No toco nada — bórralo a propósito si quieres recargar.`,
   );
   process.exit(1);
 }
+if (asientosExistentes === asientos.length && apuntesExistentes >= totalApuntes) {
+  console.log("Ya está todo cargado: nada que hacer.");
+  process.exit(0);
+}
+const reanudando = asientosExistentes === asientos.length;
+if (reanudando) console.log(`Reanudando: asientos ya cargados, apuntes ${apuntesExistentes}/${totalApuntes}`);
 
 // ---------- mapa código → id del plan de cuentas (paginado) ----------
 const plan = new Map();
@@ -96,39 +129,64 @@ if (sinCuenta.size > 0) {
   process.exit(1);
 }
 
-// ---------- ejercicio del año de la carga ----------
-const anio = Number(asientos[0].fecha.slice(0, 4));
-const rEj = await api(`fin_ejercicios?select=id,anio&sociedad_id=eq.${SOCIEDAD_ID}&anio=eq.${anio}`);
-const ejercicios = await rEj.json();
-if (ejercicios.length !== 1) {
-  console.error(`Esperaba 1 ejercicio ${anio} y hay ${ejercicios.length}.`);
-  process.exit(1);
+if (!reanudando) {
+  // ---------- ejercicio del año de la carga ----------
+  const anio = Number(asientos[0].fecha.slice(0, 4));
+  const rEj = await api(`fin_ejercicios?select=id,anio&sociedad_id=eq.${SOCIEDAD_ID}&anio=eq.${anio}`);
+  const ejercicios = await rEj.json();
+  if (ejercicios.length !== 1) {
+    console.error(`Esperaba 1 ejercicio ${anio} y hay ${ejercicios.length}.`);
+    process.exit(1);
+  }
+  const EJERCICIO_ID = ejercicios[0].id;
+
+  for (const a of asientos) a.id = randomUUID();
+
+  const LOTE_ASIENTOS = 500;
+  for (let i = 0; i < asientos.length; i += LOTE_ASIENTOS) {
+    const lote = asientos.slice(i, i + LOTE_ASIENTOS).map((a) => ({
+      id: a.id,
+      cuenta_id: CUENTA_ID,
+      sociedad_id: SOCIEDAD_ID,
+      ejercicio_id: EJERCICIO_ID,
+      fecha: a.fecha,
+      descripcion: `${a.concepto} · A3 ${a.a3}`,
+      origen_tipo: "manual",
+      creado_por: CREADO_POR,
+    }));
+    await api("fin_asientos", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(lote),
+      sinReintento: true, // un reintento aquí chocaría con los id ya insertados
+    });
+    console.log(`asientos ${Math.min(i + LOTE_ASIENTOS, asientos.length)}/${asientos.length}`);
+  }
+} else {
+  // ---------- recuperar los id reales de los asientos ya insertados ----------
+  console.log("Recuperando los id de los asientos por su marca «· A3 n»…");
+  const porA3 = new Map();
+  for (let desde = 0; ; desde += 1000) {
+    const r = await api(`fin_asientos?select=id,descripcion&order=id&limit=1000&offset=${desde}`);
+    const pagina = await r.json();
+    for (const f of pagina) {
+      const m = (f.descripcion ?? "").match(/· A3 (\d+)$/);
+      if (m) porA3.set(Number(m[1]), f.id);
+    }
+    if (pagina.length < 1000) break;
+  }
+  let sinId = 0;
+  for (const a of asientos) {
+    a.id = porA3.get(a.a3);
+    if (!a.id) sinId++;
+  }
+  if (sinId > 0) {
+    console.error(`${sinId} asientos del JSON no aparecen en la base: no reanudo sobre datos que no reconozco.`);
+    process.exit(1);
+  }
 }
-const EJERCICIO_ID = ejercicios[0].id;
 
-// ---------- inserción por lotes: asientos (con id propio) y luego apuntes ----------
-for (const a of asientos) a.id = randomUUID();
-
-const LOTE_ASIENTOS = 500;
-for (let i = 0; i < asientos.length; i += LOTE_ASIENTOS) {
-  const lote = asientos.slice(i, i + LOTE_ASIENTOS).map((a) => ({
-    id: a.id,
-    cuenta_id: CUENTA_ID,
-    sociedad_id: SOCIEDAD_ID,
-    ejercicio_id: EJERCICIO_ID,
-    fecha: a.fecha,
-    descripcion: `${a.concepto} · A3 ${a.a3}`,
-    origen_tipo: "manual",
-    creado_por: CREADO_POR,
-  }));
-  await api("fin_asientos", {
-    method: "POST",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify(lote),
-  });
-  console.log(`asientos ${Math.min(i + LOTE_ASIENTOS, asientos.length)}/${asientos.length}`);
-}
-
+// ---------- apuntes, en orden determinista, desde donde diga la base ----------
 const apuntes = asientos.flatMap((a) =>
   a.lineas.map((l, j) => ({
     cuenta_id: CUENTA_ID,
@@ -140,17 +198,30 @@ const apuntes = asientos.flatMap((a) =>
   })),
 );
 
-const LOTE_APUNTES = 2000;
-for (let i = 0; i < apuntes.length; i += LOTE_APUNTES) {
-  await api("fin_apuntes", {
-    method: "POST",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify(apuntes.slice(i, i + LOTE_APUNTES)),
-  });
-  console.log(`apuntes ${Math.min(i + LOTE_APUNTES, apuntes.length)}/${apuntes.length}`);
+const LOTE_APUNTES = 500;
+let hechos = reanudando ? apuntesExistentes : 0;
+while (hechos < apuntes.length) {
+  const lote = apuntes.slice(hechos, hechos + LOTE_APUNTES);
+  try {
+    await api("fin_apuntes", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(lote),
+      sinReintento: true,
+    });
+    hechos += lote.length;
+  } catch (e) {
+    // ¿Entró o no entró? La base es la única que lo sabe: se relee el contador
+    // y se sigue desde ahí. Así un corte de red nunca duplica ni salta filas.
+    console.log(`  aviso: ${e.message ?? e} — compruebo en la base por dónde vamos…`);
+    await new Promise((r2) => setTimeout(r2, 5000));
+    hechos = await contar("fin_apuntes");
+  }
+  console.log(`apuntes ${hechos}/${apuntes.length}`);
 }
 
+const finales = await contar("fin_apuntes");
 console.log(
-  `\nHECHO: ${asientos.length} asientos en borrador con ${apuntes.length} apuntes.\n` +
+  `\nHECHO: ${asientos.length} asientos en borrador con ${finales} apuntes.\n` +
     `Siguiente paso: confirmarlos en orden de fecha con fin_confirmar_asiento.`,
 );
