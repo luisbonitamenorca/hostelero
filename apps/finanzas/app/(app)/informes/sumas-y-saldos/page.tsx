@@ -1,6 +1,7 @@
 import { euros } from "@/lib/importes";
 import { cargarSaldos } from "../datos";
 import SelectorPeriodo from "../selector-periodo";
+import DescargarExcel, { type CeldaExcel } from "../descargar-excel";
 import SinDiario from "../sin-diario";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,17 @@ export default async function SumasYSaldos({
 
   const descuadre = Math.round((t.debeTotal - t.haberTotal) * 100) / 100;
 
+  const filasExcel: CeldaExcel[][] = [
+    ["Cuenta", "Nombre", "Debe anterior", "Haber anterior", "Debe periodo", "Haber periodo",
+      "Debe acumulado", "Haber acumulado", "Saldo"],
+    ...filas.map((f): CeldaExcel[] => [
+      f.codigo, f.nombre, f.debeAnterior, f.haberAnterior, f.debePeriodo, f.haberPeriodo,
+      f.debeTotal, f.haberTotal, f.saldo,
+    ]),
+    ["", "TOTALES", t.debeAnterior, t.haberAnterior, t.debePeriodo, t.haberPeriodo,
+      t.debeTotal, t.haberTotal, descuadre],
+  ];
+
   return (
     <>
       <div className="cabecera-pagina">
@@ -36,6 +48,9 @@ export default async function SumasYSaldos({
 
       <div className="barra-filtros">
         <SelectorPeriodo base="/informes/sumas-y-saldos" anio={anio} modo={modo} sp={sp} />
+        {hayApuntes && (
+          <DescargarExcel nombre={`sumas-y-saldos-${anio}-${modo}`} filas={filasExcel} />
+        )}
       </div>
 
       {error && (

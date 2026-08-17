@@ -1,45 +1,69 @@
 import { Fragment } from "react";
 import { euros } from "@/lib/importes";
-import { balance, type BloqueBalance } from "@/lib/contabilidad";
-import { cargarSaldos } from "../datos";
-import SelectorPeriodo from "../selector-periodo";
+import { balanceEnColumnas, type BloqueColumnas } from "@/lib/contabilidad";
+import { cargarApuntes } from "../datos";
+import SelectorVista from "../selector-vista";
+import DescargarExcel, { type CeldaExcel } from "../descargar-excel";
 import SinDiario from "../sin-diario";
 
 export const dynamic = "force-dynamic";
 
-function Columna({ titulo, bloques, total }: { titulo: string; bloques: BloqueBalance[]; total: number }) {
+/** Celda de importe: el cero no se pinta; el negativo (correctoras) entre paréntesis. */
+function Importe({ v }: { v: number }) {
+  return <td className="dato">{v === 0 ? "" : v < 0 ? `(${euros(-v)})` : euros(v)}</td>;
+}
+
+function Tabla({
+  titulo,
+  columnas,
+  bloques,
+  totales,
+}: {
+  titulo: string;
+  columnas: string[];
+  bloques: BloqueColumnas[];
+  totales: number[];
+}) {
   return (
     <div className="tabla-envoltura">
-      <table className="tabla">
+      <table className="tabla tabla-informe">
         <thead>
           <tr>
             <th>{titulo}</th>
-            <th className="dato">Importe</th>
+            {columnas.map((c) => (
+              <th key={c} className="dato">
+                {c}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {bloques.map((b) => (
-            <Fragment key={b.masa}>
-              <tr>
-                <td colSpan={2}>
+            <Fragment key={b.clave}>
+              <tr className="fila-seccion">
+                <td colSpan={columnas.length + 1}>
                   <strong>{b.titulo}</strong>
                 </td>
               </tr>
-              {b.lineas.map((l) => (
-                <tr key={l.codigo}>
-                  <td className="dato">
-                    {l.codigo} <span className="texto-suave">{l.nombre}</span>
+              {b.filas.map((f) => (
+                <tr key={f.codigo}>
+                  <td>
+                    {f.codigo} <span className="texto-suave">{f.nombre}</span>
                   </td>
-                  <td className="dato">{l.importe < 0 ? `(${euros(-l.importe)})` : euros(l.importe)}</td>
+                  {f.importes.map((v, i) => (
+                    <Importe key={i} v={v} />
+                  ))}
                 </tr>
               ))}
-              <tr>
-                <td className="dato">
+              <tr className="fila-subtotal">
+                <td>
                   <em>Total {b.titulo.toLowerCase()}</em>
                 </td>
-                <td className="dato">
-                  <em>{euros(b.total)}</em>
-                </td>
+                {b.totales.map((v, i) => (
+                  <td key={i} className="dato">
+                    <em>{v === 0 ? "" : euros(v)}</em>
+                  </td>
+                ))}
               </tr>
             </Fragment>
           ))}
@@ -49,9 +73,11 @@ function Columna({ titulo, bloques, total }: { titulo: string; bloques: BloqueBa
             <td>
               <strong>Total {titulo.toLowerCase()}</strong>
             </td>
-            <td className="dato">
-              <strong>{euros(total)}</strong>
-            </td>
+            {totales.map((v, i) => (
+              <td key={i} className="dato">
+                <strong>{euros(v)}</strong>
+              </td>
+            ))}
           </tr>
         </tfoot>
       </table>
@@ -65,21 +91,55 @@ export default async function BalanceDeSituacion({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const { anio, modo, periodo, filas, error, hayApuntes } = await cargarSaldos(sp);
-  const b = balance(filas);
+  const { anio, vista, tramos, inicioEjercicio, apuntes, error, hayApuntes } =
+    await cargarApuntes(sp);
+  const b = balanceEnColumnas(apuntes, tramos, inicioEjercicio);
+
+  // Cada columna es una FOTO al último día de su tramo. Por eso aquí no hay
+  // columna «Total año»: sumar fotos no significa nada — la última columna YA
+  // es el balance a fin del periodo.
+  const columnas = tramos.map((t) =>
+    tramos.length > 1 ? `a ${t.hasta.split("-").reverse().join("/")}` : t.titulo,
+  );
+
+  const descuadrado = b.descuadres.some((d) => d !== 0);
+
+  const filasExcel: CeldaExcel[][] = [["Cuenta", "Nombre", ...columnas]];
+  for (const [titulo, bloques, totales] of [
+    ["ACTIVO", b.activo, b.totalActivo],
+    ["PATRIMONIO NETO Y PASIVO", b.pasivo, b.totalPasivo],
+  ] as const) {
+    filasExcel.push([titulo]);
+    for (const bl of bloques) {
+      for (const f of bl.filas) filasExcel.push([f.codigo, f.nombre, ...f.importes]);
+      filasExcel.push(["", `Total ${bl.titulo}`, ...bl.totales]);
+    }
+    filasExcel.push(["", `TOTAL ${titulo}`, ...totales]);
+  }
+  if (b.sinClasificar.length > 0) {
+    filasExcel.push(["SIN CLASIFICAR"]);
+    for (const f of b.sinClasificar) filasExcel.push([f.codigo, f.nombre, ...f.importes]);
+  }
 
   return (
     <>
       <div className="cabecera-pagina">
         <h1>Balance de situación</h1>
         {/* Un balance es una FOTO a una fecha, no un movimiento de un tramo.
-            Se dice explícitamente porque el selector de arriba habla de
-            periodos y es fácil leerlo como «el balance de marzo». */}
-        <p className="sub">A {periodo.hasta.split("-").reverse().join("/")} · acumulado desde el 1 de enero de {anio}</p>
+            En la vista por meses cada columna es la foto a fin de ese mes. */}
+        <p className="sub">
+          Ejercicio {anio} · acumulado desde el 1 de enero
+          {vista === "meses"
+            ? " · una columna por fin de mes"
+            : vista === "trimestres"
+              ? " · una columna por fin de trimestre"
+              : ""}
+        </p>
       </div>
 
       <div className="barra-filtros">
-        <SelectorPeriodo base="/informes/balance" anio={anio} modo={modo} sp={sp} />
+        <SelectorVista base="/informes/balance" anio={anio} vista={vista} sp={sp} />
+        {hayApuntes && <DescargarExcel nombre={`balance-${anio}-${vista}`} filas={filasExcel} />}
       </div>
 
       {error && (
@@ -93,22 +153,26 @@ export default async function BalanceDeSituacion({
 
       {!error && hayApuntes && (
         <>
-          <div className="rejilla">
-            <Columna titulo="Activo" bloques={b.activo} total={b.totalActivo} />
-            <Columna titulo="Patrimonio neto y pasivo" bloques={b.pasivo} total={b.totalPasivo} />
-          </div>
+          <Tabla titulo="Activo" columnas={columnas} bloques={b.activo} totales={b.totalActivo} />
+          <Tabla
+            titulo="Patrimonio neto y pasivo"
+            columnas={columnas}
+            bloques={b.pasivo}
+            totales={b.totalPasivo}
+          />
 
-          {b.descuadre === 0 ? (
+          {!descuadrado ? (
             <p className="pista">
-              El balance cuadra: activo y pasivo suman {euros(b.totalActivo)}. El
-              resultado del ejercicio ({euros(b.resultado)}) va incorporado al patrimonio
-              neto; en la contabilidad todavía vive en los grupos 6 y 7 hasta que se
-              regularice al cierre.
+              El balance cuadra en todas las columnas: activo y pasivo suman lo mismo.
+              El resultado del ejercicio va incorporado al patrimonio neto (línea 129);
+              en la contabilidad todavía vive en los grupos 6 y 7 hasta que se
+              regularice al cierre. Los importes entre paréntesis restan: son las
+              cuentas correctoras (amortización acumulada y deterioros).
             </p>
           ) : (
             <div className="aviso-banda">
               <span className="aviso-texto">
-                <strong>El balance no cuadra por {euros(b.descuadre)}.</strong>{" "}
+                <strong>El balance no cuadra en alguna columna.</strong>{" "}
                 {b.sinClasificar.length > 0
                   ? "Hay cuentas que no se han podido colocar en una masa patrimonial; salen listadas abajo."
                   : "El descuadre viene del propio diario, no de la clasificación."}
@@ -118,20 +182,26 @@ export default async function BalanceDeSituacion({
 
           {b.sinClasificar.length > 0 && (
             <div className="tabla-envoltura">
-              <table className="tabla">
+              <table className="tabla tabla-informe">
                 <thead>
                   <tr>
                     <th>Sin clasificar</th>
-                    <th className="dato">Saldo</th>
+                    {columnas.map((c) => (
+                      <th key={c} className="dato">
+                        {c}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {b.sinClasificar.map((l) => (
-                    <tr key={l.codigo}>
-                      <td className="dato">
-                        {l.codigo} <span className="texto-suave">{l.nombre}</span>
+                  {b.sinClasificar.map((f) => (
+                    <tr key={f.codigo}>
+                      <td>
+                        {f.codigo} <span className="texto-suave">{f.nombre}</span>
                       </td>
-                      <td className="dato">{euros(l.importe)}</td>
+                      {f.importes.map((v, i) => (
+                        <Importe key={i} v={v} />
+                      ))}
                     </tr>
                   ))}
                 </tbody>

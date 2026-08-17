@@ -528,3 +528,166 @@ function voltear(iso: string): string {
   const [a, m, d] = iso.split("-");
   return `${d}/${m}/${a}`;
 }
+
+// ---------------------------------------------------------------- informes en columnas
+
+/**
+ * Vista de un informe: cuántas columnas tiene y qué significa cada una.
+ * «anual» es todo el ejercicio junto; «trimestres» y «meses» sacan una columna
+ * por tramo; «rango» es una sola columna entre dos fechas.
+ */
+export type Vista = "anual" | "trimestres" | "meses" | "rango";
+
+export type Tramo = { titulo: string; desde: string; hasta: string };
+
+const MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+export function tramosDeVista(
+  anio: number,
+  vista: Vista,
+  opciones: { desde?: string; hasta?: string } = {},
+): Tramo[] {
+  if (vista === "meses") {
+    return MESES_CORTOS.map((titulo, i) => ({
+      titulo,
+      desde: primerDia(anio, i + 1),
+      hasta: diaFinal(anio, i + 1),
+    }));
+  }
+  if (vista === "trimestres") {
+    return [1, 2, 3, 4].map((t) => ({
+      titulo: `T${t}`,
+      desde: primerDia(anio, t * 3 - 2),
+      hasta: diaFinal(anio, t * 3),
+    }));
+  }
+  if (vista === "rango") {
+    const desde = opciones.desde || primerDia(anio, 1);
+    const hasta = opciones.hasta || diaFinal(anio, 12);
+    return [{ titulo: `${voltear(desde)} – ${voltear(hasta)}`, desde, hasta }];
+  }
+  return [{ titulo: `Ejercicio ${anio}`, desde: primerDia(anio, 1), hasta: diaFinal(anio, 12) }];
+}
+
+/** Una fila de informe con un importe por tramo, en el mismo orden que los tramos. */
+export type FilaColumnas = { codigo: string; nombre: string; importes: number[] };
+export type BloqueColumnas = {
+  clave: string;
+  titulo: string;
+  filas: FilaColumnas[];
+  totales: number[];
+};
+
+/**
+ * Funde varios informes de un solo tramo en una tabla de columnas: la unión de
+ * bloques y de cuentas, con 0 donde una cuenta no se movió ese tramo. El orden
+ * de bloques respeta el del primer tramo donde aparece cada uno (que ya viene
+ * ordenado de las funciones de un tramo).
+ */
+function fundir(
+  porTramo: { clave: string; titulo: string; lineas: { codigo: string; nombre: string; importe: number }[] }[][],
+): BloqueColumnas[] {
+  const n = porTramo.length;
+  const bloques = new Map<string, BloqueColumnas>();
+
+  porTramo.forEach((lista, i) => {
+    for (const b of lista) {
+      let bloque = bloques.get(b.clave);
+      if (!bloque) {
+        bloque = { clave: b.clave, titulo: b.titulo, filas: [], totales: Array(n).fill(0) };
+        bloques.set(b.clave, bloque);
+      }
+      for (const l of b.lineas) {
+        let fila = bloque.filas.find((f) => f.codigo === l.codigo);
+        if (!fila) {
+          fila = { codigo: l.codigo, nombre: l.nombre, importes: Array(n).fill(0) };
+          bloque.filas.push(fila);
+        }
+        fila.importes[i] = l.importe;
+      }
+    }
+  });
+
+  const resultado = [...bloques.values()];
+  for (const b of resultado) {
+    b.filas.sort((a, z) => a.codigo.localeCompare(z.codigo));
+    b.totales = b.totales.map((_, i) =>
+      redondear(b.filas.reduce((s, f) => s + f.importes[i], 0)),
+    );
+  }
+  return resultado;
+}
+
+export type PyGColumnas = {
+  tramos: Tramo[];
+  ingresos: BloqueColumnas[];
+  gastos: BloqueColumnas[];
+  totalIngresos: number[];
+  totalGastos: number[];
+  resultado: number[];
+};
+
+/** PyG con una columna por tramo: cada columna es el MOVIMIENTO de su tramo. */
+export function pygEnColumnas(apuntes: ApunteInforme[], tramos: Tramo[]): PyGColumnas {
+  const porTramo = tramos.map((t) => perdidasYGanancias(sumasYSaldos(apuntes, t.desde, t.hasta)));
+
+  const aBloques = (lado: "ingresos" | "gastos") =>
+    fundir(porTramo.map((p) => p[lado].map((b) => ({ clave: b.subgrupo, titulo: b.titulo, lineas: b.lineas }))));
+
+  const ingresos = aBloques("ingresos");
+  const gastos = aBloques("gastos");
+  const totalIngresos = porTramo.map((p) => p.totalIngresos);
+  const totalGastos = porTramo.map((p) => p.totalGastos);
+
+  return {
+    tramos,
+    ingresos,
+    gastos,
+    totalIngresos,
+    totalGastos,
+    resultado: porTramo.map((p) => p.resultado),
+  };
+}
+
+export type BalanceColumnas = {
+  tramos: Tramo[];
+  activo: BloqueColumnas[];
+  pasivo: BloqueColumnas[];
+  sinClasificar: FilaColumnas[];
+  totalActivo: number[];
+  totalPasivo: number[];
+  resultado: number[];
+  descuadres: number[];
+};
+
+/**
+ * Balance con una columna por tramo: cada columna es la FOTO al último día del
+ * tramo (acumulada desde `inicioEjercicio`), no el movimiento del tramo. Por
+ * eso «meses» aquí se lee «cómo estaba la empresa a fin de cada mes».
+ */
+export function balanceEnColumnas(
+  apuntes: ApunteInforme[],
+  tramos: Tramo[],
+  inicioEjercicio: string,
+): BalanceColumnas {
+  const porTramo = tramos.map((t) => balance(sumasYSaldos(apuntes, inicioEjercicio, t.hasta)));
+
+  const aBloques = (lado: "activo" | "pasivo") =>
+    fundir(porTramo.map((b) => b[lado].map((x) => ({ clave: x.masa, titulo: x.titulo, lineas: x.lineas }))));
+
+  const sinClasificar = fundir(
+    porTramo.map((b) => [{ clave: "sin", titulo: "Sin clasificar", lineas: b.sinClasificar }]),
+  )[0]?.filas ?? [];
+
+  return {
+    tramos,
+    activo: aBloques("activo"),
+    pasivo: aBloques("pasivo"),
+    sinClasificar,
+    totalActivo: porTramo.map((b) => b.totalActivo),
+    totalPasivo: porTramo.map((b) => b.totalPasivo),
+    resultado: porTramo.map((b) => b.resultado),
+    descuadres: porTramo.map((b) => b.descuadre),
+  };
+}

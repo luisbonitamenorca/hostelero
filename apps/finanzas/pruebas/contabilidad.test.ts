@@ -155,5 +155,58 @@ comprueba("y el título va en formato español", rango.titulo === "del 04/05/202
 const raro = calcularPeriodo(2026, "mes", { mes: 99 });
 comprueba("un mes imposible se acota", raro.hasta === "2026-12-31", raro.hasta);
 
+
+// ------------------------------------------------------------ informes en columnas
+
+// Se importa aquí abajo para no tocar la cabecera del archivo.
+const { tramosDeVista, pygEnColumnas, balanceEnColumnas } = await import("../lib/contabilidad.ts");
+
+const meses = tramosDeVista(2026, "meses");
+comprueba("la vista por meses tiene 12 tramos", meses.length === 12);
+comprueba("enero va del 1 al 31", meses[0].desde === "2026-01-01" && meses[0].hasta === "2026-01-31");
+comprueba("febrero acaba el 28", meses[1].hasta === "2026-02-28");
+
+const trimestres = tramosDeVista(2026, "trimestres");
+comprueba("la vista por trimestres tiene 4 tramos", trimestres.length === 4);
+comprueba("T3 va de julio a septiembre",
+  trimestres[2].desde === "2026-07-01" && trimestres[2].hasta === "2026-09-30", trimestres[2].desde);
+
+comprueba("la vista anual es un solo tramo", tramosDeVista(2026, "anual").length === 1);
+
+// Un diario mínimo: venta en enero, compra en febrero. La PyG por meses tiene
+// que poner cada cosa en su columna y cero en la otra.
+const diarioCol: ApunteInforme[] = [
+  { codigo: "430000000", nombre: "Clientes", fecha: "2026-01-15", debe: 121, haber: 0 },
+  { codigo: "700000100", nombre: "Ventas", fecha: "2026-01-15", debe: 0, haber: 100 },
+  { codigo: "477000010", nombre: "IVA rep.", fecha: "2026-01-15", debe: 0, haber: 21 },
+  { codigo: "600000000", nombre: "Compras", fecha: "2026-02-10", debe: 40, haber: 0 },
+  { codigo: "400000001", nombre: "Proveedores", fecha: "2026-02-10", debe: 0, haber: 40 },
+];
+
+const pygCol = pygEnColumnas(diarioCol, meses);
+comprueba("la venta cae en la columna de enero", pygCol.totalIngresos[0] === 100, String(pygCol.totalIngresos[0]));
+comprueba("y no en la de febrero", pygCol.totalIngresos[1] === 0);
+comprueba("la compra cae en la columna de febrero", pygCol.totalGastos[1] === 40);
+comprueba("el resultado de enero es la venta entera", pygCol.resultado[0] === 100);
+comprueba("el resultado de febrero es la compra en negativo", pygCol.resultado[1] === -40);
+const filaVentas = pygCol.ingresos[0]?.filas.find((f) => f.codigo === "700000100");
+comprueba("la fila de ventas tiene 12 importes", filaVentas?.importes.length === 12);
+comprueba("con 100 en enero y 0 en marzo", filaVentas?.importes[0] === 100 && filaVentas?.importes[2] === 0);
+
+// El balance por meses es una FOTO acumulada: la venta de enero sigue estando
+// en la columna de febrero, y la compra solo aparece a partir de febrero.
+const balCol = balanceEnColumnas(diarioCol, meses.slice(0, 2), "2026-01-01");
+comprueba("el balance de enero cuadra", balCol.descuadres[0] === 0, String(balCol.descuadres[0]));
+comprueba("el balance de febrero cuadra", balCol.descuadres[1] === 0);
+comprueba("clientes está en las dos fotos", (() => {
+  const f = balCol.activo.flatMap((b) => b.filas).find((x) => x.codigo === "430000000");
+  return f?.importes[0] === 121 && f?.importes[1] === 121;
+})());
+comprueba("proveedores solo aparece desde febrero", (() => {
+  const f = balCol.pasivo.flatMap((b) => b.filas).find((x) => x.codigo === "400000001");
+  return f?.importes[0] === 0 && f?.importes[1] === 40;
+})());
+comprueba("el resultado acumulado de febrero es 60", balCol.resultado[1] === 60, String(balCol.resultado[1]));
+
 console.log(fallos === 0 ? "\nTODO CORRECTO" : `\n${fallos} FALLOS`);
 process.exit(fallos === 0 ? 0 : 1);

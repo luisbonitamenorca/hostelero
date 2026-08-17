@@ -55,7 +55,7 @@ export default async function Diario({
         <h1>Diario</h1>
         <p className="sub">
           Asientos de {periodo.titulo}
-          {filas.length > 0 ? ` · ${filas.length}` : ""}
+          {filas.length > 0 ? ` · ${filas.length === 300 ? "los 300 más recientes — acota el periodo para ver el resto" : filas.length}` : ""}
           {borradores > 0 ? ` · ${borradores} en borrador` : ""}
         </p>
       </div>

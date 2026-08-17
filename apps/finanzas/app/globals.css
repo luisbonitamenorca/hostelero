@@ -267,6 +267,29 @@ button { font: inherit; cursor: pointer; }
 
 .tabla td.numero { text-align: right; }
 
+/* Los importes se leen alineados a la derecha, como en cualquier listado
+   contable: con tabular-nums las unidades quedan en vertical y el ojo compara
+   columnas sin esfuerzo. El encabezado acompaña a su columna. */
+.tabla td.dato, .tabla th.dato { text-align: right; white-space: nowrap; }
+
+/* Tablas de informe (balance, PyG): muchas columnas de importes. La primera
+   columna queda fija al hacer scroll horizontal para no perder la cuenta. */
+.tabla-informe th:first-child, .tabla-informe td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--blanco);
+  min-width: 220px;
+}
+.tabla-informe .fila-seccion td {
+  background: var(--papel);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.tabla-informe .fila-seccion td:first-child { background: var(--papel); }
+.tabla-informe .fila-subtotal td { border-top: 1px solid var(--borde); color: var(--gris); }
+.tabla-informe tfoot td { border-top: 2px solid var(--tinta); font-size: 15px; }
+
 .estado-vacio {
   background: var(--blanco);
   border: 1px dashed var(--borde);
