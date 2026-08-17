@@ -18,6 +18,10 @@
 -- Revisada 17-08-2026 (6): el ejercicio tiene que ser de la CUENTA del asiento,
 -- no solo de su sociedad; y el rastro (creado_*, confirmado_*) se escribe en el
 -- disparador de nacimiento, porque después de la sección 5 no hay otro sitio.
+-- Revisada 17-08-2026 (8): el centro del apunte tiene que ser de la sociedad del
+-- asiento — al añadir centro_id en la ronda 7 se añadió también la forma de
+-- colarlo —, y el origen duplicado responde en castellano diciendo en qué asiento
+-- está ya contabilizado.
 -- Revisada 17-08-2026 (7): entran centro_id en los apuntes y el índice único de
 -- origen. Las dos por decisión de Luis, y las dos ahora porque hoy son gratis y
 -- dentro de unos meses no lo serían.
@@ -60,6 +64,11 @@
 --     635 subcuentas de proveedor y solo dos cuentas de resultado (680 y 681),
 --     así que no hay dónde llevar una venta ni una compra.
 --   · Nada de cierre de ejercicio ni asiento de regularización (F5d).
+--   · Nada de carga del diario histórico de A3. Cuando toque, la migración de
+--     carga tendrá que desactivar y reactivar fin_asientos_nacer_borrador_ins
+--     dentro de ella misma: el disparador impide que un asiento nazca
+--     confirmado, y lo impide también para la clave de servicio. Mismo caso que
+--     la F2b dejó anotado para las facturas históricas de Ágora.
 --
 -- QUÉ SÍ ENTRA AUNQUE TODAVÍA NO SE USE, y por qué no espera
 --   · centro_id en fin_apuntes (sección 1) y el índice que impide contabilizar
@@ -320,6 +329,7 @@ declare
   v_ajenas   int;
   v_bloq     boolean;
   v_numero   bigint;
+  v_otro     bigint;
 begin
   select * into v_a from fin_asientos where id = p_asiento_id for update;
   if not found then
@@ -425,6 +435,66 @@ begin
      and (pc.sociedad_id is distinct from v_a.sociedad_id or not pc.activo);
   if v_ajenas > 0 then
     raise exception 'Hay % apunte(s) con cuenta de otra sociedad o desactivada', v_ajenas;
+  end if;
+
+  -- Y el CENTRO del apunte tiene que ser de la sociedad del asiento. La clave
+  -- ajena de la sección 1 solo garantiza que el centro EXISTE, no de quién es.
+  --
+  -- Y no basta con la que ya trae `centros`: esa tabla sí tiene una FK compuesta
+  -- —(sociedad_id, cuenta_id) → sociedades(id, cuenta_id)—, o sea que el centro es
+  -- coherente CONSIGO MISMO. Lo que no hay es nada que lo ate a la sociedad del
+  -- ASIENTO, y eso es lo que se comprueba aquí. Referenciar por uuid un centro
+  -- que la RLS ni te deja ver sigue siendo posible: la clave ajena solo exige que
+  -- la fila esté, no que la veas.
+  --
+  -- Sin esto, un apunte de la sociedad A puede imputar su gasto a un centro de la
+  -- B, y como de ahí sale la PyG por centro, el resultado del centro ajeno queda
+  -- contaminado — y confirmado e inmutable, así que solo se arregla con un asiento
+  -- de corrección.
+  --
+  -- Es el mismo agujero que se cierra arriba con el ejercicio y con las cuentas
+  -- del plan, en la dimensión que esta misma migración estrena: al añadir
+  -- centro_id se añadió también la forma de colarlo, y por eso se cierra en la
+  -- misma migración y no en la siguiente.
+  --
+  -- Se compara contra la SOCIEDAD y no contra la cuenta a propósito: una cuenta
+  -- puede tener varias sociedades, y un centro de la sociedad hermana también
+  -- descuadraría la PyG. Los apuntes sin centro no entran, porque el join los
+  -- deja fuera — y eso es lo que se quiere: el centro es opcional a propósito.
+  select count(*) into v_ajenas
+    from fin_apuntes ap
+    join centros ce on ce.id = ap.centro_id
+   where ap.asiento_id = v_a.id
+     and ce.sociedad_id is distinct from v_a.sociedad_id;
+  if v_ajenas > 0 then
+    raise exception 'Hay % apunte(s) con centro de otra sociedad', v_ajenas;
+  end if;
+
+  -- El índice fin_asientos_origen_unico de la sección 6 es la barrera de verdad;
+  -- esto es solo el mensaje. Sin esto, contabilizar dos veces la misma factura
+  -- devuelve el «duplicate key value violates unique constraint» de Postgres, con
+  -- el uuid a pelo: no dice ni en qué asiento está ya contabilizada ni qué hacer,
+  -- y es el único rechazo de esta función que no estaría en castellano.
+  --
+  -- No es a prueba de carreras y no pretende serlo: el advisory lock de abajo
+  -- serializa por ejercicio y esta unicidad es global, así que dos confirmaciones
+  -- simultáneas del mismo origen en ejercicios distintos pasarían las dos por
+  -- aquí. Ahí muerde el índice, que es donde tiene que morder.
+  --
+  -- Esta lista de tipos tiene que moverse con la del índice de la sección 6.
+  if v_a.origen_id is not null
+     and v_a.origen_tipo in ('factura_emitida', 'compra') then
+    select numero into v_otro
+      from fin_asientos
+     where origen_tipo = v_a.origen_tipo
+       and origen_id   = v_a.origen_id
+       and estado      = 'confirmado'
+       and id <> v_a.id
+     limit 1;
+    if found then
+      raise exception 'Este origen (%) ya está contabilizado en el asiento %',
+        v_a.origen_tipo, v_otro;
+    end if;
   end if;
 
   -- Numeración correlativa por ejercicio: reinicia en 1 cada año, y no deja
@@ -587,6 +657,9 @@ end $$;
 --     saber qué va a apuntar ahí.
 -- ----------------------------------------------------------------------------
 
+-- Si aquí se añade un tipo, hay que añadirlo también a la comprobación previa de
+-- la sección 4 que da el mensaje en castellano. Son dos capas de lo mismo y
+-- tienen que llevar la misma lista.
 create unique index if not exists fin_asientos_origen_unico
   on fin_asientos (origen_tipo, origen_id)
   where origen_id is not null
