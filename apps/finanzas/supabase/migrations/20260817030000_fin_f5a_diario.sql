@@ -5,16 +5,16 @@
 -- Revisada 17-08-2026 (2): se bloquea también el borrado de apuntes (la misma
 -- carrera que el insert, por el otro lado), se cambia v_existe por found, y la
 -- ausencia de fila de periodo pasa a ser excepción en vez de mes abierto.
--- Revisada 17-08-2026 (5): el revoke necesitaba las dos concesiones (public y
--- anon, no solo anon); se añaden confirmado_por y confirmado_en, porque después
--- de confirmar ya no hay forma de escribirlos; y dos bloqueos explícitos en vez
--- de apoyarse en la forma del plan.
--- Revisada 17-08-2026 (4): privilegios de columna sobre fin_asientos, que es la
--- barrera de verdad detrás del guardarraíl de la marca. Decisión de Luis.
 -- Revisada 17-08-2026 (3): el disparador de apuntes pasa a SECURITY DEFINER
 -- (sin eso `not found` significaba «no lo veo», no «no existe») y comprueba que
 -- el apunte sea de la misma cuenta que su asiento; se bloquean también el
 -- ejercicio y el periodo al confirmar, que se leían sin lock.
+-- Revisada 17-08-2026 (4): privilegios de columna sobre fin_asientos, que es la
+-- barrera de verdad detrás del guardarraíl de la marca. Decisión de Luis.
+-- Revisada 17-08-2026 (5): el revoke necesitaba las dos concesiones (public y
+-- anon, no solo anon); se añaden confirmado_por y confirmado_en, porque después
+-- de confirmar ya no hay forma de escribirlos; y dos bloqueos explícitos en vez
+-- de apoyarse en la forma del plan.
 -- ============================================================================
 -- MIGRACIÓN F5a — El diario: confirmar un asiento
 -- Proyecto: hostelero · Fecha: 17-08-2026
@@ -143,14 +143,11 @@ begin
       --
       -- Y conviene no prometer de más: la marca es un GUARDARRAÍL, no una
       -- barrera. set_config() lo puede llamar cualquiera, así que quien tenga
-      -- UPDATE por RLS y acceso SQL directo podría ponérsela él y hacer el
-      -- update a mano. Por PostgREST no es alcanzable — set_config vive en
-      -- pg_catalog y no se expone como RPC —, y eso es lo que hoy la sostiene.
-      -- Deuda consciente: la barrera de verdad son privilegios de columna,
-      --   revoke update on fin_asientos from authenticated;
-      --   grant  update (<columnas editables>) on fin_asientos to authenticated;
-      -- que a cambio obliga a mantener esa lista cada vez que se añada una
-      -- columna. Decisión de Luis; no se implementa aquí.
+      -- UPDATE y acceso SQL directo podría ponérsela él y hacer el update a
+      -- mano. La barrera está en la SECCIÓN 5: sin privilegio de UPDATE sobre
+      -- estas dos columnas, ese intento se para antes de llegar aquí. Esta
+      -- comprobación se queda porque el error de permisos de Postgres no dice a
+      -- quién hay que preguntar, y este mensaje sí.
       if coalesce(current_setting('fin.confirmando', true), '') <> old.id::text then
         raise exception 'El estado y el número los asigna fin_confirmar_asiento()';
       end if;
@@ -196,8 +193,9 @@ create trigger fin_asientos_proteger_del before delete on fin_asientos
 -- Sobre interbloqueos: el orden cabecera-antes-que-apunte es el mismo en todos
 -- los caminos. Lo que no cubría era mover un apunte de A a B mientras otra
 -- transacción mueve otro de B a A — ahí se bloqueaba A→B y B→A. Por eso, cuando
--- intervienen dos asientos, se piden los dos bloqueos de golpe y ordenados por
--- id, que impone el mismo orden a las dos transacciones.
+-- intervienen dos asientos, se piden los dos bloqueos por separado y siempre el
+-- de id menor primero, que impone el mismo orden a las dos transacciones sin
+-- depender de la forma del plan.
 -- ----------------------------------------------------------------------------
 
 create or replace function fin_apuntes_proteger() returns trigger
