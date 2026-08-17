@@ -112,6 +112,7 @@ export async function guardarAsiento(datos: {
       asiento_id: asientoId,
       orden: i + 1,
       cuenta_plan_id: l.cuentaPlanId,
+      centro_id: l.centroId || null,
       descripcion: l.descripcion?.trim() || null,
       debe: redondear(l.debe),
       haber: redondear(l.haber),

@@ -1,5 +1,5 @@
 import { exigirModulo } from "@/lib/supabase/server";
-import type { CuentaPlan } from "@/lib/diario";
+import type { CentroBreve, CuentaPlan } from "@/lib/diario";
 
 /**
  * Cuentas donde se puede imputar un apunte. Se cargan todas (hoy son ~660) y
@@ -9,11 +9,15 @@ import type { CuentaPlan } from "@/lib/diario";
 export async function cargarCuentas() {
   const { supabase } = await exigirModulo("contabilidad");
 
-  const { data, error } = await supabase
-    .from("fin_plan_cuentas")
-    .select("id, codigo, nombre")
-    .eq("activo", true)
-    .order("codigo");
+  const [{ data, error }, { data: centros }] = await Promise.all([
+    supabase.from("fin_plan_cuentas").select("id, codigo, nombre").eq("activo", true).order("codigo"),
+    supabase.from("centros").select("id, nombre").order("nombre"),
+  ]);
 
-  return { supabase, cuentas: (data ?? []) as CuentaPlan[], error };
+  return {
+    supabase,
+    cuentas: (data ?? []) as CuentaPlan[],
+    centros: (centros ?? []) as CentroBreve[],
+    error,
+  };
 }

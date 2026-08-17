@@ -5,7 +5,7 @@ import EditorAsiento from "../editor-asiento";
 export const dynamic = "force-dynamic";
 
 export default async function AsientoNuevo() {
-  const { cuentas, error } = await cargarCuentas();
+  const { cuentas, centros, error } = await cargarCuentas();
 
   return (
     <>
@@ -26,7 +26,7 @@ export default async function AsientoNuevo() {
         </div>
       )}
 
-      <EditorAsiento cuentas={cuentas} />
+      <EditorAsiento cuentas={cuentas} centros={centros} />
     </>
   );
 }

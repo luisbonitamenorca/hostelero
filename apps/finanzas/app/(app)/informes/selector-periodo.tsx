@@ -18,11 +18,14 @@ export default function SelectorPeriodo({
   anio,
   modo,
   sp,
+  /** Solo lo pasa la PyG: filtrar por centro un balance no significa nada. */
+  centros,
 }: {
   base: string;
   anio: number;
   modo: ModoPeriodo;
   sp: Record<string, string | undefined>;
+  centros?: { id: string; nombre: string }[];
 }) {
   const router = useRouter();
   const ahora = new Date();
@@ -81,6 +84,20 @@ export default function SelectorPeriodo({
             <option value="2">2.º (abril – junio)</option>
             <option value="3">3.º (julio – septiembre)</option>
             <option value="4">4.º (octubre – diciembre)</option>
+          </select>
+        </label>
+      )}
+
+      {centros && centros.length > 0 && (
+        <label className="campo">
+          <span>Centro</span>
+          <select value={sp.centro ?? ""} onChange={(e) => ir({ centro: e.target.value })}>
+            <option value="">Todos</option>
+            {centros.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
           </select>
         </label>
       )}
