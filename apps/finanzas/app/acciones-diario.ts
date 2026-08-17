@@ -18,7 +18,7 @@ export async function guardarAsiento(datos: {
   descripcion: string;
   lineas: LineaAsiento[];
 }) {
-  const { supabase, cuenta } = await exigirModulo("contabilidad");
+  const { supabase, perfil, cuenta } = await exigirModulo("contabilidad");
   const db = clienteDiario(supabase);
 
   if (!datos.fecha) return { error: "Falta la fecha del asiento." };
@@ -95,6 +95,10 @@ export async function guardarAsiento(datos: {
         fecha: datos.fecha,
         descripcion: datos.descripcion.trim() || null,
         origen_tipo: "manual",
+        // La columna existe desde la F0 y nadie la rellenaba: el rastro de quién
+        // creó el borrador estaba vacío, y la F5a lo protege de escrituras
+        // posteriores — así que si no se pone aquí, no se pone nunca.
+        creado_por: perfil.id,
       })
       .select("id")
       .single();
