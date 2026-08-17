@@ -47,6 +47,20 @@ Y una migración aplicada NO se edita: los arreglos van en una migración nueva.
 - Vercel: equipo "Luis' projects" (team_BxyfAxd3xJiWq25fs2KDK8os). Proyecto hostelero-finanzas, con Root Directory `apps/finanzas`. La cuenta conectada por MCP NO puede crear proyectos (403): los crea Luis desde el panel.
 - Los proyectos hostelero-app y hostelero-consola son la plataforma viva. Se puede AÑADIR al monorepo, nunca modificar apps/general ni apps/consola sin pedirlo. packages/db y packages/ui se comparten: tocarlos obliga a comprobar que las tres apps siguen compilando.
 
+## Datos de prueba: SOLO 2026
+Decision de Luis (17-08-2026): de los listados de Lucia y del extracto de
+CaixaBank se carga UNICAMENTE el ejercicio 2026. Es el banco de pruebas del
+modulo; 2023-2025 no interesan. Vale para toda carga futura salvo que Luis diga
+lo contrario. Los ficheros fuente llevan NIFs y nombres reales: se leen en
+local y JAMAS se suben a este repo, que es publico.
+
+## Flujo de trabajo con Luis (desde 17-08-2026)
+Code hace commit y push DIRECTO a main para el trabajo rutinario: Luis no
+revisa los PRs (revisa las migraciones via chat), asi que el merge manual solo
+añadia friccion. Se abre PR unicamente cuando hay una decision real que
+enseñarle. El resto de reglas no cambia: las migraciones las sigue aplicando el
+chat tras el OK de Luis, y apps/general y apps/consola no se tocan sin pedirlo.
+
 ## Reglas de la casa (innegociables)
 1. Importes SIEMPRE en numeric; jamás float. El redondeo se aplica en un único sitio del código.
 2. Ninguna migración se aplica sin que Luis vea el SQL antes. Las migraciones viven en supabase/migrations/ con timestamp en el nombre.
