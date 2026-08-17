@@ -68,9 +68,17 @@ export async function guardarAsiento(datos: {
   let asientoId = datos.id;
 
   if (asientoId) {
+    // El ejercicio se reescribe con la fecha: si al reeditar el borrador se le
+    // cambia el año, el ejercicio viejo dejaría de corresponder y confirmar
+    // fallaría con «la fecha queda fuera del ejercicio», que no dice nada al
+    // que solo ha corregido una fecha.
     const { error } = await db
       .from("fin_asientos")
-      .update({ fecha: datos.fecha, descripcion: datos.descripcion.trim() || null })
+      .update({
+        fecha: datos.fecha,
+        ejercicio_id: ejercicio.id,
+        descripcion: datos.descripcion.trim() || null,
+      })
       .eq("id", asientoId);
     if (error) return { error: `No se pudo guardar el asiento: ${error.message}` };
 

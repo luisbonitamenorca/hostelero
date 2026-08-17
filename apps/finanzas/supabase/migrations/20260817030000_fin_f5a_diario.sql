@@ -5,6 +5,12 @@
 -- Revisada 17-08-2026 (2): se bloquea también el borrado de apuntes (la misma
 -- carrera que el insert, por el otro lado), se cambia v_existe por found, y la
 -- ausencia de fila de periodo pasa a ser excepción en vez de mes abierto.
+-- Revisada 17-08-2026 (4): privilegios de columna sobre fin_asientos, que es la
+-- barrera de verdad detrás del guardarraíl de la marca. Decisión de Luis.
+-- Revisada 17-08-2026 (3): el disparador de apuntes pasa a SECURITY DEFINER
+-- (sin eso `not found` significaba «no lo veo», no «no existe») y comprueba que
+-- el apunte sea de la misma cuenta que su asiento; se bloquean también el
+-- ejercicio y el periodo al confirmar, que se leían sin lock.
 -- ============================================================================
 -- MIGRACIÓN F5a — El diario: confirmar un asiento
 -- Proyecto: hostelero · Fecha: 17-08-2026
@@ -143,42 +149,73 @@ create trigger fin_asientos_proteger_del before delete on fin_asientos
 -- simétrica y da el mismo destrozo por el otro lado: T1 está confirmando y ya
 -- ha sumado dos apuntes que cuadran; T2 borra uno, lee la cabecera sin lock,
 -- ve 'borrador' en su instantánea y lo borra; T1 confirma. Queda un asiento
--- confirmado, inmutable y con un solo apunte. Vale igual para mover un apunte
--- de un asiento a otro: sin esto se comprueba con lock el padre nuevo y sin él
--- el viejo.
+-- confirmado, inmutable y con un solo apunte.
 --
 -- Se usa `found` y no una variable propia porque `select true, … into v_existe`
 -- deja v_existe en NULL cuando no hay fila, no en false — y `not NULL` no es
 -- cierto, así que la comprobación de «el asiento no existe» era código muerto
 -- que tapaba la clave ajena.
 --
--- El orden de bloqueos es el mismo en todos los caminos (cabecera primero), así
--- que esto no introduce interbloqueos. En un UPDATE que no cambia de asiento se
--- pide `for share` dos veces sobre la misma fila, que es inocuo.
+-- Y va SECURITY DEFINER, que es lo que hace que `found` signifique de verdad
+-- «no existe». Sin ello el disparador corre como el usuario y sus select sobre
+-- fin_asientos pasan por la RLS, así que `not found` sería «no lo veo». Como la
+-- política de fin_apuntes filtra por el cuenta_id DEL PROPIO APUNTE, y nada lo
+-- ataba al de su asiento, un apunte de la cuenta A colgado de un asiento de la
+-- cuenta B se saltaba la inmutabilidad entera: el select no encontraba al padre
+-- y se dejaba pasar el borrado. Definer cierra eso, y la comprobación de
+-- cuenta_id de abajo impide que esa pareja descabalada llegue a existir.
+-- No abre superficie por RPC: PostgREST no expone funciones que devuelven
+-- trigger.
+--
+-- Sobre interbloqueos: el orden cabecera-antes-que-apunte es el mismo en todos
+-- los caminos. Lo que no cubría era mover un apunte de A a B mientras otra
+-- transacción mueve otro de B a A — ahí se bloqueaba A→B y B→A. Por eso, cuando
+-- intervienen dos asientos, se piden los dos bloqueos de golpe y ordenados por
+-- id, que impone el mismo orden a las dos transacciones.
 -- ----------------------------------------------------------------------------
 
 create or replace function fin_apuntes_proteger() returns trigger
-language plpgsql set search_path = public as $$
+language plpgsql security definer
+set search_path = public as $$
 declare
+  -- El asiento del que sale el apunte y al que va. En INSERT solo hay destino;
+  -- en DELETE solo origen; en UPDATE los dos, y pueden ser distintos.
+  v_viejo uuid := case when tg_op in ('UPDATE','DELETE') then old.asiento_id end;
+  v_nuevo uuid := case when tg_op in ('INSERT','UPDATE') then new.asiento_id end;
   v_estado text;
+  v_cuenta uuid;
 begin
-  if tg_op in ('UPDATE','DELETE') then
-    -- Si no hay fila es el cascade al borrar el asiento entero: el trigger salta
-    -- con el padre ya borrado, `found` es false y se deja pasar. Es el mismo
-    -- caso que la F0b tuvo que arreglar en las líneas de factura.
-    select estado into v_estado from fin_asientos where id = old.asiento_id for share;
+  -- Los dos bloqueos de golpe y en orden de id: el LockRows va por encima del
+  -- Sort, así que se bloquea en el orden del `order by` y dos movimientos
+  -- cruzados no pueden quedarse esperándose el uno al otro.
+  if v_viejo is not null and v_nuevo is not null and v_viejo <> v_nuevo then
+    perform 1 from fin_asientos where id in (v_viejo, v_nuevo) order by id for share;
+  end if;
+
+  if v_viejo is not null then
+    -- Si no hay fila es el cascade al borrar el asiento entero: el disparador
+    -- salta con el padre ya borrado y se deja pasar. Es el mismo caso que la
+    -- F0b tuvo que arreglar en las líneas de factura.
+    select estado into v_estado from fin_asientos where id = v_viejo for share;
     if found and v_estado <> 'borrador' then
       raise exception 'Los apuntes de un asiento confirmado son inmutables';
     end if;
   end if;
 
-  if tg_op in ('INSERT','UPDATE') then
-    select estado into v_estado from fin_asientos where id = new.asiento_id for share;
+  if v_nuevo is not null then
+    select estado, cuenta_id into v_estado, v_cuenta
+      from fin_asientos where id = v_nuevo for share;
     if not found then
       raise exception 'El apunte apunta a un asiento que no existe';
     end if;
     if v_estado <> 'borrador' then
       raise exception 'No se añaden apuntes a un asiento confirmado';
+    end if;
+    -- La RLS de fin_apuntes confía en el cuenta_id del propio apunte, que es una
+    -- columna suelta. Sin esto, un apunte puede declarar una cuenta distinta de
+    -- la de su asiento y quedar visible para el inquilino equivocado.
+    if new.cuenta_id is distinct from v_cuenta then
+      raise exception 'El apunte pertenece a una cuenta distinta de la del asiento';
     end if;
     return new;
   end if;
@@ -227,7 +264,13 @@ begin
   end if;
 
   -- El ejercicio tiene que estar abierto y la fecha caer dentro.
-  select * into v_ej from fin_ejercicios where id = v_a.ejercicio_id;
+  --
+  -- `for share` porque hoy cerrar un ejercicio es un update directo bajo RLS: no
+  -- hay función que lo haga. Sin el bloqueo, T1 lee 'abierto', T2 cierra y
+  -- commitea, y T1 confirma igual — asiento confirmado e inmutable dentro de un
+  -- ejercicio cerrado. Con él, quien cierra espera. El orden de bloqueos es
+  -- siempre asiento → ejercicio → periodo, así que no hay ciclo posible.
+  select * into v_ej from fin_ejercicios where id = v_a.ejercicio_id for share;
   if not found then
     raise exception 'El ejercicio del asiento no existe';
   end if;
@@ -248,11 +291,13 @@ begin
   end if;
 
   -- Y el mes no puede estar bloqueado. Para eso existe fin_periodos.bloqueado,
-  -- que hasta hoy no lo miraba nadie.
+  -- que hasta hoy no lo miraba nadie. Con `for share` por el mismo motivo que el
+  -- ejercicio: bloquear un mes también es hoy un update directo.
   select bloqueado into v_bloq
     from fin_periodos
    where ejercicio_id = v_a.ejercicio_id
-     and mes = extract(month from v_a.fecha)::int;
+     and mes = extract(month from v_a.fecha)::int
+     for share;
   -- Sin fila NO se asume «mes abierto»: sería apagar el bloqueo mensual en
   -- silencio. Es un fallo de configuración del ejercicio, y el mensaje apunta
   -- ahí y no al asiento, que no tiene la culpa. La siembra de los doce periodos
@@ -294,7 +339,18 @@ begin
     raise exception 'Hay % apunte(s) con cuenta de otra sociedad o desactivada', v_ajenas;
   end if;
 
-  -- Numeración correlativa por ejercicio. El lock serializa dos confirmaciones
+  -- Numeración correlativa por ejercicio: reinicia en 1 cada año, y no deja
+  -- huecos porque sale de max()+1 sobre lo ya comprometido — una secuencia sí
+  -- los dejaría, porque un rollback no devuelve el número consumido.
+  --
+  -- Va por ORDEN DE CONFIRMACIÓN, no por fecha: un asiento de enero confirmado
+  -- en marzo se lleva número posterior a otro de febrero confirmado antes.
+  -- Decidido con Luis el 17-08-2026: se acepta durante el ejercicio y el diario
+  -- se RENUMERA POR FECHA al cerrarlo. Esa renumeración toca asientos
+  -- confirmados, que aquí son inmutables, así que tiene que vivir dentro de la
+  -- función de cierre de ejercicio (F5d) y dejar rastro — nunca un update suelto.
+  --
+  -- El lock serializa dos confirmaciones
   -- simultáneas: sin él, ambas leerían el mismo max() y chocarían contra el
   -- índice único fin_asientos_numero_unico, que va por (ejercicio_id, numero) —
   -- comprobado: el ámbito del índice y el de este lock coinciden.
@@ -332,6 +388,56 @@ end $$;
 -- nulo; esto es la segunda capa.)
 revoke execute on function fin_confirmar_asiento(uuid) from anon;
 
+-- ----------------------------------------------------------------------------
+-- 5) La puerta cerrada, no el cartel de «no pasar»
+--
+-- La marca `fin.confirmando` de la sección 2 es un guardarraíl: impide el update
+-- accidental, pero quien tenga acceso SQL directo puede ponérsela él mismo.
+-- Esto es la barrera de verdad: sin permiso de UPDATE sobre `estado` y `numero`,
+-- da igual lo que intente — lo para el motor antes de llegar a ningún
+-- disparador. Las dos capas se quedan: los privilegios impiden, la marca explica
+-- por qué (el error de permisos de Postgres no dice a quién preguntar).
+--
+-- OJO al detalle que hace que esto funcione: un `revoke update (estado, numero)`
+-- NO sirve mientras exista el grant a nivel de TABLA. Hay que revocar la tabla
+-- entera y volver a conceder columna a columna.
+--
+-- La lista se calcula, no se escribe a mano: se conceden todas las columnas
+-- MENOS las protegidas. Consecuencia buscada de hacerlo en tiempo de migración:
+-- una columna añadida más adelante no queda concedida, y la app falla con
+-- «permission denied for column», que es ruidoso y se arregla en un minuto. Lo
+-- contrario — que se concediera sola — sería silencioso, y silencioso es peor.
+--
+-- fin_confirmar_asiento sigue pudiendo escribirlas porque es SECURITY DEFINER y
+-- corre como el propietario de la tabla, que conserva todos los privilegios.
+-- ----------------------------------------------------------------------------
+
+do $$
+declare
+  v_columnas text;
+begin
+  -- anon no escribe asientos en ningún caso: se le quita entero, sin devolverle
+  -- nada. Mismo criterio que la F1b con expedir y anular.
+  revoke update on fin_asientos from authenticated, anon;
+
+  select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
+    into v_columnas
+    from information_schema.columns
+   where table_schema = 'public'
+     and table_name   = 'fin_asientos'
+     and column_name not in (
+       'id',           -- mover un asiento de sitio no es editarlo
+       'cuenta_id',    -- cambiarlo se lo lleva a otro inquilino
+       'sociedad_id',  -- y esto, a otra sociedad del mismo inquilino
+       'numero',       -- los asigna
+       'estado',       --   fin_confirmar_asiento()
+       'creado_por',   -- rastro de quién y cuándo: no se reescribe
+       'creado_en'
+     );
+
+  execute format('grant update (%s) on fin_asientos to authenticated', v_columnas);
+end $$;
+
 -- ============================================================================
 -- COMPROBACIONES SUGERIDAS DESPUÉS DE APLICAR
 --
@@ -360,6 +466,9 @@ revoke execute on function fin_confirmar_asiento(uuid) from anon;
 --     con NUESTRO mensaje, no con el de la clave ajena
 --   · Confirmar en un mes cuya fila de fin_periodos no existe .. debe FALLAR
 --     señalando la configuración del ejercicio
+--   · Confirmar con el ejercicio cerrado ...................... debe FALLAR
+--   · Insertar un apunte con cuenta_id distinto al del asiento . debe FALLAR
+--   · Mover un apunte de un asiento a otro, los dos borradores . debe PASAR
 --   · Borrar un asiento EN BORRADOR que tiene apuntes ......... debe PASAR
 --     (este es el caso que falló en facturas y motivó la F0b; aquí el trigger
 --      de apuntes distingue «sin padre» de «padre no borrador»)
