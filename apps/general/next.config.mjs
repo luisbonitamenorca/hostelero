@@ -7,10 +7,11 @@ const URL_FINANZAS = process.env.URL_FINANZAS ?? "https://hostelero-finanzas.ver
 
 const nextConfig = {
   transpilePackages: ["@hostelero/db", "@hostelero/ui"],
-  // El HTML de PyG Socios se lee del disco en tiempo de ejecución: hay que
-  // decirle a Vercel que lo empaquete junto a la función de la ruta.
+  // Los HTML de PyG Socios y Ratios se leen del disco en tiempo de ejecución:
+  // hay que decirle a Vercel que los empaquete junto a la función de su ruta.
   outputFileTracingIncludes: {
     "/pyg": ["./datos/pyg.html"],
+    "/ratios": ["./datos/ratios.html"],
   },
   async rewrites() {
     return [

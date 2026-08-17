@@ -11,9 +11,11 @@ export const RUTAS_MODULO: Record<string, string> = {
   rrhh: "/rrhh",
   curso: "/curso",
   docs: "/docs",
-  // App de un solo HTML servida por app/pyg/route.ts con la sesión de la casa;
-  // sus datos siguen en el proyecto Ratios (independiente, fase de pruebas).
+  // Apps de un solo HTML servidas por app/{pyg,ratios}/route.ts con la sesión
+  // de la casa; sus datos siguen en el proyecto Ratios de Supabase
+  // (independiente, fase de pruebas — el port de datos es decisión de noviembre).
   pyg: "/pyg",
+  ratios: "/ratios",
   // Los dos llevan a la misma app: es una sola aplicación con su menú.
   facturacion: "/finanzas",
   contabilidad: "/finanzas",
