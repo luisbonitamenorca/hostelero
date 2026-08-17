@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { euros, redondear } from "@/lib/importes";
+import { numero, redondear } from "@/lib/importes";
 import { pygEnColumnas, type BloqueColumnas } from "@/lib/contabilidad";
 import { cargarApuntes } from "../datos";
 import SelectorVista from "../selector-vista";
@@ -7,10 +7,11 @@ import DescargarExcel, { type CeldaExcel } from "../descargar-excel";
 import SinDiario from "../sin-diario";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** Celda de importe: el cero no se pinta — doce columnas de 0,00 € no se leen. */
 function Importe({ v }: { v: number }) {
-  return <td className="dato">{v === 0 ? "" : v < 0 ? `(${euros(-v)})` : euros(v)}</td>;
+  return <td className="dato">{v === 0 ? "" : v < 0 ? `(${numero(-v)})` : numero(v)}</td>;
 }
 
 const totalFila = (importes: number[]) => redondear(importes.reduce((s, x) => s + x, 0));
@@ -62,12 +63,12 @@ function Seccion({
             </td>
             {b.totales.map((v, i) => (
               <td key={i} className="dato">
-                <em>{v === 0 ? "" : euros(v)}</em>
+                <em>{v === 0 ? "" : numero(v)}</em>
               </td>
             ))}
             {conTotal && (
               <td className="dato">
-                <em>{euros(totalFila(b.totales))}</em>
+                <em>{numero(totalFila(b.totales))}</em>
               </td>
             )}
           </tr>
@@ -79,12 +80,12 @@ function Seccion({
         </td>
         {totales.map((v, i) => (
           <td key={i} className="dato">
-            <strong>{euros(v)}</strong>
+            <strong>{numero(v)}</strong>
           </td>
         ))}
         {conTotal && (
           <td className="dato">
-            <strong>{euros(totalFila(totales))}</strong>
+            <strong>{numero(totalFila(totales))}</strong>
           </td>
         )}
       </tr>
@@ -136,7 +137,7 @@ export default async function PerdidasYGanancias({
         <p className="sub">
           Ejercicio {anio}
           {vista === "meses" ? " · una columna por mes" : vista === "trimestres" ? " · una columna por trimestre" : ""}
-          {nombreCentro ? ` · ${nombreCentro}` : " · todos los centros"}
+          {nombreCentro ? ` · ${nombreCentro}` : " · todos los centros"} · importes en euros
         </p>
       </div>
 
@@ -196,13 +197,13 @@ export default async function PerdidasYGanancias({
                   </td>
                   {pyg.resultado.map((v, i) => (
                     <td key={i} className="dato">
-                      <strong className={v < 0 ? "error-texto" : undefined}>{euros(v)}</strong>
+                      <strong className={v < 0 ? "error-texto" : undefined}>{numero(v)}</strong>
                     </td>
                   ))}
                   {conTotal && (
                     <td className="dato">
                       <strong className={totalFila(pyg.resultado) < 0 ? "error-texto" : undefined}>
-                        {euros(totalFila(pyg.resultado))}
+                        {numero(totalFila(pyg.resultado))}
                       </strong>
                     </td>
                   )}

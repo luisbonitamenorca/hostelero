@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { euros } from "@/lib/importes";
+import { numero } from "@/lib/importes";
 import { balanceEnColumnas, type BloqueColumnas } from "@/lib/contabilidad";
 import { cargarApuntes } from "../datos";
 import SelectorVista from "../selector-vista";
@@ -7,10 +7,11 @@ import DescargarExcel, { type CeldaExcel } from "../descargar-excel";
 import SinDiario from "../sin-diario";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** Celda de importe: el cero no se pinta; el negativo (correctoras) entre paréntesis. */
 function Importe({ v }: { v: number }) {
-  return <td className="dato">{v === 0 ? "" : v < 0 ? `(${euros(-v)})` : euros(v)}</td>;
+  return <td className="dato">{v === 0 ? "" : v < 0 ? `(${numero(-v)})` : numero(v)}</td>;
 }
 
 function Tabla({
@@ -61,7 +62,7 @@ function Tabla({
                 </td>
                 {b.totales.map((v, i) => (
                   <td key={i} className="dato">
-                    <em>{v === 0 ? "" : euros(v)}</em>
+                    <em>{v === 0 ? "" : numero(v)}</em>
                   </td>
                 ))}
               </tr>
@@ -75,7 +76,7 @@ function Tabla({
             </td>
             {totales.map((v, i) => (
               <td key={i} className="dato">
-                <strong>{euros(v)}</strong>
+                <strong>{numero(v)}</strong>
               </td>
             ))}
           </tr>
@@ -128,7 +129,7 @@ export default async function BalanceDeSituacion({
         {/* Un balance es una FOTO a una fecha, no un movimiento de un tramo.
             En la vista por meses cada columna es la foto a fin de ese mes. */}
         <p className="sub">
-          Ejercicio {anio} · acumulado desde el 1 de enero
+          Ejercicio {anio} · acumulado desde el 1 de enero · importes en euros
           {vista === "meses"
             ? " · una columna por fin de mes"
             : vista === "trimestres"
