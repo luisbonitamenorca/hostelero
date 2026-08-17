@@ -26,6 +26,10 @@ type ApunteConCentro = ApunteInforme & { centroId: string | null };
  * 500 asientos en 500. Sin paginar, el día que el diario tenga miles de
  * asientos la consulta devolvería una página silenciosamente incompleta y los
  * informes CUADRARÍAN con cifras falsas, que es el peor fallo posible aquí.
+ *
+ * Las páginas se piden EN PARALELO tras contar cuántas hay: con ~7.000
+ * asientos son 14 consultas, y en serie superaban el tiempo máximo de la
+ * función en Vercel — el informe directamente no cargaba.
  */
 async function traerApuntes(
   supabase: Awaited<ReturnType<typeof exigirModulo>>["supabase"],
@@ -33,23 +37,34 @@ async function traerApuntes(
   hasta: string,
 ): Promise<{ apuntes: ApunteConCentro[]; error: { message: string } | null }> {
   const PASO = 500;
-  const apuntes: ApunteConCentro[] = [];
 
-  for (let desde = 0; ; desde += PASO) {
-    const { data, error } = await supabase
+  const base = () =>
+    supabase
       .from("fin_asientos")
       .select("fecha, fin_apuntes(debe, haber, centro_id, fin_plan_cuentas(codigo, nombre))")
       .eq("estado", "confirmado")
       .gte("fecha", inicioEjercicio)
-      .lte("fecha", hasta)
-      .order("fecha")
-      .order("id")
-      .range(desde, desde + PASO - 1);
+      .lte("fecha", hasta);
 
-    if (error) return { apuntes, error };
+  const { count, error: errorCuenta } = await supabase
+    .from("fin_asientos")
+    .select("id", { count: "exact", head: true })
+    .eq("estado", "confirmado")
+    .gte("fecha", inicioEjercicio)
+    .lte("fecha", hasta);
+  if (errorCuenta) return { apuntes: [], error: errorCuenta };
 
-    const pagina = (data ?? []) as unknown as AsientoCrudo[];
-    for (const a of pagina) {
+  const paginas = Math.max(1, Math.ceil((count ?? 0) / PASO));
+  const resultados = await Promise.all(
+    Array.from({ length: paginas }, (_, i) =>
+      base().order("fecha").order("id").range(i * PASO, i * PASO + PASO - 1),
+    ),
+  );
+
+  const apuntes: ApunteConCentro[] = [];
+  for (const { data, error } of resultados) {
+    if (error) return { apuntes: [], error };
+    for (const a of (data ?? []) as unknown as AsientoCrudo[]) {
       for (const ap of a.fin_apuntes ?? []) {
         if (!ap.fin_plan_cuentas) continue;
         apuntes.push({
@@ -62,7 +77,6 @@ async function traerApuntes(
         });
       }
     }
-    if (pagina.length < PASO) break;
   }
 
   return { apuntes, error: null };
