@@ -2626,6 +2626,7 @@ export type Database = {
       fin_apuntes: {
         Row: {
           asiento_id: string
+          centro_id: string | null
           cuenta_id: string
           cuenta_plan_id: string
           debe: number
@@ -2636,6 +2637,7 @@ export type Database = {
         }
         Insert: {
           asiento_id: string
+          centro_id?: string | null
           cuenta_id: string
           cuenta_plan_id: string
           debe?: number
@@ -2646,6 +2648,7 @@ export type Database = {
         }
         Update: {
           asiento_id?: string
+          centro_id?: string | null
           cuenta_id?: string
           cuenta_plan_id?: string
           debe?: number
@@ -2660,6 +2663,13 @@ export type Database = {
             columns: ["asiento_id"]
             isOneToOne: false
             referencedRelation: "fin_asientos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_apuntes_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
             referencedColumns: ["id"]
           },
           {
@@ -2680,6 +2690,8 @@ export type Database = {
       }
       fin_asientos: {
         Row: {
+          confirmado_en: string | null
+          confirmado_por: string | null
           creado_en: string
           creado_por: string | null
           cuenta_id: string
@@ -2694,6 +2706,8 @@ export type Database = {
           sociedad_id: string
         }
         Insert: {
+          confirmado_en?: string | null
+          confirmado_por?: string | null
           creado_en?: string
           creado_por?: string | null
           cuenta_id: string
@@ -2708,6 +2722,8 @@ export type Database = {
           sociedad_id: string
         }
         Update: {
+          confirmado_en?: string | null
+          confirmado_por?: string | null
           creado_en?: string
           creado_por?: string | null
           cuenta_id?: string
@@ -5654,6 +5670,7 @@ export type Database = {
         Args: { p_factura_id: string; p_motivo: string }
         Returns: Json
       }
+      fin_confirmar_asiento: { Args: { p_asiento_id: string }; Returns: Json }
       fin_expedir_factura: { Args: { p_factura_id: string }; Returns: Json }
       fin_vf_cadena_alta: {
         Args: {

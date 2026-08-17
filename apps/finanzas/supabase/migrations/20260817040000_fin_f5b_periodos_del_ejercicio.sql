@@ -1,4 +1,9 @@
 -- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+--
+-- NOTA DE ORDEN: la F5a quedó registrada como 20260817112052, así que en un
+-- entorno nuevo esta F5b (20260817040000) se ejecuta ANTES que la F5a. No rompe
+-- nada — solo toca fin_ejercicios y fin_periodos y no depende de ningún objeto
+-- de la F5a — pero conviene saberlo al leer la carpeta.
 -- ============================================================================
 -- MIGRACIÓN F5b — Un ejercicio nace con sus doce periodos
 -- Proyecto: hostelero · Fecha: 17-08-2026
@@ -44,7 +49,9 @@ begin
   return new;
 end $$;
 
-create trigger fin_ejercicios_sembrar_periodos_ins after insert on fin_ejercicios
+-- `or replace` por lo mismo que la ronda 9 lo puso en los seis de la F5a: es lo
+-- único que impediría reejecutar el archivo entero.
+create or replace trigger fin_ejercicios_sembrar_periodos_ins after insert on fin_ejercicios
   for each row execute function fin_ejercicios_sembrar_periodos();
 
 -- Recuperación de lo que ya existiera incompleto. Con `on conflict do nothing`

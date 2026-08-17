@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { exigirModulo } from "@/lib/supabase/server";
 import { redondear } from "@/lib/importes";
-import { clienteDiario, type LineaAsiento } from "@/lib/diario";
+import type { LineaAsiento } from "@/lib/diario";
 
 /**
  * Guarda un asiento en BORRADOR: cabecera y apuntes.
@@ -19,7 +19,6 @@ export async function guardarAsiento(datos: {
   lineas: LineaAsiento[];
 }) {
   const { supabase, cuenta } = await exigirModulo("contabilidad");
-  const db = clienteDiario(supabase);
 
   if (!datos.fecha) return { error: "Falta la fecha del asiento." };
 
@@ -72,7 +71,7 @@ export async function guardarAsiento(datos: {
     // cambia el año, el ejercicio viejo dejaría de corresponder y confirmar
     // fallaría con «la fecha queda fuera del ejercicio», que no dice nada al
     // que solo ha corregido una fecha.
-    const { error } = await db
+    const { error } = await supabase
       .from("fin_asientos")
       .update({
         fecha: datos.fecha,
@@ -82,11 +81,11 @@ export async function guardarAsiento(datos: {
       .eq("id", asientoId);
     if (error) return { error: `No se pudo guardar el asiento: ${error.message}` };
 
-    const { error: errorBorrado } = await db.from("fin_apuntes").delete().eq("asiento_id", asientoId);
+    const { error: errorBorrado } = await supabase.from("fin_apuntes").delete().eq("asiento_id", asientoId);
     if (errorBorrado) return { error: `No se pudieron reescribir los apuntes: ${errorBorrado.message}` };
   } else {
     // Sin `estado` ni `numero` a propósito: los pone la base (F5a).
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from("fin_asientos")
       .insert({
         cuenta_id: cuenta.id,
@@ -106,7 +105,7 @@ export async function guardarAsiento(datos: {
     asientoId = data.id;
   }
 
-  const { error: errorApuntes } = await db.from("fin_apuntes").insert(
+  const { error: errorApuntes } = await supabase.from("fin_apuntes").insert(
     lineas.map((l, i) => ({
       cuenta_id: cuenta.id,
       asiento_id: asientoId,
@@ -133,7 +132,7 @@ export async function guardarAsiento(datos: {
 export async function confirmarAsiento(id: string) {
   const { supabase } = await exigirModulo("contabilidad");
 
-  const { data, error } = await clienteDiario(supabase).rpc("fin_confirmar_asiento", {
+  const { data, error } = await supabase.rpc("fin_confirmar_asiento", {
     p_asiento_id: id,
   });
 
@@ -148,7 +147,7 @@ export async function confirmarAsiento(id: string) {
 export async function borrarAsiento(id: string) {
   const { supabase } = await exigirModulo("contabilidad");
 
-  const { error } = await clienteDiario(supabase).from("fin_asientos").delete().eq("id", id);
+  const { error } = await supabase.from("fin_asientos").delete().eq("id", id);
   if (error) return { error: `No se pudo borrar: ${error.message}` };
 
   revalidatePath("/asientos");

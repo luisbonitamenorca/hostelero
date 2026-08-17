@@ -1,4 +1,5 @@
--- ESTADO: PROPUESTA. No aplicada. Para revisión de Luis.
+-- ESTADO: APLICADA en producción el 17-08-2026 (registrada como 20260817112052).
+-- No reaplicar. Los arreglos van en una migración nueva.
 -- Revisada 17-08-2026: se cierra el UPDATE directo que confirmaba sin pasar por
 -- fin_confirmar_asiento(), se bloquea el padre al insertar apuntes y se valida
 -- que el ejercicio sea de la sociedad del asiento.
