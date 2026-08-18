@@ -72,17 +72,29 @@ export const ACCESO_POR_ROL: Record<string, string[] | null> = {
 export async function exigirModulo(moduloId: string) {
   const { supabase, perfil, cuenta } = await exigirPerfil();
 
-  const { data: contratacion } = await supabase
-    .from("modulos_contratados")
-    .select("activo")
-    .eq("cuenta_id", cuenta.id)
-    .eq("modulo_id", moduloId)
-    .maybeSingle();
+  const [{ data: contratacion }, { data: veto }] = await Promise.all([
+    supabase
+      .from("modulos_contratados")
+      .select("activo")
+      .eq("cuenta_id", cuenta.id)
+      .eq("modulo_id", moduloId)
+      .maybeSingle(),
+    // El veto por usuario (módulo Usuarios de hostelero-app) resta sobre lo
+    // que el rol permite. Se comprueba también aquí porque esta app tiene su
+    // propio guard: sin esto, un vetado entraría tecleando /finanzas.
+    supabase
+      .from("modulos_vetados")
+      .select("modulo_id")
+      .eq("perfil_id", perfil.id)
+      .eq("modulo_id", moduloId)
+      .maybeSingle(),
+  ]);
 
   const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
   const conAcceso =
     contratacion?.activo === true &&
-    (permitidos === null || permitidos.includes(moduloId));
+    (permitidos === null || permitidos.includes(moduloId)) &&
+    !veto;
 
   if (!conAcceso) notFound();
 

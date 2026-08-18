@@ -13,12 +13,18 @@ export default async function PaginaModulo({
   const { modulo } = await params;
   const { supabase, perfil, cuenta } = await exigirPerfil();
 
-  const [{ data: definicion }, { data: contratacion }] = await Promise.all([
+  const [{ data: definicion }, { data: contratacion }, { data: veto }] = await Promise.all([
     supabase.from("modulos").select("id, nombre, area").eq("id", modulo).maybeSingle(),
     supabase
       .from("modulos_contratados")
       .select("activo")
       .eq("cuenta_id", cuenta.id)
+      .eq("modulo_id", modulo)
+      .maybeSingle(),
+    supabase
+      .from("modulos_vetados")
+      .select("modulo_id")
+      .eq("perfil_id", perfil.id)
       .eq("modulo_id", modulo)
       .maybeSingle(),
   ]);
@@ -27,7 +33,8 @@ export default async function PaginaModulo({
   const conAcceso =
     definicion &&
     contratacion?.activo === true &&
-    (permitidos === null || permitidos.includes(modulo));
+    (permitidos === null || permitidos.includes(modulo)) &&
+    !veto;
 
   if (!conAcceso) notFound();
 

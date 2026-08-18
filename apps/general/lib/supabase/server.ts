@@ -70,17 +70,27 @@ export async function exigirModulo(moduloId: string) {
   const ctx = await exigirPerfil();
   const { supabase, perfil, cuenta } = ctx;
 
-  const { data: contratacion } = await supabase
-    .from("modulos_contratados")
-    .select("activo")
-    .eq("cuenta_id", cuenta.id)
-    .eq("modulo_id", moduloId)
-    .maybeSingle();
+  const [{ data: contratacion }, { data: veto }] = await Promise.all([
+    supabase
+      .from("modulos_contratados")
+      .select("activo")
+      .eq("cuenta_id", cuenta.id)
+      .eq("modulo_id", moduloId)
+      .maybeSingle(),
+    // El veto por usuario resta sobre lo que el rol permite (modulo Usuarios).
+    supabase
+      .from("modulos_vetados")
+      .select("modulo_id")
+      .eq("perfil_id", perfil.id)
+      .eq("modulo_id", moduloId)
+      .maybeSingle(),
+  ]);
 
   const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
   const conAcceso =
     contratacion?.activo === true &&
-    (permitidos === null || permitidos.includes(moduloId));
+    (permitidos === null || permitidos.includes(moduloId)) &&
+    !veto;
 
   if (!conAcceso) notFound();
 

@@ -37,20 +37,26 @@ export default async function Portada() {
     );
   }
 
-  const [{ data: contratados, error }, { data: modulos }] = await Promise.all([
+  const [{ data: contratados, error }, { data: modulos }, { data: vetos }] = await Promise.all([
     supabase
       .from("modulos_contratados")
       .select("modulo_id, activo")
       .eq("cuenta_id", cuenta.id)
       .eq("activo", true),
     supabase.from("modulos").select("id, nombre, area").order("id"),
+    // Vetos por usuario (modulo Usuarios): restan sobre lo que el rol permite.
+    supabase.from("modulos_vetados").select("modulo_id").eq("perfil_id", perfil.id),
   ]);
 
   const idsContratados = new Set((contratados ?? []).map((m) => m.modulo_id));
+  const idsVetados = new Set((vetos ?? []).map((v) => v.modulo_id));
   const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
 
   const visibles = (modulos ?? []).filter(
-    (m) => idsContratados.has(m.id) && (permitidos === null || permitidos.includes(m.id))
+    (m) =>
+      idsContratados.has(m.id) &&
+      (permitidos === null || permitidos.includes(m.id)) &&
+      !idsVetados.has(m.id)
   );
 
   const areas = [...new Set(visibles.map((m) => m.area))];

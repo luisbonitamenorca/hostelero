@@ -3978,6 +3978,49 @@ export type Database = {
           },
         ]
       }
+      modulos_vetados: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          modulo_id: string
+          perfil_id: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id: string
+          modulo_id: string
+          perfil_id: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          modulo_id?: string
+          perfil_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modulos_vetados_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modulos_vetados_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modulos_vetados_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operadores: {
         Row: {
           correo: string
@@ -5665,6 +5708,7 @@ export type Database = {
           purgadas: number
         }[]
       }
+      es_direccion: { Args: never; Returns: boolean }
       es_operador: { Args: never; Returns: boolean }
       fin_anular_factura: {
         Args: { p_factura_id: string; p_motivo: string }
@@ -5672,6 +5716,17 @@ export type Database = {
       }
       fin_confirmar_asiento: { Args: { p_asiento_id: string }; Returns: Json }
       fin_expedir_factura: { Args: { p_factura_id: string }; Returns: Json }
+      fin_informe_mensual: {
+        Args: { p_anio: number }
+        Returns: {
+          centro_id: string
+          codigo: string
+          debe: number
+          fecha: string
+          haber: number
+          nombre: string
+        }[]
+      }
       fin_vf_cadena_alta: {
         Args: {
           p_cuota_total: number
@@ -5719,6 +5774,10 @@ export type Database = {
       norm_nif: { Args: { t: string }; Returns: string }
       norm_nom: { Args: { t: string }; Returns: string }
       norm_telefono: { Args: { t: string }; Returns: string }
+      perfil_es_de_cuenta: {
+        Args: { p_cuenta: string; p_perfil: string }
+        Returns: boolean
+      }
       reservas_apuntar_lista_espera: {
         Args: {
           p_fecha: string
