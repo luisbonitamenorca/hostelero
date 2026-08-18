@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<!-- Servido en /agentes por hostelero-app tras la sesión de la casa (módulo
+     'agentes', solo dirección). A DIFERENCIA de /pyg y /ratios, el login
+     interno SE CONSERVA: los datos viven en el Supabase del proyecto agentes
+     (kuqhrszlxewonvkkjnsg) con Auth y RLS propios, y las funciones /api/*
+     verifican ese token. supabase-js recuerda la sesión, así que solo se pide
+     una vez por navegador. Las llamadas /api/agentes/* las proxea el rewrite
+     de next.config.mjs al Vercel original (agentes-bonita.vercel.app), donde
+     siguen la ANTHROPIC_API_KEY y los crons. SSO de verdad: cuando el módulo
+     se porte al esqueleto. -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonita · Agentes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF1F4; --surface:#FFFFFF; --ink:#14232E; --muted:#5A6B77;
+  --line:#D9E1E7; --accent:#0E7C8A; --accent-ink:#0A5560;
+  --amber:#D9A03F; --danger:#BF4B3A; --ok:#3E7A4E; --r:12px;
+  --wa-bg:#E9EDEA; --wa-cliente:#FFFFFF; --wa-agente:#D6EDE4; --wa-humano:#14232E;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+textarea,select,input{font-family:inherit;font-size:14px;color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+header{background:var(--ink);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-family:'Archivo',sans-serif;font-weight:800;letter-spacing:.06em;font-size:17px}
+.brand small{display:block;font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:10px;letter-spacing:.18em;color:#9FB3BF;margin-top:2px}
+nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;align-items:center}
+nav button{background:transparent;border:none;color:#B9C7D0;padding:8px 14px;border-radius:8px;font-weight:600;font-size:14px}
+nav button.active{background:rgba(255,255,255,.14);color:#fff}
+nav button:hover{color:#fff}
+main{max-width:960px;margin:0 auto;padding:20px 16px 80px}
+main.wide{max-width:1200px}
+
+.login-wrap{max-width:380px;margin:60px auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:28px}
+.login-wrap h1{font-family:'Archivo',sans-serif;font-size:20px;margin-bottom:4px}
+.login-wrap p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.login-wrap input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}
+.login-err{color:var(--danger);font-size:13px;margin-bottom:10px;min-height:18px}
+
+.rail{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 14px;scrollbar-width:none}
+.rail::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 12px 7px 8px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;border-left:5px solid var(--vc,#888)}
+.chip b{font-family:'IBM Plex Mono',monospace;font-weight:500;background:var(--bg);border-radius:6px;padding:1px 7px;font-size:12px}
+
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.toolbar select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.spacer{flex:1}
+.btn{border:none;border-radius:9px;padding:10px 16px;font-weight:600;font-size:14px;transition:filter .15s}
+.btn:hover{filter:brightness(.95)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:7px 12px;font-size:13px;border-radius:8px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden;border-left:6px solid var(--vc,#888)}
+.card-head{padding:14px 16px 0;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.venue-tag{font-family:'Archivo',sans-serif;font-weight:700;font-size:13px;letter-spacing:.02em;color:var(--vc)}
+.meta{font-size:12px;color:var(--muted)}
+.platform{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--bg);border-radius:6px;padding:2px 8px;color:var(--muted)}
+.stars{color:var(--amber);letter-spacing:2px;font-size:13px}
+.stars .off{color:var(--line)}
+.review-body{padding:10px 16px 4px}
+.review-body .author{font-weight:600;font-size:13px}
+.review-body p{margin-top:4px;color:#2A3B47}
+.draft{margin:12px 16px 14px;background:#F4F8F8;border:1px dashed #BFD6D9;border-radius:10px;padding:12px}
+.draft-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:6px}
+.draft p{font-size:14px;color:#1E3238;white-space:pre-wrap}
+.draft textarea{width:100%;min-height:90px;border:1px solid var(--accent);border-radius:8px;padding:10px;background:#fff;resize:vertical}
+.draft-empty{color:var(--muted);font-style:italic;font-size:14px}
+.card-actions{display:flex;gap:8px;padding:0 16px 14px;flex-wrap:wrap}
+.status-pill{font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px}
+.st-pendiente{background:#FBF3E2;color:#8A6414}
+.st-borrador{background:#E6F2F3;color:var(--accent-ink)}
+.st-publicada{background:#E8F2EA;color:var(--ok)}
+.st-descartada{background:#F2E9E7;color:var(--danger)}
+.st-agente{background:#E6F2F3;color:var(--accent-ink)}
+.st-escalado{background:#FBE9E2;color:#9A4A1F}
+.st-humano{background:#E8E9F5;color:#3D4384}
+.st-urgente{background:#F7E0DC;color:#8E2E1F}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:36px 20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);margin-bottom:6px;font-family:'Archivo',sans-serif}
+
+h2{font-family:'Archivo',sans-serif;font-weight:800;font-size:20px;margin:6px 0 14px}
+.note{background:#FFF8EC;border:1px solid #EAD9AE;border-radius:10px;padding:12px 14px;font-size:13px;color:#6B5518;margin-bottom:16px}
+
+.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.agent{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.agent h3{font-family:'Archivo',sans-serif;font-size:15px;font-weight:700}
+.agent .dom{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.agent p{font-size:13px;color:var(--muted);margin:8px 0 12px}
+.agent-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.badge-on{color:var(--ok);font-weight:700}
+.badge-off{color:var(--muted)}
+.badge-soon{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;background:var(--bg);border-radius:6px;padding:3px 8px;color:var(--muted)}
+
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:#F6F9FA}
+td.num{font-family:'IBM Plex Mono',monospace}
+tr:last-child td{border-bottom:none}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.kpi .v{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500}
+.kpi .l{font-size:12px;color:var(--muted);margin-top:2px}
+
+.tone-block{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--vc);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.tone-block label{font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;color:var(--vc);display:block;margin-bottom:8px}
+.tone-block textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}
+.save-row{display:flex;gap:10px;align-items:center;margin-top:10px}
+.saved-msg{color:var(--ok);font-size:13px;font-weight:600;opacity:0;transition:opacity .3s}
+.saved-msg.show{opacity:1}
+
+/* ============ WHATSAPP ============ */
+.wa-wrap{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;height:calc(100vh - 210px);min-height:480px}
+.wa-list{width:320px;border-right:1px solid var(--line);overflow-y:auto;flex-shrink:0}
+.wa-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start;border-left:5px solid var(--vc,#888)}
+.wa-item:hover{background:#F6F9FA}
+.wa-item.active{background:#EDF4F5}
+.wa-item .avatar{width:38px;height:38px;border-radius:50%;background:var(--vc,#888);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+.wa-item .wi-body{flex:1;min-width:0}
+.wa-item .wi-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.wa-item .wi-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-item .wi-time{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;flex-shrink:0}
+.wa-item .wi-venue{font-size:11px;color:var(--vc);font-weight:700}
+.wa-item .wi-snippet{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.wa-thread{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--wa-bg)}
+.wa-head{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.wa-head .avatar{width:34px;height:34px;border-radius:50%;background:var(--vc,#888);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.wa-head .wh-name{font-weight:700;font-size:14px}
+.wa-head .wh-sub{font-size:11px;color:var(--muted)}
+.wa-msgs{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:8px}
+.bubble{max-width:72%;padding:8px 12px;border-radius:12px;font-size:14px;position:relative;box-shadow:0 1px 1px rgba(0,0,0,.06);white-space:pre-wrap}
+.bubble .b-meta{display:block;font-size:10px;color:rgba(0,0,0,.4);margin-top:4px;font-family:'IBM Plex Mono',monospace;text-align:right}
+.b-cliente{background:var(--wa-cliente);align-self:flex-start;border-top-left-radius:4px}
+.b-agente{background:var(--wa-agente);align-self:flex-end;border-top-right-radius:4px}
+.b-humano{background:var(--wa-humano);color:#fff;align-self:flex-end;border-top-right-radius:4px}
+.b-humano .b-meta{color:rgba(255,255,255,.55)}
+.b-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:3px;color:var(--accent-ink)}
+.b-humano .b-label{color:#AEB6E8}
+.wa-typing{align-self:flex-end;font-size:12px;color:var(--muted);font-style:italic;padding:4px 8px}
+.wa-compose{background:var(--surface);border-top:1px solid var(--line);padding:10px 12px}
+.wa-compose .row{display:flex;gap:8px;align-items:center}
+.wa-compose input{flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:999px;background:#fff}
+.wa-compose .hint{font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px}
+.wa-sim{background:#FFF8EC;border-top:1px dashed #EAD9AE}
+.wa-sim input{background:#FFFDF7}
+.wa-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;flex-direction:column;gap:8px;padding:20px;text-align:center}
+.wa-back{display:none}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading-page{text-align:center;color:var(--muted);padding:60px 20px}
+
+@media (max-width:740px){
+  header{padding:12px 14px}
+  nav{width:100%;margin-left:0}
+  nav button{padding:7px 10px;font-size:13px}
+  main{padding:14px 10px 80px}
+  .card-actions .btn{flex:1;text-align:center}
+  .wa-wrap{height:calc(100vh - 250px)}
+  .wa-list{width:100%;border-right:none}
+  .wa-wrap.chat-open .wa-list{display:none}
+  .wa-wrap:not(.chat-open) .wa-thread{display:none}
+  .wa-back{display:inline-flex}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">BONITA · AGENTES<small id="mode-label">MARKETING · COMERCIAL</small></div>
+  <nav id="nav" style="display:none">
+    <button data-view="bandeja" class="active">Bandeja</button>
+    <button data-view="whatsapp">WhatsApp</button>
+    <button data-view="prospeccion">Prospección</button>
+    <button data-view="horarios">Horarios</button>
+    <button data-view="competencia">Competencia</button>
+    <button data-view="subvenciones">Subvenciones</button>
+    <button data-view="agentes">Agentes</button>
+    <button data-view="actividad">Actividad</button>
+    <button data-view="ajustes">Ajustes</button>
+    <button onclick="location.href='/'" title="Volver a Hostelero">← Inicio</button>
+    <button id="logout" title="Cerrar sesión">Salir</button>
+  </nav>
+</header>
+
+<main id="main"><div class="loading-page">Cargando…</div></main>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://kuqhrszlxewonvkkjnsg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_xmjbr4SQU_4K79wFdGYocg_v1NOj5R5";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const PRICE_IN = 3/1e6, PRICE_OUT = 15/1e6;
+
+const AGENTS = [
+ {id:"reviews",dom:"Bonita",name:"Analista de reseñas",desc:"Clasifica reseñas y comentarios de Google, Facebook e Instagram y redacta respuestas por local. Fase A: datos de prueba hasta conectar las APIs.",active:true},
+ {id:"wa",dom:"Bonita",name:"Conserje de WhatsApp",desc:"Atiende conversaciones de WhatsApp en tiempo real, responde lo rutinario y escala a humano lo delicado. En simulación hasta conectar la Cloud API.",active:true},
+ {id:"sync",dom:"Bonita",name:"Sincronizador de horarios",desc:"Cada mañana comprueba un local (rotando): compara los horarios publicados en Google, TripAdvisor y TheFork contra la base de conocimiento y alerta de discrepancias en la Bandeja.",active:true},
+ {id:"comp",dom:"Bonita",name:"Vigilante de competencia",desc:"Cada lunes rastrea novedades de los competidores que definas: cartas, precios, prensa, reseñas y eventos, con fuente. Vigilancia manual por competidor cuando quieras.",active:true},
+ {id:"subv",dom:"Bonita",name:"Rastreador de subvenciones",desc:"Cada lunes barre la Base de Datos Nacional de Subvenciones (donde aparecen antes que en el BOIB las convocatorias del Govern, el Consell y los ayuntamientos) más un barrido web de FOGAIBA, OCM del vino, ICEX y ayudas estatales. Criba contra el perfil de la empresa y vigila los plazos.",active:true},
+ {id:"dist",dom:"Binifadet",name:"Prospector de distribuidores",desc:"Distribuidores y tiendas en península para variedades autóctonas. Fase 1 activa: prospección por zonas con búsqueda web y aprobación de fichas.",active:true}
+];
+
+/* ================= ESTADO ================= */
+let session=null, venues={}, reviews=[], runs=[], view="bandeja";
+let waChats=[], waMsgs={}, waActive=null, waBusy=false, waChannel=null, waFilter="all";
+let knowledge=[];
+let prospects=[], prFilter="nuevo", prBusy=false;
+let syncAlerts=[], syncBusy=null, syncChecks=[];
+let competitors=[], findings=[], compBusy=null;
+let grants=[], grFilter="nueva", grBusy=null, grProfile="";
+let filters={venue:"all",status:"all",platform:"all"};
+
+const $ = s => document.querySelector(s);
+const esc = s => (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2600); }
+function stars(n){ if(n==null) return ""; let s=""; for(let i=1;i<=5;i++) s+=`<span class="${i<=n?'':'off'}">★</span>`; return `<span class="stars">${s}</span>`; }
+function fmtDate(d){ return new Date(d+"T12:00:00").toLocaleDateString("es-ES",{day:"numeric",month:"short"}); }
+function fmtTime(ts){ return new Date(ts).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"}); }
+function money(v){ return "$"+Number(v).toFixed(4); }
+function initials(name){ return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
+
+/* ================= AUTH ================= */
+async function init(){
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  sb.auth.onAuthStateChange((_e, s)=>{ session=s; if(!s) renderLogin(); });
+  if(!session) renderLogin(); else await enterApp();
+}
+
+function renderLogin(){
+  $("#nav").style.display="none";
+  $("#main").className="";
+  $("#main").innerHTML = `<div class="login-wrap">
+    <h1>Bonita · Agentes</h1><p>Acceso restringido. Entra con tu cuenta.</p>
+    <div class="login-err" id="login-err"></div>
+    <input type="email" id="l-email" placeholder="Email" autocomplete="username">
+    <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password">
+    <button class="btn btn-primary" style="width:100%" id="l-go">Entrar</button>
+  </div>`;
+  $("#l-go").onclick = async ()=>{
+    const { data, error } = await sb.auth.signInWithPassword({ email:$("#l-email").value.trim(), password:$("#l-pass").value });
+    if(error){ $("#login-err").textContent = "No se pudo iniciar sesión. Revisa email y contraseña."; return; }
+    session = data.session; await enterApp();
+  };
+  $("#l-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#l-go").click(); });
+}
+
+async function enterApp(){
+  $("#nav").style.display="flex";
+  $("#logout").onclick = async ()=>{ if(waChannel) sb.removeChannel(waChannel); await sb.auth.signOut(); };
+  await loadAll(); subscribeWA(); render();
+}
+
+/* ================= DATOS ================= */
+async function loadAll(){
+  const [t, r, ru, wc, wm, kn, pr, sa, sc, co, fi, gr, gp] = await Promise.all([
+    sb.from("agent_tones").select("*").order("sort"),
+    sb.from("agent_reviews").select("*"),
+    sb.from("agent_runs").select("*").order("ts",{ascending:false}).limit(100),
+    sb.from("agent_wa_chats").select("*").order("last_ts",{ascending:false}),
+    sb.from("agent_wa_messages").select("*").order("ts"),
+    sb.from("agent_knowledge").select("*").order("updated_at",{ascending:false}),
+    sb.from("agent_prospects").select("*").order("score",{ascending:false}),
+    sb.from("agent_sync_alerts").select("*").eq("estado","abierta").order("created_at",{ascending:false}),
+    sb.from("agent_sync_checks").select("*").order("created_at",{ascending:false}).limit(60),
+    sb.from("agent_competitors").select("*").order("created_at"),
+    sb.from("agent_watch_findings").select("*").order("created_at",{ascending:false}).limit(120),
+    sb.from("agent_grants").select("*").order("encaje",{ascending:false}).order("created_at",{ascending:false}).limit(300),
+    sb.from("agent_grant_profile").select("*").limit(1)
+  ]);
+  if(t.error||r.error||ru.error||wc.error||wm.error||kn.error||pr.error||sa.error||sc.error||co.error||fi.error||gr.error){ toast("Error cargando datos de Supabase"); console.error(t.error||r.error||ru.error||wc.error||wm.error||kn.error||pr.error||sa.error||sc.error||co.error||fi.error||gr.error); return; }
+  grants = gr.data||[];
+  grProfile = (gp.data && gp.data[0] && gp.data[0].perfil) || "";
+  competitors = co.data; findings = fi.data;
+  syncChecks = sc.data;
+  syncAlerts = sa.data;
+  prospects = pr.data;
+  venues = {}; t.data.forEach(v=> venues[v.venue]={name:v.name,color:v.color,tone:v.tone});
+  reviews = r.data; runs = ru.data; knowledge = kn.data;
+  waChats = wc.data; waMsgs = {};
+  wm.data.forEach(m=>{ (waMsgs[m.chat_id] = waMsgs[m.chat_id]||[]).push(m); });
+}
+
+/* Realtime: mensajes y cambios de estado entran solos */
+function subscribeWA(){
+  if(waChannel) sb.removeChannel(waChannel);
+  waChannel = sb.channel("wa-live")
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"agent_wa_messages"},payload=>{
+      const m = payload.new;
+      const arr = (waMsgs[m.chat_id] = waMsgs[m.chat_id]||[]);
+      if(!arr.some(x=>x.id===m.id)){ arr.push(m); if(view==="whatsapp") render(); }
+    })
+    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"agent_wa_chats"},payload=>{
+      const c = waChats.find(x=>x.id===payload.new.id);
+      if(c){ Object.assign(c, payload.new); if(view==="whatsapp") render(); }
+    })
+    .subscribe();
+}
+
+/* ================= ROUTER ================= */
+function render(){
+  document.querySelectorAll("#nav [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+  const hb = document.querySelector('#nav [data-view="horarios"]');
+  if(hb) hb.textContent = syncAlerts.length ? `Horarios (${syncAlerts.length})` : "Horarios";
+  const cb = document.querySelector('#nav [data-view="competencia"]');
+  if(cb){ const n = findings.filter(f=>f.estado==="nuevo").length; cb.textContent = n ? `Competencia (${n})` : "Competencia"; }
+  const gb = document.querySelector('#nav [data-view="subvenciones"]');
+  if(gb){ const n = grants.filter(grAvisa).length; gb.textContent = n ? `Subvenciones (${n})` : "Subvenciones"; }
+  $("#main").className = view==="whatsapp" ? "wide" : "";
+  if(view==="bandeja") renderBandeja();
+  else if(view==="whatsapp") renderWhatsapp();
+  else if(view==="prospeccion") renderProspeccion();
+  else if(view==="horarios") renderHorarios();
+  else if(view==="competencia") renderCompetencia();
+  else if(view==="subvenciones") renderSubvenciones();
+  else if(view==="agentes") renderAgentes();
+  else if(view==="actividad") renderActividad();
+  else renderAjustes();
+}
+
+/* ================= BANDEJA (reseñas) ================= */
+function renderBandeja(){
+  const f = filters;
+  const pendingByVenue = {};
+  reviews.forEach(r=>{ if(r.status==="pendiente"||r.status==="borrador"){ pendingByVenue[r.venue]=(pendingByVenue[r.venue]||0)+1; } });
+
+  const rail = Object.entries(venues).map(([k,v])=>
+    `<div class="chip" style="--vc:${v.color}">${esc(v.name.replace(" Binifadet","").replace("Restaurante ","Rest. "))} <b>${pendingByVenue[k]||0}</b></div>`).join("");
+
+  const list = reviews.filter(r=>
+    (f.venue==="all"||r.venue===f.venue) &&
+    (f.status==="all"||r.status===f.status) &&
+    (f.platform==="all"||r.platform===f.platform)
+  ).sort((a,b)=> (b.review_date||"").localeCompare(a.review_date||""));
+
+  const pendingCount = reviews.filter(r=>r.status==="pendiente").length;
+
+  const pendCount = p => reviews.filter(r=>(p==="all"||r.platform===p)&&(r.status==="pendiente"||r.status==="borrador")).length;
+  const platTabs = ["all","Google","Facebook","Instagram"].map(p=>
+    `<button class="chip" data-plat="${p}" style="--vc:${f.platform===p?"var(--accent)":"#9AA8B2"};border-color:${f.platform===p?"var(--accent)":"var(--line)"};cursor:pointer;font-weight:${f.platform===p?"700":"600"}">${p==="all"?"Todas":p} <b>${pendCount(p)}</b></button>`).join("");
+
+  let googleStats = "";
+  if(f.platform==="Google"){
+    const gr = reviews.filter(r=>r.platform==="Google" && r.rating!=null && r.status!=="descartada");
+    if(gr.length){
+      const avg = a => a.length? (a.reduce((s,r)=>s+r.rating,0)/a.length) : null;
+      const g30 = gr.filter(r=>{ const d=new Date(r.review_date); return (Date.now()-d.getTime())<30*864e5; });
+      const media = avg(gr), media30 = avg(g30);
+      const cincos = gr.filter(r=>r.rating===5).length, bajas = gr.filter(r=>r.rating<=2).length;
+      const porLocal = Object.entries(venues).map(([k,v])=>{
+        const vr = gr.filter(r=>r.venue===k); if(!vr.length) return "";
+        return `<div class="chip" style="--vc:${v.color}">${esc(v.name.replace(" Binifadet","").replace("Restaurante ","Rest. "))} <b>${avg(vr).toFixed(1)}★ · ${vr.length}</b></div>`;
+      }).join("");
+      googleStats = `
+      <div class="kpis">
+        <div class="kpi"><div class="v">${media.toFixed(2)}★</div><div class="l">Media global (${gr.length} reseñas)</div></div>
+        <div class="kpi"><div class="v">${media30?media30.toFixed(2)+"★":"—"}</div><div class="l">Media últimos 30 días${g30.length?" ("+g30.length+")":""}</div></div>
+        <div class="kpi"><div class="v">${Math.round(cincos/gr.length*100)}%</div><div class="l">Reseñas de 5★</div></div>
+        <div class="kpi"><div class="v">${Math.round(bajas/gr.length*100)}%</div><div class="l">Reseñas de 1-2★</div></div>
+      </div>
+      <div class="rail" style="padding-top:0">${porLocal}</div>`;
+    }
+  }
+
+  $("#main").innerHTML = `
+    <div class="rail">${rail}</div>
+    <div class="rail" style="padding-top:0">${platTabs}</div>
+    ${googleStats}
+    <div class="toolbar">
+      <select id="f-venue"><option value="all">Todos los locales</option>${Object.entries(venues).map(([k,v])=>`<option value="${k}" ${f.venue===k?"selected":""}>${esc(v.name)}</option>`).join("")}</select>
+      <select id="f-status"><option value="all">Todos los estados</option>
+        <option value="pendiente" ${f.status==="pendiente"?"selected":""}>Pendiente</option>
+        <option value="borrador" ${f.status==="borrador"?"selected":""}>Con borrador</option>
+        <option value="publicada" ${f.status==="publicada"?"selected":""}>Publicada</option>
+        <option value="descartada" ${f.status==="descartada"?"selected":""}>Descartada</option></select>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost" id="refresh" title="Recargar">↻</button>
+      <button class="btn btn-primary" id="run-agent" ${pendingCount===0?"disabled":""}>Generar borradores (${pendingCount})</button>
+    </div>
+    <div id="cards">${list.length? list.map(cardHTML).join("") : `<div class="empty"><b>Bandeja al día</b>No hay elementos con estos filtros. Cuando se conecten Google y Meta, las reseñas reales entrarán aquí solas.</div>`}</div>`;
+
+  $("#f-venue").onchange = e=>{filters.venue=e.target.value;render();};
+  $("#f-status").onchange = e=>{filters.status=e.target.value;render();};
+  document.querySelectorAll("[data-plat]").forEach(el=> el.onclick = ()=>{ filters.platform = el.dataset.plat; render(); });
+  $("#refresh").onclick = async ()=>{ await loadAll(); render(); toast("Actualizado"); };
+  $("#run-agent").onclick = runAgent;
+  bindCardActions();
+}
+
+function cardHTML(r){
+  const v = venues[r.venue] || {name:r.venue,color:"#888"};
+  let draftBlock;
+  if(r._editing){
+    draftBlock = `<div class="draft"><div class="draft-label">EDITANDO RESPUESTA</div>
+      <textarea id="edit-${r.id}">${esc(r.draft||"")}</textarea>
+      <div class="save-row"><button class="btn btn-primary btn-sm" data-act="saveedit" data-id="${r.id}">Guardar cambios</button>
+      <button class="btn btn-ghost btn-sm" data-act="canceledit" data-id="${r.id}">Cancelar</button></div></div>`;
+  } else if(r.draft){
+    draftBlock = `<div class="draft"><div class="draft-label">RESPUESTA PROPUESTA POR EL AGENTE</div><p>${esc(r.draft)}</p></div>`;
+  } else {
+    draftBlock = `<div class="draft"><p class="draft-empty">Sin borrador todavía. Pulsa «Generar borradores» arriba.</p></div>`;
+  }
+
+  const actions = r.status==="publicada" ? `<span class="status-pill st-publicada">Publicada${r.source==="mock"?" (simulado)":""}</span>`
+    : r.status==="descartada" ? `<span class="status-pill st-descartada">Descartada</span> <button class="btn btn-ghost btn-sm" data-act="restore" data-id="${r.id}">Recuperar</button>`
+    : r._editing ? ""
+    : `${r.draft?`<button class="btn btn-primary btn-sm" data-act="approve" data-id="${r.id}">Aprobar y publicar</button>
+        <button class="btn btn-ghost btn-sm" data-act="edit" data-id="${r.id}">Editar</button>
+        <button class="btn btn-ghost btn-sm" data-act="regen" data-id="${r.id}">Regenerar</button>`:""}
+       <button class="btn btn-ghost btn-sm" data-act="discard" data-id="${r.id}">Descartar</button>`;
+
+  const pill = r.status==="pendiente"?`<span class="status-pill st-pendiente">Pendiente</span>`
+    : r.status==="borrador"?`<span class="status-pill st-borrador">Borrador listo</span>`:"";
+
+  return `<article class="card" style="--vc:${v.color}">
+    <div class="card-head">
+      <span class="venue-tag">${esc(v.name)}</span>
+      <span class="platform">${esc(r.platform)}</span>
+      ${stars(r.rating)}
+      <span class="meta">${r.review_date?fmtDate(r.review_date):""}</span>
+      <div class="spacer"></div>${pill}
+    </div>
+    <div class="review-body"><span class="author">${esc(r.author)}</span><p>${esc(r.text)}</p></div>
+    ${draftBlock}
+    <div class="card-actions">${actions}</div>
+  </article>`;
+}
+
+async function setReview(id, patch){
+  const { error } = await sb.from("agent_reviews").update({...patch, updated_at:new Date().toISOString()}).eq("id", id);
+  if(error){ toast("No se pudo guardar el cambio"); console.error(error); return false; }
+  const r = reviews.find(x=>x.id===id); Object.assign(r, patch);
+  return true;
+}
+
+function bindCardActions(){
+  document.querySelectorAll("[data-act]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const r = reviews.find(x=>x.id===btn.dataset.id);
+      const act = btn.dataset.act;
+      if(act==="approve"){ if(await setReview(r.id,{status:"publicada"})) toast(r.source==="mock"?"Aprobada. En producción se publicaría ahora en "+r.platform+".":"Aprobada y en cola de publicación."); }
+      else if(act==="discard"){ await setReview(r.id,{status:"descartada"}); }
+      else if(act==="restore"){ await setReview(r.id,{status:r.draft?"borrador":"pendiente"}); }
+      else if(act==="edit"){ r._editing = true; }
+      else if(act==="canceledit"){ r._editing = false; }
+      else if(act==="saveedit"){ const val=document.getElementById("edit-"+r.id).value.trim(); if(await setReview(r.id,{draft:val,status:"borrador"})){ r._editing=false; toast("Borrador actualizado."); } }
+      else if(act==="regen"){ await generateDrafts([r], btn); }
+      render();
+    };
+  });
+}
+
+async function runAgent(){
+  const pending = reviews.filter(r=>r.status==="pendiente");
+  if(pending.length) await generateDrafts(pending, $("#run-agent"));
+}
+
+async function generateDrafts(items, btn){
+  const original = btn ? btn.innerHTML : "";
+  if(btn){ btn.disabled=true; btn.innerHTML=`<span class="spin"></span>Redactando…`; }
+  const payload = items.map(r=>({id:r.id, local:(venues[r.venue]||{}).name||r.venue, plataforma:r.platform,
+    valoracion:r.rating, idioma:r.lang, autor:r.author, texto:r.text, tono:(venues[r.venue]||{}).tone||""}));
+  try{
+    const res = await fetch("/api/agentes/generar",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+      body:JSON.stringify({reviews:payload})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||"Error del servidor");
+    let applied = 0;
+    for(const d of data.drafts||[]){
+      const r = reviews.find(x=>x.id===d.id);
+      if(r && d.respuesta && await setReview(r.id,{draft:d.respuesta.trim(),status:"borrador"})) applied++;
+    }
+    await logRun("Analista de reseñas", applied, data.usage);
+    toast(`${applied} borrador${applied!==1?"es":""} generado${applied!==1?"s":""}`);
+  }catch(err){
+    console.error(err);
+    toast("No se pudieron generar los borradores. Reintenta en unos segundos.");
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML=original; }
+    render();
+  }
+}
+
+async function logRun(agent, items, usage){
+  const inTok = (usage&&usage.input_tokens)||0, outTok = (usage&&usage.output_tokens)||0;
+  const cost = inTok*PRICE_IN + outTok*PRICE_OUT;
+  const { error } = await sb.from("agent_runs").insert({agent,items,tokens_in:inTok,tokens_out:outTok,cost});
+  if(!error) runs.unshift({ts:new Date().toISOString(),agent,items,tokens_in:inTok,tokens_out:outTok,cost});
+}
+
+/* ================= WHATSAPP ================= */
+function waStatusPill(st){
+  if(st==="agente") return `<span class="status-pill st-agente">Agente activo</span>`;
+  if(st==="escalado") return `<span class="status-pill st-escalado">Escalado — espera humano</span>`;
+  if(st==="humano") return `<span class="status-pill st-humano">Al mando: humano</span>`;
+  return `<span class="status-pill st-descartada">Cerrado</span>`;
+}
+
+function renderWhatsapp(){
+  const visibles = waChats.filter(c=> waFilter==="all" || c.venue===waFilter);
+  const listHTML = visibles.map(c=>{
+    const v = venues[c.venue]||{name:c.venue,color:"#888"};
+    const msgs = waMsgs[c.id]||[];
+    const last = msgs[msgs.length-1];
+    return `<div class="wa-item ${waActive===c.id?"active":""}" data-chat="${c.id}" style="--vc:${v.color}">
+      <div class="avatar">${initials(c.customer_name)}</div>
+      <div class="wi-body">
+        <div class="wi-top"><span class="wi-name">${esc(c.customer_name)}</span><span class="wi-time">${last?fmtTime(last.ts):""}</span></div>
+        <div class="wi-venue">${esc(v.name)}</div>
+        <div class="wi-snippet">${last?esc(last.text):""}</div>
+        <div style="margin-top:4px">${waStatusPill(c.status)}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const chat = waChats.find(c=>c.id===waActive);
+  let threadHTML;
+  if(!chat){
+    threadHTML = `<div class="wa-empty"><b style="font-family:'Archivo',sans-serif;color:var(--ink)">Conserje de WhatsApp</b>
+      Selecciona una conversación para verla.<br>Modo simulación: escribe como cliente y mira al agente trabajar.</div>`;
+  } else {
+    const v = venues[chat.venue]||{name:chat.venue,color:"#888"};
+    const msgs = waMsgs[chat.id]||[];
+    const bubbles = msgs.map(m=>{
+      const cls = m.sender==="cliente"?"b-cliente":m.sender==="agente"?"b-agente":"b-humano";
+      const label = m.sender==="agente"?`<span class="b-label">Agente</span>`:m.sender==="humano"?`<span class="b-label">Equipo</span>`:"";
+      return `<div class="bubble ${cls}">${label}${esc(m.text)}<span class="b-meta">${fmtTime(m.ts)}</span></div>`;
+    }).join("");
+
+    const controls = chat.status==="humano"
+      ? `<button class="btn btn-ghost btn-sm" id="wa-return">Devolver al agente</button>`
+      : `<button class="btn btn-primary btn-sm" id="wa-take">Intervenir</button>`;
+
+    const composer = chat.status==="humano"
+      ? `<div class="wa-compose"><div class="row">
+           <input id="wa-input" placeholder="Escribe como el equipo…" autocomplete="off">
+           <button class="btn btn-primary btn-sm" id="wa-send">Enviar</button></div>
+         <div class="hint">Estás al mando de esta conversación. El agente no responderá mientras tanto.</div></div>`
+      : `<div class="wa-compose"><div class="hint" style="margin:2px 0 0">El agente atiende esta conversación. Pulsa «Intervenir» para tomar el control${chat.status==="escalado"?" — el agente la ha escalado y está esperando":""}.</div></div>`;
+
+    threadHTML = `
+      <div class="wa-head" style="--vc:${v.color}">
+        <button class="btn btn-ghost btn-sm wa-back" id="wa-back">←</button>
+        <div class="avatar">${initials(chat.customer_name)}</div>
+        <div><div class="wh-name">${esc(chat.customer_name)}</div>
+        <div class="wh-sub">${esc(v.name)} · ${esc(chat.phone_masked||"")}</div></div>
+        <div class="spacer"></div>
+        ${waStatusPill(chat.status)} ${controls}
+      </div>
+      <div class="wa-msgs" id="wa-msgs">${bubbles}${waBusy?`<div class="wa-typing">el agente está escribiendo…</div>`:""}</div>
+      ${composer}
+      <div class="wa-compose wa-sim"><div class="row">
+        <input id="wa-sim-input" placeholder="SIMULADOR — escribe como si fueras el cliente…" autocomplete="off">
+        <button class="btn btn-ghost btn-sm" id="wa-sim-send">Simular</button></div>
+      <div class="hint">Modo simulación: el mensaje entra como cliente y, si el agente está al mando, responde él solo.</div></div>`;
+  }
+
+  $("#main").innerHTML = `
+    <div class="toolbar" style="margin-bottom:12px">
+      <h2 style="margin:0">WhatsApp</h2>
+      <select id="wa-venue"><option value="all">Todos los locales</option>${Object.entries(venues).map(([k,v])=>`<option value="${k}" ${waFilter===k?"selected":""}>${esc(v.name)}</option>`).join("")}</select>
+      <div class="spacer"></div>
+      <span class="meta">Simulación · Cloud API pendiente de decisión con los equipos</span>
+    </div>
+    <div class="wa-wrap ${waActive?"chat-open":""}">
+      <div class="wa-list">${listHTML || `<div class="wa-empty" style="padding:30px 14px">Sin conversaciones en este local.</div>`}</div>
+      <div class="wa-thread" ${chat?`style="--vc:${(venues[chat.venue]||{}).color}"`:""}>${threadHTML}</div>
+    </div>`;
+
+  $("#wa-venue").onchange = e=>{
+    waFilter = e.target.value;
+    const act = waChats.find(c=>c.id===waActive);
+    if(act && waFilter!=="all" && act.venue!==waFilter) waActive = null;
+    render();
+  };
+  document.querySelectorAll(".wa-item").forEach(el=> el.onclick = ()=>{ waActive = el.dataset.chat; render(); });
+  const back = $("#wa-back"); if(back) back.onclick = ()=>{ waActive=null; render(); };
+  const msgsEl = $("#wa-msgs"); if(msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+
+  const take = $("#wa-take"); if(take) take.onclick = ()=> setChatStatus(waActive,"humano","Has tomado el control. El agente queda en pausa en este chat.");
+  const ret = $("#wa-return"); if(ret) ret.onclick = ()=> setChatStatus(waActive,"agente","El agente vuelve a estar al mando de este chat.");
+
+  const send = $("#wa-send");
+  if(send){
+    const doSend = async ()=>{
+      const inp = $("#wa-input"); const text = inp.value.trim(); if(!text) return;
+      inp.value=""; await insertMsg(waActive,"humano",text);
+    };
+    send.onclick = doSend;
+    $("#wa-input").addEventListener("keydown",e=>{ if(e.key==="Enter") doSend(); });
+  }
+
+  const simSend = $("#wa-sim-send");
+  if(simSend){
+    const doSim = async ()=>{
+      const inp = $("#wa-sim-input"); const text = inp.value.trim(); if(!text||waBusy) return;
+      inp.value="";
+      await insertMsg(waActive,"cliente",text);
+      const chat = waChats.find(c=>c.id===waActive);
+      if(chat && chat.status==="agente") await agentReply(chat);
+    };
+    simSend.onclick = doSim;
+    $("#wa-sim-input").addEventListener("keydown",e=>{ if(e.key==="Enter") doSim(); });
+  }
+}
+
+async function insertMsg(chatId, sender, text){
+  const { data, error } = await sb.from("agent_wa_messages").insert({chat_id:chatId,sender,text}).select().single();
+  if(error){ toast("No se pudo enviar"); console.error(error); return; }
+  const arr = (waMsgs[chatId]=waMsgs[chatId]||[]);
+  if(!arr.some(x=>x.id===data.id)) arr.push(data);
+  await sb.from("agent_wa_chats").update({last_ts:new Date().toISOString()}).eq("id",chatId);
+  const c = waChats.find(x=>x.id===chatId); if(c) c.last_ts = new Date().toISOString();
+  render();
+}
+
+async function setChatStatus(chatId, status, msg){
+  const { error } = await sb.from("agent_wa_chats").update({status}).eq("id",chatId);
+  if(error){ toast("No se pudo cambiar el estado"); return; }
+  const c = waChats.find(x=>x.id===chatId); if(c) c.status = status;
+  if(msg) toast(msg);
+  render();
+}
+
+async function agentReply(chat){
+  waBusy = true; render();
+  const v = venues[chat.venue]||{};
+  const history = (waMsgs[chat.id]||[]).slice(-16).map(m=>({sender:m.sender,text:m.text}));
+  const kb = knowledge.filter(k=>k.venue===chat.venue && k.active)
+    .map(k=>"## "+k.title+"\n"+k.content).join("\n\n").slice(0,10000);
+  try{
+    const res = await fetch("/api/agentes/whatsapp",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+      body:JSON.stringify({venue_name:v.name||chat.venue, tone:v.tone||"", customer:chat.customer_name, history, conocimiento:kb})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||"Error del servidor");
+    waBusy = false;
+    await insertMsg(chat.id,"agente",data.mensaje);
+    if(data.accion==="escalar") await setChatStatus(chat.id,"escalado","El agente ha escalado esta conversación a humano.");
+    await logRun("Conserje WhatsApp",1,data.usage);
+  }catch(err){
+    console.error(err); waBusy = false;
+    toast("El agente no pudo responder. Reintenta.");
+    render();
+  }
+}
+
+/* ================= PROSPECCIÓN ================= */
+const PR_STAGES = [["nuevo","Nuevos"],["aprobado","Aprobados"],["contactado","Contactados"],["interesado","Interesados"],["muestras","Muestras"],["cliente","Clientes"],["descartado","Descartados"]];
+
+function renderProspeccion(){
+  const counts = {}; prospects.forEach(p=>counts[p.stage]=(counts[p.stage]||0)+1);
+  const list = prospects.filter(p=>p.stage===prFilter);
+
+  $("#main").innerHTML = `
+    <h2>Prospector de distribuidores — Binifadet</h2>
+    <div class="note">Dale una zona y el agente busca en la web distribuidores y vinotecas que encajen (variedades autóctonas, premium, Baleares), lee sus webs y crea fichas puntuadas. Tú apruebas o descartas — nadie contacta a nadie sin tu visto bueno. Cada run tarda 1-3 minutos y hace varias búsquedas web.</div>
+    <div class="toolbar">
+      <input id="pr-zona" placeholder="Zona (p. ej. Madrid, País Vasco, Barcelona…)" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface)">
+      <button class="btn btn-primary" id="pr-run" ${prBusy?"disabled":""}>${prBusy?'<span class="spin"></span>Prospectando…':"Prospectar zona"}</button>
+    </div>
+    <div class="rail">${PR_STAGES.map(([k,l])=>`<button class="chip" data-prstage="${k}" style="--vc:${k===prFilter?"var(--accent)":"#9AA8B2"};border-color:${k===prFilter?"var(--accent)":"var(--line)"};cursor:pointer">${l} <b>${counts[k]||0}</b></button>`).join("")}</div>
+    <div>${list.length? list.map(prCardHTML).join("") : `<div class="empty"><b>Nada en «${(PR_STAGES.find(s=>s[0]===prFilter)||["",""])[1]}»</b>${prFilter==="nuevo"?"Lanza una prospección arriba para llenar esta bandeja.":"Las fichas llegarán aquí según avancen por el pipeline."}</div>`}</div>`;
+
+  $("#pr-run").onclick = runProspeccion;
+  $("#pr-zona").addEventListener("keydown",e=>{ if(e.key==="Enter") runProspeccion(); });
+  document.querySelectorAll("[data-prstage]").forEach(el=> el.onclick = ()=>{ prFilter = el.dataset.prstage; render(); });
+  bindProspectActions();
+}
+
+function prCardHTML(p){
+  const next = {nuevo:[["aprobado","Aprobar"],["descartado","Descartar"]],
+    aprobado:[["contactado","Marcar contactado"],["descartado","Descartar"]],
+    contactado:[["interesado","Interesado"],["descartado","Descartar"]],
+    interesado:[["muestras","Muestras enviadas"],["descartado","Descartar"]],
+    muestras:[["cliente","¡Cliente!"],["descartado","Descartar"]],
+    cliente:[], descartado:[["nuevo","Recuperar"]]}[p.stage]||[];
+  return `<article class="card" style="--vc:${p.score>=7?"var(--ok)":p.score>=5?"var(--amber)":"var(--danger)"}">
+    <div class="card-head">
+      <span class="venue-tag" style="color:var(--ink)">${esc(p.name)}</span>
+      <span class="platform">${esc(p.zone)}${p.city?" · "+esc(p.city):""}</span>
+      <span class="meta" style="font-family:'IBM Plex Mono',monospace;font-weight:600">encaje ${p.score||"?"}/10</span>
+      <div class="spacer"></div>
+      ${p.web?`<a href="${esc(p.web)}" target="_blank" rel="noopener" class="meta">web ↗</a>`:""}
+    </div>
+    <div class="review-body">
+      <p><b>Perfil:</b> ${esc(p.perfil||"—")}</p>
+      <p style="margin-top:6px"><b>Encaje:</b> ${esc(p.razon||"—")}</p>
+      <p style="margin-top:6px"><b>Ángulo de entrada:</b> ${esc(p.angulo||"—")}</p>
+      ${(p.email||p.phone)?`<p style="margin-top:6px" class="meta">${esc(p.email||"")}${p.email&&p.phone?" · ":""}${esc(p.phone||"")}</p>`:`<p style="margin-top:6px" class="meta">Sin contacto publicado — buscarlo a mano si se aprueba.</p>`}
+    </div>
+    <div class="card-actions">
+      ${next.map(([st,label])=>`<button class="btn ${st==="descartado"?"btn-ghost":"btn-primary"} btn-sm" data-pr="${st}" data-id="${p.id}">${label}</button>`).join("")}
+    </div>
+  </article>`;
+}
+
+function bindProspectActions(){
+  document.querySelectorAll("[data-pr]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const { error } = await sb.from("agent_prospects").update({stage:btn.dataset.pr,updated_at:new Date().toISOString()}).eq("id",btn.dataset.id);
+      if(error){ toast("No se pudo mover la ficha"); return; }
+      const p = prospects.find(x=>x.id===btn.dataset.id); if(p) p.stage = btn.dataset.pr;
+      render();
+    };
+  });
+}
+
+async function runProspeccion(){
+  const zona = $("#pr-zona").value.trim();
+  if(!zona){ toast("Indica una zona"); return; }
+  if(prBusy) return;
+  prBusy = true; render();
+  try{
+    const existentes = prospects.map(p=>p.name).slice(0,200);
+    const res = await fetch("/api/agentes/prospectar",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+      body:JSON.stringify({zona, existentes})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||"Error del servidor");
+    let added = 0;
+    for(const f of data.fichas||[]){
+      if(!f.name) continue;
+      const dup = prospects.some(p=> p.name.toLowerCase()===f.name.toLowerCase() || (f.web && p.web===f.web));
+      if(dup) continue;
+      const { data: row, error } = await sb.from("agent_prospects").insert({
+        zone:zona, name:f.name, city:f.city||null, web:f.web||null, email:f.email||null,
+        phone:f.phone||null, perfil:f.perfil||null, score:f.score||null, razon:f.razon||null, angulo:f.angulo||null
+      }).select().single();
+      if(!error){ prospects.push(row); added++; }
+    }
+    prospects.sort((a,b)=>(b.score||0)-(a.score||0));
+    const searchCost = ((data.usage&&data.usage.searches)||0)*0.01;
+    const inTok=(data.usage&&data.usage.input_tokens)||0, outTok=(data.usage&&data.usage.output_tokens)||0;
+    const cost = inTok*PRICE_IN + outTok*PRICE_OUT + searchCost;
+    await sb.from("agent_runs").insert({agent:"Prospector distribuidores",items:added,tokens_in:inTok,tokens_out:outTok,cost});
+    runs.unshift({ts:new Date().toISOString(),agent:"Prospector distribuidores",items:added,tokens_in:inTok,tokens_out:outTok,cost});
+    prFilter = "nuevo";
+    toast(added? added+" ficha"+(added!==1?"s":"")+" nueva"+(added!==1?"s":"")+" de "+zona : "Sin fichas nuevas (candidatos ya fichados o sin encaje)");
+  }catch(err){
+    console.error(err);
+    toast(err.message||"Fallo en la prospección");
+  }finally{
+    prBusy = false; render();
+  }
+}
+
+
+/* ================= HORARIOS (sincronizador) ================= */
+function renderHorarios(){
+  const venueCards = Object.entries(venues).map(([k,v])=>{
+    const doc = knowledge.find(x=>x.venue===k && x.active && /horari/i.test(x.title||""));
+    const last = syncChecks.find(c=>c.venue===k);
+    const openCount = syncAlerts.filter(a=>a.venue===k).length;
+    const estado = !doc ? `<span class="status-pill st-pendiente">Sin fuente de verdad</span>`
+      : openCount ? `<span class="status-pill st-escalado">${openCount} discrepancia${openCount!==1?"s":""}</span>`
+      : last ? `<span class="status-pill st-publicada">Todo coincide</span>`
+      : `<span class="status-pill st-borrador">Sin comprobar aún</span>`;
+    return `<div class="card" style="--vc:${v.color}">
+      <div class="card-head">
+        <span class="venue-tag">${esc(v.name)}</span>
+        <div class="spacer"></div>${estado}
+      </div>
+      <div class="review-body">
+        <p class="meta">${doc?`Fuente de verdad: «${esc(doc.title)}»`:`Falta un documento activo con «Horarios» en el título (Ajustes → base de conocimiento).`}</p>
+        <p class="meta" style="margin-top:4px">${last?`Última comprobación: ${new Date(last.created_at).toLocaleString("es-ES",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})} · ${last.comprobadas} plataforma${last.comprobadas!==1?"s":""} · ${esc(last.resumen||"")}`:"Este local todavía no se ha comprobado."}</p>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-primary btn-sm" data-sync-run="${k}" ${(!doc||syncBusy)?"disabled":""}>${syncBusy===k?"Comprobando…":"⟳ Comprobar ahora"}</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  const alertCards = syncAlerts.map(a=>{ const v=venues[a.venue]||{name:a.venue,color:"#888"}; return `
+    <div class="card" style="--vc:#C4703E">
+      <div class="card-head">
+        <span class="venue-tag" style="color:#9A4A1F">⚠ ${esc(v.name)}</span>
+        <span class="platform">${esc(a.plataforma)}</span>
+        <span class="meta">${new Date(a.created_at).toLocaleDateString("es-ES",{day:"numeric",month:"short"})}</span>
+      </div>
+      <div class="review-body">
+        <p><b>Publicado en ${esc(a.plataforma)}:</b> ${esc(a.encontrado||"—")}</p>
+        <p style="margin-top:4px"><b>Diferencia:</b> ${esc(a.detalle||"—")}</p>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-primary btn-sm" data-sync="resuelta" data-id="${a.id}">Resuelta (ya corregido)</button>
+        <button class="btn btn-ghost btn-sm" data-sync="ignorada" data-id="${a.id}">Ignorar</button>
+      </div>
+    </div>`;}).join("");
+
+  $("#main").innerHTML = `
+    <h2>Sincronizador de horarios</h2>
+    <div class="note">Cada mañana el agente comprueba un local (rotando: los seis a la semana) contra Google, TripAdvisor y TheFork, usando como verdad el documento «Horarios» activo de cada local. Aquí ves el estado de todos, las discrepancias abiertas y el historial.</div>
+    ${syncAlerts.length?`<h2 style="font-size:16px">Discrepancias abiertas</h2>${alertCards}`:""}
+    <h2 style="font-size:16px;margin-top:${syncAlerts.length?"22px":"0"}">Estado por local</h2>
+    ${venueCards}
+    ${syncChecks.length?`<h2 style="font-size:16px;margin-top:22px">Últimas comprobaciones</h2>
+    <table><thead><tr><th>Fecha</th><th>Local</th><th>Plataformas</th><th>Resultado</th></tr></thead>
+    <tbody>${syncChecks.slice(0,15).map(c=>`<tr>
+      <td>${new Date(c.created_at).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td>
+      <td>${esc((venues[c.venue]||{}).name||c.venue)}</td><td class="num">${c.comprobadas}</td>
+      <td>${c.ok?"✓ Todo coincide":"⚠ "+c.discrepancias+" discrepancia"+(c.discrepancias!==1?"s":"")}</td>
+    </tr>`).join("")}</tbody></table>`:""}`;
+
+  bindSyncRun();
+  document.querySelectorAll("[data-sync]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const { error } = await sb.from("agent_sync_alerts").update({estado:btn.dataset.sync,resolved_at:new Date().toISOString()}).eq("id",btn.dataset.id);
+      if(error){ toast("No se pudo actualizar la alerta"); return; }
+      syncAlerts = syncAlerts.filter(a=>a.id!==btn.dataset.id);
+      render();
+    };
+  });
+}
+
+function bindSyncRun(){
+  document.querySelectorAll("[data-sync-run]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const venue = btn.dataset.syncRun;
+      if(syncBusy) return;
+      syncBusy = venue; render();
+      try{
+        const res = await fetch("/api/agentes/sincronizar",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+          body:JSON.stringify({venue})
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error||"Error del servidor");
+        if(data.skipped){ toast(data.motivo); }
+        else{
+          toast(data.discrepancias? data.discrepancias+" discrepancia"+(data.discrepancias!==1?"s":"") : "Comprobado: todo coincide ✓");
+          const [{ data: fa }, { data: fc }] = await Promise.all([
+            sb.from("agent_sync_alerts").select("*").eq("estado","abierta").order("created_at",{ascending:false}),
+            sb.from("agent_sync_checks").select("*").order("created_at",{ascending:false}).limit(60)
+          ]);
+          if(fa) syncAlerts = fa;
+          if(fc) syncChecks = fc;
+        }
+      }catch(err){ console.error(err); toast(err.message||"Fallo en la comprobación"); }
+      finally{ syncBusy = null; render(); }
+    };
+  });
+}
+
+/* ================= COMPETENCIA (vigilante) ================= */
+const TIPO_LABEL = {carta:"Carta",precios:"Precios",prensa:"Prensa",resenas:"Reseñas",eventos:"Eventos",otro:"Otro"};
+
+function renderCompetencia(){
+  const nuevos = findings.filter(f=>f.estado==="nuevo");
+
+  const compRows = competitors.map(c=>`
+    <div style="display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#fff;${c.active?"":"opacity:.55"}">
+      <input type="checkbox" ${c.active?"checked":""} data-comp="toggle" data-id="${c.id}" title="Activo: el agente lo vigila">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px">${esc(c.name)} <span class="platform" style="margin-left:6px">${esc(c.ambito)}</span></div>
+        <div class="meta">${c.last_checked_at?"Vigilado: "+new Date(c.last_checked_at).toLocaleDateString("es-ES",{day:"numeric",month:"short"}):"Nunca vigilado"}${c.notas?" · "+esc(c.notas):""}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" data-comp="run" data-id="${c.id}" ${(!c.active||compBusy)?"disabled":""}>${compBusy===c.id?"Vigilando…":"Vigilar ahora"}</button>
+      <button class="btn btn-ghost btn-sm" data-comp="del" data-id="${c.id}" title="Borrar">✕</button>
+    </div>`).join("");
+
+  const findingCards = findings.slice(0,40).map(f=>{
+    const c = competitors.find(x=>x.id===f.competitor_id)||{name:"?"};
+    return `<article class="card" style="--vc:${f.relevancia>=4?"var(--danger)":f.relevancia===3?"var(--amber)":"#9AA8B2"};${f.estado==="leido"?"opacity:.6":""}">
+      <div class="card-head">
+        <span class="venue-tag" style="color:var(--ink)">${esc(c.name)}</span>
+        <span class="platform">${TIPO_LABEL[f.tipo]||f.tipo}</span>
+        <span class="meta" style="font-family:'IBM Plex Mono',monospace">rel. ${f.relevancia||"?"}/5</span>
+        <span class="meta">${new Date(f.created_at).toLocaleDateString("es-ES",{day:"numeric",month:"short"})}</span>
+        <div class="spacer"></div>
+        ${f.estado==="nuevo"?`<span class="status-pill st-borrador">Nuevo</span>`:""}
+      </div>
+      <div class="review-body">
+        <p><b>${esc(f.titulo)}</b></p>
+        <p style="margin-top:4px">${esc(f.detalle||"")}</p>
+        ${f.url?`<p style="margin-top:4px"><a href="${esc(f.url)}" target="_blank" rel="noopener" class="meta">fuente ↗</a></p>`:""}
+      </div>
+      <div class="card-actions">
+        ${f.estado==="nuevo"?`<button class="btn btn-ghost btn-sm" data-find="leido" data-id="${f.id}">Marcar leído</button>`:""}
+        <button class="btn btn-ghost btn-sm" data-find="del" data-id="${f.id}">Eliminar</button>
+      </div>
+    </article>`;
+  }).join("");
+
+  $("#main").innerHTML = `
+    <h2>Vigilante de competencia</h2>
+    <div class="note">Cada lunes el agente vigila los 3 competidores activos con la revisión más antigua: novedades de carta, precios, prensa, reseñas y eventos de los últimos 45 días, siempre con fuente. Añade aquí a quién vigilar — la lista es tuya, no del agente.</div>
+    <h2 style="font-size:16px">Competidores (${competitors.filter(c=>c.active).length} activos)</h2>
+    ${compRows || `<div class="meta" style="margin-bottom:8px;font-style:italic">Sin competidores. Añade el primero.</div>`}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
+      <button class="btn btn-ghost btn-sm" id="comp-add">＋ Añadir competidor</button>
+    </div>
+    <h2 style="font-size:16px">Hallazgos${nuevos.length?` · <span style="color:var(--accent)">${nuevos.length} nuevo${nuevos.length!==1?"s":""}</span>`:""}</h2>
+    ${findingCards || `<div class="empty"><b>Sin hallazgos todavía</b>Lanza «Vigilar ahora» sobre un competidor o espera al run del lunes. Si no hay novedades reales, el agente lo dirá con silencio — es su forma de trabajar bien.</div>`}`;
+
+  $("#comp-add").onclick = async ()=>{
+    const name = prompt("Nombre del competidor:"); if(!name) return;
+    const ambito = prompt("Ámbito (restauracion / vino / enoturismo / otro):","restauracion")||"otro";
+    const notas = prompt("Notas para el agente (opcional — qué te interesa de este competidor):")||"";
+    const val = ["restauracion","vino","enoturismo","otro"].includes(ambito.trim())?ambito.trim():"otro";
+    const { data, error } = await sb.from("agent_competitors").insert({name:name.trim(),ambito:val,notas:notas.trim()}).select().single();
+    if(error){ toast("No se pudo añadir"); return; }
+    competitors.push(data); render();
+  };
+
+  document.querySelectorAll("[data-comp]").forEach(el=>{
+    el.onclick = async ()=>{
+      const c = competitors.find(x=>x.id===el.dataset.id);
+      const act = el.dataset.comp;
+      if(act==="toggle"){
+        const { error } = await sb.from("agent_competitors").update({active:!c.active}).eq("id",c.id);
+        if(!error){ c.active=!c.active; render(); }
+      }
+      else if(act==="del"){
+        if(!confirm("¿Borrar a "+c.name+" y todos sus hallazgos?")) return;
+        const { error } = await sb.from("agent_competitors").delete().eq("id",c.id);
+        if(!error){ competitors=competitors.filter(x=>x.id!==c.id); findings=findings.filter(f=>f.competitor_id!==c.id); render(); }
+      }
+      else if(act==="run"){
+        if(compBusy) return;
+        compBusy = c.id; render();
+        try{
+          const res = await fetch("/api/agentes/vigilar",{
+            method:"POST",
+            headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+            body:JSON.stringify({competitor_id:c.id})
+          });
+          const data = await res.json();
+          if(!res.ok) throw new Error(data.error||"Error del servidor");
+          toast(data.hallazgos? data.hallazgos+" hallazgo"+(data.hallazgos!==1?"s":"")+" nuevo"+(data.hallazgos!==1?"s":"") : "Vigilado: sin novedades reales ✓");
+          const [{ data: fc }, { data: fco }] = await Promise.all([
+            sb.from("agent_watch_findings").select("*").order("created_at",{ascending:false}).limit(120),
+            sb.from("agent_competitors").select("*").order("created_at")
+          ]);
+          if(fc) findings = fc;
+          if(fco) competitors = fco;
+        }catch(err){ console.error(err); toast(err.message||"Fallo en la vigilancia"); }
+        finally{ compBusy = null; render(); }
+      }
+    };
+  });
+
+  document.querySelectorAll("[data-find]").forEach(el=>{
+    el.onclick = async ()=>{
+      if(el.dataset.find==="leido"){
+        const { error } = await sb.from("agent_watch_findings").update({estado:"leido"}).eq("id",el.dataset.id);
+        if(!error){ const f=findings.find(x=>x.id===el.dataset.id); if(f) f.estado="leido"; render(); }
+      } else {
+        const { error } = await sb.from("agent_watch_findings").delete().eq("id",el.dataset.id);
+        if(!error){ findings=findings.filter(x=>x.id!==el.dataset.id); render(); }
+      }
+    };
+  });
+}
+
+/* ================= SUBVENCIONES (rastreador) ================= */
+const GR_STAGES = [["nueva","Nuevas"],["interesa","Interesan"],["preparando","Preparando"],["presentada","Presentadas"],["descartada","Descartadas"],["caducada","Caducadas"]];
+const GR_AMBITO = {local:"Local",autonomica:"Autonómica",estatal:"Estatal",europea:"Europea"};
+const GR_VIVAS = ["nueva","interesa","preparando"];
+
+function grDias(f){
+  if(!f) return null;
+  return Math.ceil((new Date(f+"T23:59:59").getTime() - Date.now())/864e5);
+}
+function grUrgente(g){
+  const d = grDias(g.plazo);
+  return GR_VIVAS.includes(g.estado) && d!==null && d>=0 && d<=12;
+}
+function grAvisa(g){ return g.estado==="nueva" || grUrgente(g); }
+
+function renderSubvenciones(){
+  const counts = {}; grants.forEach(g=>counts[g.estado]=(counts[g.estado]||0)+1);
+  const list = grants.filter(g=>g.estado===grFilter).sort((a,b)=>{
+    const da = grDias(a.plazo), db = grDias(b.plazo);
+    if(da!==null && db!==null && da!==db) return da-db;
+    if(da!==null && db===null) return -1;
+    if(db!==null && da===null) return 1;
+    return (b.encaje||0)-(a.encaje||0);
+  });
+  const urgentes = grants.filter(grUrgente);
+
+  const avisoHTML = urgentes.length ? `
+    <div class="card" style="--vc:var(--danger);margin-bottom:18px">
+      <div class="card-head"><span class="venue-tag" style="color:#8E2E1F">⏳ Plazos que se acaban</span></div>
+      <div class="review-body">${urgentes.map(g=>{
+        const d = grDias(g.plazo);
+        return `<p style="margin-top:4px">· <b>${esc(g.titulo.slice(0,110))}</b> — quedan ${d} día${d!==1?"s":""} (hasta el ${fmtDate(g.plazo)})</p>`;
+      }).join("")}</div>
+    </div>` : "";
+
+  $("#main").innerHTML = `
+    <h2>Rastreador de subvenciones</h2>
+    <div class="note">Cada lunes de madrugada el agente barre la <b>Base de Datos Nacional de Subvenciones</b> —donde toda convocatoria se registra <i>antes</i> de que su extracto salga en el BOIB o el BOE, así que ahí caen el Govern Balear, el Consell Insular y los ayuntamientos de Maó, Sant Lluís y Es Mercadal— más un barrido web de FOGAIBA, OCM del vino, ICEX, IDAE y ayudas estatales de digitalización e IA. Criba contra el perfil de la empresa (editable en Ajustes) y solo sube lo que podríamos pedir. Lo importante no es enterarse: es no dejar pasar el plazo.</div>
+    ${avisoHTML}
+    <div class="toolbar">
+      <button class="btn btn-primary" id="gr-bdns" ${grBusy?"disabled":""}>${grBusy==="bdns"?'<span class="spin"></span>Rastreando BDNS…':"Rastrear BDNS ahora"}</button>
+      <button class="btn btn-ghost" id="gr-web" ${grBusy?"disabled":""}>${grBusy==="web"?'<span class="spin"></span>Buscando en la web…':"Barrido web"}</button>
+      <div class="spacer"></div>
+      <span class="meta">${grants.length} convocatoria${grants.length!==1?"s":""} fichadas</span>
+    </div>
+    <div class="rail">${GR_STAGES.map(([k,l])=>`<button class="chip" data-grstage="${k}" style="--vc:${k===grFilter?"var(--accent)":"#9AA8B2"};border-color:${k===grFilter?"var(--accent)":"var(--line)"};cursor:pointer">${l} <b>${counts[k]||0}</b></button>`).join("")}</div>
+    <div>${list.length? list.map(grCardHTML).join("") : `<div class="empty"><b>Nada en «${(GR_STAGES.find(s=>s[0]===grFilter)||["",""])[1]}»</b>${grFilter==="nueva"?"Lanza un rastreo arriba o espera al run del lunes. Si esta semana no hay ninguna convocatoria que nos aplique, el agente no inventará ninguna.":"Las convocatorias llegarán aquí según avancen."}</div>`}</div>`;
+
+  $("#gr-bdns").onclick = ()=> runGrants("bdns");
+  $("#gr-web").onclick = ()=> runGrants("web");
+  document.querySelectorAll("[data-grstage]").forEach(el=> el.onclick = ()=>{ grFilter = el.dataset.grstage; render(); });
+  bindGrantActions();
+}
+
+function grCardHTML(g){
+  const d = grDias(g.plazo);
+  const urgente = grUrgente(g);
+  const color = urgente ? "var(--danger)" : g.encaje>=4 ? "var(--ok)" : g.encaje===3 ? "var(--amber)" : "#9AA8B2";
+  const next = {
+    nueva:[["interesa","Nos interesa"],["descartada","Descartar"]],
+    interesa:[["preparando","En preparación"],["descartada","Descartar"]],
+    preparando:[["presentada","Presentada"],["descartada","Descartar"]],
+    presentada:[],
+    descartada:[["nueva","Recuperar"]],
+    caducada:[["descartada","Archivar"]]
+  }[g.estado]||[];
+
+  const plazoTxt = !g.plazo ? `<span class="meta">Plazo por confirmar</span>`
+    : d<0 ? `<span class="status-pill st-descartada">Plazo vencido (${fmtDate(g.plazo)})</span>`
+    : `<span class="status-pill ${urgente?"st-urgente":"st-borrador"}">Hasta el ${fmtDate(g.plazo)} · quedan ${d} día${d!==1?"s":""}</span>`;
+
+  return `<article class="card" style="--vc:${color}">
+    <div class="card-head">
+      <span class="platform">${GR_AMBITO[g.ambito]||g.ambito}</span>
+      <span class="platform">${esc(g.materia||"otra")}</span>
+      <span class="meta" style="font-family:'IBM Plex Mono',monospace;font-weight:600">encaje ${g.encaje||"?"}/5</span>
+      <div class="spacer"></div>${plazoTxt}
+    </div>
+    <div class="review-body">
+      <p><b>${esc(g.titulo)}</b></p>
+      ${g.organo?`<p class="meta" style="margin-top:4px">${esc(g.organo)}${g.bdns?" · BDNS "+esc(g.bdns):""}</p>`:""}
+      <p style="margin-top:6px"><b>Por qué nos encaja:</b> ${esc(g.razon||"—")}</p>
+      ${g.importe?`<p style="margin-top:4px"><b>Cuantía:</b> ${esc(g.importe)}</p>`:""}
+      ${g.detalle?`<div class="draft" style="margin:10px 0 4px"><div class="draft-label">FICHA DEL AGENTE</div><p>${esc(g.detalle)}</p></div>`:""}
+      ${g.notas?`<p style="margin-top:6px" class="meta"><b>Nota:</b> ${esc(g.notas)}</p>`:""}
+      ${g.url?`<p style="margin-top:6px"><a href="${esc(g.url)}" target="_blank" rel="noopener" class="meta">convocatoria ↗</a></p>`:""}
+    </div>
+    <div class="card-actions">
+      ${next.map(([st,label])=>`<button class="btn ${st==="descartada"||st==="nueva"?"btn-ghost":"btn-primary"} btn-sm" data-gr="${st}" data-id="${g.id}">${label}</button>`).join("")}
+      <button class="btn btn-ghost btn-sm" data-grnote="1" data-id="${g.id}">Nota</button>
+      <button class="btn btn-ghost btn-sm" data-grplazo="1" data-id="${g.id}">Fijar plazo</button>
+    </div>
+  </article>`;
+}
+
+function bindGrantActions(){
+  document.querySelectorAll("[data-gr]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const { error } = await sb.from("agent_grants").update({estado:btn.dataset.gr,updated_at:new Date().toISOString()}).eq("id",btn.dataset.id);
+      if(error){ toast("No se pudo mover la convocatoria"); return; }
+      const g = grants.find(x=>x.id===btn.dataset.id); if(g) g.estado = btn.dataset.gr;
+      render();
+    };
+  });
+  document.querySelectorAll("[data-grnote]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const g = grants.find(x=>x.id===btn.dataset.id);
+      const nota = prompt("Nota interna sobre esta convocatoria:", g.notas||"");
+      if(nota===null) return;
+      const { error } = await sb.from("agent_grants").update({notas:nota,updated_at:new Date().toISOString()}).eq("id",g.id);
+      if(error){ toast("No se pudo guardar la nota"); return; }
+      g.notas = nota; render();
+    };
+  });
+  document.querySelectorAll("[data-grplazo]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const g = grants.find(x=>x.id===btn.dataset.id);
+      const v = prompt("Fecha límite de solicitud (AAAA-MM-DD). Vacío para borrarla:", g.plazo||"");
+      if(v===null) return;
+      const val = v.trim();
+      if(val && !/^\d{4}-\d{2}-\d{2}$/.test(val)){ toast("Formato no válido. Usa AAAA-MM-DD."); return; }
+      const { error } = await sb.from("agent_grants").update({plazo:val||null,updated_at:new Date().toISOString()}).eq("id",g.id);
+      if(error){ toast("No se pudo guardar el plazo"); return; }
+      g.plazo = val||null; render();
+    };
+  });
+}
+
+async function runGrants(modo){
+  if(grBusy) return;
+  grBusy = modo; render();
+  try{
+    const res = await fetch("/api/agentes/subvenciones",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+      body:JSON.stringify(modo==="web" ? {modo:"web"} : {modo:"bdns", dias:14})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||"Error del servidor");
+    const [{ data: fg }, { data: fr }] = await Promise.all([
+      sb.from("agent_grants").select("*").order("encaje",{ascending:false}).order("created_at",{ascending:false}).limit(300),
+      sb.from("agent_runs").select("*").order("ts",{ascending:false}).limit(100)
+    ]);
+    if(fg) grants = fg;
+    if(fr) runs = fr;
+    grFilter = "nueva";
+    toast(data.nuevas ? data.nuevas+" convocatoria"+(data.nuevas!==1?"s":"")+" nueva"+(data.nuevas!==1?"s":"") : "Rastreado: nada nuevo que nos aplique ✓");
+  }catch(err){
+    console.error(err);
+    toast(err.message||"Fallo en el rastreo");
+  }finally{
+    grBusy = null; render();
+  }
+}
+
+function renderAgentes(){
+  $("#main").innerHTML = `<h2>Catálogo de agentes</h2>
+  <div class="note">Los seis agentes de este panel están operativos. Los agentes de otras áreas (dirección, contabilidad, RRHH, cocina) vivirán en sus propios paneles.</div>
+  <div class="agent-grid">${AGENTS.map(a=>`
+    <div class="agent">
+      <div class="dom">${esc(a.dom)}</div>
+      <h3>${esc(a.name)}</h3>
+      <p>${esc(a.desc)}</p>
+      <div class="agent-foot">
+        ${a.active?`<span class="badge-on">● Activo</span>`:`<span class="badge-off">○ Inactivo</span>`}
+        ${a.soon?`<span class="badge-soon">${a.soon}</span>`:""}
+      </div>
+    </div>`).join("")}</div>`;
+}
+
+/* ================= ACTIVIDAD ================= */
+function renderActividad(){
+  const tin = runs.reduce((a,r)=>a+(r.tokens_in||0),0), tout = runs.reduce((a,r)=>a+(r.tokens_out||0),0);
+  const cost = runs.reduce((a,r)=>a+Number(r.cost||0),0);
+  $("#main").innerHTML = `<h2>Actividad y coste</h2>
+  <div class="kpis">
+    <div class="kpi"><div class="v">${runs.length}</div><div class="l">Ejecuciones</div></div>
+    <div class="kpi"><div class="v">${(tin+tout).toLocaleString("es-ES")}</div><div class="l">Tokens totales</div></div>
+    <div class="kpi"><div class="v">${money(cost)}</div><div class="l">Coste acumulado (Sonnet 4.6)</div></div>
+    <div class="kpi"><div class="v">${reviews.filter(r=>r.status==="publicada").length}</div><div class="l">Respuestas publicadas</div></div>
+  </div>
+  ${runs.length? `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Ítems</th><th>Tokens in</th><th>Tokens out</th><th>Coste</th></tr></thead>
+  <tbody>${runs.map(r=>`<tr><td>${new Date(r.ts).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td>
+    <td>${esc(r.agent)}</td><td class="num">${r.items}</td><td class="num">${(r.tokens_in||0).toLocaleString("es-ES")}</td>
+    <td class="num">${(r.tokens_out||0).toLocaleString("es-ES")}</td><td class="num">${money(r.cost||0)}</td></tr>`).join("")}</tbody></table>`
+  : `<div class="empty"><b>Sin ejecuciones todavía</b>Genera borradores desde la Bandeja o habla con el conserje de WhatsApp y aquí quedará el registro con tokens y coste de cada run.</div>`}
+  <div style="margin-top:16px"><button class="btn btn-ghost" id="reset">Restaurar reseñas de prueba</button></div>`;
+  $("#reset").onclick = async ()=>{
+    if(!confirm("¿Restaurar las reseñas de prueba a estado pendiente? El historial de ejecuciones se conserva.")) return;
+    const { error } = await sb.from("agent_reviews").update({status:"pendiente",draft:null}).eq("source","mock");
+    if(error){ toast("No se pudo restaurar"); return; }
+    await loadAll(); render(); toast("Reseñas de prueba restauradas");
+  };
+}
+
+/* ================= AJUSTES ================= */
+function knItemHTML(k){
+  const kb = Math.round((k.content||"").length/1000);
+  if(k._editing){
+    return `<div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;background:#F9FBFB">
+      <input value="${esc(k.title)}" data-kn-title="${k.id}" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;font-weight:600">
+      <textarea data-kn-content="${k.id}" style="width:100%;min-height:140px;border:1px solid var(--accent);border-radius:8px;padding:10px;resize:vertical;font-size:13px">${esc(k.content)}</textarea>
+      <div class="save-row">
+        <button class="btn btn-primary btn-sm" data-kn="save" data-id="${k.id}">Guardar</button>
+        <button class="btn btn-ghost btn-sm" data-kn="cancel" data-id="${k.id}">Cancelar</button>
+      </div></div>`;
+  }
+  return `<div style="display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#fff;${k.active?"":"opacity:.55"}">
+    <input type="checkbox" ${k.active?"checked":""} data-kn="toggle" data-id="${k.id}" title="Activo: el agente lo usa">
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(k.title)}</div>
+      <div class="meta">${k.source==="pdf"?"PDF · ":""}${kb<1?"<1":kb} k caracteres · ${k.active?"activo":"inactivo"}</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" data-kn="edit" data-id="${k.id}">Ver / Editar</button>
+    <button class="btn btn-ghost btn-sm" data-kn="del" data-id="${k.id}" title="Borrar">✕</button>
+  </div>`;
+}
+
+function renderAjustes(){
+  $("#main").innerHTML = `<h2>Ajustes por local</h2>
+  <div class="note">Dos piezas por local: el <b>tono</b> (cómo suena) y la <b>base de conocimiento</b> (lo que sabe: horarios, cartas, políticas). El conserje de WhatsApp solo da datos concretos que estén en documentos activos — lo que no cargues aquí, no lo sabe. Sube un PDF (extrae el texto y te lo deja editable) o crea documentos de texto directamente.</div>
+  ${Object.entries(venues).map(([k,v])=>{
+    const docs = knowledge.filter(x=>x.venue===k);
+    return `
+    <div class="tone-block" style="--vc:${v.color}">
+      <label>${esc(v.name)}</label>
+      <div class="meta" style="margin-bottom:4px">Tono</div>
+      <textarea data-tone="${k}">${esc(v.tone)}</textarea>
+      <div class="meta" style="margin:12px 0 6px">Base de conocimiento (${docs.filter(d=>d.active).length} activos de ${docs.length})</div>
+      ${docs.map(knItemHTML).join("") || `<div class="meta" style="margin-bottom:8px;font-style:italic">Sin documentos. El agente no dará ningún dato concreto de este local.</div>`}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" data-kn="addtext" data-venue="${k}">＋ Documento de texto</button>
+        <button class="btn btn-ghost btn-sm" data-kn="addpdf" data-venue="${k}">＋ Subir PDF</button>
+        <button class="btn btn-ghost btn-sm" data-sync-run="${k}" ${syncBusy===k?"disabled":""}>${syncBusy===k?"Comprobando…":"⟳ Comprobar horarios publicados"}</button>
+        <input type="file" accept="application/pdf" data-kn-file="${k}" style="display:none">
+      </div>
+    </div>`;
+  }).join("")}
+  <div class="save-row">
+    <button class="btn btn-primary" id="save-tones">Guardar tonos</button>
+    <span class="saved-msg" id="saved-msg">Guardado ✓</span>
+  </div>
+  <h2 style="margin-top:28px">Perfil para el rastreador de subvenciones</h2>
+  <div class="note">Esto es lo único que el agente usa para decidir si una convocatoria nos aplica. Cuanto más concreto (CNAE, municipios, tipo de inversión prevista), menos ruido sube a la pestaña de Subvenciones. Si este año vais a acometer una inversión concreta —una reforma, placas, una máquina— escríbelo aquí: el agente la buscará activamente.</div>
+  <textarea id="gr-perfil" style="width:100%;min-height:240px;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;resize:vertical">${esc(grProfile)}</textarea>
+  <div class="save-row">
+    <button class="btn btn-primary" id="save-perfil">Guardar perfil</button>
+    <span class="saved-msg" id="saved-perfil">Guardado ✓</span>
+  </div>
+  <h2 style="margin-top:28px">Autopublicación y autonomía</h2>
+  <div class="note">Reseñas: todo pasa por aprobación humana en esta fase. WhatsApp: el agente responde solo lo rutinario y escala quejas, grupos grandes, pagos y cambios de reserva — las reglas de escalado se afinarán con casos reales. Subvenciones: el agente detecta y ficha, pero nadie presenta nada sin decisión humana.</div>`;
+
+  $("#save-tones").onclick = async ()=>{
+    for(const t of document.querySelectorAll("[data-tone]")){
+      const { error } = await sb.from("agent_tones").update({tone:t.value.trim(),updated_at:new Date().toISOString()}).eq("venue",t.dataset.tone);
+      if(error){ toast("No se pudieron guardar los tonos"); return; }
+      venues[t.dataset.tone].tone = t.value.trim();
+    }
+    const m=$("#saved-msg"); m.classList.add("show"); setTimeout(()=>m.classList.remove("show"),2000);
+  };
+
+  $("#save-perfil").onclick = async ()=>{
+    const val = $("#gr-perfil").value;
+    const { error } = await sb.from("agent_grant_profile").upsert({id:1,perfil:val,updated_at:new Date().toISOString()});
+    if(error){ toast("No se pudo guardar el perfil"); console.error(error); return; }
+    grProfile = val;
+    const m=$("#saved-perfil"); m.classList.add("show"); setTimeout(()=>m.classList.remove("show"),2000);
+  };
+
+  document.querySelectorAll("[data-kn]").forEach(el=>{
+    el.onclick = async ()=>{
+      const act = el.dataset.kn;
+      if(act==="addtext"){
+        const title = prompt("Título del documento (p. ej. Horarios verano 2026):");
+        if(!title) return;
+        await knInsert(el.dataset.venue, title.trim(), "", "texto", true);
+      }
+      else if(act==="addpdf"){
+        document.querySelector(`[data-kn-file="${el.dataset.venue}"]`).click();
+      }
+      else if(act==="toggle"){
+        const k = knowledge.find(x=>x.id===el.dataset.id);
+        const { error } = await sb.from("agent_knowledge").update({active:!k.active,updated_at:new Date().toISOString()}).eq("id",k.id);
+        if(error){ toast("No se pudo cambiar"); return; }
+        k.active = !k.active; render();
+      }
+      else if(act==="edit"){ const k = knowledge.find(x=>x.id===el.dataset.id); k._editing=true; render(); }
+      else if(act==="cancel"){ const k = knowledge.find(x=>x.id===el.dataset.id); k._editing=false; render(); }
+      else if(act==="save"){
+        const k = knowledge.find(x=>x.id===el.dataset.id);
+        const title = document.querySelector(`[data-kn-title="${k.id}"]`).value.trim() || k.title;
+        const content = document.querySelector(`[data-kn-content="${k.id}"]`).value;
+        const { error } = await sb.from("agent_knowledge").update({title,content,updated_at:new Date().toISOString()}).eq("id",k.id);
+        if(error){ toast("No se pudo guardar"); return; }
+        k.title=title; k.content=content; k._editing=false; render(); toast("Documento guardado");
+      }
+      else if(act==="del"){
+        if(!confirm("¿Borrar este documento de conocimiento?")) return;
+        const { error } = await sb.from("agent_knowledge").delete().eq("id",el.dataset.id);
+        if(error){ toast("No se pudo borrar"); return; }
+        knowledge = knowledge.filter(x=>x.id!==el.dataset.id); render();
+      }
+    };
+  });
+
+  bindSyncRun();
+
+  document.querySelectorAll("[data-kn-file]").forEach(inp=>{
+    inp.onchange = async ()=>{
+      const file = inp.files[0]; if(!file) return;
+      toast("Extrayendo texto del PDF…");
+      try{
+        const text = await pdfToText(file);
+        if(!text.trim()){ toast("No se pudo extraer texto (¿PDF escaneado sin OCR?). Crea un documento de texto y pégalo a mano."); return; }
+        await knInsert(inp.dataset.knFile, file.name.replace(/\.pdf$/i,""), text.slice(0,20000), "pdf", false);
+        toast("PDF cargado. Revisa el texto extraído antes de dejarlo definitivo.");
+      }catch(err){ console.error(err); toast("Error leyendo el PDF"); }
+      inp.value = "";
+    };
+  });
+}
+
+async function knInsert(venue, title, content, source, openEditor){
+  const { data, error } = await sb.from("agent_knowledge").insert({venue,title,content,source,active:true}).select().single();
+  if(error){ toast("No se pudo crear el documento"); console.error(error); return; }
+  if(openEditor) data._editing = true;
+  knowledge.unshift(data); render();
+}
+
+async function pdfToText(file){
+  const buf = await file.arrayBuffer();
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  let out = [];
+  for(let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    out.push(tc.items.map(i=>i.str).join(" "));
+  }
+  return out.join("\n\n").replace(/[ \t]{2,}/g," ").trim();
+}
+
+/* ================= INICIO ================= */
+document.querySelectorAll("#nav [data-view]").forEach(b=> b.onclick = ()=>{ view=b.dataset.view; render(); });
+init();
+</script>
+</body>
+</html>

@@ -16,6 +16,9 @@ export const RUTAS_MODULO: Record<string, string> = {
   // (independiente, fase de pruebas — el port de datos es decisión de noviembre).
   pyg: "/pyg",
   ratios: "/ratios",
+  // Igual que los dos de arriba, pero conserva su login interno (Supabase
+  // Auth propio del proyecto agentes) y proxea /api/agentes/* a su Vercel.
+  agentes: "/agentes",
   // Los dos llevan a la misma app: es una sola aplicación con su menú.
   facturacion: "/finanzas",
   contabilidad: "/finanzas",
