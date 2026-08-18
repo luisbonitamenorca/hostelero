@@ -99,3 +99,60 @@ export async function cambiarVeto(formData: FormData) {
   revalidatePath("/usuarios");
   redirect("/usuarios");
 }
+
+export async function cambiarRol(formData: FormData) {
+  const { perfil, cuenta } = await exigirDireccion();
+
+  const perfilId = String(formData.get("perfil") ?? "");
+  const rol = String(formData.get("rol") ?? "");
+  if (!ROLES_VALIDOS.includes(rol)) redirect("/usuarios?error=datos");
+
+  // Cambiarse el rol a uno mismo queda cerrado: la única dirección podría
+  // degradarse sin querer y dejar la cuenta sin nadie que gestione usuarios.
+  if (perfilId === perfil.id) redirect("/usuarios?error=propio-rol");
+
+  const servicio = crearClienteServicio();
+  if (!servicio) redirect("/usuarios?error=configuracion");
+
+  // La service key salta la RLS, así que la pertenencia a la cuenta se
+  // comprueba aquí a mano: sin esto, una dirección podría cambiar el rol a
+  // un usuario de OTRA cuenta acertando su uuid.
+  const { data: objetivo } = await servicio
+    .from("perfiles")
+    .select("id")
+    .eq("id", perfilId)
+    .eq("cuenta_id", cuenta.id)
+    .maybeSingle();
+  if (!objetivo) redirect("/usuarios?error=datos");
+
+  await servicio.from("perfiles").update({ rol }).eq("id", perfilId);
+
+  revalidatePath("/usuarios");
+  redirect("/usuarios");
+}
+
+export async function borrarUsuario(formData: FormData) {
+  const { perfil, cuenta } = await exigirDireccion();
+
+  const perfilId = String(formData.get("perfil") ?? "");
+  if (perfilId === perfil.id) redirect("/usuarios?error=propio-borrado");
+
+  const servicio = crearClienteServicio();
+  if (!servicio) redirect("/usuarios?error=configuracion");
+
+  const { data: objetivo } = await servicio
+    .from("perfiles")
+    .select("id")
+    .eq("id", perfilId)
+    .eq("cuenta_id", cuenta.id)
+    .maybeSingle();
+  if (!objetivo) redirect("/usuarios?error=datos");
+
+  // Borrar el usuario de Auth arrastra el perfil (FK on delete cascade) y el
+  // perfil arrastra sus vetos: un solo golpe y no quedan huérfanos.
+  const { error } = await servicio.auth.admin.deleteUser(perfilId);
+  if (error) redirect("/usuarios?error=auth");
+
+  revalidatePath("/usuarios");
+  redirect("/usuarios?borrado=1");
+}

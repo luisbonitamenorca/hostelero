@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirModulo } from "@/lib/supabase/server";
 import { crearUsuario, cambiarVeto } from "./acciones";
+import FilaAcciones from "./fila-acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ const ERRORES: Record<string, string> = {
   perfil: "No se pudo crear el perfil; el alta se ha deshecho entera.",
   configuracion: "Falta configuración en el servidor (clave de servicio).",
   propio: "No puedes vetarte a ti mismo el módulo de Usuarios: te quedarías fuera de esta pantalla.",
+  "propio-rol": "Tu propio rol no se cambia desde aquí: la única dirección podría degradarse y dejar la cuenta sin gestión.",
+  "propio-borrado": "No puedes borrarte a ti mismo.",
 };
 
 export default async function Usuarios({
@@ -71,6 +74,11 @@ export default async function Usuarios({
 
       <main className="contenido">
         {sp.error && <p className="aviso-error">{ERRORES[sp.error] ?? "Algo ha fallado."}</p>}
+        {sp.borrado && (
+          <div className="tarjeta" style={{ marginBottom: 20 }}>
+            <p>Usuario borrado: su acceso, su perfil y sus vetos han desaparecido a la vez.</p>
+          </div>
+        )}
         {sp.creado && (
           <div className="tarjeta" style={{ marginBottom: 20, borderColor: "var(--verde, #0F6E56)" }}>
             <p>
@@ -127,7 +135,7 @@ export default async function Usuarios({
               <thead>
                 <tr>
                   <th style={{ textAlign: "left", padding: "12px 16px" }}>Usuario</th>
-                  <th style={{ textAlign: "left", padding: "12px 16px" }}>Rol</th>
+                  <th style={{ textAlign: "left", padding: "12px 16px" }}>Rol · borrar</th>
                   {modulosDeLaCuenta.map((m) => (
                     <th key={m.id} style={{ padding: "12px 8px", fontSize: 11, textAlign: "center" }}>
                       {m.nombre}
@@ -142,7 +150,15 @@ export default async function Usuarios({
                       <strong>{g.nombre}</strong>
                       <span style={{ color: "#5F6B65", display: "block", fontSize: 12 }}>{g.correo}</span>
                     </td>
-                    <td style={{ padding: "10px 16px" }}>{ROLES.find((r) => r.id === g.rol)?.nombre ?? g.rol}</td>
+                    <td style={{ padding: "10px 16px" }}>
+                      <FilaAcciones
+                        perfilId={g.id}
+                        rol={g.rol ?? "empleado"}
+                        nombre={g.nombre ?? g.correo ?? "este usuario"}
+                        esYo={g.id === perfil.id}
+                        roles={ROLES.map((r) => ({ id: r.id, nombre: r.nombre }))}
+                      />
+                    </td>
                     {modulosDeLaCuenta.map((m) => {
                       const estaVetado = vetado.has(`${g.id}|${m.id}`);
                       return (
