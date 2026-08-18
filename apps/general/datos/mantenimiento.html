@@ -252,6 +252,16 @@ input[type=file]{display:none;}
       <div class="chip" onclick="setFilter('Resuelto',this)">Resueltos</div>
       <div class="chip" onclick="setFilter('Crítico',this)">Críticos</div>
       <div class="chip" onclick="setFilter('Urgente',this)">Urgentes</div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+        <label style="font-size:11px;color:var(--text3);white-space:nowrap">Ordenar por</label>
+        <select id="orden-sel" onchange="setOrden(this.value)"
+          style="font-family:inherit;font-size:12px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px">
+          <option value="vivo">Estado y urgencia</option>
+          <option value="recientes">Más recientes</option>
+          <option value="centro">Centro</option>
+          <option value="responsable">Responsable</option>
+        </select>
+      </div>
     </div>
     <div id="partes-list"><div class="loading-state">Cargando partes...</div></div>
   </div>
@@ -549,16 +559,32 @@ function renderStats() {
   ].map(([l,n])=>`<div class="stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
 }
 
+let ordenPanel='vivo';
+try{ordenPanel=localStorage.getItem('mant_orden')||'vivo';}catch(e){}
+function setOrden(v){
+  ordenPanel=v;
+  try{localStorage.setItem('mant_orden',v);}catch(e){}
+  renderPanel();
+}
+
 function renderPanel() {
   renderStats();
-  // Lo VIVO primero: un crítico ya resuelto no debe tapar el parte de esta
-  // mañana. Dentro de cada estado, por urgencia; a igual urgencia, lo último.
+  const sel=document.getElementById('orden-sel');
+  if(sel&&sel.value!==ordenPanel)sel.value=ordenPanel;
+  // Orden por defecto, lo VIVO primero: un crítico ya resuelto no debe tapar
+  // el parte de esta mañana. Dentro de cada estado, urgencia y recencia. Los
+  // demás órdenes agrupan por su campo y dentro mantienen este criterio.
   const ord={Crítico:0,Urgente:1,Normal:2};
   const ordEstado={Pendiente:0,'En proceso':1,Resuelto:2};
-  let list = [...partes].sort((a,b)=>
+  const porVivo=(a,b)=>
     (ordEstado[a.estado]??1)-(ordEstado[b.estado]??1)
     || ord[a.urgencia]-ord[b.urgencia]
-    || b.ts-a.ts);
+    || b.ts-a.ts;
+  let list=[...partes];
+  if(ordenPanel==='recientes') list.sort((a,b)=>b.ts-a.ts);
+  else if(ordenPanel==='centro') list.sort((a,b)=>(a.centro||'').localeCompare(b.centro||'')||porVivo(a,b));
+  else if(ordenPanel==='responsable') list.sort((a,b)=>(a.responsable||'').localeCompare(b.responsable||'')||porVivo(a,b));
+  else list.sort(porVivo);
   if(currentFilter==='Pendiente') list=list.filter(p=>p.estado==='Pendiente');
   else if(currentFilter==='En proceso') list=list.filter(p=>p.estado==='En proceso');
   else if(currentFilter==='Resuelto') list=list.filter(p=>p.estado==='Resuelto');
