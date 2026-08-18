@@ -22,6 +22,7 @@ export const RUTAS_MODULO: Record<string, string> = {
   // Como pyg/ratios (sin login interno que quitar: no traía) y con pasarela
   // /api/compras/* a su Vercel. La URL original sigue viva para el equipo.
   compras: "/compras",
+  mantenimiento: "/mantenimiento",
   // Autogestion del dueño: alta de usuarios y vetos por modulo (solo direccion).
   usuarios: "/usuarios",
   // Los dos llevan a la misma app: es una sola aplicación con su menú.

@@ -14,6 +14,7 @@ const nextConfig = {
     "/ratios": ["./datos/ratios.html"],
     "/agentes": ["./datos/agentes.html"],
     "/compras": ["./datos/compras.html"],
+    "/mantenimiento": ["./datos/mantenimiento.html"],
   },
   async rewrites() {
     return [

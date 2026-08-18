@@ -1,0 +1,14 @@
+{
+  "name": "Partes · Bonita Menorca",
+  "short_name": "Partes",
+  "description": "Enviar partes de mantenimiento a Marcos y su equipo",
+  "start_url": "/parte",
+  "display": "standalone",
+  "background_color": "#F6F3ED",
+  "theme_color": "#4A5A3E",
+  "lang": "es",
+  "icons": [
+    { "src": "/parte-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/parte-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
