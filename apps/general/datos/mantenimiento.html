@@ -551,8 +551,14 @@ function renderStats() {
 
 function renderPanel() {
   renderStats();
+  // Lo VIVO primero: un crítico ya resuelto no debe tapar el parte de esta
+  // mañana. Dentro de cada estado, por urgencia; a igual urgencia, lo último.
   const ord={Crítico:0,Urgente:1,Normal:2};
-  let list = [...partes].sort((a,b)=>ord[a.urgencia]-ord[b.urgencia]||b.ts-a.ts);
+  const ordEstado={Pendiente:0,'En proceso':1,Resuelto:2};
+  let list = [...partes].sort((a,b)=>
+    (ordEstado[a.estado]??1)-(ordEstado[b.estado]??1)
+    || ord[a.urgencia]-ord[b.urgencia]
+    || b.ts-a.ts);
   if(currentFilter==='Pendiente') list=list.filter(p=>p.estado==='Pendiente');
   else if(currentFilter==='En proceso') list=list.filter(p=>p.estado==='En proceso');
   else if(currentFilter==='Resuelto') list=list.filter(p=>p.estado==='Resuelto');
