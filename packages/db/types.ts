@@ -3924,6 +3924,62 @@ export type Database = {
           },
         ]
       }
+      mant_partes: {
+        Row: {
+          asignado: string | null
+          centro: string | null
+          created_at: string | null
+          cuenta_id: string
+          descripcion: string | null
+          estado: string | null
+          fecha: string | null
+          id: number
+          medios: Json | null
+          responsable: string | null
+          tipo: string | null
+          ts: number | null
+          urgencia: string | null
+        }
+        Insert: {
+          asignado?: string | null
+          centro?: string | null
+          created_at?: string | null
+          cuenta_id: string
+          descripcion?: string | null
+          estado?: string | null
+          fecha?: string | null
+          id?: number
+          medios?: Json | null
+          responsable?: string | null
+          tipo?: string | null
+          ts?: number | null
+          urgencia?: string | null
+        }
+        Update: {
+          asignado?: string | null
+          centro?: string | null
+          created_at?: string | null
+          cuenta_id?: string
+          descripcion?: string | null
+          estado?: string | null
+          fecha?: string | null
+          id?: number
+          medios?: Json | null
+          responsable?: string | null
+          tipo?: string | null
+          ts?: number | null
+          urgencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mant_partes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modulos: {
         Row: {
           area: string

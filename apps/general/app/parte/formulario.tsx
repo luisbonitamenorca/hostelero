@@ -4,15 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * El mismo formulario «Nueva petición» de la app de mantenimiento, en versión
- * móvil y pública. Escribe EXACTAMENTE la misma fila en la tabla `partes`
- * (mismo Supabase, clave publicable — la misma que ya vive en el repo público
- * de mantenimiento-bonita), así que para Marcos un parte del móvil y uno de
- * la app son indistinguibles. Las fotos van comprimidas en base64 dentro de
- * `medios`, como hace la app (sin bucket).
+ * móvil y pública. Desde el port al esqueleto (18-08-2026) NO toca la base:
+ * envía a /api/publico/parte, que valida y escribe en mant_partes del
+ * Supabase de Hostelero con la service key — el patrón de la casa para
+ * fronts sin sesión. Para Marcos, un parte del móvil y uno del panel son
+ * indistinguibles. Las fotos van comprimidas en base64 dentro de `medios`.
  */
-const SB_URL = "https://zqvkaeuwqxyixvanwxtl.supabase.co";
-const SB_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmthZXV3cXh5aXh2YW53eHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODU2NzIsImV4cCI6MjA5NjU2MTY3Mn0.TfYe371pbJorYurdxTGUfztTltK9ZJ2WkJGUkI5Ir_M";
 
 // Las mismas listas que la app de mantenimiento (su pestaña Personas guarda
 // cambios solo en el navegador de cada uno, así que este es el punto de partida
@@ -52,8 +49,8 @@ function comprimirImagen(fichero: File): Promise<string> {
 
 function leerVideo(fichero: File): Promise<string> {
   return new Promise((resolver, rechazar) => {
-    if (fichero.size > 15 * 1024 * 1024) {
-      rechazar(new Error("el vídeo pasa de 15 MB — graba uno más corto"));
+    if (fichero.size > 3 * 1024 * 1024) {
+      rechazar(new Error("el vídeo pasa de 3 MB — graba unos segundos o mejor haz fotos"));
       return;
     }
     const lector = new FileReader();
@@ -107,26 +104,28 @@ export default function FormularioParte() {
     setAviso(null);
     localStorage.setItem("parte_quien", responsable);
     try {
-      const r = await fetch(`${SB_URL}/rest/v1/partes`, {
+      const r = await fetch("/api/publico/parte", {
         method: "POST",
-        headers: {
-          apikey: SB_KEY,
-          Authorization: `Bearer ${SB_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           responsable, centro, tipo, fecha,
           urgencia, descripcion: descripcion.trim(),
-          estado: "Pendiente", asignado: "",
-          medios, ts: Date.now(),
+          medios,
         }),
       });
-      if (!r.ok) throw new Error(`respuesta ${r.status}`);
+      if (!r.ok) {
+        const cuerpo = (await r.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(cuerpo?.error ?? `respuesta ${r.status}`);
+      }
       setAviso({ texto: "Parte enviado. Marcos y su equipo lo verán en el panel.", error: false });
       setCentro(""); setTipo(""); setUrgencia(""); setDescripcion(""); setMedios([]); setFecha(hoy());
-    } catch {
-      setAviso({ texto: "No se pudo enviar. Comprueba la conexión e inténtalo otra vez.", error: true });
+    } catch (e) {
+      setAviso({
+        texto: e instanceof Error && e.message !== "Failed to fetch"
+          ? `No se pudo enviar: ${e.message}`
+          : "No se pudo enviar. Comprueba la conexión e inténtalo otra vez.",
+        error: true,
+      });
     }
     setEnviando(false);
   }

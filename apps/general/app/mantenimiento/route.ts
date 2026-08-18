@@ -5,20 +5,34 @@ import { exigirModulo } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 /**
- * Mantenimiento: la app de un solo HTML (mantenimiento-bonita.vercel.app)
- * servida detrás de la sesión de Hostelero, patrón de la casa. Es la mitad
- * «gestionar» — el panel de Marcos, con estados, asignaciones y PDF —; la
- * mitad «pedir» vive en /parte, un front público instalable en el móvil que
- * escribe en la misma tabla. La app original no traía login (URL abierta):
- * esto AÑADE una puerta, y su URL vieja sigue viva mientras convenga.
+ * Mantenimiento, PORTADO del todo al esqueleto (18-08-2026): el panel de
+ * Marcos (estados, asignaciones, PDF) sobre la tabla mant_partes de ESTA
+ * casa — a diferencia de Compras/PyG/Ratios, aquí los datos se mudaron.
+ *
+ * El HTML lleva cuatro marcadores que se rellenan al servirlo: URL y clave
+ * publicable del proyecto, el TOKEN DE SESIÓN del usuario y su cuenta. Así
+ * la página estática habla con PostgREST como authenticated y la RLS
+ * multi-tenant aplica de verdad. El token caduca (~1 h): el propio HTML se
+ * recarga al primer 401 y aquí se inyecta uno fresco.
  */
 export async function GET() {
-  await exigirModulo("mantenimiento");
-  const html = await readFile(path.join(process.cwd(), "datos", "mantenimiento.html"), "utf8");
+  const { supabase, cuenta } = await exigirModulo("mantenimiento");
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const plantilla = await readFile(path.join(process.cwd(), "datos", "mantenimiento.html"), "utf8");
+  const html = plantilla
+    .replace("__SUPABASE_URL__", process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")
+    .replace("__SUPABASE_ANON__", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "")
+    .replace("__SB_TOKEN__", session?.access_token ?? "")
+    .replace("__CUENTA_ID__", cuenta.id);
+
   return new Response(html, {
     headers: {
       "content-type": "text/html; charset=utf-8",
-      // La sesión decide quién entra: esta página nunca se cachea compartida.
+      // Lleva un token de sesión dentro: jamás se cachea, ni compartido ni local.
       "cache-control": "private, no-store",
     },
   });

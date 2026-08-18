@@ -1,9 +1,9 @@
 <!-- Servido en /mantenimiento por hostelero-app tras la sesión de la casa
-     (módulo 'mantenimiento', solo dirección de momento). La app original no
-     traía login: servirla aquí AÑADE una puerta; su URL vieja sigue viva. Los
-     datos están en el Supabase de mantenimiento (zqvkaeuwqxyixvanwxtl). La
-     mitad «pedir» tiene además un front público instalable en /parte, que
-     escribe en la misma tabla partes. -->
+     (módulo 'mantenimiento'). PORTADO DEL TODO (18-08-2026): los datos viven
+     en el Supabase de HOSTELERO (tabla mant_partes) y las llamadas van con el
+     token de sesión del usuario — la RLS multi-tenant aplica de verdad. La
+     mitad «pedir» es el front público instalable /parte, que escribe por
+     /api/publico/parte. La app y el Supabase antiguos quedan de recuerdo. -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -314,20 +314,37 @@ input[type=file]{display:none;}
 
 <script>
 // ── Supabase config ──────────────────────────────────────────────
-const SB_URL = 'https://zqvkaeuwqxyixvanwxtl.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdmthZXV3cXh5aXh2YW53eHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODU2NzIsImV4cCI6MjA5NjU2MTY3Mn0.TfYe371pbJorYurdxTGUfztTltK9ZJ2WkJGUkI5Ir_M';
+// Desde el port al esqueleto (18-08-2026) los datos viven en el Supabase de
+// HOSTELERO (tabla mant_partes, multi-tenant). Los tres marcadores los inyecta
+// app/mantenimiento/route.ts al servir la página: la clave publicable, el
+// TOKEN DE SESIÓN del usuario (la RLS aplica de verdad: cada cuenta ve solo
+// lo suyo) y su cuenta. Aquí no hay ninguna clave escrita.
+const SB_URL = '__SUPABASE_URL__';
+const SB_KEY = '__SUPABASE_ANON__';
+const SB_TOKEN = '__SB_TOKEN__';
+const CUENTA_ID = '__CUENTA_ID__';
 
 async function sbFetch(path, opts={}) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
     ...opts,
     headers: {
       'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
+      'Authorization': 'Bearer ' + SB_TOKEN,
       'Content-Type': 'application/json',
       'Prefer': opts.prefer || '',
       ...(opts.headers||{})
     }
   });
+  if(res.status === 401) {
+    // El token de sesión caduca (~1 h): recargar lo renueva. El candado de
+    // sessionStorage evita un bucle si la sesión está rota de verdad.
+    const ultima = Number(sessionStorage.getItem('mant_recarga') || 0);
+    if(Date.now() - ultima > 60000) {
+      sessionStorage.setItem('mant_recarga', String(Date.now()));
+      location.reload();
+    }
+    throw new Error('sesión caducada — recarga la página');
+  }
   if(!res.ok) { const e = await res.text(); throw new Error(e); }
   const txt = await res.text();
   return txt ? JSON.parse(txt) : null;
@@ -454,10 +471,11 @@ async function submitParte() {
 
   const medios = pendingFiles.filter(Boolean);
   try {
-    await sbFetch('partes', {
+    await sbFetch('mant_partes', {
       method: 'POST',
       prefer: 'return=minimal',
       body: JSON.stringify({
+        cuenta_id: CUENTA_ID,
         responsable:r, centro:c, tipo:t, fecha:f,
         urgencia:urgSel, descripcion:d,
         estado:'Pendiente', asignado:'',
@@ -485,7 +503,7 @@ async function loadPartes() {
   setSyncState('spin','Cargando...');
   document.getElementById('partes-list').innerHTML = '<div class="loading-state">Cargando partes...</div>';
   try {
-    const data = await sbFetch('partes?select=*&order=ts.desc');
+    const data = await sbFetch('mant_partes?select=*&order=ts.desc');
     partes = data || [];
     setSyncState('ok','Sincronizado');
     renderPanel();
@@ -500,7 +518,7 @@ async function setEstado(id, v) {
   const p = partes.find(x=>x.id===id);
   if(p) { p.estado=v; renderPanel(); }
   try {
-    await sbFetch(`partes?id=eq.${id}`, {method:'PATCH', prefer:'return=minimal', body:JSON.stringify({estado:v})});
+    await sbFetch(`mant_partes?id=eq.${id}`, {method:'PATCH', prefer:'return=minimal', body:JSON.stringify({estado:v})});
     setSyncState('ok','Sincronizado');
   } catch(e) { setSyncState('err','Error al guardar'); showToast('Error al actualizar.', true); }
 }
@@ -509,7 +527,7 @@ async function setAsig(id, v) {
   const p = partes.find(x=>x.id===id);
   if(p) { p.asignado=v; renderPanel(); }
   try {
-    await sbFetch(`partes?id=eq.${id}`, {method:'PATCH', prefer:'return=minimal', body:JSON.stringify({asignado:v})});
+    await sbFetch(`mant_partes?id=eq.${id}`, {method:'PATCH', prefer:'return=minimal', body:JSON.stringify({asignado:v})});
     setSyncState('ok','Sincronizado');
   } catch(e) { setSyncState('err','Error al guardar'); }
 }
