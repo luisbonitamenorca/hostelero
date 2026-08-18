@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { exigirModulo } from "@/lib/supabase/server";
+import { servirHtmlModulo } from "@/lib/html-modulo";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +18,5 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   await exigirModulo("compras");
-  const html = await readFile(path.join(process.cwd(), "datos", "compras.html"), "utf8");
-  return new Response(html, {
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      // La sesión decide quién entra: esta página nunca se cachea compartida.
-      "cache-control": "private, no-store",
-    },
-  });
+  return servirHtmlModulo("compras.html");
 }

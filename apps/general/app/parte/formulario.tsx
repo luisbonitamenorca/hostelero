@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import AvisoVersion from "../aviso-version";
 
 /**
  * El mismo formulario «Nueva petición» de la app de mantenimiento, en versión
@@ -133,6 +134,7 @@ export default function FormularioParte() {
   return (
     <main style={{ maxWidth: 480, margin: "0 auto", padding: "24px 16px 48px",
       fontFamily: "system-ui, sans-serif", background: "#F6F3ED", minHeight: "100vh" }}>
+      <AvisoVersion />
       <h1 style={{ fontSize: 22, marginBottom: 2, color: "#1E1B16" }}>Parte de mantenimiento</h1>
       <p style={{ color: "#6B6456", fontSize: 14, marginBottom: 20 }}>
         Bonita Menorca. Cuéntanos qué hay que revisar o reparar: le llega a Marcos al momento.

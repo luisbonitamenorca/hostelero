@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { exigirModulo } from "@/lib/supabase/server";
+import { servirHtmlModulo } from "@/lib/html-modulo";
 
 export const dynamic = "force-dynamic";
 
@@ -22,18 +21,10 @@ export async function GET() {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const plantilla = await readFile(path.join(process.cwd(), "datos", "mantenimiento.html"), "utf8");
-  const html = plantilla
-    .replace("__SUPABASE_URL__", process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")
-    .replace("__SUPABASE_ANON__", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "")
-    .replace("__SB_TOKEN__", session?.access_token ?? "")
-    .replace("__CUENTA_ID__", cuenta.id);
-
-  return new Response(html, {
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      // Lleva un token de sesión dentro: jamás se cachea, ni compartido ni local.
-      "cache-control": "private, no-store",
-    },
+  return servirHtmlModulo("mantenimiento.html", {
+    "__SUPABASE_URL__": process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    "__SUPABASE_ANON__": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    "__SB_TOKEN__": session?.access_token ?? "",
+    "__CUENTA_ID__": cuenta.id,
   });
 }

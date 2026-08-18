@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import AvisoVersion from "../aviso-version";
 
 /**
  * Carga de facturas y albaranes desde el móvil — el segundo camino de entrada
@@ -165,6 +166,7 @@ export default function SubirFacturas() {
 
   return (
     <main style={{ maxWidth: 480, margin: "0 auto", padding: "24px 16px 48px", fontFamily: "system-ui, sans-serif" }}>
+      <AvisoVersion />
       <h1 style={{ fontSize: 22, marginBottom: 2 }}>Subir facturas</h1>
       <p style={{ color: "#666", fontSize: 14, marginBottom: 20 }}>
         Compras · Bonita Menorca. Haz foto o elige el PDF: entra solo en la
