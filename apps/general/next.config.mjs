@@ -13,6 +13,7 @@ const nextConfig = {
     "/pyg": ["./datos/pyg.html"],
     "/ratios": ["./datos/ratios.html"],
     "/agentes": ["./datos/agentes.html"],
+    "/compras": ["./datos/compras.html"],
   },
   async rewrites() {
     return [
@@ -22,6 +23,8 @@ const nextConfig = {
       // crons) siguen en su Vercel original; esto solo hace de pasarela para que
       // el panel servido en /agentes las llame sin pelearse con CORS.
       { source: "/api/agentes/:path*", destination: "https://agentes-bonita.vercel.app/api/:path*" },
+      // Compras, mismo papel: OCR (anthropic) e ingesta de correo en su Vercel.
+      { source: "/api/compras/:path*", destination: "https://compras-bonita.vercel.app/api/:path*" },
     ];
   },
 };

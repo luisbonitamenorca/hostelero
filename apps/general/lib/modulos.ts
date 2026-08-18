@@ -19,6 +19,9 @@ export const RUTAS_MODULO: Record<string, string> = {
   // Igual que los dos de arriba, pero conserva su login interno (Supabase
   // Auth propio del proyecto agentes) y proxea /api/agentes/* a su Vercel.
   agentes: "/agentes",
+  // Como pyg/ratios (sin login interno que quitar: no traía) y con pasarela
+  // /api/compras/* a su Vercel. La URL original sigue viva para el equipo.
+  compras: "/compras",
   // Los dos llevan a la misma app: es una sola aplicación con su menú.
   facturacion: "/finanzas",
   contabilidad: "/finanzas",
