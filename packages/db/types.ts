@@ -4133,6 +4133,24 @@ export type Database = {
           },
         ]
       }
+      plataforma_secretos: {
+        Row: {
+          actualizado_en: string
+          clave: string
+          valor: Json
+        }
+        Insert: {
+          actualizado_en?: string
+          clave: string
+          valor: Json
+        }
+        Update: {
+          actualizado_en?: string
+          clave?: string
+          valor?: Json
+        }
+        Relationships: []
+      }
       reservas_cierres: {
         Row: {
           cuenta_id: string

@@ -192,7 +192,6 @@ tr:last-child td{border-bottom:none}
     <button data-view="actividad">Actividad</button>
     <button data-view="ajustes">Ajustes</button>
     <button onclick="location.href='/'" title="Volver a Hostelero">← Inicio</button>
-    <button id="logout" title="Cerrar sesión">Salir</button>
   </nav>
 </header>
 
@@ -205,7 +204,18 @@ tr:last-child td{border-bottom:none}
 /* ================= CONFIG ================= */
 const SUPABASE_URL = "https://kuqhrszlxewonvkkjnsg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_xmjbr4SQU_4K79wFdGYocg_v1NOj5R5";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Token del puente, inyectado por el route handler tras validar la sesión de
+// Hostelero. Dura ~1 h: la página se recarga sola al volver pasado ese tiempo.
+const PUENTE_TOKEN = "__AGENTES_TOKEN__";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  global: { headers: { Authorization: "Bearer " + PUENTE_TOKEN } },
+  auth: { persistSession: false, autoRefreshToken: false }
+});
+if (sb.realtime && sb.realtime.setAuth) sb.realtime.setAuth(PUENTE_TOKEN);
+const NACIDA = Date.now();
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && Date.now() - NACIDA > 50 * 60 * 1000) location.reload();
+});
 const PRICE_IN = 3/1e6, PRICE_OUT = 15/1e6;
 
 const AGENTS = [
@@ -236,35 +246,17 @@ function fmtTime(ts){ return new Date(ts).toLocaleTimeString("es-ES",{hour:"2-di
 function money(v){ return "$"+Number(v).toFixed(4); }
 function initials(name){ return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
 
-/* ================= AUTH ================= */
+/* ================= AUTH =================
+   Sin login propio (19-08-2026): la puerta es la sesión de Hostelero, que el
+   route handler valida (módulo y veto incluidos) antes de servir esta página
+   con el token del puente ya dentro. */
 async function init(){
-  const { data } = await sb.auth.getSession();
-  session = data.session;
-  sb.auth.onAuthStateChange((_e, s)=>{ session=s; if(!s) renderLogin(); });
-  if(!session) renderLogin(); else await enterApp();
-}
-
-function renderLogin(){
-  $("#nav").style.display="none";
-  $("#main").className="";
-  $("#main").innerHTML = `<div class="login-wrap">
-    <h1>Bonita · Agentes</h1><p>Acceso restringido. Entra con tu cuenta.</p>
-    <div class="login-err" id="login-err"></div>
-    <input type="email" id="l-email" placeholder="Email" autocomplete="username">
-    <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password">
-    <button class="btn btn-primary" style="width:100%" id="l-go">Entrar</button>
-  </div>`;
-  $("#l-go").onclick = async ()=>{
-    const { data, error } = await sb.auth.signInWithPassword({ email:$("#l-email").value.trim(), password:$("#l-pass").value });
-    if(error){ $("#login-err").textContent = "No se pudo iniciar sesión. Revisa email y contraseña."; return; }
-    session = data.session; await enterApp();
-  };
-  $("#l-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#l-go").click(); });
+  session = { access_token: PUENTE_TOKEN };
+  await enterApp();
 }
 
 async function enterApp(){
   $("#nav").style.display="flex";
-  $("#logout").onclick = async ()=>{ if(waChannel) sb.removeChannel(waChannel); await sb.auth.signOut(); };
   await loadAll(); subscribeWA(); render();
 }
 
