@@ -43,7 +43,7 @@ export default async function Portada() {
       .select("modulo_id, activo")
       .eq("cuenta_id", cuenta.id)
       .eq("activo", true),
-    supabase.from("modulos").select("id, nombre, area").order("id"),
+    supabase.from("modulos").select("id, nombre, area, madurez").order("id"),
     // Vetos por usuario (modulo Usuarios): restan sobre lo que el rol permite.
     supabase.from("modulos_vetados").select("modulo_id").eq("perfil_id", perfil.id),
   ]);
@@ -108,6 +108,15 @@ export default async function Portada() {
             );
             const sueltos = delArea.filter((m) => !grupoDe(m.id));
 
+            // Lo operativo primero; lo beta después con su etiqueta. Un grupo
+            // (Contabilidad) es beta mientras todos sus módulos lo sean.
+            const esBeta = (m: { madurez?: string | null }) => m.madurez !== "operativo";
+            const grupoBeta = (g: (typeof grupos)[number]) =>
+              delArea.filter((m) => g.modulos.includes(m.id)).every(esBeta);
+            const sueltosOrdenados = [...sueltos].sort(
+              (a, b) => Number(esBeta(a)) - Number(esBeta(b))
+            );
+
             return (
               <section key={area} style={{ marginBottom: 26 }}>
                 <h2 className="rotulo">{area}</h2>
@@ -115,12 +124,14 @@ export default async function Portada() {
                   {grupos.map((g) => (
                     <Link key={g.id} href={g.ruta} className="tarjeta-modulo">
                       <span className="nombre-modulo">{g.nombre}</span>
+                      {grupoBeta(g) && <span className="etiqueta-beta">Versión beta</span>}
                     </Link>
                   ))}
-                  {sueltos.map((m) =>
+                  {sueltosOrdenados.map((m) =>
                     RUTAS_MODULO[m.id] ? (
                       <Link key={m.id} href={`/m/${m.id}`} className="tarjeta-modulo">
                         <span className="nombre-modulo">{m.nombre}</span>
+                        {esBeta(m) && <span className="etiqueta-beta">Versión beta</span>}
                       </Link>
                     ) : (
                       // Contratado pero aún sin app en el esqueleto: sombreado, sin enlace.

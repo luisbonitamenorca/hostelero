@@ -3984,16 +3984,19 @@ export type Database = {
         Row: {
           area: string
           id: string
+          madurez: string
           nombre: string
         }
         Insert: {
           area: string
           id: string
+          madurez?: string
           nombre: string
         }
         Update: {
           area?: string
           id?: string
+          madurez?: string
           nombre?: string
         }
         Relationships: []
