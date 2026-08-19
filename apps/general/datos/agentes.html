@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <!-- Servido en /agentes por hostelero-app tras la sesión de la casa (módulo
-     'agentes', solo dirección). A DIFERENCIA de /pyg y /ratios, el login
-     interno SE CONSERVA: los datos viven en el Supabase del proyecto agentes
-     (kuqhrszlxewonvkkjnsg) con Auth y RLS propios, y las funciones /api/*
-     verifican ese token. supabase-js recuerda la sesión, así que solo se pide
-     una vez por navegador. Las llamadas /api/agentes/* las proxea el rewrite
-     de next.config.mjs al Vercel original (agentes-bonita.vercel.app), donde
-     siguen la ANTHROPIC_API_KEY y los crons. SSO de verdad: cuando el módulo
-     se porte al esqueleto. -->
+     'agentes', según vetos). PORTADO DEL TODO (19-08-2026): las tablas
+     agent_* viven en el Supabase de HOSTELERO y este HTML habla con ellas,
+     con realtime y con las funciones /api/agentes/* (pages/api de esta misma
+     app) usando el token de sesión del usuario. El proyecto agentes-bonita
+     (Supabase y Vercel) queda obsoleto. -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -202,11 +199,15 @@ tr:last-child td{border-bottom:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 /* ================= CONFIG ================= */
-const SUPABASE_URL = "https://kuqhrszlxewonvkkjnsg.supabase.co";
-const SUPABASE_KEY = "sb_publishable_xmjbr4SQU_4K79wFdGYocg_v1NOj5R5";
-// Token del puente, inyectado por el route handler tras validar la sesión de
-// Hostelero. Dura ~1 h: la página se recarga sola al volver pasado ese tiempo.
-const PUENTE_TOKEN = "__AGENTES_TOKEN__";
+// Desde el port al esqueleto (19-08-2026) los datos viven en el Supabase de
+// HOSTELERO (tablas agent_*). Los marcadores los inyecta app/agentes/route.ts
+// al servir la página: la RLS multi-tenant aplica con el token de sesión del
+// usuario real. El puente con usuario de máquina ya no hace falta.
+const SUPABASE_URL = '__SUPABASE_URL__';
+const SUPABASE_KEY = '__SUPABASE_ANON__';
+// Token de SESIÓN del usuario, inyectado por el route handler. Dura ~1 h: la
+// página se recarga sola al volver pasado ese tiempo y recibe uno fresco.
+const PUENTE_TOKEN = "__SB_TOKEN__";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   global: { headers: { Authorization: "Bearer " + PUENTE_TOKEN } },
   auth: { persistSession: false, autoRefreshToken: false }

@@ -3,6 +3,18 @@
     {
       "path": "/api/cron/purgar-dni",
       "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/agentes/sincronizar",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/agentes/vigilar",
+      "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/agentes/subvenciones",
+      "schedule": "30 6 * * 1"
     }
   ]
 }

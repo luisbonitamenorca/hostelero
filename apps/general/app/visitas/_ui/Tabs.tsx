@@ -13,7 +13,7 @@ const TABS = [
 ];
 
 export default function Tabs() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   return (
     <nav className="vis-tabs">
       {TABS.map((t) => {

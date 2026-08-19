@@ -53,6 +53,625 @@ export type Database = {
           },
         ]
       }
+      agent_competitors: {
+        Row: {
+          active: boolean
+          ambito: string
+          created_at: string
+          cuenta_id: string
+          id: string
+          last_checked_at: string | null
+          name: string
+          notas: string | null
+          web: string | null
+        }
+        Insert: {
+          active?: boolean
+          ambito?: string
+          created_at?: string
+          cuenta_id?: string
+          id?: string
+          last_checked_at?: string | null
+          name: string
+          notas?: string | null
+          web?: string | null
+        }
+        Update: {
+          active?: boolean
+          ambito?: string
+          created_at?: string
+          cuenta_id?: string
+          id?: string
+          last_checked_at?: string | null
+          name?: string
+          notas?: string | null
+          web?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_competitors_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_grant_profile: {
+        Row: {
+          cuenta_id: string
+          id: number
+          perfil: string
+          updated_at: string
+        }
+        Insert: {
+          cuenta_id?: string
+          id?: number
+          perfil?: string
+          updated_at?: string
+        }
+        Update: {
+          cuenta_id?: string
+          id?: number
+          perfil?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_grant_profile_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_grants: {
+        Row: {
+          ambito: string
+          bdns: string | null
+          created_at: string
+          cuenta_id: string
+          detalle: string | null
+          encaje: number | null
+          estado: string
+          fecha_pub: string | null
+          fuente: string
+          id: string
+          importe: string | null
+          materia: string | null
+          notas: string | null
+          organo: string | null
+          plazo: string | null
+          razon: string | null
+          titulo: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          ambito?: string
+          bdns?: string | null
+          created_at?: string
+          cuenta_id?: string
+          detalle?: string | null
+          encaje?: number | null
+          estado?: string
+          fecha_pub?: string | null
+          fuente?: string
+          id?: string
+          importe?: string | null
+          materia?: string | null
+          notas?: string | null
+          organo?: string | null
+          plazo?: string | null
+          razon?: string | null
+          titulo: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          ambito?: string
+          bdns?: string | null
+          created_at?: string
+          cuenta_id?: string
+          detalle?: string | null
+          encaje?: number | null
+          estado?: string
+          fecha_pub?: string | null
+          fuente?: string
+          id?: string
+          importe?: string | null
+          materia?: string | null
+          notas?: string | null
+          organo?: string | null
+          plazo?: string | null
+          razon?: string | null
+          titulo?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_grants_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_knowledge: {
+        Row: {
+          active: boolean
+          content: string
+          cuenta_id: string
+          id: string
+          source: string | null
+          title: string
+          updated_at: string
+          venue: string
+        }
+        Insert: {
+          active?: boolean
+          content?: string
+          cuenta_id?: string
+          id?: string
+          source?: string | null
+          title: string
+          updated_at?: string
+          venue: string
+        }
+        Update: {
+          active?: boolean
+          content?: string
+          cuenta_id?: string
+          id?: string
+          source?: string | null
+          title?: string
+          updated_at?: string
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_knowledge_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_prospects: {
+        Row: {
+          angulo: string | null
+          city: string | null
+          created_at: string
+          cuenta_id: string
+          email: string | null
+          id: string
+          name: string
+          notas: string | null
+          perfil: string | null
+          phone: string | null
+          razon: string | null
+          score: number | null
+          stage: string
+          updated_at: string
+          web: string | null
+          zone: string
+        }
+        Insert: {
+          angulo?: string | null
+          city?: string | null
+          created_at?: string
+          cuenta_id?: string
+          email?: string | null
+          id?: string
+          name: string
+          notas?: string | null
+          perfil?: string | null
+          phone?: string | null
+          razon?: string | null
+          score?: number | null
+          stage?: string
+          updated_at?: string
+          web?: string | null
+          zone: string
+        }
+        Update: {
+          angulo?: string | null
+          city?: string | null
+          created_at?: string
+          cuenta_id?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notas?: string | null
+          perfil?: string | null
+          phone?: string | null
+          razon?: string | null
+          score?: number | null
+          stage?: string
+          updated_at?: string
+          web?: string | null
+          zone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_prospects_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_reviews: {
+        Row: {
+          author: string | null
+          created_at: string
+          cuenta_id: string
+          draft: string | null
+          id: string
+          lang: string | null
+          platform: string
+          rating: number | null
+          review_date: string | null
+          source: string
+          status: string
+          text: string
+          updated_at: string
+          venue: string
+        }
+        Insert: {
+          author?: string | null
+          created_at?: string
+          cuenta_id?: string
+          draft?: string | null
+          id: string
+          lang?: string | null
+          platform: string
+          rating?: number | null
+          review_date?: string | null
+          source?: string
+          status?: string
+          text: string
+          updated_at?: string
+          venue: string
+        }
+        Update: {
+          author?: string | null
+          created_at?: string
+          cuenta_id?: string
+          draft?: string | null
+          id?: string
+          lang?: string | null
+          platform?: string
+          rating?: number | null
+          review_date?: string | null
+          source?: string
+          status?: string
+          text?: string
+          updated_at?: string
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_reviews_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_runs: {
+        Row: {
+          agent: string
+          cost: number
+          cuenta_id: string
+          id: string
+          items: number
+          tokens_in: number
+          tokens_out: number
+          ts: string
+        }
+        Insert: {
+          agent: string
+          cost?: number
+          cuenta_id?: string
+          id?: string
+          items?: number
+          tokens_in?: number
+          tokens_out?: number
+          ts?: string
+        }
+        Update: {
+          agent?: string
+          cost?: number
+          cuenta_id?: string
+          id?: string
+          items?: number
+          tokens_in?: number
+          tokens_out?: number
+          ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_sync_alerts: {
+        Row: {
+          created_at: string
+          cuenta_id: string
+          detalle: string | null
+          encontrado: string | null
+          esperado: string | null
+          estado: string
+          id: string
+          plataforma: string
+          resolved_at: string | null
+          venue: string
+        }
+        Insert: {
+          created_at?: string
+          cuenta_id?: string
+          detalle?: string | null
+          encontrado?: string | null
+          esperado?: string | null
+          estado?: string
+          id?: string
+          plataforma: string
+          resolved_at?: string | null
+          venue: string
+        }
+        Update: {
+          created_at?: string
+          cuenta_id?: string
+          detalle?: string | null
+          encontrado?: string | null
+          esperado?: string | null
+          estado?: string
+          id?: string
+          plataforma?: string
+          resolved_at?: string | null
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_sync_alerts_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_sync_checks: {
+        Row: {
+          comprobadas: number
+          created_at: string
+          cuenta_id: string
+          discrepancias: number
+          id: string
+          ok: boolean
+          resumen: string | null
+          venue: string
+        }
+        Insert: {
+          comprobadas?: number
+          created_at?: string
+          cuenta_id?: string
+          discrepancias?: number
+          id?: string
+          ok: boolean
+          resumen?: string | null
+          venue: string
+        }
+        Update: {
+          comprobadas?: number
+          created_at?: string
+          cuenta_id?: string
+          discrepancias?: number
+          id?: string
+          ok?: boolean
+          resumen?: string | null
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_sync_checks_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_tones: {
+        Row: {
+          color: string
+          cuenta_id: string
+          name: string
+          sort: number
+          tone: string
+          updated_at: string
+          venue: string
+        }
+        Insert: {
+          color: string
+          cuenta_id?: string
+          name: string
+          sort?: number
+          tone?: string
+          updated_at?: string
+          venue: string
+        }
+        Update: {
+          color?: string
+          cuenta_id?: string
+          name?: string
+          sort?: number
+          tone?: string
+          updated_at?: string
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_wa_chats: {
+        Row: {
+          created_at: string
+          cuenta_id: string
+          customer_name: string
+          id: string
+          last_ts: string
+          phone_masked: string | null
+          source: string
+          status: string
+          venue: string
+        }
+        Insert: {
+          created_at?: string
+          cuenta_id?: string
+          customer_name: string
+          id: string
+          last_ts?: string
+          phone_masked?: string | null
+          source?: string
+          status?: string
+          venue: string
+        }
+        Update: {
+          created_at?: string
+          cuenta_id?: string
+          customer_name?: string
+          id?: string
+          last_ts?: string
+          phone_masked?: string | null
+          source?: string
+          status?: string
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_wa_chats_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_wa_messages: {
+        Row: {
+          chat_id: string
+          cuenta_id: string
+          id: string
+          sender: string
+          text: string
+          ts: string
+        }
+        Insert: {
+          chat_id: string
+          cuenta_id?: string
+          id?: string
+          sender: string
+          text: string
+          ts?: string
+        }
+        Update: {
+          chat_id?: string
+          cuenta_id?: string
+          id?: string
+          sender?: string
+          text?: string
+          ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_wa_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "agent_wa_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_wa_messages_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_watch_findings: {
+        Row: {
+          competitor_id: string
+          created_at: string
+          cuenta_id: string
+          detalle: string | null
+          estado: string
+          id: string
+          relevancia: number | null
+          tipo: string
+          titulo: string
+          url: string | null
+        }
+        Insert: {
+          competitor_id: string
+          created_at?: string
+          cuenta_id?: string
+          detalle?: string | null
+          estado?: string
+          id?: string
+          relevancia?: number | null
+          tipo?: string
+          titulo: string
+          url?: string | null
+        }
+        Update: {
+          competitor_id?: string
+          created_at?: string
+          cuenta_id?: string
+          detalle?: string | null
+          estado?: string
+          id?: string
+          relevancia?: number | null
+          tipo?: string
+          titulo?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_watch_findings_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "agent_competitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_watch_findings_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agentes_activos: {
         Row: {
           activo: boolean

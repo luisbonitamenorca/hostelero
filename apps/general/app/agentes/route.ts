@@ -1,50 +1,27 @@
 import { exigirModulo } from "@/lib/supabase/server";
-import { crearClienteServicio } from "@/lib/supabase/servicio";
 import { servirHtmlModulo } from "@/lib/html-modulo";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Bonita · Agentes, con PUENTE DE SESIÓN (19-08-2026): la pantalla de
- * contraseña interna se quitó — con la sesión de Hostelero y los permisos
- * por usuario ya no aportaba nada. Los datos siguen en el Supabase del
- * proyecto agentes con su RLS de solo-autenticados, así que este handler,
- * DESPUÉS de validar sesión + módulo + veto del usuario real, inicia sesión
- * allí con un usuario de máquina (credencial en plataforma_secretos, tabla
- * solo-servicio) e inyecta el token en la página. Las llamadas
- * /api/agentes/* del Vercel original verifican ese mismo token.
+ * Bonita · Agentes, PORTADO del todo al esqueleto (19-08-2026): las 13
+ * tablas agent_* viven en el Supabase de la casa con RLS multi-tenant, y el
+ * panel habla con PostgREST, con realtime y con las funciones
+ * /api/agentes/* (portadas a pages/api) usando el TOKEN DE SESIÓN del
+ * usuario real, que se inyecta aquí al servir la página. El puente con
+ * usuario de máquina de esta mañana quedó obsoleto en horas — así de rápido
+ * va esto. El Supabase y el Vercel antiguos ya no pintan nada.
  */
-let tokenCacheado: { valor: string; caduca: number } | null = null;
-
-async function tokenPuente(): Promise<string> {
-  // El token de GoTrue dura 1 h: se reutiliza 50 min por instancia para no
-  // iniciar sesión en cada visita.
-  if (tokenCacheado && Date.now() < tokenCacheado.caduca) return tokenCacheado.valor;
-
-  const servicio = crearClienteServicio();
-  if (!servicio) return "";
-  const { data } = await servicio
-    .from("plataforma_secretos")
-    .select("valor")
-    .eq("clave", "agentes_puente")
-    .maybeSingle();
-  const s = data?.valor as { url: string; anon: string; email: string; password: string } | null;
-  if (!s) return "";
-
-  const r = await fetch(`${s.url}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: { apikey: s.anon, "Content-Type": "application/json" },
-    body: JSON.stringify({ email: s.email, password: s.password }),
-  });
-  if (!r.ok) return "";
-  const d = (await r.json()) as { access_token?: string };
-  if (!d.access_token) return "";
-
-  tokenCacheado = { valor: d.access_token, caduca: Date.now() + 50 * 60 * 1000 };
-  return d.access_token;
-}
-
 export async function GET() {
-  await exigirModulo("agentes");
-  return servirHtmlModulo("agentes.html", { "__AGENTES_TOKEN__": await tokenPuente() });
+  const { supabase } = await exigirModulo("agentes");
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return servirHtmlModulo("agentes.html", {
+    "__SUPABASE_URL__": process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    "__SUPABASE_ANON__": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    "__SB_TOKEN__": session?.access_token ?? "",
+  });
 }
