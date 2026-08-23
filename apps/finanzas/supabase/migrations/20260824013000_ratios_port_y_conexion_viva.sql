@@ -1,0 +1,25 @@
+-- Port de Ratios al esqueleto + conexión viva Compras→Ratios (24-08-2026).
+-- Aplicado vía MCP durante la mudanza; este fichero es el registro.
+--
+-- 1) Las 25 tablas de Ratios Bonita se crearon tal cual (DDL ensamblado en
+--    origen en _ddl_export y aplicado con ejecutar_ddl) y se copiaron
+--    ~193.000 filas verificadas al céntimo. RLS: política ratios_sesion
+--    (authenticated all, anon nada) en las 25.
+-- 2) Secuencias: serial re-enlazadas (owned by) y al día; las 5 columnas
+--    identity restauradas (nominas_reparto* ALWAYS, rrhh* BY DEFAULT).
+-- 3) CONEXIÓN VIVA (primera integración entre módulos):
+--    gastos → renombrada a gastos_dijit (histórico congelado, Dijit hasta
+--    31-07-2026; las filas origen COMPRAS del Excel de Dakota se borraron).
+--    Vista 'gastos' = gastos_dijit UNION líneas de albaranes de compras_*
+--    desde el corte 2026-08-01, con el mismo mapeo del parser del Excel:
+--    centros CANAL_COMPRAS, familia/subfamilia/factor del catálogo
+--    productos_dijit por codigo_interno (P-xxxxx), solo tipo='albaran'
+--    (las facturas no entran: duplicarían su albarán), sin DUPLICADOs,
+--    ids negativos (hash) para las filas vivas.
+--    Trigger INSTEAD OF: escrituras de la app van a gastos_dijit; los
+--    INSERT con origen='COMPRAS' se ignoran (el Excel ya no puede duplicar).
+-- 4) Compras: bucket 'documentos' público con 3.055 ficheros copiados;
+--    políticas: authenticated all; anon SOLO insert de movil_* (el front
+--    /subir-facturas) + insert/select de su fila en compras_correo_adjunto
+--    (correo_id nulo). FKs fin_activos/fin_vencimientos/fin_proveedor_
+--    condiciones recreadas contra los datos frescos.

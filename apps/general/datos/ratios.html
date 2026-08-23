@@ -1653,7 +1653,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-08-17.3';
+const APP_VERSION = '2026-08-24.1';
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -4096,12 +4096,23 @@ function savePpto() {
 // La sesión la valida Hostelero en el servidor antes de entregar este HTML.
 
 // ── SUPABASE ────────────────────────────────────────────────────────
-const SB_URL = 'https://osmfedjemjmlxyifrreq.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zbWZlZGplbWptbHh5aWZycmVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODc4MjEsImV4cCI6MjA5MTY2MzgyMX0.QWVY1XuHVizl5AUXoXSFebh--IAyrDxvKGWVZgK3uMU';
+// Datos en la casa de Hostelero (24-08-2026): URL, clave publicable y TOKEN
+// DE SESIÓN inyectados al servir la página. Al primer 401 (token caducado,
+// ~1h) o pasados 50 minutos, la página se recarga sola y llega token fresco.
+const SB_URL = '__SUPABASE_URL__';
+const SB_KEY = '__SUPABASE_ANON__';
+const SB_TOKEN = '__SB_TOKEN__';
+setTimeout(()=>location.reload(), 50*60*1000);
+const _fetchOriginal = window.fetch.bind(window);
+window.fetch = async (u, o) => {
+  const r = await _fetchOriginal(u, o);
+  if (r.status === 401 && String(u).startsWith(SB_URL)) setTimeout(()=>location.reload(), 800);
+  return r;
+};
 
 const sbHeaders = {
   'apikey': SB_KEY,
-  'Authorization': 'Bearer ' + SB_KEY,
+  'Authorization': 'Bearer ' + (SB_TOKEN || SB_KEY),
   'Content-Type': 'application/json',
   'Prefer': 'return=minimal'
 };
@@ -6995,6 +7006,13 @@ async function handleXlFile(file, opts) {
   const compRows = [];
   let compFueraCorte = 0, compSinCanal = 0, compSinCodigo = 0;
   if (hojaCompras) {
+    // Desde el port a Hostelero (24-08-2026) las compras entran EN VIVO desde
+    // el módulo Compras (vista SQL 'gastos'): la hoja se ignora a propósito
+    // para no duplicar. El guard del servidor también las rechaza.
+    document.getElementById('xl-comp-count').textContent = 'Ya es automática: las compras entran solas desde el módulo Compras (hoja ignorada)';
+    document.getElementById('xl-comp-ico').textContent = '✓';
+    document.getElementById('xl-comp-ico').className = 'sheet-ok';
+  } else if (false) {
    try {
     const ws = wb.Sheets[hojaCompras];
     const data = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:""});
@@ -9531,7 +9549,7 @@ async function docSubirArchivo(){
     // 1) Subir el archivo al bucket
     const up = await fetch(SB_URL + '/storage/v1/object/documentos/' + path, {
       method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': file.type || 'application/octet-stream' },
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + (SB_TOKEN || SB_KEY), 'Content-Type': file.type || 'application/octet-stream' },
       body: file
     });
     if (!up.ok) throw new Error('Storage: ' + (await up.text()).substring(0,120));
@@ -9565,7 +9583,7 @@ async function docBorrar(id){
     if (d.archivo_path) {
       const del = await fetch(SB_URL + '/storage/v1/object/documentos/' + d.archivo_path, {
         method: 'DELETE',
-        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + (SB_TOKEN || SB_KEY) }
       });
       if (!del.ok) console.warn('No se pudo borrar el archivo del bucket:', await del.text());
     }

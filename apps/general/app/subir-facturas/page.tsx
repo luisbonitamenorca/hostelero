@@ -10,15 +10,15 @@ import AvisoVersion from "../aviso-version";
  * y esta página no enseña ningún dato, solo deja ficheros.
  *
  * Cómo encaja con la app de Compras SIN que Lucía note nada distinto: cada
- * fichero va al mismo bucket ('documentos' del Supabase de compras) y deja
+ * fichero va al bucket 'documentos' de la casa (Compras vive aquí desde el
+ * 24-08-2026; políticas anon estrechas: solo subir movil_* y su bandeja) y deja
  * una fila PENDIENTE en compras_correo_adjunto con correo_id nulo — la misma
  * bandeja que llena la ingesta de correo. La app los procesa exactamente
  * igual que un adjunto llegado por email. La clave de abajo es la publicable
  * (anon), la misma que ya vive en el repo público de compras-bonita.
  */
-const SB_URL = "https://qjfraquadsvtfwolfbkb.supabase.co";
-const SB_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZnJhcXVhZHN2dGZ3b2xmYmtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTYxNzIsImV4cCI6MjA5NTYzMjE3Mn0.3XidwXSbZPWKdlQD7vPOnqc96oY7sEVq7Bc74KF3okk";
+const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const BUCKET = "documentos";
 
 // Los mismos tipos que admite la ingesta de correo de Compras.
