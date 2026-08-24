@@ -1653,7 +1653,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-08-24.1';
+const APP_VERSION = '2026-08-24.2';
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -8501,7 +8501,7 @@ function renderCompras() {
   const nProd   = new Set(rows.map(r=>r.producto)).size;
 
   document.getElementById('rc-metrics').innerHTML = `
-    <div class="mc"><div class="lbl">Compras totales</div><div class="val">€${fmtK(totBase)}</div></div>
+    <div class="mc"><div class="lbl">Compras totales</div><div class="val" title="Importe exacto para cotejar con el módulo Compras">${totBase.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €</div></div>
     <div class="mc"><div class="lbl">Proveedores</div><div class="val">${nProv}</div></div>
     <div class="mc"><div class="lbl">Productos distintos</div><div class="val">${nProd}</div></div>
   `;
