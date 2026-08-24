@@ -556,7 +556,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
   </header>
 
   <!-- DATA FRESHNESS BAR -->
-  <div id="data-freshness" style="display:flex;align-items:center;flex-wrap:wrap;gap:14px;font-size:12px;background:#f5faf7;border:1px solid #d3e9dd;border-radius:6px;padding:6px 14px;margin:10px 0;">
+  <div id="data-freshness" style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px;font-size:12px;background:#f5faf7;border:1px solid #d3e9dd;border-radius:6px;padding:6px 14px;margin:10px 0;">
     <div style="font-weight:500;color:#555;font-size:11px;letter-spacing:.3px;text-transform:uppercase;">Estado de los datos</div>
     <div id="df-list" style="display:flex;flex-wrap:wrap;gap:14px;"></div>
   </div>
@@ -1653,7 +1653,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-08-24.3';
+const APP_VERSION = '2026-08-24.4';
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -6463,27 +6463,48 @@ function pintaFrescura() {
     return {col:'#A32D2D', ico:'⚠'};
   };
 
+  // Cuándo se CARGÓ el fichero por última vez (max created_at de las filas).
+  // Distinto de la fecha del último dato: Visitas/Comensales cargan reservas
+  // futuras, así que "hasta 28/10" no dice nada de cuándo se subió el Excel.
+  // Petición de Nuria y Patricia (24-08-2026).
+  const ultimaCarga = (arr) => {
+    if (!arr || !arr.length) return null;
+    let mx = null;
+    for (const r of arr) { const t = r.created_at; if (t && (!mx || t > mx)) mx = t; }
+    return mx;
+  };
+  const fmtCarga = (ts) => {
+    if (!ts) return null;
+    const d = new Date(ts); if (isNaN(d)) return null;
+    const p = n => String(n).padStart(2,'0');
+    return `${p(d.getDate())}-${p(d.getMonth()+1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
   const fuentes = [];
   // Ventas, compras, horas → diarias L–V
-  fuentes.push({label:'📋 Ventas',     fecha: ultimaFecha(DB.ingresos),                desfase: desfaseLab(ultimaFecha(DB.ingresos)),                umbrales:[2,5]});
-  fuentes.push({label:'🛒 Compras',    fecha: ultimaFecha(DB.gastos),                  desfase: desfaseLab(ultimaFecha(DB.gastos)),                  umbrales:[2,5]});
-  fuentes.push({label:'👥 Horas',      fecha: ultimaFecha(DB.rrhh),                    desfase: desfaseSemanal(ultimaFecha(DB.rrhh)),               umbrales:[7,14], esSemana:true});
+  fuentes.push({label:'📋 Ventas',     fecha: ultimaFecha(DB.ingresos),                desfase: desfaseLab(ultimaFecha(DB.ingresos)),                umbrales:[2,5],  carga: ultimaCarga(DB.ingresos)});
+  fuentes.push({label:'🛒 Compras',    fecha: ultimaFecha(DB.gastos),                  desfase: desfaseLab(ultimaFecha(DB.gastos)),                  umbrales:[2,5],  carga: ultimaCarga(DB.gastos), enVivo:true});
+  fuentes.push({label:'👥 Horas',      fecha: ultimaFecha(DB.rrhh),                    desfase: desfaseSemanal(ultimaFecha(DB.rrhh)),               umbrales:[7,14], esSemana:true, carga: ultimaCarga(DB.rrhh)});
   // Comensales, visitas → L y V
-  fuentes.push({label:'🍽️ Comensales', fecha: ultimaFecha(DB.comensales, 2026),         desfase: desfaseLV(ultimaFecha(DB.comensales, 2026)),         umbrales:[3,7]});
-  fuentes.push({label:'🎫 Visitas',    fecha: ultimaFecha(DB.visitas, 2026),            desfase: desfaseLV(ultimaFecha(DB.visitas, 2026)),            umbrales:[3,7]});
+  fuentes.push({label:'🍽️ Comensales', fecha: ultimaFecha(DB.comensales, 2026),         desfase: desfaseLV(ultimaFecha(DB.comensales, 2026)),         umbrales:[3,7],  carga: ultimaCarga(DB.comensales)});
+  fuentes.push({label:'🎫 Visitas',    fecha: ultimaFecha(DB.visitas, 2026),            desfase: desfaseLV(ultimaFecha(DB.visitas, 2026)),            umbrales:[3,7],  carga: ultimaCarga(DB.visitas)});
 
   el.innerHTML = fuentes.map(f => {
     const c = chip(f.desfase, f.umbrales[0], f.umbrales[1]);
-    const fechaTxt = f.fecha ? (f.esSemana ? 'sem. '+fmtFecha(f.fecha) : (f.esMes ? f.fecha : fmtFecha(f.fecha))) : 'sin datos';
+    const fechaTxt = f.fecha ? (f.esSemana ? 'sem. '+fmtFecha(f.fecha) : (f.esMes ? f.fecha : 'hasta '+fmtFecha(f.fecha))) : 'sin datos';
     let tip;
     if (f.desfase === null)      tip = 'Sin datos cargados';
     else if (f.desfase <= 0)     tip = f.esSemana ? 'Semana al día' : 'Al día';
     else if (f.esSemana)         { const sem = Math.round(f.desfase/7); tip = `${sem} semana${sem===1?'':'s'} de retraso`; }
     else                         tip = `${f.desfase} día${f.desfase===1?'':'s'} de retraso`;
-    return `<div style="display:flex;align-items:center;gap:6px" title="${tip}">
-      <span style="color:${c.col};font-weight:500">${c.ico}</span>
-      <span>${f.label}</span>
-      <span style="color:#888">${fechaTxt}</span>
+    const cargaTxt = f.carga ? (f.enVivo ? '⚡ último albarán '+fmtCarga(f.carga) : '↑ subido '+fmtCarga(f.carga)) : '';
+    return `<div style="display:flex;flex-direction:column;gap:1px" title="${tip}${f.carga?` · ${f.enVivo?'último albarán entrado':'fichero subido'} el ${fmtCarga(f.carga)}`:''}">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="color:${c.col};font-weight:500">${c.ico}</span>
+        <span>${f.label}</span>
+        <span style="color:#888">${fechaTxt}</span>
+      </div>
+      ${cargaTxt?`<div style="font-size:10.5px;color:#9aa5a0;padding-left:20px;line-height:1.2">${cargaTxt}</div>`:''}
     </div>`;
   }).join('');
 }
