@@ -1653,7 +1653,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-08-24.2';
+const APP_VERSION = '2026-08-24.3';
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -1823,7 +1823,11 @@ function buildDijitNameIndex() {
 }
 
 function getIng(c,m)  { return DB.ingresos   .filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||r.mes===m)&&inRango(r.fecha)).map(resolveIng); }
-function getGas(c,m)  { return DB.gastos     .filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||r.mes===m)&&inRango(r.fecha)).map(resolveGas); }
+// El histórico Dijit guarda compras desde 2008: al filtrar por MES, el año se
+// ciñe a la temporada actual (si no, "Ago" mezclaba agostos de 2024 y 2025 con
+// el de 2026). El histórico completo sigue accesible con el rango Desde/Hasta.
+function getGas(c,m)  { const anioTemporada=String(new Date().getFullYear());
+  return DB.gastos     .filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||(r.mes===m&&String(r.fecha||'').slice(0,4)===anioTemporada))&&inRango(r.fecha)).map(resolveGas); }
 function getPpto(c,m) { return DB.presupuesto.filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||r.mes===m)&&inRango(r.fecha)); }
 
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); charts[id] = null; } }
