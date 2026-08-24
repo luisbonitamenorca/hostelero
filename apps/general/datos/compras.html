@@ -380,6 +380,7 @@
           <div class="dashcard"><h4>Por centro</h4><div id="dashPorCentro"></div></div>
           <div class="dashcard"><h4>Por mes</h4><div id="dashPorMes"></div></div>
           <div class="dashcard"><h4>Top proveedores</h4><div id="dashTopProv"></div></div>
+          <div class="dashcard"><h4>Días hasta la carga <span class="hint" style="font-weight:normal">de la fecha del albarán a su subida</span></h4><div id="dashDemora"></div></div>
           <div class="dashcard"><h4>Artículos más comprados</h4><div id="dashTopArt"></div></div>
         </div>
         <p class="hint">Importes sin IVA, calculados sobre los albaranes (los duplicados no cuentan).</p>
@@ -1017,7 +1018,7 @@ function estadoCorreo(txt){
 // trabajando de verdad); en forzado bastan 90 s, porque ningún documento tarda
 // tanto y quien pulsa el botón está viendo que no pasa nada.
 async function sincronizarCorreo(forzado=false){
-  console.log('Compras Bonita · v68 · botón «descartar» en las propuestas de fusión de productos: la pareja se apunta en compras_dup_descartada y no se vuelve a proponer (se limpia sola si uno de los dos desaparece) · al ordenar por centro, los que NO tienen centro salen primero (antes caían al final por la regla de vacíos y parecían no existir) · el desplegable de centro del listado arrastra también las LÍNEAS del albarán (antes solo cambiaba el documento y el coste seguía en el centro viejo en Compras/Resumen/Ratios; las líneas de un reparto multi-centro deliberado no se tocan) · la pestaña Compras añade una fila de ajuste por albarán cuando las líneas no suman la base (descuentos de pie, líneas con IVA, redondeos): su total ya cuadra con la suma de bases de Albaranes, y la vista de Ratios aplica la misma regla · fechas en dd-mm-aaaa en todas las tablas y modales (en Excel y base siguen aaaa-mm-dd, que ordenan bien) · el aviso naranja de albarán incompleto ya no salta si las líneas cuadran con la base (los "3/3" de JJ Carreras y "1/5" de Distnura son códigos de reparto/envases, no páginas; añadidas pautas de proveedor) · una fecha leída de un año anterior al actual dispara la escalada a Opus y, si persiste, deja el documento en Revisar (con margen de 60 días para no molestar en enero) · la ayuda del modal explica que Guardar cambios es el visto bueno · el reproceso re-evalúa el proveedor cuando el CIF leído casa exacto con otro del maestro · reprocesar dudosos en lote (albaranes y facturas) y detector-fusionador de productos duplicados · escalada de modelo: si la lectura no cuadra, segunda pasada con Opus (y el reproceso manual va directo a Opus) · tablas con barra de scroll siempre visible y cabecera fija (Windows) · el nombre propio ya no puede ser el proveedor (se limpia o se deja vacío para revisión) · los adjuntos del front movil (correo_id nulo) pueden ser albaranes: la regla de solo-facturas es para el correo de verdad · el enlace de linea con el catalogo lo resuelve Postgres (trigger trg_linea_enlaza_producto): por referencia del proveedor y, si el albaran no trae codigos, por nombre normalizado dentro del mismo proveedor; asi enlazan tambien Produccion, Bodega, Santo Domingo o Pain Pigalle, y las lineas creadas a mano en el modal de revision · el codigo de proveedor de A3 se escribe a mano y se guarda tal cual en codigo_a3: el maestro es solo ayuda de busqueda, ya no una lista blanca que bloqueaba las altas recientes (142, 143, 144...) · las claves normalizadas las calcula Postgres, no el navegador · seleccion multiple de productos para borrar y fusionar · las acciones y exportaciones respetan los filtros de columna · borrado de productos sin uso · frecuencia de uso por producto (albaranes en los que aparece) · nombre de proveedor unificado en Compras, Albaranes y Facturas · filtros por columna en todos los listados, fusion manual de productos y limpieza del catalogo · CIF en el listado de productos y nombre de proveedor derivado de la ficha · validacion de CIF por digito de control y comparacion visual de proveedores · código interno de la app en Compras (para Ratios) · desglose de IVA visible, bloqueos de A3 en el listado y en el Excel, matriz centro x IVA · pies de IVA con varias filas leidos y autocorregidos, precio unitario editable y aviso de linea descuadrada (13-ago-2026)');
+  console.log('Compras Bonita · v69 · tarjeta «Días hasta la carga» en el Resumen: media de días entre la fecha del albarán y su subida, por centro y por mes (mide lo que tardan los centros en pasar los papeles a Dakota) · botón «descartar» en las propuestas de fusión de productos: la pareja se apunta en compras_dup_descartada y no se vuelve a proponer (se limpia sola si uno de los dos desaparece) · al ordenar por centro, los que NO tienen centro salen primero (antes caían al final por la regla de vacíos y parecían no existir) · el desplegable de centro del listado arrastra también las LÍNEAS del albarán (antes solo cambiaba el documento y el coste seguía en el centro viejo en Compras/Resumen/Ratios; las líneas de un reparto multi-centro deliberado no se tocan) · la pestaña Compras añade una fila de ajuste por albarán cuando las líneas no suman la base (descuentos de pie, líneas con IVA, redondeos): su total ya cuadra con la suma de bases de Albaranes, y la vista de Ratios aplica la misma regla · fechas en dd-mm-aaaa en todas las tablas y modales (en Excel y base siguen aaaa-mm-dd, que ordenan bien) · el aviso naranja de albarán incompleto ya no salta si las líneas cuadran con la base (los "3/3" de JJ Carreras y "1/5" de Distnura son códigos de reparto/envases, no páginas; añadidas pautas de proveedor) · una fecha leída de un año anterior al actual dispara la escalada a Opus y, si persiste, deja el documento en Revisar (con margen de 60 días para no molestar en enero) · la ayuda del modal explica que Guardar cambios es el visto bueno · el reproceso re-evalúa el proveedor cuando el CIF leído casa exacto con otro del maestro · reprocesar dudosos en lote (albaranes y facturas) y detector-fusionador de productos duplicados · escalada de modelo: si la lectura no cuadra, segunda pasada con Opus (y el reproceso manual va directo a Opus) · tablas con barra de scroll siempre visible y cabecera fija (Windows) · el nombre propio ya no puede ser el proveedor (se limpia o se deja vacío para revisión) · los adjuntos del front movil (correo_id nulo) pueden ser albaranes: la regla de solo-facturas es para el correo de verdad · el enlace de linea con el catalogo lo resuelve Postgres (trigger trg_linea_enlaza_producto): por referencia del proveedor y, si el albaran no trae codigos, por nombre normalizado dentro del mismo proveedor; asi enlazan tambien Produccion, Bodega, Santo Domingo o Pain Pigalle, y las lineas creadas a mano en el modal de revision · el codigo de proveedor de A3 se escribe a mano y se guarda tal cual en codigo_a3: el maestro es solo ayuda de busqueda, ya no una lista blanca que bloqueaba las altas recientes (142, 143, 144...) · las claves normalizadas las calcula Postgres, no el navegador · seleccion multiple de productos para borrar y fusionar · las acciones y exportaciones respetan los filtros de columna · borrado de productos sin uso · frecuencia de uso por producto (albaranes en los que aparece) · nombre de proveedor unificado en Compras, Albaranes y Facturas · filtros por columna en todos los listados, fusion manual de productos y limpieza del catalogo · CIF en el listado de productos y nombre de proveedor derivado de la ficha · validacion de CIF por digito de control y comparacion visual de proveedores · código interno de la app en Compras (para Ratios) · desglose de IVA visible, bloqueos de A3 en el listado y en el Excel, matriz centro x IVA · pies de IVA con varias filas leidos y autocorregidos, precio unitario editable y aviso de linea descuadrada (13-ago-2026)');
   if(_sincronizando){
     if(forzado)toast('Ya hay una revisión del correo en marcha');
     return;
@@ -2199,7 +2200,7 @@ async function loadCompras(){
   // Se trae tambien el codigo del catalogo de la app (compras_producto.codigo_interno).
   // El "Cod." que se veia hasta ahora es la referencia DEL PROVEEDOR, que cambia
   // de un proveedor a otro y no sirve para clasificar por familia en Ratios.
-  try{compras=await sbAll('compras_linea?select=id,doc_id,id_producto,producto,cantidad,importe,canal,producto_id,compras_producto(codigo_interno,nombre),compras_doc(fecha,proveedor,tipo,num_documento,estado,estado_detalle,base,canal)&order=created_at.desc');inyectarAjustes();renderTable();renderDashboard();}
+  try{compras=await sbAll('compras_linea?select=id,doc_id,id_producto,producto,cantidad,importe,canal,producto_id,compras_producto(codigo_interno,nombre),compras_doc(fecha,proveedor,tipo,num_documento,estado,estado_detalle,base,canal,created_at)&order=created_at.desc');inyectarAjustes();renderTable();renderDashboard();}
   catch(err){toast('No pude cargar compras: '+err.message,true);}
 }
 // Fila sintética de ajuste por albarán: cuando las líneas no suman la base
@@ -4051,6 +4052,42 @@ function renderDashboard(){
   const prov=agrupa(r=>(r.compras_doc||{}).proveedor);
   const provTop=Object.fromEntries(Object.entries(prov).sort((a,b)=>b[1]-a[1]).slice(0,10));
   document.getElementById('dashTopProv').innerHTML=barras(provTop);
+  // Días hasta la carga: cuánto tarda cada albarán en llegar a la app desde su
+  // fecha de emisión (petición de Luis, 24-08-2026: mide lo que tardan los
+  // centros en pasarle los papeles a Dakota). Media por centro y por mes, a
+  // nivel de DOCUMENTO (no de línea) y solo cargas por foto/correo con fecha.
+  const docsVistos=new Map();
+  rows.forEach(r=>{
+    const dc=r.compras_doc||{};
+    if(docsVistos.has(r.doc_id)||!dc.fecha||!dc.created_at)return;
+    const f=new Date(dc.fecha+'T00:00:00'), c=new Date(dc.created_at);
+    if(isNaN(f)||isNaN(c))return;
+    c.setHours(0,0,0,0);
+    const dias=Math.max(0,Math.round((c-f)/86400000));
+    docsVistos.set(r.doc_id,{dias,centro:dc.canal||r.canal||'(sin centro)',mes:String(dc.fecha).slice(0,7)});
+  });
+  const mediaDe=(sel)=>{
+    const m={};
+    docsVistos.forEach(v=>{const k=sel(v);if(!k)return;(m[k]=m[k]||{s:0,n:0});m[k].s+=v.dias;m[k].n++;});
+    return Object.entries(m).map(([k,v])=>[k,v.s/v.n,v.n]);
+  };
+  const barrasDias=(ents)=>{
+    if(!ents.length)return '<p class="hint" style="margin:0">Sin datos.</p>';
+    const mx=Math.max(1,...ents.map(e=>e[1]));
+    return ents.map(([k,v,n])=>`<div class="brow"><div class="blab"><span>${k}</span><b>${v.toLocaleString('es-ES',{maximumFractionDigits:1})} d <span class="hint">(${n} alb)</span></b></div><div class="btrack"><div class="bfill" style="width:${Math.max(2,v/mx*100)}%${v>=7?';background:var(--warn)':''}"></div></div></div>`).join('');
+  };
+  const todosD=[...docsVistos.values()];
+  const mediaGlobal=todosD.length?todosD.reduce((s,v)=>s+v.dias,0)/todosD.length:0;
+  const porCentroD=mediaDe(v=>v.centro).sort((a,b)=>b[1]-a[1]);
+  const porMesD=mediaDe(v=>v.mes).sort((a,b)=>a[0]<b[0]?-1:1).slice(-12)
+    .map(([k,v,n])=>{const [y,m]=k.split('-');return [`${MESES[(+m)-1]||m} ${y}`,v,n];});
+  const elDem=document.getElementById('dashDemora');
+  if(elDem)elDem.innerHTML=`
+    <p class="hint" style="margin:0 0 8px">Media global: <b>${mediaGlobal.toLocaleString('es-ES',{maximumFractionDigits:1})} días</b> · en ámbar los que van a 7 días o más</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div><p class="hint" style="margin:0 0 4px"><b>Por centro</b></p>${barrasDias(porCentroD)}</div>
+      <div><p class="hint" style="margin:0 0 4px"><b>Por mes</b></p>${barrasDias(porMesD)}</div>
+    </div>`;
   // artículos más comprados (15) por importe, con cantidad
   const art={};
   rows.forEach(r=>{const k=r.producto||r.id_producto;if(!k)return;if(!art[k])art[k]={imp:0,cant:0};art[k].imp+=(num(r.importe)||0);art[k].cant+=(num(r.cantidad)||0);});
