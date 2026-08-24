@@ -20,10 +20,6 @@ const nextConfig = {
     return [
       { source: "/finanzas", destination: `${URL_FINANZAS}/finanzas` },
       { source: "/finanzas/:path*", destination: `${URL_FINANZAS}/finanzas/:path*` },
-      // El proxy de Anthropic ya vive aquí (pages/api/compras/anthropic.js).
-      // La ingesta de CORREO sigue en el Vercel viejo con su IMAP hasta que
-      // Infotelecom pase las claves; este rewrite solo cubre esa ruta.
-      { source: "/api/compras/ingesta-correo", destination: "https://compras-bonita.vercel.app/api/ingesta-correo" },
     ];
   },
 };
