@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { exigirModulo, ACCESO_POR_ROL } from "@/lib/supabase/server";
+import { exigirModulo, rolIncluye } from "@/lib/supabase/server";
 import { crearUsuario, cambiarVeto, cambiarConcesion } from "./acciones";
 import FilaAcciones from "./fila-acciones";
 
@@ -169,9 +169,9 @@ export default async function Usuarios({
                       // El rol es el tope de serie; fuera de él la celda es
                       // una CONCESIÓN: guion apagado = no lo ve (pulsar para
                       // concederlo como extra), ✓ con borde discontinuo = extra
-                      // concedido (pulsar para quitarlo).
-                      const delRol = ACCESO_POR_ROL[g.rol ?? "empleado"] ?? null;
-                      if (delRol !== null && !delRol.includes(m.id)) {
+                      // concedido (pulsar para quitarlo). Usuarios es
+                      // solo-por-concesión para TODOS los roles.
+                      if (!rolIncluye(g.rol ?? "empleado", m.id)) {
                         const tieneExtra = concedido.has(`${g.id}|${m.id}`);
                         return (
                           <td key={m.id} style={{ padding: "6px 4px", textAlign: "center" }}>

@@ -101,11 +101,17 @@ export async function cambiarVeto(formData: FormData) {
 }
 
 export async function cambiarConcesion(formData: FormData) {
-  const { supabase, cuenta } = await exigirDireccion();
+  const { supabase, perfil, cuenta } = await exigirDireccion();
 
   const perfilId = String(formData.get("perfil") ?? "");
   const moduloId = String(formData.get("modulo") ?? "");
   const conceder = formData.get("conceder") === "si";
+
+  // Usuarios es solo-por-concesión: quitarse la propia dejaría esta pantalla
+  // inalcanzable para todos. Mismo candado que el veto.
+  if (!conceder && perfilId === perfil.id && moduloId === "usuarios") {
+    redirect("/usuarios?error=propio");
+  }
 
   // Con el cliente de SESIÓN a propósito, como el veto: la RLS de
   // modulos_concedidos vuelve a comprobar dirección + misma cuenta.

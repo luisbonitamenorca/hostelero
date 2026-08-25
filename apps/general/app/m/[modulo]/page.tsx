@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { exigirPerfil, ACCESO_POR_ROL } from "@/lib/supabase/server";
+import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
 import { RUTAS_MODULO } from "@/lib/modulos";
 
 export const dynamic = "force-dynamic";
@@ -36,11 +36,10 @@ export default async function PaginaModulo({
       .maybeSingle(),
   ]);
 
-  const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
   const conAcceso =
     definicion &&
     contratacion?.activo === true &&
-    (permitidos === null || permitidos.includes(modulo) || !!concesion) &&
+    (rolIncluye(perfil.rol, modulo) || !!concesion) &&
     !veto;
 
   if (!conAcceso) notFound();

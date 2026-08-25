@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { exigirPerfil, ACCESO_POR_ROL } from "@/lib/supabase/server";
+import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
 import { RUTAS_MODULO, GRUPOS_PORTADA, grupoDe } from "@/lib/modulos";
 import { cerrarSesion } from "./acciones";
 
@@ -54,12 +54,11 @@ export default async function Portada() {
   const idsContratados = new Set((contratados ?? []).map((m) => m.modulo_id));
   const idsVetados = new Set((vetos ?? []).map((v) => v.modulo_id));
   const idsConcedidos = new Set((concesiones ?? []).map((c) => c.modulo_id));
-  const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
 
   const visibles = (modulos ?? []).filter(
     (m) =>
       idsContratados.has(m.id) &&
-      (permitidos === null || permitidos.includes(m.id) || idsConcedidos.has(m.id)) &&
+      (rolIncluye(perfil.rol, m.id) || idsConcedidos.has(m.id)) &&
       !idsVetados.has(m.id)
   );
 

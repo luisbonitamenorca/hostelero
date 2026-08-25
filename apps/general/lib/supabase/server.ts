@@ -63,6 +63,21 @@ export const ACCESO_POR_ROL: Record<string, string[] | null> = {
 };
 
 /**
+ * Módulos que NINGÚN rol trae de serie, ni dirección (que en el mapa es null
+ * = todos): solo se ven con concesión expresa en la rejilla. Decidido por
+ * Luis el 25-08-2026 para Usuarios: gestionar gente y permisos es de una
+ * persona, no de un rol.
+ */
+export const SOLO_CONCESION = new Set(["usuarios"]);
+
+/** ¿El rol trae este módulo de serie? (las concesiones van aparte) */
+export function rolIncluye(rol: string, moduloId: string): boolean {
+  if (SOLO_CONCESION.has(moduloId)) return false;
+  const permitidos = ACCESO_POR_ROL[rol] ?? null;
+  return permitidos === null || permitidos.includes(moduloId);
+}
+
+/**
  * Exige acceso a un módulo concreto: sesión de perfil + módulo contratado y
  * activo + permitido por el rol. Redirige/`notFound` igual que /m/[modulo].
  * Devuelve el mismo contexto que exigirPerfil (cliente, perfil, cuenta).
@@ -95,10 +110,9 @@ export async function exigirModulo(moduloId: string) {
       .maybeSingle(),
   ]);
 
-  const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
   const conAcceso =
     contratacion?.activo === true &&
-    (permitidos === null || permitidos.includes(moduloId) || !!concesion) &&
+    (rolIncluye(perfil.rol, moduloId) || !!concesion) &&
     !veto;
 
   if (!conAcceso) notFound();
