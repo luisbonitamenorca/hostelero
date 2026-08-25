@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { exigirModulo } from "@/lib/supabase/server";
+import { exigirModulo, ACCESO_POR_ROL } from "@/lib/supabase/server";
 import { crearUsuario, cambiarVeto } from "./acciones";
 import FilaAcciones from "./fila-acciones";
 
@@ -129,7 +129,8 @@ export default async function Usuarios({
           <h2 className="rotulo">Quién ve qué</h2>
           <p style={{ color: "var(--gris, #5F6B65)", fontSize: 13, margin: "0 0 12px" }}>
             El rol marca el máximo; aquí se quita lo que alguien no deba ver. Verde = lo ve;
-            pulsa para vetarlo (y al revés). Los cambios valen desde su siguiente carga de página.
+            pulsa para vetarlo (y al revés). Un guion apagado = el rol ya no lo incluye, no
+            hay nada que vetar. Los cambios valen desde su siguiente carga de página.
           </p>
           <div className="tabla-envoltura" style={{ background: "#fff", border: "1px solid #DDE2DF", borderRadius: 8, overflowX: "auto" }}>
             <table className="tabla" style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
@@ -162,6 +163,27 @@ export default async function Usuarios({
                     </td>
                     {modulosDeLaCuenta.map((m) => {
                       const estaVetado = vetado.has(`${g.id}|${m.id}`);
+                      // El rol es el tope: lo que queda fuera se pinta apagado
+                      // y sin botón. Antes salía en verde y parecía que el
+                      // usuario lo veía, cuando las puertas ya lo bloqueaban.
+                      const delRol = ACCESO_POR_ROL[g.rol ?? "empleado"] ?? null;
+                      if (delRol !== null && !delRol.includes(m.id)) {
+                        return (
+                          <td key={m.id} style={{ padding: "6px 4px", textAlign: "center" }}>
+                            <span
+                              title={`El rol de ${g.nombre} no incluye este módulo`}
+                              style={{
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                width: 30, height: 30, borderRadius: 6,
+                                border: "1px dashed #DDE2DF", color: "#B8C2BC",
+                                fontSize: 14, userSelect: "none",
+                              }}
+                            >
+                              –
+                            </span>
+                          </td>
+                        );
+                      }
                       return (
                         <td key={m.id} style={{ padding: "6px 4px", textAlign: "center" }}>
                           <form action={cambiarVeto}>
