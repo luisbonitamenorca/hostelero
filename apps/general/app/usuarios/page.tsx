@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 const ROLES: { id: string; nombre: string; pista: string }[] = [
   { id: "direccion", nombre: "Dirección", pista: "ve todo (salvo vetos)" },
+  { id: "responsable_area", nombre: "Responsable de área", pista: "ratios, personal, TPV, compras, clientes, documentos, reservas" },
   { id: "administracion", nombre: "Administración", pista: "compras, documentos, clientes, formación" },
   { id: "jefe_sala", nombre: "Jefe de sala", pista: "reservas, visitas, TPV, personal" },
   { id: "empleado", nombre: "Empleado", pista: "solo la app de empleado (fichar)" },

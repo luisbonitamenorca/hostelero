@@ -17,7 +17,7 @@ async function exigirDireccion() {
   return ctx;
 }
 
-const ROLES_VALIDOS = ["direccion", "administracion", "jefe_sala", "empleado"];
+const ROLES_VALIDOS = ["direccion", "responsable_area", "administracion", "jefe_sala", "empleado"];
 
 export async function crearUsuario(formData: FormData) {
   const { cuenta } = await exigirDireccion();

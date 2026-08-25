@@ -55,6 +55,7 @@ export default async function DetalleCuenta({
 
   const ROLES: Record<string, string> = {
     direccion: "Dirección",
+    responsable_area: "Responsable de área",
     jefe_sala: "Jefe de sala",
     administracion: "Administración",
   };

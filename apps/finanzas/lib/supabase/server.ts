@@ -60,6 +60,7 @@ export async function exigirPerfil() {
  */
 export const ACCESO_POR_ROL: Record<string, string[] | null> = {
   direccion: null,
+  responsable_area: [],
   jefe_sala: [],
   administracion: ["facturacion", "contabilidad", "bancos", "impuestos", "remesas"],
   empleado: [],
