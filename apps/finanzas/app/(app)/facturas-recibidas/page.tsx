@@ -21,7 +21,10 @@ export default async function FacturasRecibidas({
 
   let consulta = supabase
     .from("compras_doc")
-    .select("id, fecha, proveedor, proveedor_nif, num_documento, base, iva, total, estado, centro_id, imagen_url, origen")
+    // `canal` es el centro en el mundo de Compras (texto, no uuid): la página
+    // se escribió contra un esquema previsto con centro_id que el port real
+    // no trae. Salió a la luz al regenerar packages/db/types.ts el 25-08-2026.
+    .select("id, fecha, proveedor, proveedor_nif, num_documento, base, iva, total, estado, canal, imagen_url, origen")
     .eq("tipo", "factura")
     .order("fecha", { ascending: false })
     .limit(LIMITE);
@@ -33,10 +36,7 @@ export default async function FacturasRecibidas({
     );
   }
 
-  const [{ data, error }, { data: centros }] = await Promise.all([
-    consulta,
-    supabase.from("centros").select("id, nombre"),
-  ]);
+  const { data, error } = await consulta;
 
   // Cuáles ya están en cartera. Si la migración F2a aún no está aplicada, la
   // tabla no existe: se sigue adelante sin la columna en vez de romper la
@@ -48,7 +48,6 @@ export default async function FacturasRecibidas({
 
   const conVencimiento = new Set((enCartera ?? []).map((v) => v.compra_doc_id).filter(Boolean));
 
-  const nombreCentro = new Map((centros ?? []).map((c) => [c.id, c.nombre]));
   const filas = data ?? [];
   const suma = filas.reduce((s, f) => s + Number(f.total ?? 0), 0);
 
@@ -104,7 +103,7 @@ export default async function FacturasRecibidas({
                       {f.proveedor_nif && <span className="secundario">{f.proveedor_nif}</span>}
                     </td>
                     <td className="dato">{f.num_documento ?? "—"}</td>
-                    <td>{f.centro_id ? (nombreCentro.get(f.centro_id) ?? "—") : "—"}</td>
+                    <td>{f.canal ?? "—"}</td>
                     <td className="numero">{euros(Number(f.base ?? 0))}</td>
                     <td className="numero">{euros(Number(f.iva ?? 0))}</td>
                     <td className="numero">{euros(Number(f.total ?? 0))}</td>

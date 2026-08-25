@@ -1644,36 +1644,134 @@ export type Database = {
           },
         ]
       }
-      compras_correo: {
+      comensales: {
         Row: {
-          asunto: string | null
+          anio: number
+          capacidad: number
+          centro: string
+          comensales: number
           created_at: string | null
-          cuenta_id: string
-          fecha_correo: string | null
+          dia_semana: number
+          fecha: string
           id: number
-          message_id: string
-          num_adjuntos: number | null
-          remitente: string | null
+          mes: number
+          semana: number
+          servicio: string
         }
         Insert: {
-          asunto?: string | null
+          anio: number
+          capacidad?: number
+          centro: string
+          comensales?: number
           created_at?: string | null
-          cuenta_id?: string
-          fecha_correo?: string | null
+          dia_semana: number
+          fecha: string
           id?: number
-          message_id: string
-          num_adjuntos?: number | null
-          remitente?: string | null
+          mes: number
+          semana: number
+          servicio: string
         }
         Update: {
+          anio?: number
+          capacidad?: number
+          centro?: string
+          comensales?: number
+          created_at?: string | null
+          dia_semana?: number
+          fecha?: string
+          id?: number
+          mes?: number
+          semana?: number
+          servicio?: string
+        }
+        Relationships: []
+      }
+      compras_centro_coste: {
+        Row: {
+          activo: boolean
+          canal: string | null
+          codigo: number
+          cuenta_id: string
+          descripcion: string
+        }
+        Insert: {
+          activo?: boolean
+          canal?: string | null
+          codigo: number
+          cuenta_id?: string
+          descripcion: string
+        }
+        Update: {
+          activo?: boolean
+          canal?: string | null
+          codigo?: number
+          cuenta_id?: string
+          descripcion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_centro_coste_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_correo: {
+        Row: {
+          adjuntos_detectados: number | null
+          asunto: string | null
+          carpeta: string | null
+          created_at: string | null
+          cuenta_id: string
+          enlaces: string[] | null
+          error: string | null
+          estado: string
+          fecha_correo: string | null
+          id: number
+          intentos: number
+          message_id: string
+          num_adjuntos: number | null
+          procesado_at: string | null
+          remitente: string | null
+          uid: number | null
+        }
+        Insert: {
+          adjuntos_detectados?: number | null
           asunto?: string | null
+          carpeta?: string | null
           created_at?: string | null
           cuenta_id?: string
+          enlaces?: string[] | null
+          error?: string | null
+          estado?: string
           fecha_correo?: string | null
           id?: number
+          intentos?: number
+          message_id: string
+          num_adjuntos?: number | null
+          procesado_at?: string | null
+          remitente?: string | null
+          uid?: number | null
+        }
+        Update: {
+          adjuntos_detectados?: number | null
+          asunto?: string | null
+          carpeta?: string | null
+          created_at?: string | null
+          cuenta_id?: string
+          enlaces?: string[] | null
+          error?: string | null
+          estado?: string
+          fecha_correo?: string | null
+          id?: number
+          intentos?: number
           message_id?: string
           num_adjuntos?: number | null
+          procesado_at?: string | null
           remitente?: string | null
+          uid?: number | null
         }
         Relationships: [
           {
@@ -1733,6 +1831,13 @@ export type Database = {
             foreignKeyName: "compras_correo_adjunto_correo_id_fkey"
             columns: ["correo_id"]
             isOneToOne: false
+            referencedRelation: "compras_conciliacion_correo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_correo_adjunto_correo_id_fkey"
+            columns: ["correo_id"]
+            isOneToOne: false
             referencedRelation: "compras_correo"
             referencedColumns: ["id"]
           },
@@ -1744,17 +1849,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "compras_correo_adjunto_doc_id_fkey"
+            foreignKeyName: "compras_correo_adjunto_doc_fk"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_correo_adjunto_doc_fk"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_correo_adjunto_doc_fk"
             columns: ["doc_id"]
             isOneToOne: false
             referencedRelation: "compras_doc"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_correo_adjunto_doc_fk"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
           },
         ]
       }
       compras_cuenta_a3: {
         Row: {
           activo: boolean
+          codigo: string | null
           contrapartida: string | null
           created_at: string
           cuenta: string
@@ -1766,6 +1893,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          codigo?: string | null
           contrapartida?: string | null
           created_at?: string
           cuenta: string
@@ -1777,6 +1905,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          codigo?: string | null
           contrapartida?: string | null
           created_at?: string
           cuenta?: string
@@ -1796,12 +1925,63 @@ export type Database = {
           },
         ]
       }
+      compras_cups: {
+        Row: {
+          canal: string
+          created_at: string
+          cuenta_id: string
+          cups: string
+          id: number
+          meses: number[] | null
+          nota: string | null
+          pct: number
+        }
+        Insert: {
+          canal: string
+          created_at?: string
+          cuenta_id?: string
+          cups: string
+          id?: number
+          meses?: number[] | null
+          nota?: string | null
+          pct?: number
+        }
+        Update: {
+          canal?: string
+          created_at?: string
+          cuenta_id?: string
+          cups?: string
+          id?: number
+          meses?: number[] | null
+          nota?: string | null
+          pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_cups_canal_fkey"
+            columns: ["canal"]
+            isOneToOne: false
+            referencedRelation: "compras_centro_coste"
+            referencedColumns: ["canal"]
+          },
+          {
+            foreignKeyName: "compras_cups_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras_doc: {
         Row: {
+          a3_exportado_at: string | null
+          a3_numdoc: number | null
           albaranes_detectados: Json | null
           base: number | null
           canal: string | null
-          centro_id: string | null
+          codigo_cups: string | null
+          codigo_terminal: string | null
           created_at: string
           cuenta_id: string
           descuento: number | null
@@ -1812,21 +1992,32 @@ export type Database = {
           hash_doc: string | null
           id: string
           imagen_url: string | null
+          imagenes: Json | null
           iva: number | null
           num_documento: string | null
           origen: string | null
+          pagina: number | null
+          paginas: number | null
+          paginas_vistas: number[] | null
           proveedor: string | null
           proveedor_id: string | null
           proveedor_nif: string | null
           raw: Json | null
+          reparto_sugerido: Json | null
+          retencion: number | null
+          retencion_base: number | null
+          retencion_pct: number | null
           tipo: string
           total: number | null
         }
         Insert: {
+          a3_exportado_at?: string | null
+          a3_numdoc?: number | null
           albaranes_detectados?: Json | null
           base?: number | null
           canal?: string | null
-          centro_id?: string | null
+          codigo_cups?: string | null
+          codigo_terminal?: string | null
           created_at?: string
           cuenta_id?: string
           descuento?: number | null
@@ -1837,21 +2028,32 @@ export type Database = {
           hash_doc?: string | null
           id?: string
           imagen_url?: string | null
+          imagenes?: Json | null
           iva?: number | null
           num_documento?: string | null
           origen?: string | null
+          pagina?: number | null
+          paginas?: number | null
+          paginas_vistas?: number[] | null
           proveedor?: string | null
           proveedor_id?: string | null
           proveedor_nif?: string | null
           raw?: Json | null
+          reparto_sugerido?: Json | null
+          retencion?: number | null
+          retencion_base?: number | null
+          retencion_pct?: number | null
           tipo?: string
           total?: number | null
         }
         Update: {
+          a3_exportado_at?: string | null
+          a3_numdoc?: number | null
           albaranes_detectados?: Json | null
           base?: number | null
           canal?: string | null
-          centro_id?: string | null
+          codigo_cups?: string | null
+          codigo_terminal?: string | null
           created_at?: string
           cuenta_id?: string
           descuento?: number | null
@@ -1862,24 +2064,25 @@ export type Database = {
           hash_doc?: string | null
           id?: string
           imagen_url?: string | null
+          imagenes?: Json | null
           iva?: number | null
           num_documento?: string | null
           origen?: string | null
+          pagina?: number | null
+          paginas?: number | null
+          paginas_vistas?: number[] | null
           proveedor?: string | null
           proveedor_id?: string | null
           proveedor_nif?: string | null
           raw?: Json | null
+          reparto_sugerido?: Json | null
+          retencion?: number | null
+          retencion_base?: number | null
+          retencion_pct?: number | null
           tipo?: string
           total?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "compras_doc_centro_id_fkey"
-            columns: ["centro_id"]
-            isOneToOne: false
-            referencedRelation: "centros"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "compras_doc_cuenta_id_fkey"
             columns: ["cuenta_id"]
@@ -1891,8 +2094,29 @@ export type Database = {
             foreignKeyName: "compras_doc_factura_id_fkey"
             columns: ["factura_id"]
             isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_doc_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_doc_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
             referencedRelation: "compras_doc"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_doc_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
           },
           {
             foreignKeyName: "compras_doc_proveedor_id_fkey"
@@ -1903,11 +2127,155 @@ export type Database = {
           },
         ]
       }
+      compras_doc_reparto: {
+        Row: {
+          base: number
+          centro_coste: number | null
+          created_at: string
+          cuenta_gasto: string | null
+          cuenta_id: string
+          cuota: number | null
+          descripcion: string | null
+          doc_id: string
+          id: string
+          manual: boolean
+          orden: number
+          tipo_iva: string | null
+        }
+        Insert: {
+          base: number
+          centro_coste?: number | null
+          created_at?: string
+          cuenta_gasto?: string | null
+          cuenta_id?: string
+          cuota?: number | null
+          descripcion?: string | null
+          doc_id: string
+          id?: string
+          manual?: boolean
+          orden?: number
+          tipo_iva?: string | null
+        }
+        Update: {
+          base?: number
+          centro_coste?: number | null
+          created_at?: string
+          cuenta_gasto?: string | null
+          cuenta_id?: string
+          cuota?: number | null
+          descripcion?: string | null
+          doc_id?: string
+          id?: string
+          manual?: boolean
+          orden?: number
+          tipo_iva?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_doc_reparto_centro_coste_fkey"
+            columns: ["centro_coste"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["centro_coste_defecto"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_centro_coste_fkey"
+            columns: ["centro_coste"]
+            isOneToOne: false
+            referencedRelation: "compras_centro_coste"
+            referencedColumns: ["codigo"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_tipo_iva_fkey"
+            columns: ["tipo_iva"]
+            isOneToOne: false
+            referencedRelation: "compras_tipo_iva"
+            referencedColumns: ["codigo"]
+          },
+        ]
+      }
+      compras_dup_descartada: {
+        Row: {
+          a: string
+          b: string
+          creado_en: string
+          cuenta_id: string
+        }
+        Insert: {
+          a: string
+          b: string
+          creado_en?: string
+          cuenta_id?: string
+        }
+        Update: {
+          a?: string
+          b?: string
+          creado_en?: string
+          cuenta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_dup_descartada_a_fkey"
+            columns: ["a"]
+            isOneToOne: false
+            referencedRelation: "compras_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_dup_descartada_b_fkey"
+            columns: ["b"]
+            isOneToOne: false
+            referencedRelation: "compras_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_dup_descartada_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras_linea: {
         Row: {
           canal: string | null
           cantidad: number | null
-          centro_id: string | null
           created_at: string
           cuenta_id: string
           doc_id: string | null
@@ -1921,7 +2289,6 @@ export type Database = {
         Insert: {
           canal?: string | null
           cantidad?: number | null
-          centro_id?: string | null
           created_at?: string
           cuenta_id?: string
           doc_id?: string | null
@@ -1935,7 +2302,6 @@ export type Database = {
         Update: {
           canal?: string | null
           cantidad?: number | null
-          centro_id?: string | null
           created_at?: string
           cuenta_id?: string
           doc_id?: string | null
@@ -1948,13 +2314,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "compras_linea_centro_id_fkey"
-            columns: ["centro_id"]
-            isOneToOne: false
-            referencedRelation: "centros"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "compras_linea_cuenta_id_fkey"
             columns: ["cuenta_id"]
             isOneToOne: false
@@ -1965,8 +2324,29 @@ export type Database = {
             foreignKeyName: "compras_linea_doc_id_fkey"
             columns: ["doc_id"]
             isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_linea_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_linea_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
             referencedRelation: "compras_doc"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_linea_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
           },
           {
             foreignKeyName: "compras_linea_producto_id_fkey"
@@ -2033,7 +2413,7 @@ export type Database = {
           alias: string | null
           autorizado: boolean | null
           categoria: string | null
-          centro_defecto_id: string | null
+          codigo_a3: string | null
           created_at: string
           critico: boolean | null
           cuenta_contable: string | null
@@ -2049,12 +2429,14 @@ export type Database = {
           nombre_norm: string | null
           pauta_factura: string | null
           pautas: string | null
+          retencion_modelo: string | null
+          retencion_pct: number | null
         }
         Insert: {
           alias?: string | null
           autorizado?: boolean | null
           categoria?: string | null
-          centro_defecto_id?: string | null
+          codigo_a3?: string | null
           created_at?: string
           critico?: boolean | null
           cuenta_contable?: string | null
@@ -2070,12 +2452,14 @@ export type Database = {
           nombre_norm?: string | null
           pauta_factura?: string | null
           pautas?: string | null
+          retencion_modelo?: string | null
+          retencion_pct?: number | null
         }
         Update: {
           alias?: string | null
           autorizado?: boolean | null
           categoria?: string | null
-          centro_defecto_id?: string | null
+          codigo_a3?: string | null
           created_at?: string
           critico?: boolean | null
           cuenta_contable?: string | null
@@ -2091,15 +2475,10 @@ export type Database = {
           nombre_norm?: string | null
           pauta_factura?: string | null
           pautas?: string | null
+          retencion_modelo?: string | null
+          retencion_pct?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "compras_proveedor_centro_defecto_id_fkey"
-            columns: ["centro_defecto_id"]
-            isOneToOne: false
-            referencedRelation: "centros"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "compras_proveedor_cuenta_id_fkey"
             columns: ["cuenta_id"]
@@ -2134,6 +2513,83 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "compras_regla_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_terminal: {
+        Row: {
+          canal: string
+          codigo: string
+          created_at: string
+          cuenta_id: string
+          nota: string | null
+          proveedor: string | null
+        }
+        Insert: {
+          canal: string
+          codigo: string
+          created_at?: string
+          cuenta_id?: string
+          nota?: string | null
+          proveedor?: string | null
+        }
+        Update: {
+          canal?: string
+          codigo?: string
+          created_at?: string
+          cuenta_id?: string
+          nota?: string | null
+          proveedor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_terminal_canal_fkey"
+            columns: ["canal"]
+            isOneToOne: false
+            referencedRelation: "compras_centro_coste"
+            referencedColumns: ["canal"]
+          },
+          {
+            foreignKeyName: "compras_terminal_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_tipo_iva: {
+        Row: {
+          activo: boolean
+          codigo: string
+          cuenta_id: string
+          descripcion: string
+          habitual: boolean
+          pct: number | null
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          cuenta_id?: string
+          descripcion: string
+          habitual?: boolean
+          pct?: number | null
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          cuenta_id?: string
+          descripcion?: string
+          habitual?: boolean
+          pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_tipo_iva_cuenta_id_fkey"
             columns: ["cuenta_id"]
             isOneToOne: false
             referencedRelation: "cuentas"
@@ -2799,6 +3255,119 @@ export type Database = {
           },
         ]
       }
+      doc_departamentos: {
+        Row: {
+          id: number
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          id?: number
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          id?: number
+          nombre?: string
+          orden?: number
+        }
+        Relationships: []
+      }
+      doc_documentos: {
+        Row: {
+          actualizado_en: string
+          archivo_nombre: string
+          archivo_path: string
+          archivo_tamano: number | null
+          archivo_tipo: string | null
+          archivo_url: string
+          centro: string | null
+          creado_en: string
+          departamento_id: number
+          descripcion: string | null
+          id: number
+          nombre: string
+          subcategoria_id: number | null
+          subido_por: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          archivo_nombre: string
+          archivo_path: string
+          archivo_tamano?: number | null
+          archivo_tipo?: string | null
+          archivo_url: string
+          centro?: string | null
+          creado_en?: string
+          departamento_id: number
+          descripcion?: string | null
+          id?: number
+          nombre: string
+          subcategoria_id?: number | null
+          subido_por?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          archivo_nombre?: string
+          archivo_path?: string
+          archivo_tamano?: number | null
+          archivo_tipo?: string | null
+          archivo_url?: string
+          centro?: string | null
+          creado_en?: string
+          departamento_id?: number
+          descripcion?: string | null
+          id?: number
+          nombre?: string
+          subcategoria_id?: number | null
+          subido_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_documentos_departamento_id_fkey"
+            columns: ["departamento_id"]
+            isOneToOne: false
+            referencedRelation: "doc_departamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_documentos_subcategoria_id_fkey"
+            columns: ["subcategoria_id"]
+            isOneToOne: false
+            referencedRelation: "doc_subcategorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doc_subcategorias: {
+        Row: {
+          departamento_id: number
+          id: number
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          departamento_id: number
+          id?: number
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          departamento_id?: number
+          id?: number
+          nombre?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_subcategorias_departamento_id_fkey"
+            columns: ["departamento_id"]
+            isOneToOne: false
+            referencedRelation: "doc_departamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       docs_categorias: {
         Row: {
           activo: boolean
@@ -2962,6 +3531,96 @@ export type Database = {
           },
         ]
       }
+      ecommerce: {
+        Row: {
+          anio: number | null
+          botellas: number | null
+          canal: string | null
+          envio: number | null
+          fecha: string | null
+          mes: number | null
+          neto_sin_iva: number | null
+          pais: string | null
+          pedido_id: string
+          provincia: string | null
+          reembolso: number | null
+          semana: number | null
+        }
+        Insert: {
+          anio?: number | null
+          botellas?: number | null
+          canal?: string | null
+          envio?: number | null
+          fecha?: string | null
+          mes?: number | null
+          neto_sin_iva?: number | null
+          pais?: string | null
+          pedido_id: string
+          provincia?: string | null
+          reembolso?: number | null
+          semana?: number | null
+        }
+        Update: {
+          anio?: number | null
+          botellas?: number | null
+          canal?: string | null
+          envio?: number | null
+          fecha?: string | null
+          mes?: number | null
+          neto_sin_iva?: number | null
+          pais?: string | null
+          pedido_id?: string
+          provincia?: string | null
+          reembolso?: number | null
+          semana?: number | null
+        }
+        Relationships: []
+      }
+      ecommerce_historico: {
+        Row: {
+          anio: number | null
+          botellas: number | null
+          canal: string | null
+          envio: number | null
+          fecha: string | null
+          mes: number | null
+          neto_sin_iva: number | null
+          pais: string | null
+          pedido_id: string
+          provincia: string | null
+          reembolso: number | null
+          semana: number | null
+        }
+        Insert: {
+          anio?: number | null
+          botellas?: number | null
+          canal?: string | null
+          envio?: number | null
+          fecha?: string | null
+          mes?: number | null
+          neto_sin_iva?: number | null
+          pais?: string | null
+          pedido_id: string
+          provincia?: string | null
+          reembolso?: number | null
+          semana?: number | null
+        }
+        Update: {
+          anio?: number | null
+          botellas?: number | null
+          canal?: string | null
+          envio?: number | null
+          fecha?: string | null
+          mes?: number | null
+          neto_sin_iva?: number | null
+          pais?: string | null
+          pedido_id?: string
+          provincia?: string | null
+          reembolso?: number | null
+          semana?: number | null
+        }
+        Relationships: []
+      }
       empleados: {
         Row: {
           apellidos: string | null
@@ -3049,6 +3708,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      familias: {
+        Row: {
+          created_at: string | null
+          id: number
+          nombre: string
+          orden: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          nombre: string
+          orden?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          nombre?: string
+          orden?: number | null
+        }
+        Relationships: []
       }
       fin_activos: {
         Row: {
@@ -3138,8 +3818,29 @@ export type Database = {
             foreignKeyName: "fin_activos_compra_doc_id_fkey"
             columns: ["compra_doc_id"]
             isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "fin_activos_compra_doc_id_fkey"
+            columns: ["compra_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "fin_activos_compra_doc_id_fkey"
+            columns: ["compra_doc_id"]
+            isOneToOne: false
             referencedRelation: "compras_doc"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_activos_compra_doc_id_fkey"
+            columns: ["compra_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
           },
           {
             foreignKeyName: "fin_activos_cuenta_activo_id_fkey"
@@ -4357,8 +5058,29 @@ export type Database = {
             foreignKeyName: "fin_vencimientos_compra_doc_id_fkey"
             columns: ["compra_doc_id"]
             isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "fin_vencimientos_compra_doc_id_fkey"
+            columns: ["compra_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "fin_vencimientos_compra_doc_id_fkey"
+            columns: ["compra_doc_id"]
+            isOneToOne: false
             referencedRelation: "compras_doc"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_vencimientos_compra_doc_id_fkey"
+            columns: ["compra_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
           },
           {
             foreignKeyName: "fin_vencimientos_cuenta_id_fkey"
@@ -4543,6 +5265,222 @@ export type Database = {
           },
         ]
       }
+      gastos_dijit: {
+        Row: {
+          base: number | null
+          cantidad: number | null
+          centro: string | null
+          created_at: string | null
+          factor: number | null
+          familia: string | null
+          fecha: string | null
+          id: number
+          id_prod: string | null
+          mes: number | null
+          origen: string | null
+          producto: string | null
+          proveedor: string | null
+          semana: number | null
+          subfamilia: string | null
+          total: number | null
+          unidad: string | null
+          unidades: number | null
+        }
+        Insert: {
+          base?: number | null
+          cantidad?: number | null
+          centro?: string | null
+          created_at?: string | null
+          factor?: number | null
+          familia?: string | null
+          fecha?: string | null
+          id: number
+          id_prod?: string | null
+          mes?: number | null
+          origen?: string | null
+          producto?: string | null
+          proveedor?: string | null
+          semana?: number | null
+          subfamilia?: string | null
+          total?: number | null
+          unidad?: string | null
+          unidades?: number | null
+        }
+        Update: {
+          base?: number | null
+          cantidad?: number | null
+          centro?: string | null
+          created_at?: string | null
+          factor?: number | null
+          familia?: string | null
+          fecha?: string | null
+          id?: number
+          id_prod?: string | null
+          mes?: number | null
+          origen?: string | null
+          producto?: string | null
+          proveedor?: string | null
+          semana?: number | null
+          subfamilia?: string | null
+          total?: number | null
+          unidad?: string | null
+          unidades?: number | null
+        }
+        Relationships: []
+      }
+      ingresos: {
+        Row: {
+          articulo: string | null
+          base: number | null
+          canal: string | null
+          cantidad: number | null
+          centro: string | null
+          created_at: string | null
+          descripcion: string | null
+          factor: number | null
+          familia: string | null
+          fecha: string | null
+          id: number
+          mes: number | null
+          pvp: number | null
+          semana: number | null
+          subfamilia: string | null
+          unidades: number | null
+        }
+        Insert: {
+          articulo?: string | null
+          base?: number | null
+          canal?: string | null
+          cantidad?: number | null
+          centro?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          factor?: number | null
+          familia?: string | null
+          fecha?: string | null
+          id: number
+          mes?: number | null
+          pvp?: number | null
+          semana?: number | null
+          subfamilia?: string | null
+          unidades?: number | null
+        }
+        Update: {
+          articulo?: string | null
+          base?: number | null
+          canal?: string | null
+          cantidad?: number | null
+          centro?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          factor?: number | null
+          familia?: string | null
+          fecha?: string | null
+          id?: number
+          mes?: number | null
+          pvp?: number | null
+          semana?: number | null
+          subfamilia?: string | null
+          unidades?: number | null
+        }
+        Relationships: []
+      }
+      ingresos_historico: {
+        Row: {
+          articulo: string | null
+          base: number | null
+          canal: string | null
+          cantidad: number | null
+          centro: string | null
+          created_at: string | null
+          descripcion: string | null
+          factor: number | null
+          familia: string | null
+          fecha: string | null
+          id: number
+          mes: number | null
+          pvp: number | null
+          semana: number | null
+          subfamilia: string | null
+          unidades: number | null
+        }
+        Insert: {
+          articulo?: string | null
+          base?: number | null
+          canal?: string | null
+          cantidad?: number | null
+          centro?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          factor?: number | null
+          familia?: string | null
+          fecha?: string | null
+          id: number
+          mes?: number | null
+          pvp?: number | null
+          semana?: number | null
+          subfamilia?: string | null
+          unidades?: number | null
+        }
+        Update: {
+          articulo?: string | null
+          base?: number | null
+          canal?: string | null
+          cantidad?: number | null
+          centro?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          factor?: number | null
+          familia?: string | null
+          fecha?: string | null
+          id?: number
+          mes?: number | null
+          pvp?: number | null
+          semana?: number | null
+          subfamilia?: string | null
+          unidades?: number | null
+        }
+        Relationships: []
+      }
+      inventarios: {
+        Row: {
+          centro: string
+          coste_unitario: number | null
+          created_at: string | null
+          fecha_cierre: string
+          id: number
+          id_prod: string
+          num_compras: number | null
+          unidades: number
+          updated_at: string | null
+          valor: number | null
+        }
+        Insert: {
+          centro: string
+          coste_unitario?: number | null
+          created_at?: string | null
+          fecha_cierre: string
+          id?: number
+          id_prod: string
+          num_compras?: number | null
+          unidades?: number
+          updated_at?: string | null
+          valor?: number | null
+        }
+        Update: {
+          centro?: string
+          coste_unitario?: number | null
+          created_at?: string | null
+          fecha_cierre?: string
+          id?: number
+          id_prod?: string
+          num_compras?: number | null
+          unidades?: number
+          updated_at?: string | null
+          valor?: number | null
+        }
+        Relationships: []
+      }
       mant_partes: {
         Row: {
           asignado: string | null
@@ -4619,6 +5557,49 @@ export type Database = {
           nombre?: string
         }
         Relationships: []
+      }
+      modulos_concedidos: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          modulo_id: string
+          perfil_id: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id: string
+          modulo_id: string
+          perfil_id: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          modulo_id?: string
+          perfil_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modulos_concedidos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modulos_concedidos_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modulos_concedidos_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       modulos_contratados: {
         Row: {
@@ -4699,6 +5680,132 @@ export type Database = {
           },
         ]
       }
+      nominas: {
+        Row: {
+          anio: number | null
+          anticipo: number | null
+          anticipo_autonomo: number | null
+          anticipo_manutencion: number | null
+          canal: string | null
+          categoria: string | null
+          codigo_depto: string | null
+          concepto: string | null
+          coste_ss: number | null
+          coste_total: number | null
+          created_at: string | null
+          cuota_obrera: number | null
+          depto: string | null
+          dias: number | null
+          dni: string | null
+          embargos: number | null
+          horas: number | null
+          horas_extra: number | null
+          id: number
+          irpf: number | null
+          liquido: number | null
+          mes: number | null
+          nombre: string | null
+          sueldo: number | null
+          total_devengado: number | null
+        }
+        Insert: {
+          anio?: number | null
+          anticipo?: number | null
+          anticipo_autonomo?: number | null
+          anticipo_manutencion?: number | null
+          canal?: string | null
+          categoria?: string | null
+          codigo_depto?: string | null
+          concepto?: string | null
+          coste_ss?: number | null
+          coste_total?: number | null
+          created_at?: string | null
+          cuota_obrera?: number | null
+          depto?: string | null
+          dias?: number | null
+          dni?: string | null
+          embargos?: number | null
+          horas?: number | null
+          horas_extra?: number | null
+          id: number
+          irpf?: number | null
+          liquido?: number | null
+          mes?: number | null
+          nombre?: string | null
+          sueldo?: number | null
+          total_devengado?: number | null
+        }
+        Update: {
+          anio?: number | null
+          anticipo?: number | null
+          anticipo_autonomo?: number | null
+          anticipo_manutencion?: number | null
+          canal?: string | null
+          categoria?: string | null
+          codigo_depto?: string | null
+          concepto?: string | null
+          coste_ss?: number | null
+          coste_total?: number | null
+          created_at?: string | null
+          cuota_obrera?: number | null
+          depto?: string | null
+          dias?: number | null
+          dni?: string | null
+          embargos?: number | null
+          horas?: number | null
+          horas_extra?: number | null
+          id?: number
+          irpf?: number | null
+          liquido?: number | null
+          mes?: number | null
+          nombre?: string | null
+          sueldo?: number | null
+          total_devengado?: number | null
+        }
+        Relationships: []
+      }
+      nominas_reparto: {
+        Row: {
+          centro: string
+          dni: string
+          id: number
+          nombre: string | null
+          porcentaje: number
+        }
+        Insert: {
+          centro: string
+          dni: string
+          id?: never
+          nombre?: string | null
+          porcentaje?: number
+        }
+        Update: {
+          centro?: string
+          dni?: string
+          id?: never
+          nombre?: string | null
+          porcentaje?: number
+        }
+        Relationships: []
+      }
+      nominas_reparto_horas: {
+        Row: {
+          dni: string
+          id: number
+          nombre: string | null
+        }
+        Insert: {
+          dni: string
+          id?: never
+          nombre?: string | null
+        }
+        Update: {
+          dni?: string
+          id?: never
+          nombre?: string | null
+        }
+        Relationships: []
+      }
       operadores: {
         Row: {
           correo: string
@@ -4770,6 +5877,177 @@ export type Database = {
           actualizado_en?: string
           clave?: string
           valor?: Json
+        }
+        Relationships: []
+      }
+      presupuesto: {
+        Row: {
+          centro: string | null
+          created_at: string | null
+          familia: string | null
+          fecha: string | null
+          id: number
+          importe: number | null
+          mes: number | null
+          semana: number | null
+        }
+        Insert: {
+          centro?: string | null
+          created_at?: string | null
+          familia?: string | null
+          fecha?: string | null
+          id: number
+          importe?: number | null
+          mes?: number | null
+          semana?: number | null
+        }
+        Update: {
+          centro?: string | null
+          created_at?: string | null
+          familia?: string | null
+          fecha?: string | null
+          id?: number
+          importe?: number | null
+          mes?: number | null
+          semana?: number | null
+        }
+        Relationships: []
+      }
+      presupuesto_nominas: {
+        Row: {
+          canal: string | null
+          created_at: string | null
+          depto: string | null
+          id: number
+          importe: number | null
+          mes: number | null
+        }
+        Insert: {
+          canal?: string | null
+          created_at?: string | null
+          depto?: string | null
+          id: number
+          importe?: number | null
+          mes?: number | null
+        }
+        Update: {
+          canal?: string | null
+          created_at?: string | null
+          depto?: string | null
+          id?: number
+          importe?: number | null
+          mes?: number | null
+        }
+        Relationships: []
+      }
+      productos_agora: {
+        Row: {
+          factor: number | null
+          familia: string | null
+          id_prod: string
+          producto: string | null
+          subfamilia: string | null
+        }
+        Insert: {
+          factor?: number | null
+          familia?: string | null
+          id_prod: string
+          producto?: string | null
+          subfamilia?: string | null
+        }
+        Update: {
+          factor?: number | null
+          familia?: string | null
+          id_prod?: string
+          producto?: string | null
+          subfamilia?: string | null
+        }
+        Relationships: []
+      }
+      productos_controlados: {
+        Row: {
+          activo: boolean | null
+          bloque: string | null
+          centro: string
+          created_at: string | null
+          familia: string | null
+          id_prod: string
+          nombre: string | null
+          subfamilia: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          bloque?: string | null
+          centro: string
+          created_at?: string | null
+          familia?: string | null
+          id_prod: string
+          nombre?: string | null
+          subfamilia?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          bloque?: string | null
+          centro?: string
+          created_at?: string | null
+          familia?: string | null
+          id_prod?: string
+          nombre?: string | null
+          subfamilia?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      productos_dijit: {
+        Row: {
+          descripcion: string | null
+          factor: number | null
+          familia: string | null
+          id_interno: string
+          origen: string | null
+          subfamilia: string | null
+          unidades: string | null
+        }
+        Insert: {
+          descripcion?: string | null
+          factor?: number | null
+          familia?: string | null
+          id_interno: string
+          origen?: string | null
+          subfamilia?: string | null
+          unidades?: string | null
+        }
+        Update: {
+          descripcion?: string | null
+          factor?: number | null
+          familia?: string | null
+          id_interno?: string
+          origen?: string | null
+          subfamilia?: string | null
+          unidades?: string | null
+        }
+        Relationships: []
+      }
+      ratios_objetivo: {
+        Row: {
+          created_at: string | null
+          familia: string
+          ratio: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          familia: string
+          ratio: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          familia?: string
+          ratio?: number
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -5362,6 +6640,45 @@ export type Database = {
           },
         ]
       }
+      rrhh: {
+        Row: {
+          anio: number | null
+          centro: string | null
+          contrato: number | null
+          dni: string | null
+          fecha: string | null
+          horas_reales: number | null
+          id: number
+          persona: string | null
+          puesto: string | null
+          semana: number | null
+        }
+        Insert: {
+          anio?: number | null
+          centro?: string | null
+          contrato?: number | null
+          dni?: string | null
+          fecha?: string | null
+          horas_reales?: number | null
+          id?: number
+          persona?: string | null
+          puesto?: string | null
+          semana?: number | null
+        }
+        Update: {
+          anio?: number | null
+          centro?: string | null
+          contrato?: number | null
+          dni?: string | null
+          fecha?: string | null
+          horas_reales?: number | null
+          id?: number
+          persona?: string | null
+          puesto?: string | null
+          semana?: number | null
+        }
+        Relationships: []
+      }
       rrhh_asignaciones: {
         Row: {
           centro_id: string
@@ -5645,6 +6962,27 @@ export type Database = {
           },
         ]
       }
+      rrhh_excepciones: {
+        Row: {
+          activo: boolean | null
+          dni: string | null
+          id: number
+          persona: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          dni?: string | null
+          id?: number
+          persona?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          dni?: string | null
+          id?: number
+          persona?: string | null
+        }
+        Relationships: []
+      }
       rrhh_fichajes: {
         Row: {
           centro_id: string
@@ -5775,6 +7113,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rrhh_puestos: {
+        Row: {
+          departamento: string | null
+          id: number
+          puesto: string | null
+        }
+        Insert: {
+          departamento?: string | null
+          id?: number
+          puesto?: string | null
+        }
+        Update: {
+          departamento?: string | null
+          id?: number
+          puesto?: string | null
+        }
+        Relationships: []
       }
       rrhh_tipos_ausencia: {
         Row: {
@@ -5963,6 +7319,38 @@ export type Database = {
           },
         ]
       }
+      subfamilias: {
+        Row: {
+          created_at: string | null
+          familia_id: number | null
+          id: number
+          nombre: string
+          orden: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          familia_id?: number | null
+          id?: number
+          nombre: string
+          orden?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          familia_id?: number | null
+          id?: number
+          nombre?: string
+          orden?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subfamilias_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supresiones: {
         Row: {
           canal: string
@@ -6017,6 +7405,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      visitas: {
+        Row: {
+          anio: number | null
+          canal: string | null
+          created_at: string | null
+          dia_semana: number | null
+          entradas: number | null
+          evento: string | null
+          fecha: string | null
+          id: number
+          idioma: string | null
+          mes: number | null
+          semana: number | null
+          tipo: string | null
+        }
+        Insert: {
+          anio?: number | null
+          canal?: string | null
+          created_at?: string | null
+          dia_semana?: number | null
+          entradas?: number | null
+          evento?: string | null
+          fecha?: string | null
+          id: number
+          idioma?: string | null
+          mes?: number | null
+          semana?: number | null
+          tipo?: string | null
+        }
+        Update: {
+          anio?: number | null
+          canal?: string | null
+          created_at?: string | null
+          dia_semana?: number | null
+          entradas?: number | null
+          evento?: string | null
+          fecha?: string | null
+          id?: number
+          idioma?: string | null
+          mes?: number | null
+          semana?: number | null
+          tipo?: string | null
+        }
+        Relationships: []
       }
       visitas_bonos: {
         Row: {
@@ -6375,6 +7808,210 @@ export type Database = {
           },
         ]
       }
+      compras_a3_cabecera: {
+        Row: {
+          a3_exportado_at: string | null
+          base_factura: number | null
+          cabcodpro: string | null
+          cabfecha: string | null
+          cabfechacontable: string | null
+          cabnumdoc: number | null
+          cabreferencia: string | null
+          canal_efectivo: string | null
+          capporirpf: number | null
+          captipoirpf: string | null
+          centro_coste_defecto: number | null
+          cuenta_gasto_defecto: string | null
+          cuenta_proveedor: string | null
+          desglose_cuadra: boolean | null
+          doc_id: string | null
+          estado: string | null
+          importes_cuadran: boolean | null
+          iva_factura: number | null
+          proveedor_nombre: string | null
+          retencion: number | null
+          retencion_base: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
+      compras_a3_export_preview: {
+        Row: {
+          a3_exportado_at: string | null
+          base_factura: number | null
+          bloqueos: string[] | null
+          cabcodpro: string | null
+          cabfecha: string | null
+          cabfechacontable: string | null
+          cabnumdoc: number | null
+          cabreferencia: string | null
+          capporirpf: number | null
+          captipoirpf: string | null
+          doc_id: string | null
+          lincentrocoste: number | null
+          linctacon: string | null
+          lindesclin: string | null
+          linprcmoneda: number | null
+          lintipiva: string | null
+          orden: number | null
+          proveedor_nombre: string | null
+          reparto_explicito: boolean | null
+          retencion: number | null
+          retencion_base: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
+      compras_a3_lineas: {
+        Row: {
+          doc_id: string | null
+          lincentrocoste: number | null
+          linctacon: string | null
+          lindesclin: string | null
+          linprcmoneda: number | null
+          lintipiva: string | null
+          orden: number | null
+          reparto_explicito: boolean | null
+        }
+        Relationships: []
+      }
+      compras_albaran_paginas: {
+        Row: {
+          dias_de_diferencia: number | null
+          documentos: number | null
+          fecha_max: string | null
+          fecha_min: string | null
+          ids: string[] | null
+          num_norm: string | null
+          paginas_declaradas: number | null
+          paginas_leidas: number[] | null
+          proveedor: string | null
+          proveedor_id: string | null
+          suma_totales: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_doc_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "compras_proveedor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_conciliacion_correo: {
+        Row: {
+          adj_aceptados: number | null
+          adj_descartados: number | null
+          adj_detectados: number | null
+          adj_en_cola: number | null
+          adj_error: number | null
+          adj_guardados: number | null
+          adj_procesados: number | null
+          asunto: string | null
+          carpeta: string | null
+          diagnostico: string | null
+          documentos: number | null
+          estado_correo: string | null
+          fecha_correo: string | null
+          id: number | null
+          remitente: string | null
+        }
+        Relationships: []
+      }
+      compras_doc_reparto_cuadre: {
+        Row: {
+          base_factura: number | null
+          base_reparto: number | null
+          cuadra: boolean | null
+          diferencia: number | null
+          doc_id: string | null
+          n_lineas: number | null
+        }
+        Relationships: []
+      }
+      compras_factura_centros: {
+        Row: {
+          centros: string | null
+          doc_id: string | null
+          n_centros: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_doc_reparto_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_doc_reparto_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
+          },
+        ]
+      }
+      compras_producto_duplicados: {
+        Row: {
+          albaranes_a: number | null
+          albaranes_b: number | null
+          cod_a: string | null
+          cod_b: string | null
+          id_muere: string | null
+          id_vive: string | null
+          lineas_a: number | null
+          lineas_b: number | null
+          motivo: string | null
+          nivel: string | null
+          nombre_a: string | null
+          nombre_b: string | null
+          precio_a: number | null
+          precio_b: number | null
+          proveedor: string | null
+          ref_a: string | null
+          ref_b: string | null
+          ultima_a: string | null
+          ultima_b: string | null
+        }
+        Relationships: []
+      }
+      compras_proveedor_duplicados: {
+        Row: {
+          cif_ok_a: boolean | null
+          cif_ok_b: boolean | null
+          docs_a: number | null
+          docs_b: number | null
+          id_muere: string | null
+          id_vive: string | null
+          motivo: string | null
+          muestra_a: string | null
+          muestra_b: string | null
+          nif_a: string | null
+          nif_b: string | null
+          nivel: string | null
+          nombre_a: string | null
+          nombre_b: string | null
+          prods_a: number | null
+          prods_b: number | null
+        }
+        Relationships: []
+      }
       curso_dni_pendiente_purga: {
         Row: {
           con_dni_vivo: number | null
@@ -6384,28 +8021,117 @@ export type Database = {
         }
         Relationships: []
       }
+      gastos: {
+        Row: {
+          base: number | null
+          cantidad: number | null
+          centro: string | null
+          created_at: string | null
+          factor: number | null
+          familia: string | null
+          fecha: string | null
+          id: number | null
+          id_prod: string | null
+          mes: number | null
+          origen: string | null
+          producto: string | null
+          proveedor: string | null
+          semana: number | null
+          subfamilia: string | null
+          total: number | null
+          unidad: string | null
+          unidades: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      buscar_cuenta_a3: {
-        Args: { p_cuenta_id: string; p_nif: string; p_nombre: string }
+      aplicar_reparto_cups: {
+        Args: { p_doc?: string }
         Returns: {
-          contrapartida: string
-          cuenta: string
-          nombre: string
-          via: string
+          centros: number
+          cups: string
+          detalle: string
+          num_documento: string
         }[]
       }
+      borrar_producto: { Args: { p_id: string }; Returns: Json }
+      buscar_albaran_hermano: {
+        Args: { p_num: string; p_proveedor: string }
+        Returns: {
+          base: number
+          doc_id: string
+          fecha: string
+          iva: number
+          pagina: number
+          paginas: number
+          paginas_vistas: number[]
+          total: number
+        }[]
+      }
+      buscar_cuenta_a3:
+        | {
+            Args: { p_cuenta_id: string; p_nif: string; p_nombre: string }
+            Returns: {
+              contrapartida: string
+              cuenta: string
+              nombre: string
+              via: string
+            }[]
+          }
+        | {
+            Args: { p_nif: string; p_nombre: string }
+            Returns: {
+              codigo: string
+              contrapartida: string
+              cuenta: string
+              nombre: string
+              via: string
+            }[]
+          }
+      canal_canonico: { Args: { p: string }; Returns: string }
+      cif_valido: { Args: { p_cif: string }; Returns: boolean }
+      clave_producto: { Args: { t: string }; Returns: string }
       cliente_apto_email: { Args: { p_cliente_id: string }; Returns: boolean }
+      cod_iva_de_pct: { Args: { p_pct: number }; Returns: string }
       compras_next_codigo: { Args: never; Returns: string }
       cuenta_actual: { Args: never; Returns: string }
+      cups_reparto: {
+        Args: { p_cups: string; p_fecha: string }
+        Returns: {
+          canal: string
+          pct: number
+        }[]
+      }
       curso_purgar_dni: {
         Args: { p_anios?: number }
         Returns: {
           purgadas: number
         }[]
       }
+      daitch_mokotoff: { Args: { "": string }; Returns: string[] }
+      dmetaphone: { Args: { "": string }; Returns: string }
+      dmetaphone_alt: { Args: { "": string }; Returns: string }
       es_direccion: { Args: never; Returns: boolean }
       es_operador: { Args: never; Returns: boolean }
+      exportar_a3: {
+        Args: { p_confirmar?: boolean; p_desde: string; p_hasta: string }
+        Returns: {
+          cabcodpro: string
+          cabfecha: string
+          cabfechacontable: string
+          cabnumdoc: number
+          cabreferencia: string
+          capporirpf: number
+          captipoirpf: string
+          lincentrocoste: number
+          linctacon: string
+          lindesclin: string
+          linprcmoneda: number
+          lintipiva: string
+          proveedor_nombre: string
+        }[]
+      }
       fin_anular_factura: {
         Args: { p_factura_id: string; p_motivo: string }
         Returns: Json
@@ -6465,14 +8191,89 @@ export type Database = {
         Returns: string
       }
       fin_vf_url_encode: { Args: { p_valor: string }; Returns: string }
+      fusionar_paginas_sueltas: {
+        Args: { p_aplicar?: boolean; p_proveedor: string }
+        Returns: {
+          accion: string
+          detalle: string
+          num_norm: string
+          se_absorbe: string
+          se_conserva: string
+        }[]
+      }
+      fusionar_producto: {
+        Args: { p_forzar?: boolean; p_muere: string; p_vive: string }
+        Returns: Json
+      }
+      fusionar_productos_duplicados: {
+        Args: { p_dry_run?: boolean }
+        Returns: {
+          absorbidos: string
+          lineas_movidas: number
+          nombre: string
+          proveedor: string
+          sobrevive: string
+        }[]
+      }
+      fusionar_productos_por_clave: {
+        Args: { p_dry_run?: boolean }
+        Returns: {
+          absorbidos: string
+          lineas_movidas: number
+          nombre_final: string
+          proveedor: string
+          sobrevive: string
+        }[]
+      }
+      fusionar_proveedor: {
+        Args: {
+          p_contrapartida?: string
+          p_cuenta?: string
+          p_muere: string
+          p_nif_final?: string
+          p_vive: string
+        }
+        Returns: Json
+      }
+      irpf_modelo_de_pct: { Args: { p_pct: number }; Returns: string }
+      irpf_pct_de_documento: {
+        Args: { p_base: number; p_ret: number; p_ret_base: number }
+        Returns: number
+      }
+      limpia_desc_producto: { Args: { t: string }; Returns: string }
+      mapa_centro: { Args: { v: string }; Returns: string }
       mi_empleado_id: { Args: never; Returns: string }
+      nombre_de_codigo_a3: { Args: { p_codigo: string }; Returns: string }
+      norm_desc_interna: { Args: { p: string }; Returns: string }
       norm_email: { Args: { t: string }; Returns: string }
       norm_nif: { Args: { t: string }; Returns: string }
       norm_nom: { Args: { t: string }; Returns: string }
+      norm_nom_compacto: { Args: { t: string }; Returns: string }
       norm_telefono: { Args: { t: string }; Returns: string }
       perfil_es_de_cuenta: {
         Args: { p_cuenta: string; p_perfil: string }
         Returns: boolean
+      }
+      puntua_nombre: {
+        Args: { p_nombre: string; p_prov: string }
+        Returns: number
+      }
+      recalcular_estado_facturas: {
+        Args: never
+        Returns: {
+          estado_ahora: string
+          estado_antes: string
+          motivo: string
+          num_documento: string
+        }[]
+      }
+      regenerar_reparto_iva: {
+        Args: { p_doc?: string }
+        Returns: {
+          base_repartida: number
+          lineas: number
+          num_documento: string
+        }[]
       }
       reservas_apuntar_lista_espera: {
         Args: {
@@ -6556,6 +8357,16 @@ export type Database = {
         Returns: number
       }
       rrhh_plantilla_centro: { Args: { p_centro_id: string }; Returns: number }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      soundex: { Args: { "": string }; Returns: string }
+      terminal_canal: { Args: { p_codigo: string }; Returns: string }
+      text_soundex: { Args: { "": string }; Returns: string }
+      tipo_iva_de: {
+        Args: { p_base: number; p_cuota: number }
+        Returns: string
+      }
+      truncate_table: { Args: { table_name: string }; Returns: undefined }
       vincular_mi_empleado: { Args: never; Returns: string }
       visitas_cancelar_reserva: {
         Args: { p_codigo_reserva: string }

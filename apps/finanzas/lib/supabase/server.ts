@@ -73,7 +73,7 @@ export const ACCESO_POR_ROL: Record<string, string[] | null> = {
 export async function exigirModulo(moduloId: string) {
   const { supabase, perfil, cuenta } = await exigirPerfil();
 
-  const [{ data: contratacion }, { data: veto }] = await Promise.all([
+  const [{ data: contratacion }, { data: veto }, { data: concesion }] = await Promise.all([
     supabase
       .from("modulos_contratados")
       .select("activo")
@@ -89,12 +89,20 @@ export async function exigirModulo(moduloId: string) {
       .eq("perfil_id", perfil.id)
       .eq("modulo_id", moduloId)
       .maybeSingle(),
+    // La concesión suma por encima del rol (rejilla de Usuarios); el veto
+    // manda sobre las dos cosas.
+    supabase
+      .from("modulos_concedidos")
+      .select("modulo_id")
+      .eq("perfil_id", perfil.id)
+      .eq("modulo_id", moduloId)
+      .maybeSingle(),
   ]);
 
   const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
   const conAcceso =
     contratacion?.activo === true &&
-    (permitidos === null || permitidos.includes(moduloId)) &&
+    (permitidos === null || permitidos.includes(moduloId) || !!concesion) &&
     !veto;
 
   if (!conAcceso) notFound();

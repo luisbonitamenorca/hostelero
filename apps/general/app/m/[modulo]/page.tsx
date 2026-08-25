@@ -13,7 +13,7 @@ export default async function PaginaModulo({
   const { modulo } = await params;
   const { supabase, perfil, cuenta } = await exigirPerfil();
 
-  const [{ data: definicion }, { data: contratacion }, { data: veto }] = await Promise.all([
+  const [{ data: definicion }, { data: contratacion }, { data: veto }, { data: concesion }] = await Promise.all([
     supabase.from("modulos").select("id, nombre, area").eq("id", modulo).maybeSingle(),
     supabase
       .from("modulos_contratados")
@@ -27,13 +27,20 @@ export default async function PaginaModulo({
       .eq("perfil_id", perfil.id)
       .eq("modulo_id", modulo)
       .maybeSingle(),
+    // La concesión suma por encima del rol; el veto manda sobre las dos cosas.
+    supabase
+      .from("modulos_concedidos")
+      .select("modulo_id")
+      .eq("perfil_id", perfil.id)
+      .eq("modulo_id", modulo)
+      .maybeSingle(),
   ]);
 
   const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
   const conAcceso =
     definicion &&
     contratacion?.activo === true &&
-    (permitidos === null || permitidos.includes(modulo)) &&
+    (permitidos === null || permitidos.includes(modulo) || !!concesion) &&
     !veto;
 
   if (!conAcceso) notFound();

@@ -100,6 +100,33 @@ export async function cambiarVeto(formData: FormData) {
   redirect("/usuarios");
 }
 
+export async function cambiarConcesion(formData: FormData) {
+  const { supabase, cuenta } = await exigirDireccion();
+
+  const perfilId = String(formData.get("perfil") ?? "");
+  const moduloId = String(formData.get("modulo") ?? "");
+  const conceder = formData.get("conceder") === "si";
+
+  // Con el cliente de SESIÓN a propósito, como el veto: la RLS de
+  // modulos_concedidos vuelve a comprobar dirección + misma cuenta.
+  if (conceder) {
+    await supabase.from("modulos_concedidos").insert({
+      cuenta_id: cuenta.id,
+      perfil_id: perfilId,
+      modulo_id: moduloId,
+    });
+  } else {
+    await supabase
+      .from("modulos_concedidos")
+      .delete()
+      .eq("perfil_id", perfilId)
+      .eq("modulo_id", moduloId);
+  }
+
+  revalidatePath("/usuarios");
+  redirect("/usuarios");
+}
+
 export async function cambiarRol(formData: FormData) {
   const { perfil, cuenta } = await exigirDireccion();
 
@@ -127,11 +154,12 @@ export async function cambiarRol(formData: FormData) {
 
   if (objetivo.rol !== rol) {
     await servicio.from("perfiles").update({ rol }).eq("id", perfilId);
-    // Un rol nuevo arranca con sus permisos por defecto: los vetos eran
-    // ajustes sobre el rol ANTERIOR y arrastrarlos deja al usuario con una
-    // mezcla que no responde a ninguna decisión. Se limpian todos y los
-    // extras del rol nuevo se vetan a mano después (pedido de Luis, 25-08).
+    // Un rol nuevo arranca con sus permisos por defecto: vetos y concesiones
+    // eran ajustes sobre el rol ANTERIOR y arrastrarlos deja al usuario con
+    // una mezcla que no responde a ninguna decisión. Se limpian todos y los
+    // extras del rol nuevo se ajustan a mano después (pedido de Luis, 25-08).
     await servicio.from("modulos_vetados").delete().eq("perfil_id", perfilId);
+    await servicio.from("modulos_concedidos").delete().eq("perfil_id", perfilId);
   }
 
   revalidatePath("/usuarios");

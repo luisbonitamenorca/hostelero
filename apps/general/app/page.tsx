@@ -38,7 +38,7 @@ export default async function Portada() {
     );
   }
 
-  const [{ data: contratados, error }, { data: modulos }, { data: vetos }] = await Promise.all([
+  const [{ data: contratados, error }, { data: modulos }, { data: vetos }, { data: concesiones }] = await Promise.all([
     supabase
       .from("modulos_contratados")
       .select("modulo_id, activo")
@@ -47,16 +47,19 @@ export default async function Portada() {
     supabase.from("modulos").select("id, nombre, area, madurez").order("id"),
     // Vetos por usuario (modulo Usuarios): restan sobre lo que el rol permite.
     supabase.from("modulos_vetados").select("modulo_id").eq("perfil_id", perfil.id),
+    // Concesiones: suman un módulo concreto por encima del rol. El veto manda.
+    supabase.from("modulos_concedidos").select("modulo_id").eq("perfil_id", perfil.id),
   ]);
 
   const idsContratados = new Set((contratados ?? []).map((m) => m.modulo_id));
   const idsVetados = new Set((vetos ?? []).map((v) => v.modulo_id));
+  const idsConcedidos = new Set((concesiones ?? []).map((c) => c.modulo_id));
   const permitidos = ACCESO_POR_ROL[perfil.rol] ?? null;
 
   const visibles = (modulos ?? []).filter(
     (m) =>
       idsContratados.has(m.id) &&
-      (permitidos === null || permitidos.includes(m.id)) &&
+      (permitidos === null || permitidos.includes(m.id) || idsConcedidos.has(m.id)) &&
       !idsVetados.has(m.id)
   );
 

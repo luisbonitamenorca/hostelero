@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirModulo, ACCESO_POR_ROL } from "@/lib/supabase/server";
-import { crearUsuario, cambiarVeto } from "./acciones";
+import { crearUsuario, cambiarVeto, cambiarConcesion } from "./acciones";
 import FilaAcciones from "./fila-acciones";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export default async function Usuarios({
   // por defecto. Otros roles ni siquiera lo ven en la portada.
   if (perfil.rol !== "direccion") redirect("/no-autorizado");
 
-  const [{ data: gente }, { data: contratados }, { data: modulos }, { data: vetos }] =
+  const [{ data: gente }, { data: contratados }, { data: modulos }, { data: vetos }, { data: concesiones }] =
     await Promise.all([
       supabase
         .from("perfiles")
@@ -51,11 +51,13 @@ export default async function Usuarios({
         .eq("activo", true),
       supabase.from("modulos").select("id, nombre, area").order("area"),
       supabase.from("modulos_vetados").select("perfil_id, modulo_id").eq("cuenta_id", cuenta.id),
+      supabase.from("modulos_concedidos").select("perfil_id, modulo_id").eq("cuenta_id", cuenta.id),
     ]);
 
   const idsContratados = new Set((contratados ?? []).map((c) => c.modulo_id));
   const modulosDeLaCuenta = (modulos ?? []).filter((m) => idsContratados.has(m.id));
   const vetado = new Set((vetos ?? []).map((v) => `${v.perfil_id}|${v.modulo_id}`));
+  const concedido = new Set((concesiones ?? []).map((c) => `${c.perfil_id}|${c.modulo_id}`));
 
   return (
     <>
@@ -128,9 +130,10 @@ export default async function Usuarios({
         <section>
           <h2 className="rotulo">Quién ve qué</h2>
           <p style={{ color: "var(--gris, #5F6B65)", fontSize: 13, margin: "0 0 12px" }}>
-            El rol marca el máximo; aquí se quita lo que alguien no deba ver. Verde = lo ve;
-            pulsa para vetarlo (y al revés). Un guion apagado = el rol ya no lo incluye, no
-            hay nada que vetar. Los cambios valen desde su siguiente carga de página.
+            El rol es la base; aquí se afina persona a persona. Verde = lo ve (pulsa para
+            vetarlo, y al revés). Guion apagado = el rol no lo incluye: pulsa para concedérselo
+            como extra, y el ✓ con borde discontinuo marca ese extra. Los cambios valen desde
+            su siguiente carga de página.
           </p>
           <div className="tabla-envoltura" style={{ background: "#fff", border: "1px solid #DDE2DF", borderRadius: 8, overflowX: "auto" }}>
             <table className="tabla" style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
@@ -163,24 +166,37 @@ export default async function Usuarios({
                     </td>
                     {modulosDeLaCuenta.map((m) => {
                       const estaVetado = vetado.has(`${g.id}|${m.id}`);
-                      // El rol es el tope: lo que queda fuera se pinta apagado
-                      // y sin botón. Antes salía en verde y parecía que el
-                      // usuario lo veía, cuando las puertas ya lo bloqueaban.
+                      // El rol es el tope de serie; fuera de él la celda es
+                      // una CONCESIÓN: guion apagado = no lo ve (pulsar para
+                      // concederlo como extra), ✓ con borde discontinuo = extra
+                      // concedido (pulsar para quitarlo).
                       const delRol = ACCESO_POR_ROL[g.rol ?? "empleado"] ?? null;
                       if (delRol !== null && !delRol.includes(m.id)) {
+                        const tieneExtra = concedido.has(`${g.id}|${m.id}`);
                         return (
                           <td key={m.id} style={{ padding: "6px 4px", textAlign: "center" }}>
-                            <span
-                              title={`El rol de ${g.nombre} no incluye este módulo`}
-                              style={{
-                                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                width: 30, height: 30, borderRadius: 6,
-                                border: "1px dashed #DDE2DF", color: "#B8C2BC",
-                                fontSize: 14, userSelect: "none",
-                              }}
-                            >
-                              –
-                            </span>
+                            <form action={cambiarConcesion}>
+                              <input type="hidden" name="perfil" value={g.id} />
+                              <input type="hidden" name="modulo" value={m.id} />
+                              <input type="hidden" name="conceder" value={tieneExtra ? "no" : "si"} />
+                              <button
+                                type="submit"
+                                title={
+                                  tieneExtra
+                                    ? `Extra concedido por encima del rol — pulsar para quitárselo a ${g.nombre}`
+                                    : `El rol de ${g.nombre} no lo incluye — pulsar para concedérselo como extra`
+                                }
+                                style={{
+                                  width: 30, height: 30, borderRadius: 6,
+                                  border: "1px dashed " + (tieneExtra ? "#0F6E56" : "#DDE2DF"),
+                                  cursor: "pointer", fontSize: 14,
+                                  color: tieneExtra ? "inherit" : "#B8C2BC",
+                                  background: tieneExtra ? "#E1F5EE" : "transparent",
+                                }}
+                              >
+                                {tieneExtra ? "✓" : "–"}
+                              </button>
+                            </form>
                           </td>
                         );
                       }
@@ -211,9 +227,9 @@ export default async function Usuarios({
             </table>
           </div>
           <p style={{ color: "var(--gris, #5F6B65)", fontSize: 13, marginTop: 12 }}>
-            El veto manda sobre el rol, pero no lo amplía: vetar no da acceso a nada, y un
-            módulo que el rol no permite sigue sin verse aunque no tenga veto. Las bajas de
-            usuarios, de momento, pídemelas.
+            El veto siempre manda: un módulo vetado no se ve aunque esté concedido. Al
+            cambiar a alguien de rol, vetos y concesiones se limpian y arranca con los
+            permisos por defecto del rol nuevo. Las bajas de usuarios, de momento, pídemelas.
           </p>
         </section>
       </main>
