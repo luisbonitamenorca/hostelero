@@ -119,13 +119,20 @@ export async function cambiarRol(formData: FormData) {
   // un usuario de OTRA cuenta acertando su uuid.
   const { data: objetivo } = await servicio
     .from("perfiles")
-    .select("id")
+    .select("id, rol")
     .eq("id", perfilId)
     .eq("cuenta_id", cuenta.id)
     .maybeSingle();
   if (!objetivo) redirect("/usuarios?error=datos");
 
-  await servicio.from("perfiles").update({ rol }).eq("id", perfilId);
+  if (objetivo.rol !== rol) {
+    await servicio.from("perfiles").update({ rol }).eq("id", perfilId);
+    // Un rol nuevo arranca con sus permisos por defecto: los vetos eran
+    // ajustes sobre el rol ANTERIOR y arrastrarlos deja al usuario con una
+    // mezcla que no responde a ninguna decisión. Se limpian todos y los
+    // extras del rol nuevo se vetan a mano después (pedido de Luis, 25-08).
+    await servicio.from("modulos_vetados").delete().eq("perfil_id", perfilId);
+  }
 
   revalidatePath("/usuarios");
   redirect("/usuarios");
