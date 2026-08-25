@@ -58,10 +58,12 @@ export default function SelectorVista({
           <option value="trimestres">Por trimestres</option>
           <option value="meses">Por meses</option>
           <option value="rango">Entre dos fechas</option>
+          {centros && centros.length > 0 && <option value="centros">Por centros</option>}
         </select>
       </label>
 
-      {centros && centros.length > 0 && (
+      {/* En la vista por centros el filtro sobra: ya salen todos en columnas. */}
+      {centros && centros.length > 0 && vista !== "centros" && (
         <label className="campo">
           <span>Centro</span>
           <select value={sp.centro ?? ""} onChange={(e) => ir({ centro: e.target.value })}>

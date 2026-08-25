@@ -4,7 +4,8 @@
  * El JSON lo genera un paso previo leyendo el Excel de A3 en local (lleva
  * conceptos con nombres reales: JAMÁS entra en este repo, que es público) y
  * tiene esta forma:
- *   [{ a3: 123, fecha: "2026-01-31", concepto: "…", lineas: [["600000000","40","0"], …] }, …]
+ *   [{ a3: 123, fecha: "2026-01-31", concepto: "…", lineas: [["600000000","40","0",6], …] }, …]
+ *   (el 4º elemento de cada línea es el CENTRO DE COSTE de A3, 1-8; 0 o ausente = sin centro)
  *
  * Qué hace: inserta cada asiento como BORRADOR con sus apuntes, resolviendo
  * cada código de cuenta contra fin_plan_cuentas. No confirma nada: la
@@ -28,6 +29,18 @@ import { randomUUID } from "node:crypto";
 const CUENTA_ID = "082c5366-d9ae-49b9-a8b8-8caad73985bd"; // Bonita Menorca
 const SOCIEDAD_ID = "798cf9dc-0146-4a24-94e8-fdb04f93ab70"; // Bonita Menorca, SL
 const CREADO_POR = "632f6d25-e8ea-4f11-8f7b-d406a529df37"; // usuario de Luis
+// Centros de coste: código de A3 → centros.id (verificado 25-08-2026; misma
+// numeración que compras_centro_coste — contabilidad y Compras hablan igual)
+const CENTROS = {
+  1: "0e5c90bd-62e9-4f6f-877e-bb2228f10325", // Estructura
+  2: "a2c6e3e1-c8e0-4c0a-a70f-8c612a3a2d77", // Binifadet Bodega
+  3: "b62bee30-03d3-4f61-9cc7-1c0f5492873b", // Cocina Produccion
+  4: "2c3b1092-bf98-4a59-bdc4-8df06c067a0a", // Binifadet Restaurante
+  5: "1c6593a8-f805-43a5-b920-9bb2d4a93f59", // Binifadet Tienda
+  6: "fb9e4af7-e50d-4617-b5e7-2de795faa894", // Tamarindos Restaurante
+  7: "e89c055e-956d-4eba-a1f3-581dd7740a6f", // Tamarindos Bar
+  8: "c974f3b0-ffbf-45f2-90ae-26745bb2f8f1", // Casa Tirant
+};
 
 // ---------- .env.local ----------
 const env = {};
@@ -195,6 +208,7 @@ const apuntes = asientos.flatMap((a) =>
     cuenta_plan_id: plan.get(l[0]),
     debe: l[1],
     haber: l[2],
+    centro_id: CENTROS[l[3]] ?? null,
   })),
 );
 

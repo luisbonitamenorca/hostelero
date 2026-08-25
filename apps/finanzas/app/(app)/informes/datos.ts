@@ -192,7 +192,7 @@ export async function cargarApuntes(sp: Record<string, string | undefined>) {
   const { supabase } = await exigirModulo("contabilidad");
 
   const anio = Number(sp.anio) || new Date().getFullYear();
-  const vista = (["anual", "trimestres", "meses", "rango"].includes(sp.vista ?? "")
+  const vista = (["anual", "trimestres", "meses", "rango", "centros"].includes(sp.vista ?? "")
     ? sp.vista
     : "anual") as Vista;
   const tramos: Tramo[] = tramosDeVista(anio, vista, { desde: sp.desde, hasta: sp.hasta });
@@ -220,6 +220,9 @@ export async function cargarApuntes(sp: Record<string, string | undefined>) {
     tramos,
     inicioEjercicio,
     apuntes,
+    // Con el centro de cada uno: solo lo consume la vista «por centros» de la
+    // PyG, que necesita repartirlos ella misma en columnas.
+    apuntesConCentro: todos,
     apuntesDelCentro,
     centros: (centros ?? []) as { id: string; nombre: string }[],
     centroPedido,

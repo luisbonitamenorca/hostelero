@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { numero, redondear } from "@/lib/importes";
-import { pygEnColumnas, type BloqueColumnas } from "@/lib/contabilidad";
+import { pygEnColumnas, pygPorCentros, type BloqueColumnas } from "@/lib/contabilidad";
 import { cargarApuntes } from "../datos";
 import SelectorVista from "../selector-vista";
 import DescargarExcel, { type CeldaExcel } from "../descargar-excel";
@@ -99,18 +99,26 @@ export default async function PerdidasYGanancias({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const { anio, vista, tramos, apuntesDelCentro, centros, centroPedido, error, hayApuntes } =
+  const { anio, vista, tramos, apuntesConCentro, apuntesDelCentro, centros, centroPedido, error, hayApuntes } =
     await cargarApuntes(sp);
-  const pyg = pygEnColumnas(apuntesDelCentro, tramos);
-  const nombreCentro = centros.find((c) => c.id === centroPedido)?.nombre;
-  const conTotal = tramos.length > 1;
+  // «Por centros»: las columnas dejan de ser tiempo y pasan a ser centros —
+  // mismo PyGColumnas, así que tabla, totales y Excel valen sin tocar nada.
+  // El filtro de centro no aplica: en esta vista ya salen todos.
+  const porCentros = vista === "centros";
+  const pyg = porCentros
+    ? pygPorCentros(apuntesConCentro, centros, tramos[0].desde, tramos[0].hasta)
+    : pygEnColumnas(apuntesDelCentro, tramos);
+  const columnas = pyg.tramos;
+  const nombreCentro = porCentros ? undefined : centros.find((c) => c.id === centroPedido)?.nombre;
+  const conTotal = columnas.length > 1;
+  const tituloTotal = porCentros ? "Total empresa" : "Total año";
 
   // Las mismas filas de la tabla, en crudo, para el CSV que abre Excel.
   const cabecera: CeldaExcel[] = [
     "Cuenta",
     "Nombre",
-    ...tramos.map((t) => t.titulo),
-    ...(conTotal ? ["Total año"] : []),
+    ...columnas.map((t) => t.titulo),
+    ...(conTotal ? [tituloTotal] : []),
   ];
   const filasExcel: CeldaExcel[][] = [cabecera];
   for (const [titulo, bloques, totales] of [
@@ -136,8 +144,8 @@ export default async function PerdidasYGanancias({
             La columna de marzo es lo que pasó en marzo. */}
         <p className="sub">
           Ejercicio {anio}
-          {vista === "meses" ? " · una columna por mes" : vista === "trimestres" ? " · una columna por trimestre" : ""}
-          {nombreCentro ? ` · ${nombreCentro}` : " · todos los centros"} · importes en euros
+          {vista === "meses" ? " · una columna por mes" : vista === "trimestres" ? " · una columna por trimestre" : porCentros ? " · una columna por centro" : ""}
+          {porCentros ? "" : nombreCentro ? ` · ${nombreCentro}` : " · todos los centros"} · importes en euros
         </p>
       </div>
 
@@ -168,12 +176,12 @@ export default async function PerdidasYGanancias({
               <thead>
                 <tr>
                   <th>Cuenta</th>
-                  {tramos.map((t) => (
+                  {columnas.map((t) => (
                     <th key={t.titulo} className="dato">
                       {t.titulo}
                     </th>
                   ))}
-                  {conTotal && <th className="dato">Total año</th>}
+                  {conTotal && <th className="dato">{tituloTotal}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -216,6 +224,14 @@ export default async function PerdidasYGanancias({
             Agrupado por subgrupo contable, que es como se mira el negocio. No es el
             modelo oficial de cuentas anuales: ese lleva epígrafes normalizados y hace
             falta un mapa cuenta→epígrafe que decide la asesoría.
+            {porCentros && (
+              <>
+                {" "}
+                La columna «Sin centro» recoge lo que no se imputa a ninguno —
+                amortizaciones y financieros, sobre todo —, así que el total
+                empresa sí es el resultado completo.
+              </>
+            )}
             {nombreCentro && (
               <>
                 {" "}

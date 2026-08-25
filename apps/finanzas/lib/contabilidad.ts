@@ -534,9 +534,12 @@ function voltear(iso: string): string {
 /**
  * Vista de un informe: cuántas columnas tiene y qué significa cada una.
  * «anual» es todo el ejercicio junto; «trimestres» y «meses» sacan una columna
- * por tramo; «rango» es una sola columna entre dos fechas.
+ * por tramo; «rango» es una sola columna entre dos fechas. «centros» no parte
+ * el tiempo sino el NEGOCIO: mismo periodo (el ejercicio) en todas las
+ * columnas, una por centro de coste — en tramosDeVista cae en el caso anual a
+ * propósito, porque los datos que necesita son los del año entero.
  */
-export type Vista = "anual" | "trimestres" | "meses" | "rango";
+export type Vista = "anual" | "trimestres" | "meses" | "rango" | "centros";
 
 export type Tramo = { titulo: string; desde: string; hasta: string };
 
@@ -647,6 +650,50 @@ export function pygEnColumnas(apuntes: ApunteInforme[], tramos: Tramo[]): PyGCol
     totalIngresos,
     totalGastos,
     resultado: porTramo.map((p) => p.resultado),
+  };
+}
+
+/** Un apunte de informe que además sabe de qué centro es (o de ninguno). */
+export type ApunteCentrado = ApunteInforme & { centroId: string | null };
+
+/**
+ * PyG con una columna por CENTRO en vez de por tramo: el mismo periodo en
+ * todas, y en cada columna solo los apuntes imputados a ese centro. Los
+ * apuntes sin centro (amortizaciones, financieros…) forman una columna «Sin
+ * centro» al final, para que la suma de columnas siga dando el resultado de
+ * la empresa. Un centro sin movimiento de PyG no saca columna.
+ *
+ * Devuelve PyGColumnas con los centros disfrazados de tramos: así la tabla,
+ * el Excel y los totales de la página valen tal cual, sin otro camino de
+ * render.
+ */
+export function pygPorCentros(
+  apuntes: ApunteCentrado[],
+  centros: { id: string; nombre: string }[],
+  desde: string,
+  hasta: string,
+): PyGColumnas {
+  const esPyG = (a: ApunteInforme) => a.codigo.startsWith("6") || a.codigo.startsWith("7");
+
+  const grupos: { titulo: string; apuntes: ApunteInforme[] }[] = [];
+  for (const c of centros) {
+    const propios = apuntes.filter((a) => a.centroId === c.id);
+    if (propios.some(esPyG)) grupos.push({ titulo: c.nombre, apuntes: propios });
+  }
+  const sueltos = apuntes.filter((a) => a.centroId === null);
+  if (sueltos.some(esPyG)) grupos.push({ titulo: "Sin centro", apuntes: sueltos });
+
+  const porGrupo = grupos.map((g) => perdidasYGanancias(sumasYSaldos(g.apuntes, desde, hasta)));
+  const aBloques = (lado: "ingresos" | "gastos") =>
+    fundir(porGrupo.map((p) => p[lado].map((b) => ({ clave: b.subgrupo, titulo: b.titulo, lineas: b.lineas }))));
+
+  return {
+    tramos: grupos.map((g) => ({ titulo: g.titulo, desde, hasta })),
+    ingresos: aBloques("ingresos"),
+    gastos: aBloques("gastos"),
+    totalIngresos: porGrupo.map((p) => p.totalIngresos),
+    totalGastos: porGrupo.map((p) => p.totalGastos),
+    resultado: porGrupo.map((p) => p.resultado),
   };
 }
 
