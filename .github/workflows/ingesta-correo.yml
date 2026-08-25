@@ -1,0 +1,42 @@
+name: Ingesta de correo
+
+# Vercel en plan Hobby solo permite un cron diario (el de las 05:00 en
+# apps/general/vercel.json queda de red de seguridad). Las pasadas frecuentes
+# se disparan desde aquí, como hacía el repo viejo compras-bonita — cada 15
+# minutos, que en cierre de mes entran 40-50 facturas.
+#
+# La ingesta de la casa exige autenticación: hace falta el secreto de Actions
+# CRON_SECRET con el MISMO valor que la variable CRON_SECRET de Vercel
+# (Settings → Secrets and variables → Actions → New repository secret).
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ingesta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar a /api/compras/ingesta-correo
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Falta el secreto CRON_SECRET en este repositorio (mismo valor que en Vercel)"
+            exit 1
+          fi
+          echo "Llamando a la ingesta..."
+          RESPUESTA=$(curl -sS --max-time 120 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -w "\nHTTP:%{http_code}" \
+            https://hostelero-app.vercel.app/api/compras/ingesta-correo)
+          echo "$RESPUESTA"
+
+          CODIGO=$(echo "$RESPUESTA" | tail -1 | cut -d: -f2)
+          if [ "$CODIGO" != "200" ]; then
+            echo "::error::La ingesta respondió $CODIGO"
+            exit 1
+          fi
+
+          echo "$RESPUESTA" | head -1 >> $GITHUB_STEP_SUMMARY
