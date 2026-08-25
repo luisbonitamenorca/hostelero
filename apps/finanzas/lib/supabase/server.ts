@@ -62,7 +62,7 @@ export const ACCESO_POR_ROL: Record<string, string[] | null> = {
   direccion: null,
   responsable_area: [],
   jefe_sala: [],
-  administracion: ["facturacion", "contabilidad", "bancos", "impuestos", "remesas"],
+  administracion: ["contabilidad", "bancos", "impuestos", "remesas"],
   empleado: [],
 };
 
@@ -107,7 +107,8 @@ export async function exigirModulo(moduloId: string) {
  * sociedad; cuando haya varias, esto pasará a ser una elección del usuario.
  */
 export async function exigirFacturacion() {
-  const ctx = await exigirModulo("facturacion");
+  // Desde el 25-08-2026 facturación vive dentro del módulo contabilidad.
+  const ctx = await exigirModulo("contabilidad");
 
   const { data: sociedad } = await ctx.supabase
     .from("sociedades")

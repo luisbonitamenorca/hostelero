@@ -11,9 +11,9 @@ const grupos = [
   {
     titulo: "Ventas",
     items: [
-      { ruta: "/facturas", nombre: "Facturas emitidas", modulo: "facturacion" },
-      { ruta: "/clientes", nombre: "Clientes", modulo: "facturacion" },
-      { ruta: "/series", nombre: "Series", modulo: "facturacion" },
+      { ruta: "/facturas", nombre: "Facturas emitidas", modulo: "contabilidad" },
+      { ruta: "/clientes", nombre: "Clientes", modulo: "contabilidad" },
+      { ruta: "/series", nombre: "Series", modulo: "contabilidad" },
     ],
   },
   {
@@ -27,14 +27,14 @@ const grupos = [
   },
   {
     titulo: "Cartera",
-    items: [{ ruta: "/cartera", nombre: "Cobros y pagos", modulo: "facturacion" }],
+    items: [{ ruta: "/cartera", nombre: "Cobros y pagos", modulo: "contabilidad" }],
   },
   {
     titulo: "Remesas",
     items: [
-      { ruta: "/remesas", nombre: "Remesas", modulo: "facturacion" },
-      { ruta: "/mandatos", nombre: "Mandatos SEPA", modulo: "facturacion" },
-      { ruta: "/bancos", nombre: "Cuentas bancarias", modulo: "facturacion" },
+      { ruta: "/remesas", nombre: "Remesas", modulo: "contabilidad" },
+      { ruta: "/mandatos", nombre: "Mandatos SEPA", modulo: "contabilidad" },
+      { ruta: "/bancos", nombre: "Cuentas bancarias", modulo: "contabilidad" },
     ],
   },
   {
