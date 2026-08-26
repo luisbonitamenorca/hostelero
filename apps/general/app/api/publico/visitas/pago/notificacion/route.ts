@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { crearClienteServicio } from "@/lib/supabase/servicio";
 import { CUENTA_PUBLICA } from "@/lib/visitas-publico";
 import { configTpv, validarNotificacion } from "@/lib/redsys";
+import { correoConfirmacionVisita } from "@/lib/correo-visitas";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,37 @@ export async function POST(req: Request) {
       .update({ estado: "pagada" })
       .eq("id", pago.reserva_id)
       .eq("estado", "pendiente_pago");
+
+    // Email de confirmación (Resend). Después de responder nada: el banco
+    // espera su OK, así que el envío ocurre aquí pero sin condicionar la
+    // respuesta — si falla o Resend no está configurado, el pago ya es pago.
+    const { data: r } = await sb
+      .from("visitas_reservas")
+      .select(
+        "codigo_reserva, cliente_nombre, cliente_email, num_personas, importe_total, idioma_preferido, visitas_sesiones(fecha, hora_inicio, visitas_productos(nombre_es, nombre_en, nombre_fr))",
+      )
+      .eq("id", pago.reserva_id)
+      .maybeSingle();
+    if (r?.cliente_email) {
+      const ses = r.visitas_sesiones;
+      const prod = ses?.visitas_productos;
+      const idioma = (r.idioma_preferido ?? "es") as "es" | "en" | "fr";
+      const producto =
+        (idioma === "en" ? prod?.nombre_en : idioma === "fr" ? prod?.nombre_fr : prod?.nombre_es) ||
+        prod?.nombre_es ||
+        "Visita";
+      await correoConfirmacionVisita({
+        para: r.cliente_email,
+        nombre: r.cliente_nombre || "",
+        codigo: r.codigo_reserva,
+        producto,
+        fecha: ses?.fecha || "",
+        hora: (ses?.hora_inicio || "").slice(0, 5),
+        personas: r.num_personas,
+        importe: Number(r.importe_total || 0),
+        idioma,
+      });
+    }
   }
 
   return new NextResponse("OK");
