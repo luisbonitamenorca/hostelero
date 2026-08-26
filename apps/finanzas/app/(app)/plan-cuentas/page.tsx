@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { exigirModulo } from "@/lib/supabase/server";
 import { clasificar, NOMBRE_MASA } from "@/lib/contabilidad";
 import Buscador from "../clientes/buscador";
@@ -74,6 +75,7 @@ export default async function PlanCuentas({
                 <th>Nombre</th>
                 <th>Va en</th>
                 <th>Origen</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -87,6 +89,11 @@ export default async function PlanCuentas({
                       {masa === "resultado" ? "Pérdidas y ganancias" : NOMBRE_MASA[masa]}
                     </td>
                     <td className="texto-suave">{c.origen}</td>
+                    <td>
+                      <Link className="boton-secundario" style={{ padding: "3px 10px", fontSize: 12 }} href={`/mayor?cuenta=${c.codigo}`}>
+                        Mayor
+                      </Link>
+                    </td>
                   </tr>
                 );
               })}

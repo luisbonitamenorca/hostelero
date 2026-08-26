@@ -41,6 +41,7 @@ const grupos = [
     titulo: "Contabilidad",
     items: [
       { ruta: "/asientos", nombre: "Diario", modulo: "contabilidad" },
+      { ruta: "/mayor", nombre: "Libro mayor", modulo: "contabilidad" },
       { ruta: "/activos", nombre: "Activos", modulo: "contabilidad" },
       { ruta: "/plan-cuentas", nombre: "Plan de cuentas", modulo: "contabilidad" },
     ],
