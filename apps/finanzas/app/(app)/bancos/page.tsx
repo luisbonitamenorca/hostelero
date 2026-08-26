@@ -46,6 +46,7 @@ export default async function Bancos() {
                     <th>IBAN</th>
                     <th>BIC</th>
                     <th>Estado</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -55,6 +56,11 @@ export default async function Bancos() {
                       <td className="dato">{c.iban}</td>
                       <td className="dato">{c.bic ?? "—"}</td>
                       <td>{c.activa ? "activa" : <span className="etiqueta-estado">inactiva</span>}</td>
+                      <td>
+                        <a className="boton-secundario" style={{ padding: "4px 10px", fontSize: 13 }} href={`/bancos/${c.id}/conciliacion`}>
+                          Conciliación
+                        </a>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

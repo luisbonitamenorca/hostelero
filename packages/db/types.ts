@@ -4081,6 +4081,88 @@ export type Database = {
           },
         ]
       }
+      fin_banco_movimientos: {
+        Row: {
+          apunte_id: string | null
+          banco_cuenta_id: string
+          concepto: string
+          conciliado_en: string | null
+          conciliado_via: string | null
+          creado_en: string
+          cuenta_id: string
+          detalle: string | null
+          estado: string
+          fecha: string
+          fecha_valor: string | null
+          hash_mov: string
+          id: string
+          importe: number
+          nota: string | null
+          saldo: number | null
+          sociedad_id: string
+        }
+        Insert: {
+          apunte_id?: string | null
+          banco_cuenta_id: string
+          concepto: string
+          conciliado_en?: string | null
+          conciliado_via?: string | null
+          creado_en?: string
+          cuenta_id: string
+          detalle?: string | null
+          estado?: string
+          fecha: string
+          fecha_valor?: string | null
+          hash_mov: string
+          id?: string
+          importe: number
+          nota?: string | null
+          saldo?: number | null
+          sociedad_id: string
+        }
+        Update: {
+          apunte_id?: string | null
+          banco_cuenta_id?: string
+          concepto?: string
+          conciliado_en?: string | null
+          conciliado_via?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          detalle?: string | null
+          estado?: string
+          fecha?: string
+          fecha_valor?: string | null
+          hash_mov?: string
+          id?: string
+          importe?: number
+          nota?: string | null
+          saldo?: number | null
+          sociedad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_banco_movimientos_apunte_id_fkey"
+            columns: ["apunte_id"]
+            isOneToOne: false
+            referencedRelation: "fin_apuntes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_banco_movimientos_banco_cuenta_id_fkey"
+            columns: ["banco_cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_bancos_cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_banco_movimientos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_bancos_cuentas: {
         Row: {
           activa: boolean
@@ -4088,6 +4170,7 @@ export type Database = {
           bic: string | null
           creado_en: string
           cuenta_id: string
+          cuenta_plan_id: string | null
           es_defecto: boolean
           iban: string
           id: string
@@ -4101,6 +4184,7 @@ export type Database = {
           bic?: string | null
           creado_en?: string
           cuenta_id: string
+          cuenta_plan_id?: string | null
           es_defecto?: boolean
           iban: string
           id?: string
@@ -4114,6 +4198,7 @@ export type Database = {
           bic?: string | null
           creado_en?: string
           cuenta_id?: string
+          cuenta_plan_id?: string | null
           es_defecto?: boolean
           iban?: string
           id?: string
@@ -4127,6 +4212,13 @@ export type Database = {
             columns: ["cuenta_id"]
             isOneToOne: false
             referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bancos_cuentas_cuenta_plan_id_fkey"
+            columns: ["cuenta_plan_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plan_cuentas"
             referencedColumns: ["id"]
           },
           {
@@ -8190,6 +8282,28 @@ export type Database = {
         Args: { p_factura_id: string; p_motivo: string }
         Returns: Json
       }
+      fin_conciliacion_resumen: {
+        Args: { p_banco: string }
+        Returns: {
+          conciliados: number
+          ignorados: number
+          pendientes: number
+          saldo_banco: number
+          saldo_contable: number
+          total: number
+        }[]
+      }
+      fin_conciliacion_sugerencias: {
+        Args: { p_banco: string }
+        Returns: {
+          ap_id: string
+          asiento_fecha: string
+          asiento_numero: number
+          descripcion: string
+          mov_id: string
+        }[]
+      }
+      fin_conciliar_auto: { Args: { p_banco: string }; Returns: number }
       fin_confirmar_asiento: { Args: { p_asiento_id: string }; Returns: Json }
       fin_expedir_factura: { Args: { p_factura_id: string }; Returns: Json }
       fin_informe_mensual: {
