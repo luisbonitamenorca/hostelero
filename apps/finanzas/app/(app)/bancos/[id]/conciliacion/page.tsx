@@ -29,6 +29,8 @@ type Sugerencia = { mov_id: string; ap_id: string; asiento_numero: number; asien
 type Resumen = {
   total: number; conciliados: number; pendientes: number; ignorados: number;
   saldo_banco: number | null; saldo_contable: number | null;
+  pend_cobros: number; pend_cobros_importe: number;
+  pend_pagos: number; pend_pagos_importe: number;
 };
 
 /**
@@ -42,7 +44,7 @@ export default async function Conciliacion({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ estado?: string; q?: string; mes?: string; pag?: string; orden?: string; dir?: string }>;
+  searchParams: Promise<{ estado?: string; q?: string; mes?: string; pag?: string; orden?: string; dir?: string; sentido?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -65,6 +67,8 @@ export default async function Conciliacion({
   // proveedor—, importe o estado. La fecha desempata siempre.
   const orden = ["fecha", "concepto", "importe", "estado"].includes(sp.orden ?? "") ? sp.orden! : "fecha";
   const dir = sp.dir === "asc" ? "asc" : "desc";
+  // Cobros = entradas (importe > 0), pagos = salidas. El signo ES el sentido.
+  const sentido = ["cobros", "pagos"].includes(sp.sentido ?? "") ? sp.sentido! : "";
 
   // La misma consulta dos veces: una contada (para saber cuántas páginas hay)
   // y otra paginada. El filtro por mes acota por fecha de movimiento.
@@ -83,6 +87,8 @@ export default async function Conciliacion({
       const fin = new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10);
       r = r.gte("fecha", `${mes}-01`).lte("fecha", fin);
     }
+    if (sentido === "cobros") r = r.gt("importe", 0);
+    if (sentido === "pagos") r = r.lt("importe", 0);
     return r as T;
   };
 
@@ -128,6 +134,7 @@ export default async function Conciliacion({
       ...(q ? { q } : {}),
       ...(mes ? { mes } : {}),
       ...(orden !== "fecha" || dir !== "desc" ? { orden, dir } : {}),
+      ...(sentido ? { sentido } : {}),
       ...cambios,
     };
     const p = Object.entries(base)
@@ -161,6 +168,8 @@ export default async function Conciliacion({
             ["Movimientos", String(resumen.total)],
             ["Conciliados", `${resumen.conciliados} (${pct}%)`],
             ["Pendientes", String(resumen.pendientes)],
+            ["· cobros", `${resumen.pend_cobros} (${euros(Number(resumen.pend_cobros_importe))})`],
+            ["· pagos", `${resumen.pend_pagos} (${euros(Number(resumen.pend_pagos_importe))})`],
             ["Ignorados", String(resumen.ignorados)],
             ["Saldo banco", resumen.saldo_banco != null ? euros(Number(resumen.saldo_banco)) : "—"],
             ["Saldo contable 572", resumen.saldo_contable != null ? euros(Number(resumen.saldo_contable)) : "—"],
@@ -176,6 +185,22 @@ export default async function Conciliacion({
 
       <div className="barra-filtros" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 6 }}>
+          {(
+            [
+              ["", "Cobros y pagos"],
+              ["cobros", "Solo cobros"],
+              ["pagos", "Solo pagos"],
+            ] as const
+          ).map(([v, t]) => (
+            <a
+              key={t}
+              href={enlace({ sentido: v, pag: "" })}
+              className="boton-secundario"
+              style={{ padding: "5px 12px", fontSize: 13, ...(sentido === v ? { background: "#1B2420", color: "#fff", borderColor: "#1B2420" } : {}) }}
+            >
+              {t}
+            </a>
+          ))}
           {(["pendiente", "conciliado", "ignorado", "todos"] as const).map((e) => (
             <a
               key={e}
