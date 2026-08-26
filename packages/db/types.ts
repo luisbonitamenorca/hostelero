@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -7530,6 +7530,60 @@ export type Database = {
           },
         ]
       }
+      visitas_pagos: {
+        Row: {
+          autorizacion: string | null
+          created_at: string
+          cuenta_id: string
+          ds_order: string
+          ds_respuesta: Json | null
+          estado: string
+          id: string
+          importe: number
+          pagado_at: string | null
+          reserva_id: string
+        }
+        Insert: {
+          autorizacion?: string | null
+          created_at?: string
+          cuenta_id: string
+          ds_order: string
+          ds_respuesta?: Json | null
+          estado?: string
+          id?: string
+          importe: number
+          pagado_at?: string | null
+          reserva_id: string
+        }
+        Update: {
+          autorizacion?: string | null
+          created_at?: string
+          cuenta_id?: string
+          ds_order?: string
+          ds_respuesta?: Json | null
+          estado?: string
+          id?: string
+          importe?: number
+          pagado_at?: string | null
+          reserva_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitas_pagos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_pagos_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "visitas_reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visitas_productos: {
         Row: {
           activo: boolean
@@ -8500,7 +8554,7 @@ export type Database = {
       visitas_estado_reserva: "pendiente_pago" | "pagada" | "cancelada"
       visitas_estado_sesion: "activa" | "cancelada"
       visitas_idioma: "es" | "en" | "fr"
-      visitas_metodo_pago: "stripe" | "agora_tpv" | "bono"
+      visitas_metodo_pago: "stripe" | "agora_tpv" | "bono" | "tpv"
       visitas_tipo_bono: "visita" | "maridaje" | "importe"
       visitas_tipo_producto: "visita_experiencia" | "bono"
     }
@@ -8655,7 +8709,7 @@ export const Constants = {
       visitas_estado_reserva: ["pendiente_pago", "pagada", "cancelada"],
       visitas_estado_sesion: ["activa", "cancelada"],
       visitas_idioma: ["es", "en", "fr"],
-      visitas_metodo_pago: ["stripe", "agora_tpv", "bono"],
+      visitas_metodo_pago: ["stripe", "agora_tpv", "bono", "tpv"],
       visitas_tipo_bono: ["visita", "maridaje", "importe"],
       visitas_tipo_producto: ["visita_experiencia", "bono"],
     },

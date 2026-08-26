@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 type Idioma = Database["public"]["Enums"]["visitas_idioma"];
 
 /**
- * Crea una reserva online (método stripe → queda pendiente_pago; el cobro es T3).
+ * Crea una reserva online (método tpv → queda pendiente_pago; el cobro llega
+ * justo después por el TPV Virtual de CaixaBank, ver /api/publico/visitas/pago).
  * El importe se calcula en el servidor a partir del precio real del producto:
  * nunca se confía en un importe enviado por el cliente.
  */
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
     p_idioma_preferido: (lang ?? null) as unknown as Idioma,
     p_num_personas: personas,
     p_importe_total: personas * precio,
-    p_metodo_pago: "stripe",
+    p_metodo_pago: "tpv",
   });
   if (error) return NextResponse.json({ error: "no_creada" }, { status: 409 });
 
