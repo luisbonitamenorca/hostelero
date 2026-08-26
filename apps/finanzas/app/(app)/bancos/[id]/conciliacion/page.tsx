@@ -25,7 +25,7 @@ type Mov = {
   conciliado_via: string | null;
   apunte_id: string | null;
 };
-type Sugerencia = { mov_id: string; ap_id: string; asiento_numero: number; asiento_fecha: string; descripcion: string };
+type Sugerencia = { mov_id: string; ap_id: string; asiento_numero: number; asiento_fecha: string; descripcion: string; importe: number; dias: number };
 type Resumen = {
   total: number; conciliados: number; pendientes: number; ignorados: number;
   saldo_banco: number | null; saldo_contable: number | null;
@@ -297,7 +297,7 @@ export default async function Conciliacion({
                             <select name="apunte" style={{ maxWidth: 240, padding: "4px 6px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 13 }}>
                               {sug.map((s) => (
                                 <option key={s.ap_id} value={s.ap_id}>
-                                  nº {s.asiento_numero} · {fecha(s.asiento_fecha)} · {s.descripcion.slice(0, 40)}
+                                  {euros(Number(s.importe))} · nº {s.asiento_numero} · {fecha(s.asiento_fecha)} · {s.descripcion.slice(0, 36)}
                                 </option>
                               ))}
                             </select>
