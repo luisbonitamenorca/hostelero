@@ -8326,6 +8326,17 @@ export type Database = {
         Returns: Json
       }
       fin_apuntes_conciliados: { Args: never; Returns: string[] }
+      fin_cartera_candidatos: {
+        Args: { p_banco: string; p_mov: string }
+        Returns: {
+          ap_id: string
+          asiento_fecha: string
+          asiento_numero: number
+          cuenta_codigo: string
+          descripcion: string
+          importe: number
+        }[]
+      }
       fin_conciliacion_candidatos: {
         Args: { p_banco: string; p_mov: string }
         Returns: {
@@ -8372,7 +8383,15 @@ export type Database = {
         }[]
       }
       fin_conciliar_auto: { Args: { p_banco: string }; Returns: number }
+      fin_conciliar_liquidando: {
+        Args: { p_apuntes: string[]; p_banco: string; p_mov: string }
+        Returns: string
+      }
       fin_confirmar_asiento: { Args: { p_asiento_id: string }; Returns: Json }
+      fin_desconciliar_liquidando: {
+        Args: { p_mov: string }
+        Returns: undefined
+      }
       fin_expedir_factura: { Args: { p_factura_id: string }; Returns: Json }
       fin_informe_mensual: {
         Args: { p_anio: number }

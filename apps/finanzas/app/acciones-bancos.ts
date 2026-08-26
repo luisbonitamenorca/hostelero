@@ -123,3 +123,37 @@ export async function lanzarConciliacionAuto(formData: FormData) {
 
   volver(bancoId);
 }
+
+export async function conciliarLiquidando(formData: FormData) {
+  const { supabase } = await exigirModulo("contabilidad");
+  const bancoId = String(formData.get("banco") ?? "");
+  const movId = String(formData.get("mov") ?? "");
+  const apuntes = formData.getAll("apunte").map(String).filter(Boolean);
+  if (!bancoId || !movId || apuntes.length < 1) volver(bancoId);
+
+  // La función valida en servidor (apuntes vivos + suma al céntimo), crea el
+  // asiento de cobro/pago contra el banco, enlaza el movimiento y liquida la
+  // cartera de las facturas de Compras implicadas.
+  const rpc = supabase as unknown as {
+    rpc: (fn: "fin_conciliar_liquidando", args: { p_banco: string; p_mov: string; p_apuntes: string[] }) => PromiseLike<{ error: unknown }>;
+  };
+  await rpc.rpc("fin_conciliar_liquidando", { p_banco: bancoId, p_mov: movId, p_apuntes: apuntes });
+
+  volver(bancoId);
+}
+
+export async function desconciliarLiquidacion(formData: FormData) {
+  const { supabase } = await exigirModulo("contabilidad");
+  const bancoId = String(formData.get("banco") ?? "");
+  const movId = String(formData.get("mov") ?? "");
+  if (!bancoId || !movId) redirect(`/bancos`);
+
+  // Única vía por la que muere un asiento confirmado: el de la liquidación,
+  // que nació de este movimiento. Cartera y enlaces se revierten dentro.
+  const rpc = supabase as unknown as {
+    rpc: (fn: "fin_desconciliar_liquidando", args: { p_mov: string }) => PromiseLike<{ error: unknown }>;
+  };
+  await rpc.rpc("fin_desconciliar_liquidando", { p_mov: movId });
+
+  volver(bancoId);
+}

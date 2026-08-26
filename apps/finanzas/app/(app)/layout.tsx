@@ -13,7 +13,6 @@ const grupos = [
     items: [
       { ruta: "/facturas", nombre: "Facturas emitidas", modulo: "contabilidad" },
       { ruta: "/clientes", nombre: "Clientes", modulo: "contabilidad" },
-      { ruta: "/series", nombre: "Series", modulo: "contabilidad" },
     ],
   },
   {

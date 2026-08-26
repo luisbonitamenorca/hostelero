@@ -63,7 +63,8 @@ for (let i = 0; i < asientos.length; i += 200) {
     headers: { Prefer: "return=representation" },
     body: JSON.stringify(lote.map((a) => ({
       cuenta_id: CUENTA_ID, sociedad_id: SOCIEDAD_ID, ejercicio_id: ejercicioId,
-      fecha: a.fecha, descripcion: a.concepto, origen_tipo: "manual", creado_por: CREADO_POR,
+      fecha: a.fecha, descripcion: a.concepto, origen_tipo: a.origen_tipo ?? "manual",
+      origen_id: a.origen_id ?? null, creado_por: CREADO_POR,
     }))),
   })).json();
   const apuntes = [];

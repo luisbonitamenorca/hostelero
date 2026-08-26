@@ -1,5 +1,6 @@
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
+import { ruta } from "@/lib/rutas";
 import Buscador from "../clientes/buscador";
 import BotonVencimiento from "./boton-vencimiento";
 
@@ -48,6 +49,15 @@ export default async function FacturasRecibidas({
 
   const conVencimiento = new Set((enCartera ?? []).map((v) => v.compra_doc_id).filter(Boolean));
 
+  // El asiento que generó cada factura en el diario (origen_tipo 'compra'
+  // apunta al doc de Compras). Si no hay, la factura aún no está contabilizada.
+  const { data: asientosCompra } = await supabase
+    .from("fin_asientos")
+    .select("id, numero, origen_id")
+    .eq("origen_tipo", "compra")
+    .eq("estado", "confirmado");
+  const asientoDoc = new Map((asientosCompra ?? []).map((a) => [a.origen_id, a]));
+
   const filas = data ?? [];
   const suma = filas.reduce((s, f) => s + Number(f.total ?? 0), 0);
 
@@ -90,6 +100,7 @@ export default async function FacturasRecibidas({
                   <th className="a-derecha">Base</th>
                   <th className="a-derecha">IVA</th>
                   <th className="a-derecha">Total</th>
+                  <th className="a-derecha">Asiento</th>
                   <th></th>
                   <th className="a-derecha">Cartera</th>
                 </tr>
@@ -107,6 +118,15 @@ export default async function FacturasRecibidas({
                     <td className="numero">{euros(Number(f.base ?? 0))}</td>
                     <td className="numero">{euros(Number(f.iva ?? 0))}</td>
                     <td className="numero">{euros(Number(f.total ?? 0))}</td>
+                    <td className="a-derecha">
+                      {asientoDoc.has(f.id) ? (
+                        <a className="enlace" href={ruta(`/asientos/${asientoDoc.get(f.id)!.id}`)}>
+                          nº {asientoDoc.get(f.id)!.numero}
+                        </a>
+                      ) : (
+                        <span className="secundario" style={{ display: "inline" }}>sin asiento</span>
+                      )}
+                    </td>
                     <td className="a-derecha">
                       {f.estado === "REVISAR" && <span className="etiqueta-estado">revisar</span>}
                       {f.imagen_url && (

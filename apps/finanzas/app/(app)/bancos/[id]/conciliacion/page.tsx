@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 import { exigirModulo } from "@/lib/supabase/server";
 import { ruta } from "@/lib/rutas";
 import SelectorGrupo from "./selector-grupo";
+import SelectorLiquidacion from "./selector-liquidacion";
 import { euros, fecha } from "@/lib/importes";
 import {
   conciliarGrupo,
   conciliarManual,
+  desconciliarLiquidacion,
   desconciliarMovimiento,
   ignorarMovimiento,
   lanzarConciliacionAuto,
@@ -30,6 +32,7 @@ type Mov = {
 type Sugerencia = { mov_id: string; ap_id: string; asiento_numero: number; asiento_fecha: string; descripcion: string; importe: number; dias: number };
 type Grupo = { mov_id: string; ap_ids: string[]; etiqueta: string };
 type Candidato = { ap_id: string; asiento_numero: number; asiento_fecha: string; descripcion: string; importe: number };
+type CandidatoCartera = Candidato & { cuenta_codigo: string };
 type Resumen = {
   total: number; conciliados: number; pendientes: number; ignorados: number;
   saldo_banco: number | null; saldo_contable: number | null;
@@ -48,7 +51,7 @@ export default async function Conciliacion({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ estado?: string; q?: string; mes?: string; pag?: string; orden?: string; dir?: string; sentido?: string; grupo?: string }>;
+  searchParams: Promise<{ estado?: string; q?: string; mes?: string; pag?: string; orden?: string; dir?: string; sentido?: string; grupo?: string; liq?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -115,15 +118,19 @@ export default async function Conciliacion({
   // El selector de grupo se abre para UN movimiento (?grupo=id): sus
   // candidatos se piden solo entonces, no para toda la tabla.
   const grupoAbierto = sp.grupo ?? "";
+  // El selector de liquidación (?liq=id) es su gemelo: candidatos de CARTERA
+  // (clientes 43x, proveedores 40x/41x, nóminas 465, IRPF 475, SS 476).
+  const liqAbierto = sp.liq ?? "";
   const rpcCand = supabase as unknown as {
-    rpc: (fn: "fin_conciliacion_candidatos", args: { p_banco: string; p_mov: string }) => PromiseLike<{ data: unknown }>;
+    rpc: (fn: "fin_conciliacion_candidatos" | "fin_cartera_candidatos", args: { p_banco: string; p_mov: string }) => PromiseLike<{ data: unknown }>;
   };
-  const [{ data: movsData, error }, { data: resumenData }, { data: sugData }, { data: gruposData }, candResp] = await Promise.all([
+  const [{ data: movsData, error }, { data: resumenData }, { data: sugData }, { data: gruposData }, candResp, cartResp] = await Promise.all([
     consulta,
     rpc.rpc("fin_conciliacion_resumen", { p_banco: id }),
     rpc.rpc("fin_conciliacion_sugerencias", { p_banco: id }),
     rpc.rpc("fin_conciliacion_grupos", { p_banco: id }),
     grupoAbierto ? rpcCand.rpc("fin_conciliacion_candidatos", { p_banco: id, p_mov: grupoAbierto }) : Promise.resolve({ data: null }),
+    liqAbierto ? rpcCand.rpc("fin_cartera_candidatos", { p_banco: id, p_mov: liqAbierto }) : Promise.resolve({ data: null }),
   ]);
 
   const movs = (movsData ?? []) as Mov[];
@@ -137,6 +144,7 @@ export default async function Conciliacion({
     (grupos.get(g.mov_id) ?? grupos.set(g.mov_id, []).get(g.mov_id)!).push(g);
   }
   const candidatos = ((candResp.data as Candidato[] | null) ?? []);
+  const candidatosCartera = ((cartResp.data as CandidatoCartera[] | null) ?? []);
 
   const dif =
     resumen?.saldo_banco != null && resumen?.saldo_contable != null
@@ -304,7 +312,9 @@ export default async function Conciliacion({
                       {euros(Number(m.importe))}
                     </td>
                     <td>
-                      {m.estado === "conciliado" ? (m.conciliado_via === "auto" ? "✓ auto" : "✓ manual") : m.estado}
+                      {m.estado === "conciliado"
+                        ? `✓ ${m.conciliado_via === "liquidacion" ? "liquidación" : m.conciliado_via ?? "manual"}`
+                        : m.estado}
                     </td>
                     <td>
                       {m.estado === "pendiente" && sug.length > 0 && (
@@ -347,14 +357,35 @@ export default async function Conciliacion({
                           <BotonIgnorar bancoId={id} movId={m.id} />
                         </span>
                       )}
+                      {m.estado === "pendiente" && (
+                        <a
+                          className="boton-secundario"
+                          style={{ fontSize: 12, padding: "3px 10px", marginLeft: 6 }}
+                          href={enlace({ liq: liqAbierto === m.id ? "" : m.id })}
+                          title="Cobrar/pagar facturas o nóminas pendientes: genera el asiento contra el banco"
+                        >
+                          {liqAbierto === m.id ? "Cerrar" : "Liquidar…"}
+                        </a>
+                      )}
                       {m.estado === "pendiente" && grupoAbierto === m.id && (
                         <SelectorGrupo bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatos} />
                       )}
+                      {m.estado === "pendiente" && liqAbierto === m.id && (
+                        <SelectorLiquidacion bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatosCartera} />
+                      )}
                       {m.estado !== "pendiente" && (
-                        <form action={desconciliarMovimiento} style={{ display: "inline" }}>
+                        <form
+                          action={m.conciliado_via === "liquidacion" ? desconciliarLiquidacion : desconciliarMovimiento}
+                          style={{ display: "inline" }}
+                        >
                           <input type="hidden" name="banco" value={id} />
                           <input type="hidden" name="mov" value={m.id} />
-                          <button className="boton-secundario" type="submit" style={{ fontSize: 12 }}>
+                          <button
+                            className="boton-secundario"
+                            type="submit"
+                            style={{ fontSize: 12 }}
+                            title={m.conciliado_via === "liquidacion" ? "Deshace la conciliación Y borra el asiento de cobro/pago generado" : undefined}
+                          >
                             {m.estado === "ignorado" ? "Recuperar" : "Deshacer"}
                           </button>
                         </form>
@@ -383,7 +414,10 @@ export default async function Conciliacion({
         acotas el periodo. «Sin candidato en el diario» significa que
         no hay ningún apunte de la 572 con ese importe a menos de 10 días: o falta el asiento en el
         diario cargado, o el movimiento no se contabiliza suelto (liquidaciones agrupadas de TPV,
-        comisiones…) — para esos está «Ignorar». La diferencia de saldos de arriba es la deuda real
+        comisiones…) — para esos está «Ignorar». Con «Liquidar…» el movimiento se cruza contra lo
+        VIVO — facturas de cliente por cobrar, de proveedor por pagar, nóminas, IRPF o Seguridad
+        Social — y al cuadrar la suma se genera solo el asiento de cobro/pago contra el banco,
+        liquidando de paso la cartera. La diferencia de saldos de arriba es la deuda real
         de la conciliación: a cero, banco y contabilidad dicen lo mismo.
       </p>
     </>
