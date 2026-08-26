@@ -508,6 +508,7 @@
             <option value="listas">Solo listas</option>
             <option value="bloqueadas">Solo bloqueadas</option>
           </select></div>
+          <div><label class="fld">Buscar</label><input type="search" id="a3Busca" placeholder="proveedor, referencia, nº…" oninput="renderA3()" style="min-width:190px"></div>
           <div style="flex:1 1 auto;text-align:right;align-self:flex-end;display:flex;gap:10px;justify-content:flex-end">
             <button class="btn ghost" onclick="renderA3()">↻ Previsualizar</button>
             <button class="btn" onclick="exportarA3()">Generar Excel para A3</button>
@@ -4771,14 +4772,45 @@ async function cargarA3(){
     +`&select=doc_id,orden,cabfecha,cabnumdoc,cabreferencia,cabcodpro,lindesclin,linprcmoneda,lintipiva,linctacon,lincentrocoste,proveedor_nombre,bloqueos,reparto_explicito`
     +`&order=cabfecha.asc,cabreferencia.asc,orden.asc`);
 }
+// Orden de la tabla A3: por documento entero (sus líneas comparten cabecera y
+// nunca deben separarse). Clic en la cabecera cambia el campo; segundo clic
+// invierte el sentido.
+let a3Orden={campo:'cabfecha',asc:true};
+function ordenarA3(campo){
+  a3Orden=(a3Orden.campo===campo)?{campo,asc:!a3Orden.asc}:{campo,asc:true};
+  renderA3();
+}
 async function renderA3(){
   try{a3Rows=await cargarA3();}
   catch(err){toast('No pude cargar la previsualización: '+err.message,true);return;}
   const f=document.getElementById('a3Filtro').value;
+  const q=(document.getElementById('a3Busca')?.value||'').trim().toLowerCase();
   const bloqueada=r=>(r.bloqueos||[]).length>0;
   let rows=a3Rows;
   if(f==='listas')rows=rows.filter(r=>!bloqueada(r));
   if(f==='bloqueadas')rows=rows.filter(bloqueada);
+  if(q){
+    // Se busca a nivel de DOCUMENTO: si cualquier línea casa, salen todas las
+    // del documento (una factura a medias en pantalla despistaría).
+    const casan=new Set(rows.filter(r=>
+      [r.proveedor_nombre,r.cabreferencia,r.cabcodpro,r.cabnumdoc,r.lindesclin]
+        .some(v=>String(v??'').toLowerCase().includes(q))).map(r=>r.doc_id));
+    rows=rows.filter(r=>casan.has(r.doc_id));
+  }
+  {
+    // Ordenar documentos enteros y re-aplanar sus líneas en su orden interno.
+    const {campo,asc}=a3Orden;
+    const clave=new Map();
+    for(const r of rows)if(!clave.has(r.doc_id))clave.set(r.doc_id,r[campo]);
+    const porDoc=new Map();
+    for(const r of rows)(porDoc.get(r.doc_id)??porDoc.set(r.doc_id,[]).get(r.doc_id)).push(r);
+    const docsOrden=[...porDoc.keys()].sort((a,b)=>{
+      const va=clave.get(a),vb=clave.get(b);
+      const cmp=(va==null)-(vb==null)||(va>vb)-(va<vb);
+      return asc?cmp:-cmp;
+    });
+    rows=docsOrden.flatMap(id=>porDoc.get(id).slice().sort((x,y)=>(x.orden||0)-(y.orden||0)));
+  }
 
   const docs=new Set(a3Rows.map(r=>r.doc_id));
   const docsBloq=new Set(a3Rows.filter(bloqueada).map(r=>r.doc_id));
@@ -4790,9 +4822,12 @@ async function renderA3(){
     ['Con bloqueos',docsBloq.size],['Base de las listas',fmt(baseListas)]
   ].map(([l,v])=>`<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join('');
 
+  const flecha=c=>a3Orden.campo===c?(a3Orden.asc?' ↑':' ↓'):'';
+  const th=(c,t,cls)=>`<th${cls?` class="${cls}"`:''} style="cursor:pointer" title="Ordenar por ${t}" onclick="ordenarA3('${c}')">${t}${flecha(c)}</th>`;
   document.getElementById('headA3').innerHTML=
-    '<th>Fecha</th><th>Nº A3</th><th>Referencia</th><th>Proveedor</th><th>Cód.</th>'
-   +'<th class="num">Base</th><th>IVA</th><th>Cta. gasto</th><th>Centro</th><th>Estado</th>';
+    th('cabfecha','Fecha')+th('cabnumdoc','Nº A3')+th('cabreferencia','Referencia')
+   +th('proveedor_nombre','Proveedor')+th('cabcodpro','Cód.')
+   +th('linprcmoneda','Base','num')+'<th>IVA</th><th>Cta. gasto</th><th>Centro</th><th>Estado</th>';
   document.getElementById('emptyA3').style.display=rows.length?'none':'block';
   document.getElementById('a3Body').innerHTML=rows.map(r=>{
     const bl=(r.bloqueos||[]);
