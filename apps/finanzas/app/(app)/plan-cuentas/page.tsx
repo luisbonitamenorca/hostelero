@@ -15,6 +15,7 @@ export default async function PlanCuentas({
 }) {
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
+  const pag = Math.max(1, parseInt(sp.pag ?? "1", 10) || 1);
 
   // Esta pantalla es del módulo de contabilidad, no del de facturación.
   const { supabase } = await exigirModulo("contabilidad");
@@ -23,7 +24,7 @@ export default async function PlanCuentas({
     .from("fin_plan_cuentas")
     .select("id, codigo, nombre, origen", { count: "exact" })
     .order("codigo")
-    .limit(LIMITE);
+    .range((pag - 1) * LIMITE, pag * LIMITE - 1);
 
   // Sin buscador, 658 cuentas cortadas a 200 escondían justo las del final.
   if (q) consulta = consulta.or(`codigo.ilike.%${q}%,nombre.ilike.%${q}%`);
@@ -41,9 +42,8 @@ export default async function PlanCuentas({
       <div className="cabecera-pagina">
         <h1>Plan de cuentas</h1>
         <p className="sub">
-          {q
-            ? `${total} cuentas coinciden con «${q}»${total > LIMITE ? ` · mostrando ${LIMITE}` : ""}`
-            : `${total} cuentas · mostrando las ${Math.min(total, LIMITE)} primeras`}
+          {q ? `${total} cuentas coinciden con «${q}»` : `${total} cuentas en el plan`}
+          {total > LIMITE ? ` · ${(pag - 1) * LIMITE + 1}–${Math.min(pag * LIMITE, total)}` : ""}
         </p>
       </div>
 
@@ -99,6 +99,21 @@ export default async function PlanCuentas({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {total > LIMITE && (
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", margin: "12px 0" }}>
+          {pag > 1 && (
+            <Link className="boton-secundario" style={{ padding: "4px 12px", fontSize: 13 }} href={`/plan-cuentas?pag=${pag - 1}${q ? `&q=${encodeURIComponent(q)}` : ""}`}>
+              ← Anteriores
+            </Link>
+          )}
+          {pag * LIMITE < total && (
+            <Link className="boton-secundario" style={{ padding: "4px 12px", fontSize: 13 }} href={`/plan-cuentas?pag=${pag + 1}${q ? `&q=${encodeURIComponent(q)}` : ""}`}>
+              Siguientes →
+            </Link>
+          )}
         </div>
       )}
 
