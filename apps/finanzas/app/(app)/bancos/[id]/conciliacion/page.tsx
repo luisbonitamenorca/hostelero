@@ -42,7 +42,7 @@ export default async function Conciliacion({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ estado?: string; q?: string; mes?: string; pag?: string }>;
+  searchParams: Promise<{ estado?: string; q?: string; mes?: string; pag?: string; orden?: string; dir?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -61,6 +61,10 @@ export default async function Conciliacion({
   const q = (sp.q ?? "").trim();
   const mes = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : "";
   const pag = Math.max(1, parseInt(sp.pag ?? "1", 10) || 1);
+  // Orden clicable: por fecha (defecto), concepto —que aquí hace de
+  // proveedor—, importe o estado. La fecha desempata siempre.
+  const orden = ["fecha", "concepto", "importe", "estado"].includes(sp.orden ?? "") ? sp.orden! : "fecha";
+  const dir = sp.dir === "asc" ? "asc" : "desc";
 
   // La misma consulta dos veces: una contada (para saber cuántas páginas hay)
   // y otra paginada. El filtro por mes acota por fecha de movimiento.
@@ -87,6 +91,7 @@ export default async function Conciliacion({
       .from("fin_banco_movimientos")
       .select("id, fecha, concepto, detalle, importe, saldo, estado, conciliado_via, apunte_id"),
   )
+    .order(orden, { ascending: dir === "asc" })
     .order("fecha", { ascending: false })
     .range((pag - 1) * LIMITE, pag * LIMITE - 1);
 
@@ -118,7 +123,13 @@ export default async function Conciliacion({
 
   // <a> crudos: el prefijo /finanzas del multizona no se añade solo (lib/rutas.ts).
   const enlace = (cambios: Record<string, string>) => {
-    const base: Record<string, string> = { estado: estadoFiltro, ...(q ? { q } : {}), ...(mes ? { mes } : {}), ...cambios };
+    const base: Record<string, string> = {
+      estado: estadoFiltro,
+      ...(q ? { q } : {}),
+      ...(mes ? { mes } : {}),
+      ...(orden !== "fecha" || dir !== "desc" ? { orden, dir } : {}),
+      ...cambios,
+    };
     const p = Object.entries(base)
       .filter(([, v]) => v !== "")
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
@@ -214,10 +225,25 @@ export default async function Conciliacion({
           <table className="tabla">
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Concepto</th>
-                <th className="a-derecha">Importe</th>
-                <th>Estado</th>
+                {(
+                  [
+                    ["fecha", "Fecha", ""],
+                    ["concepto", "Concepto", ""],
+                    ["importe", "Importe", "a-derecha"],
+                    ["estado", "Estado", ""],
+                  ] as const
+                ).map(([campo, titulo, clase]) => (
+                  <th key={campo} className={clase || undefined}>
+                    <a
+                      href={enlace({ orden: campo, dir: orden === campo && dir === "desc" ? "asc" : "desc", pag: "" })}
+                      style={{ color: "inherit", textDecoration: "none", cursor: "pointer" }}
+                      title={`Ordenar por ${titulo.toLowerCase()}`}
+                    >
+                      {titulo}
+                      {orden === campo ? (dir === "asc" ? " ↑" : " ↓") : ""}
+                    </a>
+                  </th>
+                ))}
                 <th style={{ minWidth: 340 }}>Conciliación</th>
               </tr>
             </thead>
