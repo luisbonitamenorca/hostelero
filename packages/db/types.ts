@@ -4081,6 +4081,49 @@ export type Database = {
           },
         ]
       }
+      fin_banco_mov_apuntes: {
+        Row: {
+          apunte_id: string
+          creado_en: string
+          cuenta_id: string
+          movimiento_id: string
+        }
+        Insert: {
+          apunte_id: string
+          creado_en?: string
+          cuenta_id: string
+          movimiento_id: string
+        }
+        Update: {
+          apunte_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          movimiento_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_banco_mov_apuntes_apunte_id_fkey"
+            columns: ["apunte_id"]
+            isOneToOne: true
+            referencedRelation: "fin_apuntes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_banco_mov_apuntes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_banco_mov_apuntes_movimiento_id_fkey"
+            columns: ["movimiento_id"]
+            isOneToOne: false
+            referencedRelation: "fin_banco_movimientos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_banco_movimientos: {
         Row: {
           apunte_id: string | null
@@ -8282,11 +8325,34 @@ export type Database = {
         Args: { p_factura_id: string; p_motivo: string }
         Returns: Json
       }
+      fin_apuntes_conciliados: { Args: never; Returns: string[] }
+      fin_conciliacion_candidatos: {
+        Args: { p_banco: string; p_mov: string }
+        Returns: {
+          ap_id: string
+          asiento_fecha: string
+          asiento_numero: number
+          descripcion: string
+          importe: number
+        }[]
+      }
+      fin_conciliacion_grupos: {
+        Args: { p_banco: string }
+        Returns: {
+          ap_ids: string[]
+          etiqueta: string
+          mov_id: string
+        }[]
+      }
       fin_conciliacion_resumen: {
         Args: { p_banco: string }
         Returns: {
           conciliados: number
           ignorados: number
+          pend_cobros: number
+          pend_cobros_importe: number
+          pend_pagos: number
+          pend_pagos_importe: number
           pendientes: number
           saldo_banco: number
           saldo_contable: number
@@ -8300,6 +8366,8 @@ export type Database = {
           asiento_fecha: string
           asiento_numero: number
           descripcion: string
+          dias: number
+          importe: number
           mov_id: string
         }[]
       }
@@ -8315,6 +8383,18 @@ export type Database = {
           fecha: string
           haber: number
           nombre: string
+        }[]
+      }
+      fin_mayor_saldos: {
+        Args: { p_prefijos: string[] }
+        Returns: {
+          apuntes: number
+          codigo: string
+          debe: number
+          haber: number
+          nombre: string
+          saldo: number
+          ultima_fecha: string
         }[]
       }
       fin_vf_cadena_alta: {

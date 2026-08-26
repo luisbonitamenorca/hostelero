@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { exigirModulo } from "@/lib/supabase/server";
 import { ruta } from "@/lib/rutas";
+import SelectorGrupo from "./selector-grupo";
 import { euros, fecha } from "@/lib/importes";
 import {
+  conciliarGrupo,
   conciliarManual,
   desconciliarMovimiento,
   ignorarMovimiento,
@@ -26,6 +28,8 @@ type Mov = {
   apunte_id: string | null;
 };
 type Sugerencia = { mov_id: string; ap_id: string; asiento_numero: number; asiento_fecha: string; descripcion: string; importe: number; dias: number };
+type Grupo = { mov_id: string; ap_ids: string[]; etiqueta: string };
+type Candidato = { ap_id: string; asiento_numero: number; asiento_fecha: string; descripcion: string; importe: number };
 type Resumen = {
   total: number; conciliados: number; pendientes: number; ignorados: number;
   saldo_banco: number | null; saldo_contable: number | null;
@@ -44,7 +48,7 @@ export default async function Conciliacion({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ estado?: string; q?: string; mes?: string; pag?: string; orden?: string; dir?: string; sentido?: string }>;
+  searchParams: Promise<{ estado?: string; q?: string; mes?: string; pag?: string; orden?: string; dir?: string; sentido?: string; grupo?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -108,10 +112,18 @@ export default async function Conciliacion({
   const rpc = supabase as unknown as {
     rpc: (fn: string, args: { p_banco: string }) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
   };
-  const [{ data: movsData, error }, { data: resumenData }, { data: sugData }] = await Promise.all([
+  // El selector de grupo se abre para UN movimiento (?grupo=id): sus
+  // candidatos se piden solo entonces, no para toda la tabla.
+  const grupoAbierto = sp.grupo ?? "";
+  const rpcCand = supabase as unknown as {
+    rpc: (fn: "fin_conciliacion_candidatos", args: { p_banco: string; p_mov: string }) => PromiseLike<{ data: unknown }>;
+  };
+  const [{ data: movsData, error }, { data: resumenData }, { data: sugData }, { data: gruposData }, candResp] = await Promise.all([
     consulta,
     rpc.rpc("fin_conciliacion_resumen", { p_banco: id }),
     rpc.rpc("fin_conciliacion_sugerencias", { p_banco: id }),
+    rpc.rpc("fin_conciliacion_grupos", { p_banco: id }),
+    grupoAbierto ? rpcCand.rpc("fin_conciliacion_candidatos", { p_banco: id, p_mov: grupoAbierto }) : Promise.resolve({ data: null }),
   ]);
 
   const movs = (movsData ?? []) as Mov[];
@@ -120,6 +132,11 @@ export default async function Conciliacion({
   for (const s of ((sugData as Sugerencia[] | null) ?? [])) {
     (sugerencias.get(s.mov_id) ?? sugerencias.set(s.mov_id, []).get(s.mov_id)!).push(s);
   }
+  const grupos = new Map<string, Grupo[]>();
+  for (const g of ((gruposData as Grupo[] | null) ?? [])) {
+    (grupos.get(g.mov_id) ?? grupos.set(g.mov_id, []).get(g.mov_id)!).push(g);
+  }
+  const candidatos = ((candResp.data as Candidato[] | null) ?? []);
 
   const dif =
     resumen?.saldo_banco != null && resumen?.saldo_contable != null
@@ -135,6 +152,7 @@ export default async function Conciliacion({
       ...(mes ? { mes } : {}),
       ...(orden !== "fecha" || dir !== "desc" ? { orden, dir } : {}),
       ...(sentido ? { sentido } : {}),
+      ...(pag > 1 ? { pag: String(pag) } : {}),
       ...cambios,
     };
     const p = Object.entries(base)
@@ -307,10 +325,30 @@ export default async function Conciliacion({
                         </span>
                       )}
                       {m.estado === "pendiente" && sug.length === 0 && (
-                        <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                          <span className="secundario" style={{ display: "inline" }}>sin candidato en el diario</span>
+                        <span style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                          {(grupos.get(m.id) ?? []).map((g, gi) => (
+                            <form key={gi} action={conciliarGrupo} style={{ display: "inline" }}>
+                              <input type="hidden" name="banco" value={id} />
+                              <input type="hidden" name="mov" value={m.id} />
+                              {g.ap_ids.map((apId) => (
+                                <input key={apId} type="hidden" name="apunte" value={apId} />
+                              ))}
+                              <button className="boton-secundario" type="submit" style={{ fontSize: 12 }} title="Conciliar contra la suma de estos apuntes">
+                                Σ {g.etiqueta}
+                              </button>
+                            </form>
+                          ))}
+                          {(grupos.get(m.id) ?? []).length === 0 && (
+                            <span className="secundario" style={{ display: "inline" }}>sin candidato en el diario</span>
+                          )}
+                          <a className="boton-secundario" style={{ fontSize: 12, padding: "3px 10px" }} href={enlace({ grupo: grupoAbierto === m.id ? "" : m.id })}>
+                            {grupoAbierto === m.id ? "Cerrar" : "Elegir varios…"}
+                          </a>
                           <BotonIgnorar bancoId={id} movId={m.id} />
                         </span>
+                      )}
+                      {m.estado === "pendiente" && grupoAbierto === m.id && (
+                        <SelectorGrupo bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatos} />
                       )}
                       {m.estado !== "pendiente" && (
                         <form action={desconciliarMovimiento} style={{ display: "inline" }}>
