@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { exigirModulo } from "@/lib/supabase/server";
+import { ruta } from "@/lib/rutas";
 import { euros, fecha } from "@/lib/importes";
 import {
   conciliarManual,
@@ -90,8 +91,9 @@ export default async function Conciliacion({
       : null;
   const pct = resumen && resumen.total > 0 ? Math.round((resumen.conciliados / resumen.total) * 100) : 0;
 
+  // <a> crudos: el prefijo /finanzas del multizona no se añade solo (lib/rutas.ts).
   const enlace = (estado: string) =>
-    `/bancos/${id}/conciliacion?estado=${estado}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+    ruta(`/bancos/${id}/conciliacion?estado=${estado}${q ? `&q=${encodeURIComponent(q)}` : ""}`);
 
   return (
     <>

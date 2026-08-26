@@ -1,4 +1,5 @@
 import { exigirFacturacion } from "@/lib/supabase/server";
+import { ruta } from "@/lib/rutas";
 import { type CuentaBancaria } from "@/lib/remesas";
 import FormularioCuenta from "./formulario-cuenta";
 
@@ -57,7 +58,7 @@ export default async function Bancos() {
                       <td className="dato">{c.bic ?? "—"}</td>
                       <td>{c.activa ? "activa" : <span className="etiqueta-estado">inactiva</span>}</td>
                       <td>
-                        <a className="boton-secundario" style={{ padding: "4px 10px", fontSize: 13 }} href={`/bancos/${c.id}/conciliacion`}>
+                        <a className="boton-secundario" style={{ padding: "4px 10px", fontSize: 13 }} href={ruta(`/bancos/${c.id}/conciliacion`)}>
                           Conciliación
                         </a>
                       </td>
