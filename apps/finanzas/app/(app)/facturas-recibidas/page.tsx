@@ -228,9 +228,10 @@ export default async function FacturasRecibidas({
 
       <p className="pista" style={{ marginTop: 12 }}>
         Solo lectura, y a propósito: el maestro de proveedores y la entrada de facturas viven en el
-        módulo de compras. Duplicar el alta aquí daría dos verdades. Lo que sí es nuestro es lo
-        financiero: «A cartera» crea el vencimiento de pago con los días que tenga ese proveedor en
-        sus condiciones, o 30 si no los tiene puestos.
+        módulo de compras. Duplicar el alta aquí daría dos verdades. Lo financiero es automático:
+        en cuanto una factura queda OK, genera sola su vencimiento en cartera (con los días de las
+        condiciones del proveedor, o 30) y la conciliación bancaria lo va liquidando. El botón
+        «A cartera» solo aparece como repesca si algo se quedó fuera.
       </p>
     </>
   );
