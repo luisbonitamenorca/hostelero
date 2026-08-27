@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros } from "@/lib/importes";
 import Buscador from "../clientes/buscador";
@@ -23,7 +24,7 @@ export default async function Proveedores({
 
   let consulta = supabase
     .from("compras_proveedor")
-    .select("id, nombre, nif, categoria, cuenta_contable, departamento, critico")
+    .select("id, nombre, nif, categoria, cuenta_contable, cuenta_proveedor, departamento, critico")
     .order("nombre")
     .limit(LIMITE);
 
@@ -110,7 +111,15 @@ export default async function Proveedores({
                       </td>
                       <td className="dato">{p.nif ?? "—"}</td>
                       <td>{p.categoria ?? "—"}</td>
-                      <td className="dato">{p.cuenta_contable ?? "—"}</td>
+                      <td className="dato">
+                        {p.cuenta_proveedor ? (
+                          <Link className="enlace" href={`/mayor?cuenta=${p.cuenta_proveedor}`} title="Ver el mayor de este proveedor">
+                            {p.cuenta_proveedor}
+                          </Link>
+                        ) : (
+                          (p.cuenta_contable ?? "—")
+                        )}
+                      </td>
                       <td className="numero">{r?.n ?? 0}</td>
                       <td className="numero">{r ? euros(r.total) : "—"}</td>
                       <td>

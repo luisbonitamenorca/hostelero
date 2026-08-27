@@ -19,20 +19,52 @@ export default async function EditarCliente({ params }: { params: Promise<{ id: 
 
   if (!data) notFound();
 
+  // Su cuenta 43x en el plan (por NIF, o por nombre si no hay NIF): el enlace
+  // al mayor del cliente.
+  let cuentaMayor: string | null = null;
+  {
+    const nif = (data.nif ?? "").replace(/[^A-Za-z0-9]/g, "");
+    if (nif) {
+      const { data: porNif } = await supabase
+        .from("fin_plan_cuentas")
+        .select("codigo")
+        .like("codigo", "43%")
+        .eq("nif", nif)
+        .limit(1);
+      cuentaMayor = porNif?.[0]?.codigo ?? null;
+    }
+    if (!cuentaMayor && data.nombre_fiscal) {
+      const { data: porNombre } = await supabase
+        .from("fin_plan_cuentas")
+        .select("codigo")
+        .like("codigo", "43%")
+        .ilike("nombre", `${data.nombre_fiscal.slice(0, 12)}%`)
+        .limit(1);
+      cuentaMayor = porNombre?.[0]?.codigo ?? null;
+    }
+  }
+
   return (
     <>
-      <div className="cabecera-pagina">
-        <p className="miga">
-          <Link className="enlace" href="/clientes">
-            Clientes
-          </Link>{" "}
-          / Ficha
-        </p>
-        <h1>{data.nombre_fiscal}</h1>
-        <p className="sub">
-          Los cambios afectan a las facturas futuras. Las ya expedidas conservan los datos con los
-          que se emitieron.
-        </p>
+      <div className="cabecera-pagina con-accion">
+        <div>
+          <p className="miga">
+            <Link className="enlace" href="/clientes">
+              Clientes
+            </Link>{" "}
+            / Ficha
+          </p>
+          <h1>{data.nombre_fiscal}</h1>
+          <p className="sub">
+            Los cambios afectan a las facturas futuras. Las ya expedidas conservan los datos con los
+            que se emitieron.
+          </p>
+        </div>
+        {cuentaMayor && (
+          <Link className="boton-secundario boton-auto" href={`/mayor?cuenta=${cuentaMayor}`}>
+            Ver su mayor ({cuentaMayor})
+          </Link>
+        )}
       </div>
       <FormularioCliente cliente={data as unknown as ClienteFicha} />
     </>
