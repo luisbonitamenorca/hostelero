@@ -4373,6 +4373,55 @@ export type Database = {
           },
         ]
       }
+      fin_compensaciones: {
+        Row: {
+          apunte_debe: string
+          apunte_haber: string
+          creado_en: string
+          cuenta_id: string
+          id: string
+          importe: number
+        }
+        Insert: {
+          apunte_debe: string
+          apunte_haber: string
+          creado_en?: string
+          cuenta_id: string
+          id?: string
+          importe: number
+        }
+        Update: {
+          apunte_debe?: string
+          apunte_haber?: string
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          importe?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_compensaciones_apunte_debe_fkey"
+            columns: ["apunte_debe"]
+            isOneToOne: true
+            referencedRelation: "fin_apuntes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_compensaciones_apunte_haber_fkey"
+            columns: ["apunte_haber"]
+            isOneToOne: true
+            referencedRelation: "fin_apuntes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_compensaciones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_config: {
         Row: {
           actualizado_en: string
@@ -5145,6 +5194,7 @@ export type Database = {
       fin_vencimientos: {
         Row: {
           actualizado_en: string
+          asiento_id: string | null
           compra_doc_id: string | null
           creado_en: string
           cuenta_id: string
@@ -5161,6 +5211,7 @@ export type Database = {
         }
         Insert: {
           actualizado_en?: string
+          asiento_id?: string | null
           compra_doc_id?: string | null
           creado_en?: string
           cuenta_id: string
@@ -5177,6 +5228,7 @@ export type Database = {
         }
         Update: {
           actualizado_en?: string
+          asiento_id?: string | null
           compra_doc_id?: string | null
           creado_en?: string
           cuenta_id?: string
@@ -5192,6 +5244,13 @@ export type Database = {
           sociedad_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fin_vencimientos_asiento_id_fkey"
+            columns: ["asiento_id"]
+            isOneToOne: false
+            referencedRelation: "fin_asientos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fin_vencimientos_compra_doc_id_fkey"
             columns: ["compra_doc_id"]
@@ -8328,6 +8387,7 @@ export type Database = {
         Args: { p_factura_id: string; p_motivo: string }
         Returns: Json
       }
+      fin_apuntes_compensados: { Args: never; Returns: string[] }
       fin_apuntes_conciliados: { Args: never; Returns: string[] }
       fin_cartera_candidatos: {
         Args: { p_banco: string; p_mov: string }
@@ -8368,7 +8428,7 @@ export type Database = {
         }[]
       }
       fin_conciliacion_resumen: {
-        Args: { p_banco: string }
+        Args: { p_banco: string; p_desde?: string; p_hasta?: string }
         Returns: {
           conciliados: number
           ignorados: number
@@ -8405,6 +8465,19 @@ export type Database = {
         Returns: undefined
       }
       fin_expedir_factura: { Args: { p_factura_id: string }; Returns: Json }
+      fin_facturas_ingreso: {
+        Args: never
+        Returns: {
+          asiento_id: string
+          cobro: string
+          descripcion: string
+          fecha: string
+          numero: number
+          pareja: string
+          tipo: string
+          total: number
+        }[]
+      }
       fin_informe_mensual: {
         Args: { p_anio: number }
         Returns: {

@@ -5,6 +5,9 @@ export type Vencimiento = {
   sentido: "cobro" | "pago";
   factura_id: string | null;
   compra_doc_id: string | null;
+  // Las facturas de ingreso de Ágora viven como asientos: su vencimiento de
+  // cobro cuelga de aquí en vez de en factura_id.
+  asiento_id: string | null;
   fecha_vencimiento: string;
   importe: number;
   importe_liquidado: number;

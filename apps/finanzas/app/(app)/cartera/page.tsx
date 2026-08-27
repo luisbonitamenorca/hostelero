@@ -20,7 +20,7 @@ export default async function Cartera({
 
   let consulta = db
     .from("fin_vencimientos")
-    .select("id, sentido, factura_id, compra_doc_id, fecha_vencimiento, importe, importe_liquidado, estado, forma_pago, notas")
+    .select("id, sentido, factura_id, compra_doc_id, asiento_id, fecha_vencimiento, importe, importe_liquidado, estado, forma_pago, notas")
     .order("fecha_vencimiento")
     .limit(500);
 
@@ -32,13 +32,17 @@ export default async function Cartera({
   // Nombres para que la lista se lea: de quién es cada cobro y cada pago.
   const idsFactura = vencimientos.map((v) => v.factura_id).filter(Boolean) as string[];
   const idsCompra = vencimientos.map((v) => v.compra_doc_id).filter(Boolean) as string[];
+  const idsAsiento = vencimientos.map((v) => v.asiento_id).filter(Boolean) as string[];
 
-  const [{ data: facturas }, { data: compras }] = await Promise.all([
+  const [{ data: facturas }, { data: compras }, { data: asientosIngreso }] = await Promise.all([
     idsFactura.length
       ? supabase.from("fin_facturas").select("id, numero_completo, cliente_id").in("id", idsFactura)
       : Promise.resolve({ data: [] }),
     idsCompra.length
       ? db.from("compras_doc").select("id, proveedor, num_documento").in("id", idsCompra)
+      : Promise.resolve({ data: [] }),
+    idsAsiento.length
+      ? supabase.from("fin_asientos").select("id, descripcion").in("id", idsAsiento)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -60,12 +64,26 @@ export default async function Cartera({
       { numero: c.num_documento, quien: c.proveedor ?? "—" },
     ]),
   );
+  // Facturas de ingreso (Ágora): número y cliente salen de la descripción del
+  // asiento: «Fra. FV-X (Cliente)».
+  const infoAsiento = new Map(
+    (asientosIngreso ?? []).map((a: { id: string; descripcion: string | null }) => {
+      const m = (a.descripcion ?? "").match(/^Fra\. (\S+) \((.+)\)$/);
+      return [a.id, { numero: m ? m[1] : "asiento", quien: m ? m[2] : (a.descripcion ?? "—") }];
+    }),
+  );
 
   // El buscador filtra por quién (cliente/proveedor) o número de documento;
   // los nombres llegan de los mapas de arriba, así que se filtra aquí.
   const pasaBusqueda = (v: Vencimiento) => {
     if (!q) return true;
-    const info = v.factura_id ? infoFactura.get(v.factura_id) : v.compra_doc_id ? infoCompra.get(v.compra_doc_id) : null;
+    const info = v.factura_id
+      ? infoFactura.get(v.factura_id)
+      : v.compra_doc_id
+        ? infoCompra.get(v.compra_doc_id)
+        : v.asiento_id
+          ? infoAsiento.get(v.asiento_id)
+          : null;
     return !!info && (`${info.quien ?? ""} ${info.numero ?? ""}`.toLowerCase().includes(q));
   };
   const cobros = vencimientos.filter((v) => v.sentido === "cobro" && pasaBusqueda(v));
@@ -135,7 +153,9 @@ export default async function Cartera({
                     ? infoFactura.get(v.factura_id)
                     : v.compra_doc_id
                       ? infoCompra.get(v.compra_doc_id)
-                      : undefined;
+                      : v.asiento_id
+                        ? infoAsiento.get(v.asiento_id)
+                        : undefined;
                   const dias = diasHasta(v.fecha_vencimiento);
                   const abierto = v.estado === "pendiente" || v.estado === "parcial";
                   return (
@@ -148,6 +168,10 @@ export default async function Cartera({
                       <td className="dato">
                         {v.factura_id ? (
                           <Link className="enlace" href={`/facturas/${v.factura_id}`}>
+                            {info?.numero ?? "ver"}
+                          </Link>
+                        ) : v.asiento_id ? (
+                          <Link className="enlace" href={`/asientos/${v.asiento_id}`}>
                             {info?.numero ?? "ver"}
                           </Link>
                         ) : (
