@@ -14,15 +14,12 @@ import {
   lanzarConciliacionAuto,
 } from "@/app/acciones-bancos";
 
-// Destinos rápidos para movimientos sin factura: cajas de centro (con su
-// analítica), anticipos, comisiones… El asiento contra el banco se genera solo.
+// Destinos rápidos para movimientos sin factura. La caja es ÚNICA (decisión
+// de Luis, 28-08-2026): el centro solo aporta en ingresos, gastos y activos —
+// el efectivo se ingresa todo junto y Adyen/Shopify van al mismo saco. El
+// asiento contra el banco se genera solo.
 const DESTINOS: [string, string][] = [
-  ["570000100|2c3b1092-bf98-4a59-bdc4-8df06c067a0a", "Caja Binifadet"],
-  ["570000600|1c6593a8-f805-43a5-b920-9bb2d4a93f59", "Caja Binifadet Tienda"],
-  ["570001200|a2c6e3e1-c8e0-4c0a-a70f-8c612a3a2d77", "Caja Binifadet Bodega"],
-  ["570000900|fb9e4af7-e50d-4617-b5e7-2de795faa894", "Caja Tamarindos"],
-  ["570001000|e89c055e-956d-4eba-a1f3-581dd7740a6f", "Caja Tamarindos Bar"],
-  ["570001100|c974f3b0-ffbf-45f2-90ae-26745bb2f8f1", "Caja Casa Tirant"],
+  ["570000000", "Caja (única)"],
   ["570000500", "Propinas"],
   ["460000000", "Anticipos de nómina"],
   ["642000000|0e5c90bd-62e9-4f6f-877e-bb2228f10325", "SS autónomos (642)"],
