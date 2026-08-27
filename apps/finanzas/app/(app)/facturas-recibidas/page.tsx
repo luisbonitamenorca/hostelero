@@ -15,10 +15,13 @@ function limpiarBusqueda(texto: string): string {
 export default async function FacturasRecibidas({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; orden?: string; dir?: string }>;
 }) {
-  const { q = "" } = await searchParams;
+  const { q = "", ...sp } = await searchParams;
   const { supabase } = await exigirModulo("compras");
+
+  const orden = ["fecha", "proveedor", "num_documento", "base", "total", "estado"].includes(sp.orden ?? "") ? sp.orden! : "fecha";
+  const dir = sp.dir === "asc" ? "asc" : "desc";
 
   let consulta = supabase
     .from("compras_doc")
@@ -27,6 +30,7 @@ export default async function FacturasRecibidas({
     // no trae. Salió a la luz al regenerar packages/db/types.ts el 25-08-2026.
     .select("id, fecha, proveedor, proveedor_nif, num_documento, base, iva, total, estado, canal, imagen_url, origen")
     .eq("tipo", "factura")
+    .order(orden, { ascending: dir === "asc" })
     .order("fecha", { ascending: false })
     .limit(LIMITE);
 
@@ -44,10 +48,17 @@ export default async function FacturasRecibidas({
   // pantalla entera.
   const { data: enCartera } = await supabase
     .from("fin_vencimientos")
-    .select("compra_doc_id")
+    .select("compra_doc_id, estado, importe, importe_liquidado")
     .eq("sentido", "pago");
 
   const conVencimiento = new Set((enCartera ?? []).map((v) => v.compra_doc_id).filter(Boolean));
+  // Estado de pago desde la cartera: la conciliación bancaria va liquidando
+  // los vencimientos y aquí se ve de un vistazo qué está pagado y qué no.
+  const pagoDoc = new Map(
+    (enCartera ?? [])
+      .filter((v) => v.compra_doc_id)
+      .map((v) => [v.compra_doc_id as string, { estado: v.estado, importe: Number(v.importe), liquidado: Number(v.importe_liquidado) }]),
+  );
 
   // El asiento que generó cada factura en el diario (origen_tipo 'compra'
   // apunta al doc de Compras). Si no hay, la factura aún no está contabilizada.
@@ -93,16 +104,35 @@ export default async function FacturasRecibidas({
             <table className="tabla">
               <thead>
                 <tr>
-                  <th>Fecha</th>
-                  <th>Proveedor</th>
-                  <th>Número</th>
-                  <th>Centro</th>
-                  <th className="a-derecha">Base</th>
-                  <th className="a-derecha">IVA</th>
-                  <th className="a-derecha">Total</th>
+                  {(
+                    [
+                      ["fecha", "Fecha", ""],
+                      ["proveedor", "Proveedor", ""],
+                      ["num_documento", "Número", ""],
+                      ["", "Centro", ""],
+                      ["base", "Base", "a-derecha"],
+                      ["", "IVA", "a-derecha"],
+                      ["total", "Total", "a-derecha"],
+                    ] as const
+                  ).map(([campo, titulo, clase]) => (
+                    <th key={titulo} className={clase || undefined}>
+                      {campo ? (
+                        <a
+                          href={`?${new URLSearchParams({ ...(q ? { q } : {}), orden: campo, dir: orden === campo && dir === "desc" ? "asc" : "desc" }).toString()}`}
+                          style={{ color: "inherit", textDecoration: "none" }}
+                          title={`Ordenar por ${titulo.toLowerCase()}`}
+                        >
+                          {titulo}
+                          {orden === campo ? (dir === "asc" ? " ↑" : " ↓") : ""}
+                        </a>
+                      ) : (
+                        titulo
+                      )}
+                    </th>
+                  ))}
                   <th className="a-derecha">Asiento</th>
+                  <th className="a-derecha">Pago</th>
                   <th></th>
-                  <th className="a-derecha">Cartera</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,15 +158,22 @@ export default async function FacturasRecibidas({
                       )}
                     </td>
                     <td className="a-derecha">
+                      {(() => {
+                        const p = pagoDoc.get(f.id);
+                        if (!p) return <BotonVencimiento id={f.id} yaTiene={conVencimiento.has(f.id)} />;
+                        if (p.estado === "liquidado") return <span style={{ color: "#0F6E56", fontWeight: 600 }}>✓ pagada</span>;
+                        if (p.estado === "parcial")
+                          return <span style={{ color: "#B4831A" }}>{euros(p.liquidado)} de {euros(p.importe)}</span>;
+                        return <span className="texto-suave">pendiente</span>;
+                      })()}
+                    </td>
+                    <td className="a-derecha">
                       {f.estado === "REVISAR" && <span className="etiqueta-estado">revisar</span>}
                       {f.imagen_url && (
                         <a className="enlace" href={f.imagen_url} target="_blank" rel="noreferrer">
                           Ver
                         </a>
                       )}
-                    </td>
-                    <td className="a-derecha">
-                      <BotonVencimiento id={f.id} yaTiene={conVencimiento.has(f.id)} />
                     </td>
                   </tr>
                 ))}

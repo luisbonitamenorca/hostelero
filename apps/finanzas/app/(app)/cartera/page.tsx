@@ -11,9 +11,10 @@ const TRAMOS = ["vencido", "30", "60", "90", "mas"] as const;
 export default async function Cartera({
   searchParams,
 }: {
-  searchParams: Promise<{ ver?: string }>;
+  searchParams: Promise<{ ver?: string; q?: string }>;
 }) {
-  const { ver = "pendientes" } = await searchParams;
+  const { ver = "pendientes", q: qCrudo = "" } = await searchParams;
+  const q = qCrudo.trim().toLowerCase();
   const { supabase } = await exigirFacturacion();
   const db = supabase;
 
@@ -60,8 +61,15 @@ export default async function Cartera({
     ]),
   );
 
-  const cobros = vencimientos.filter((v) => v.sentido === "cobro");
-  const pagos = vencimientos.filter((v) => v.sentido === "pago");
+  // El buscador filtra por quién (cliente/proveedor) o número de documento;
+  // los nombres llegan de los mapas de arriba, así que se filtra aquí.
+  const pasaBusqueda = (v: Vencimiento) => {
+    if (!q) return true;
+    const info = v.factura_id ? infoFactura.get(v.factura_id) : v.compra_doc_id ? infoCompra.get(v.compra_doc_id) : null;
+    return !!info && (`${info.quien ?? ""} ${info.numero ?? ""}`.toLowerCase().includes(q));
+  };
+  const cobros = vencimientos.filter((v) => v.sentido === "cobro" && pasaBusqueda(v));
+  const pagos = vencimientos.filter((v) => v.sentido === "pago" && pasaBusqueda(v));
 
   function pendienteDe(v: Vencimiento) {
     return Number(v.importe) - Number(v.importe_liquidado);
@@ -189,6 +197,16 @@ export default async function Cartera({
           {ver === "pendientes" ? "Ver también los liquidados" : "Ver solo lo pendiente"}
         </Link>
       </div>
+
+      <form method="get" style={{ margin: "0 0 14px" }}>
+        {ver !== "pendientes" && <input type="hidden" name="ver" value={ver} />}
+        <input
+          name="q"
+          defaultValue={qCrudo}
+          placeholder="Buscar por cliente, proveedor o número de documento…"
+          style={{ width: "100%", maxWidth: 420, padding: "8px 12px", border: "1px solid #DDE2DF", borderRadius: 8 }}
+        />
+      </form>
 
       {error && (
         <div className="estado-vacio">

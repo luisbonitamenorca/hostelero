@@ -37,7 +37,11 @@ export default function SelectorLiquidacion({
   const suma = candidatos
     .filter((c) => marcados.has(c.ap_id))
     .reduce((s, c) => s + Number(c.importe), 0);
-  const clavado = Math.round(suma * 100) === Math.round(Math.abs(objetivo) * 100) && marcados.size >= 1;
+  // Basta con CUBRIR el movimiento: si la suma se pasa, el último apunte se
+  // liquida parcialmente (nóminas del mes, SS…). El servidor reparte y valida.
+  const objetivoAbs = Math.abs(objetivo);
+  const clavado = Math.round(suma * 100) >= Math.round(objetivoAbs * 100) && marcados.size >= 1;
+  const parcial = clavado && Math.round(suma * 100) > Math.round(objetivoAbs * 100);
 
   function alternar(id: string) {
     setMarcados((prev) => {
@@ -79,9 +83,12 @@ export default function SelectorLiquidacion({
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 10, borderTop: "1px solid #EEF1EF", paddingTop: 10 }}>
         <span style={{ fontSize: 13 }}>
           Suma: <strong style={{ color: clavado ? "#0F6E56" : suma !== 0 ? "#B4423A" : undefined }}>{euros(suma)}</strong>
-          {" "}de <strong>{euros(Math.abs(objetivo))}</strong>
+          {" "}de <strong>{euros(objetivoAbs)}</strong>
           {!clavado && suma !== 0 && (
-            <span style={{ color: "#5F6B65" }}> · faltan {euros(Math.abs(objetivo) - suma)}</span>
+            <span style={{ color: "#5F6B65" }}> · faltan {euros(objetivoAbs - suma)}</span>
+          )}
+          {parcial && (
+            <span style={{ color: "#5F6B65" }}> · el último quedará liquidado en parte</span>
           )}
         </span>
         <button className="boton" type="submit" disabled={!clavado} style={{ marginLeft: "auto", opacity: clavado ? 1 : 0.45 }} title="Genera el asiento de cobro/pago y liquida la cartera">

@@ -5,6 +5,7 @@ import SelectorGrupo from "./selector-grupo";
 import SelectorLiquidacion from "./selector-liquidacion";
 import { euros, fecha } from "@/lib/importes";
 import {
+  clasificarMovimiento,
   conciliarGrupo,
   conciliarManual,
   desconciliarLiquidacion,
@@ -12,6 +13,24 @@ import {
   ignorarMovimiento,
   lanzarConciliacionAuto,
 } from "@/app/acciones-bancos";
+
+// Destinos rápidos para movimientos sin factura: cajas de centro (con su
+// analítica), anticipos, comisiones… El asiento contra el banco se genera solo.
+const DESTINOS: [string, string][] = [
+  ["570000100|2c3b1092-bf98-4a59-bdc4-8df06c067a0a", "Caja Binifadet"],
+  ["570000600|1c6593a8-f805-43a5-b920-9bb2d4a93f59", "Caja Binifadet Tienda"],
+  ["570001200|a2c6e3e1-c8e0-4c0a-a70f-8c612a3a2d77", "Caja Binifadet Bodega"],
+  ["570000900|fb9e4af7-e50d-4617-b5e7-2de795faa894", "Caja Tamarindos"],
+  ["570001000|e89c055e-956d-4eba-a1f3-581dd7740a6f", "Caja Tamarindos Bar"],
+  ["570001100|c974f3b0-ffbf-45f2-90ae-26745bb2f8f1", "Caja Casa Tirant"],
+  ["570000500", "Propinas"],
+  ["460000000", "Anticipos de nómina"],
+  ["642000000|0e5c90bd-62e9-4f6f-877e-bb2228f10325", "SS autónomos (642)"],
+  ["626000002", "Comisión bancaria"],
+  ["626000001", "Comisión Adyen (Agora Payments)"],
+  ["626000005", "Comisión Codetickets"],
+  ["626000003", "Comisión Stripe (Shopify)"],
+];
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -145,6 +164,50 @@ export default async function Conciliacion({
   }
   const candidatos = ((candResp.data as Candidato[] | null) ?? []);
   const candidatosCartera = ((cartResp.data as CandidatoCartera[] | null) ?? []);
+
+  // La PRUEBA de cada conciliado: qué asiento se generó/enlazó y contra qué
+  // facturas o cuentas se cruzó (con el importe aplicado, que puede ser
+  // parcial). Sin esto la conciliación es un acto de fe.
+  type Contra = { asiento_id: string; numero: number; descripcion: string; importe: number };
+  const asientoDeMov = new Map<string, { asiento_id: string; numero: number; descripcion: string }>();
+  const origenesDeMov = new Map<string, Contra[]>();
+  {
+    const conciliados = movs.filter((m) => m.estado === "conciliado");
+    const apIds = conciliados.map((m) => m.apunte_id).filter(Boolean) as string[];
+    if (conciliados.length) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [apsR, origR] = (await Promise.all([
+        apIds.length
+          ? supabase.from("fin_apuntes").select("id, fin_asientos(id, numero, descripcion)").in("id", apIds)
+          : Promise.resolve({ data: [] }),
+        supabase
+          .from("fin_banco_mov_apuntes")
+          .select("movimiento_id, importe, fin_apuntes(debe, haber, fin_asientos(id, numero, descripcion))")
+          .in("movimiento_id", conciliados.map((m) => m.id)),
+      ])) as any[];
+      const asientoPorApunte = new Map<string, { asiento_id: string; numero: number; descripcion: string }>();
+      for (const a of apsR.data ?? []) {
+        const asi = Array.isArray(a.fin_asientos) ? a.fin_asientos[0] : a.fin_asientos;
+        if (asi) asientoPorApunte.set(a.id, { asiento_id: asi.id, numero: asi.numero, descripcion: asi.descripcion ?? "" });
+      }
+      for (const m of conciliados) {
+        if (m.apunte_id && asientoPorApunte.has(m.apunte_id)) asientoDeMov.set(m.id, asientoPorApunte.get(m.apunte_id)!);
+      }
+      for (const o of origR.data ?? []) {
+        const ap = Array.isArray(o.fin_apuntes) ? o.fin_apuntes[0] : o.fin_apuntes;
+        const asi = ap && (Array.isArray(ap.fin_asientos) ? ap.fin_asientos[0] : ap.fin_asientos);
+        if (!asi) continue;
+        const lista = origenesDeMov.get(o.movimiento_id) ?? [];
+        lista.push({
+          asiento_id: asi.id,
+          numero: asi.numero,
+          descripcion: asi.descripcion ?? "",
+          importe: Number(o.importe ?? Number(ap.debe) + Number(ap.haber)),
+        });
+        origenesDeMov.set(o.movimiento_id, lista);
+      }
+    }
+  }
 
   const dif =
     resumen?.saldo_banco != null && resumen?.saldo_contable != null
@@ -313,7 +376,7 @@ export default async function Conciliacion({
                     </td>
                     <td>
                       {m.estado === "conciliado"
-                        ? `✓ ${m.conciliado_via === "liquidacion" ? "liquidación" : m.conciliado_via ?? "manual"}`
+                        ? `✓ ${m.conciliado_via === "liquidacion" ? "liquidación" : m.conciliado_via === "clasificacion" ? "clasificado" : m.conciliado_via ?? "manual"}`
                         : m.estado}
                     </td>
                     <td>
@@ -367,15 +430,48 @@ export default async function Conciliacion({
                           {liqAbierto === m.id ? "Cerrar" : "Liquidar…"}
                         </a>
                       )}
+                      {m.estado === "pendiente" && (
+                        <form action={clasificarMovimiento} style={{ display: "inline-flex", gap: 4, marginLeft: 6, alignItems: "center" }}>
+                          <input type="hidden" name="banco" value={id} />
+                          <input type="hidden" name="mov" value={m.id} />
+                          <select name="destino" defaultValue="" style={{ maxWidth: 150, padding: "3px 4px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 12 }}>
+                            <option value="" disabled>Enviar a…</option>
+                            {DESTINOS.map(([v, t]) => (
+                              <option key={v} value={v}>{t}</option>
+                            ))}
+                          </select>
+                          <button className="boton-secundario" type="submit" style={{ fontSize: 12, padding: "3px 8px" }} title="Genera el asiento contra esa cuenta y concilia el movimiento">
+                            OK
+                          </button>
+                        </form>
+                      )}
                       {m.estado === "pendiente" && grupoAbierto === m.id && (
                         <SelectorGrupo bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatos} />
                       )}
                       {m.estado === "pendiente" && liqAbierto === m.id && (
                         <SelectorLiquidacion bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatosCartera} />
                       )}
+                      {m.estado === "conciliado" && asientoDeMov.has(m.id) && (
+                        <span className="secundario" style={{ display: "block", marginBottom: 4 }}>
+                          →{" "}
+                          <a className="enlace" href={ruta(`/asientos/${asientoDeMov.get(m.id)!.asiento_id}`)}>
+                            nº {asientoDeMov.get(m.id)!.numero}
+                          </a>{" "}
+                          {asientoDeMov.get(m.id)!.descripcion.slice(0, 44)}
+                          {(origenesDeMov.get(m.id) ?? []).map((o) => (
+                            <span key={o.asiento_id + o.numero} style={{ display: "block", paddingLeft: 14 }}>
+                              contra{" "}
+                              <a className="enlace" href={ruta(`/asientos/${o.asiento_id}`)}>
+                                nº {o.numero}
+                              </a>{" "}
+                              {o.descripcion.slice(0, 40)} · {euros(o.importe)}
+                            </span>
+                          ))}
+                        </span>
+                      )}
                       {m.estado !== "pendiente" && (
                         <form
-                          action={m.conciliado_via === "liquidacion" ? desconciliarLiquidacion : desconciliarMovimiento}
+                          action={m.conciliado_via === "liquidacion" || m.conciliado_via === "clasificacion" ? desconciliarLiquidacion : desconciliarMovimiento}
                           style={{ display: "inline" }}
                         >
                           <input type="hidden" name="banco" value={id} />

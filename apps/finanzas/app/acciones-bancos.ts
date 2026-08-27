@@ -157,3 +157,21 @@ export async function desconciliarLiquidacion(formData: FormData) {
 
   volver(bancoId);
 }
+
+export async function clasificarMovimiento(formData: FormData) {
+  const { supabase } = await exigirModulo("contabilidad");
+  const bancoId = String(formData.get("banco") ?? "");
+  const movId = String(formData.get("mov") ?? "");
+  const destino = String(formData.get("destino") ?? "");
+  if (!bancoId || !movId || !destino) volver(bancoId);
+
+  // destino = "codigo" o "codigo|centro_uuid". Genera el asiento contra esa
+  // cuenta (caja de centro, anticipos, comisiones…) y concilia el movimiento.
+  const [codigo, centro] = destino.split("|");
+  const rpc = supabase as unknown as {
+    rpc: (fn: "fin_clasificar_a_cuenta", args: { p_banco: string; p_mov: string; p_codigo: string; p_centro: string | null }) => PromiseLike<{ error: unknown }>;
+  };
+  await rpc.rpc("fin_clasificar_a_cuenta", { p_banco: bancoId, p_mov: movId, p_codigo: codigo, p_centro: centro || null });
+
+  volver(bancoId);
+}

@@ -4086,25 +4086,28 @@ export type Database = {
           apunte_id: string
           creado_en: string
           cuenta_id: string
+          importe: number | null
           movimiento_id: string
         }
         Insert: {
           apunte_id: string
           creado_en?: string
           cuenta_id: string
+          importe?: number | null
           movimiento_id: string
         }
         Update: {
           apunte_id?: string
           creado_en?: string
           cuenta_id?: string
+          importe?: number | null
           movimiento_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "fin_banco_mov_apuntes_apunte_id_fkey"
             columns: ["apunte_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "fin_apuntes"
             referencedColumns: ["id"]
           },
@@ -8336,6 +8339,15 @@ export type Database = {
           descripcion: string
           importe: number
         }[]
+      }
+      fin_clasificar_a_cuenta: {
+        Args: {
+          p_banco: string
+          p_centro?: string
+          p_codigo: string
+          p_mov: string
+        }
+        Returns: string
       }
       fin_conciliacion_candidatos: {
         Args: { p_banco: string; p_mov: string }
