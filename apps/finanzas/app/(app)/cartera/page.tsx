@@ -2,6 +2,7 @@ import Link from "next/link";
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { euros, fecha as formatoFecha } from "@/lib/importes";
 import { diasHasta, tramo, NOMBRE_TRAMO, type Vencimiento } from "@/lib/cartera";
+import { paginar } from "@/lib/paginar";
 import FilaVencimiento from "./fila-vencimiento";
 
 export const dynamic = "force-dynamic";
@@ -18,16 +19,16 @@ export default async function Cartera({
   const { supabase } = await exigirFacturacion();
   const db = supabase;
 
-  let consulta = db
-    .from("fin_vencimientos")
-    .select("id, sentido, factura_id, compra_doc_id, asiento_id, fecha_vencimiento, importe, importe_liquidado, estado, forma_pago, notas")
-    .order("fecha_vencimiento")
-    .limit(500);
-
-  if (ver === "pendientes") consulta = consulta.in("estado", ["pendiente", "parcial"]);
-
-  const { data, error } = await consulta;
-  const vencimientos = (data ?? []) as Vencimiento[];
+  const vencimientos = (await paginar((d, h) => {
+    let c = db
+      .from("fin_vencimientos")
+      .select("id, sentido, factura_id, compra_doc_id, asiento_id, fecha_vencimiento, importe, importe_liquidado, estado, forma_pago, notas")
+      .order("fecha_vencimiento")
+      .range(d, h);
+    if (ver === "pendientes") c = c.in("estado", ["pendiente", "parcial"]);
+    return c;
+  })) as Vencimiento[];
+  const error = null;
 
   // Nombres para que la lista se lea: de quién es cada cobro y cada pago.
   const idsFactura = vencimientos.map((v) => v.factura_id).filter(Boolean) as string[];

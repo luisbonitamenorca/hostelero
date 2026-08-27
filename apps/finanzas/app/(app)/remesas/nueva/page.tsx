@@ -2,6 +2,7 @@ import Link from "next/link";
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { type CuentaBancaria } from "@/lib/remesas";
 import type { Vencimiento } from "@/lib/cartera";
+import { paginar } from "@/lib/paginar";
 import FormularioRemesa from "./formulario-remesa";
 
 export const dynamic = "force-dynamic";
@@ -10,18 +11,21 @@ export default async function NuevaRemesa() {
   const { supabase, cuenta } = await exigirFacturacion();
   const db = supabase;
 
-  const [{ data: cuentas }, { data: vencimientos }, { data: config }] = await Promise.all([
+  const [{ data: cuentas }, vencimientos, { data: config }] = await Promise.all([
     db.from("fin_bancos_cuentas").select("id, nombre, iban, bic, activa, sociedad_id").eq("activa", true).order("nombre"),
-    supabase
-      .from("fin_vencimientos")
-      .select("id, sentido, factura_id, compra_doc_id, asiento_id, fecha_vencimiento, importe, importe_liquidado, estado, forma_pago, notas")
-      .in("estado", ["pendiente", "parcial"])
-      .order("fecha_vencimiento"),
+    paginar((d, h) =>
+      supabase
+        .from("fin_vencimientos")
+        .select("id, sentido, factura_id, compra_doc_id, asiento_id, fecha_vencimiento, importe, importe_liquidado, estado, forma_pago, notas")
+        .in("estado", ["pendiente", "parcial"])
+        .order("fecha_vencimiento")
+        .range(d, h),
+    ),
     // La columna llega con la F4a: hasta aplicarla, los tipos no la conocen.
     db.from("fin_config").select("identificador_acreedor").limit(1).maybeSingle(),
   ]);
 
-  const abiertos = (vencimientos ?? []) as Vencimiento[];
+  const abiertos = vencimientos as Vencimiento[];
 
   // Nombres, para que la lista de selección se pueda leer.
   const idsFactura = abiertos.map((v) => v.factura_id).filter(Boolean) as string[];

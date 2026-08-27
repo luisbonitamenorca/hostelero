@@ -1,5 +1,6 @@
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
+import { paginar } from "@/lib/paginar";
 import { ruta } from "@/lib/rutas";
 import Buscador from "../clientes/buscador";
 import BotonVencimiento from "./boton-vencimiento";
@@ -58,28 +59,34 @@ export default async function FacturasRecibidas({
   // Cuáles ya están en cartera. Si la migración F2a aún no está aplicada, la
   // tabla no existe: se sigue adelante sin la columna en vez de romper la
   // pantalla entera.
-  const { data: enCartera } = await supabase
-    .from("fin_vencimientos")
-    .select("compra_doc_id, estado, importe, importe_liquidado")
-    .eq("sentido", "pago");
+  const enCartera = await paginar((d, h) =>
+    supabase
+      .from("fin_vencimientos")
+      .select("compra_doc_id, estado, importe, importe_liquidado")
+      .eq("sentido", "pago")
+      .range(d, h),
+  );
 
-  const conVencimiento = new Set((enCartera ?? []).map((v) => v.compra_doc_id).filter(Boolean));
+  const conVencimiento = new Set(enCartera.map((v) => v.compra_doc_id).filter(Boolean));
   // Estado de pago desde la cartera: la conciliación bancaria va liquidando
   // los vencimientos y aquí se ve de un vistazo qué está pagado y qué no.
   const pagoDoc = new Map(
-    (enCartera ?? [])
+    enCartera
       .filter((v) => v.compra_doc_id)
       .map((v) => [v.compra_doc_id as string, { estado: v.estado, importe: Number(v.importe), liquidado: Number(v.importe_liquidado) }]),
   );
 
   // El asiento que generó cada factura en el diario (origen_tipo 'compra'
   // apunta al doc de Compras). Si no hay, la factura aún no está contabilizada.
-  const { data: asientosCompra } = await supabase
-    .from("fin_asientos")
-    .select("id, numero, origen_id")
-    .eq("origen_tipo", "compra")
-    .eq("estado", "confirmado");
-  const asientoDoc = new Map((asientosCompra ?? []).map((a) => [a.origen_id, a]));
+  const asientosCompra = await paginar((d, h) =>
+    supabase
+      .from("fin_asientos")
+      .select("id, numero, origen_id")
+      .eq("origen_tipo", "compra")
+      .eq("estado", "confirmado")
+      .range(d, h),
+  );
+  const asientoDoc = new Map(asientosCompra.map((a) => [a.origen_id, a]));
 
   const filas = data ?? [];
   const suma = filas.reduce((s, f) => s + Number(f.total ?? 0), 0);
