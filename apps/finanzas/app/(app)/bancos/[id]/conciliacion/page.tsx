@@ -3,6 +3,7 @@ import { exigirModulo } from "@/lib/supabase/server";
 import { ruta } from "@/lib/rutas";
 import SelectorGrupo from "./selector-grupo";
 import SelectorLiquidacion from "./selector-liquidacion";
+import SelectorMes from "./selector-mes";
 import { euros, fecha } from "@/lib/importes";
 import {
   clasificarMovimiento,
@@ -307,12 +308,7 @@ export default async function Conciliacion({
         </div>
         <form method="get" style={{ display: "flex", gap: 6, flex: "1 1 300px" }}>
           <input type="hidden" name="estado" value={estadoFiltro} />
-          <select name="mes" defaultValue={mes} style={{ padding: "6px 8px", border: "1px solid #DDE2DF", borderRadius: 6 }}>
-            <option value="">Todo el año</option>
-            {MESES_EXTRACTO.map((m) => (
-              <option key={m} value={m}>{m.split("-").reverse().join("/")}</option>
-            ))}
-          </select>
+          <SelectorMes meses={MESES_EXTRACTO} valor={mes} />
           <input name="q" defaultValue={q} placeholder="Buscar en concepto o detalle…" style={{ flex: 1, padding: "6px 10px", border: "1px solid #DDE2DF", borderRadius: 6 }} />
           <button className="boton-secundario" type="submit">Buscar</button>
         </form>
