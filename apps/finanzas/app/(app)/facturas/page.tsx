@@ -36,7 +36,7 @@ export default async function Facturas({
     rpc.rpc("fin_facturas_ingreso", {}),
   ]);
 
-  type Ingreso = { asiento_id: string; numero: number; fecha: string; tipo: string; descripcion: string; total: number; cobro: string };
+  type Ingreso = { asiento_id: string; numero: number; fecha: string; tipo: string; descripcion: string; total: number; cobro: string; pareja: string | null };
   const ingresos = ((ingresoResp.data as Ingreso[] | null) ?? []);
 
   // Fila unificada: da igual si nació en el TPV o en Ágora. `cobro` dice si el
@@ -63,8 +63,17 @@ export default async function Facturas({
       href: `/asientos/${a.asiento_id}`,
       numero: m ? m[1] : "—",
       cliente: m ? m[2] : a.descripcion,
-      tipo: nominativa ? "Ágora" : "Ágora · día",
-      estado: a.cobro === "pendiente" ? "pendiente de cobro" : `cobrada (${a.cobro})`,
+      tipo: nominativa && Number(a.total) < 0 ? "Ágora · rectificativa" : nominativa ? "Ágora" : "Ágora · día",
+      // Compensada: la rectificativa (total < 0) dice a quién rectifica y la
+      // factura anulada, quién la anula — una se paga con la otra.
+      estado:
+        a.cobro === "compensada" && a.pareja
+          ? Number(a.total) < 0
+            ? `rectifica a ${a.pareja}`
+            : `anulada por ${a.pareja}`
+          : a.cobro === "pendiente"
+            ? "pendiente de cobro"
+            : `cobrada (${a.cobro})`,
       fecha: a.fecha,
       total: Number(a.total),
       asiento: { numero: a.numero, href: `/asientos/${a.asiento_id}` },
@@ -183,6 +192,8 @@ export default async function Facturas({
                         <span style={{ color: "#B4831A" }}>pendiente de cobro</span>
                       ) : f.estado.startsWith("cobrada") ? (
                         <span style={{ color: "#0F6E56" }}>✓ {f.estado}</span>
+                      ) : f.estado.startsWith("rectifica") || f.estado.startsWith("anulada por") ? (
+                        <span style={{ color: "#5F6B65" }}>⇄ {f.estado}</span>
                       ) : (
                         f.estado
                       )}
