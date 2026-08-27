@@ -36,11 +36,12 @@ export default async function Facturas({
     rpc.rpc("fin_facturas_ingreso", {}),
   ]);
 
-  type Ingreso = { asiento_id: string; numero: number; fecha: string; tipo: string; descripcion: string; total: number };
+  type Ingreso = { asiento_id: string; numero: number; fecha: string; tipo: string; descripcion: string; total: number; cobro: string };
   const ingresos = ((ingresoResp.data as Ingreso[] | null) ?? []);
 
-  // Fila unificada: da igual si nació en el TPV o en Ágora.
-  type Fila = { clave: string; href: string; numero: string; cliente: string; tipo: string; estado: string; fecha: string; total: number };
+  // Fila unificada: da igual si nació en el TPV o en Ágora. `cobro` dice si el
+  // dinero ya está (caja/banco) o si la factura espera transferencia o giro.
+  type Fila = { clave: string; href: string; numero: string; cliente: string; tipo: string; estado: string; fecha: string; total: number; asiento?: { numero: number; href: string } };
   const filasPropias: Fila[] = (propias ?? []).map((f) => {
     const c = Array.isArray(f.fin_clientes) ? f.fin_clientes[0] : f.fin_clientes;
     return {
@@ -60,12 +61,13 @@ export default async function Facturas({
     return {
       clave: `a-${a.asiento_id}`,
       href: `/asientos/${a.asiento_id}`,
-      numero: m ? m[1] : `asiento ${a.numero}`,
+      numero: m ? m[1] : "—",
       cliente: m ? m[2] : a.descripcion,
       tipo: nominativa ? "Ágora" : "Ágora · día",
-      estado: "contabilizada",
+      estado: a.cobro === "pendiente" ? "pendiente de cobro" : `cobrada (${a.cobro})`,
       fecha: a.fecha,
       total: Number(a.total),
+      asiento: { numero: a.numero, href: `/asientos/${a.asiento_id}` },
     };
   });
 
@@ -143,9 +145,10 @@ export default async function Facturas({
                       ["numero", "Número", ""],
                       ["cliente", "Cliente", ""],
                       ["tipo", "Tipo", ""],
-                      ["", "Estado", ""],
+                      ["", "Cobro", ""],
                       ["fecha", "Fecha", ""],
                       ["total", "Total", "a-derecha"],
+                      ["", "Asiento", "a-derecha"],
                     ] as const
                   ).map(([campo, titulo, clase]) => (
                     <th key={titulo} className={clase || undefined}>
@@ -165,21 +168,36 @@ export default async function Facturas({
                 {pagina.map((f) => (
                   <tr key={f.clave}>
                     <td className="dato">
-                      <Link className="enlace" href={f.href}>
-                        {f.numero}
-                      </Link>
+                      {f.numero === "—" ? "—" : (
+                        <Link className="enlace" href={f.href}>
+                          {f.numero}
+                        </Link>
+                      )}
                     </td>
                     <td>{f.cliente}</td>
                     <td>{f.tipo}</td>
                     <td>
                       {f.estado === "borrador" || f.estado === "anulada" ? (
                         <span className="etiqueta-estado">{f.estado}</span>
+                      ) : f.estado === "pendiente de cobro" ? (
+                        <span style={{ color: "#B4831A" }}>pendiente de cobro</span>
+                      ) : f.estado.startsWith("cobrada") ? (
+                        <span style={{ color: "#0F6E56" }}>✓ {f.estado}</span>
                       ) : (
                         f.estado
                       )}
                     </td>
                     <td className="dato">{fecha(f.fecha)}</td>
                     <td className="numero">{euros(f.total)}</td>
+                    <td className="a-derecha">
+                      {f.asiento ? (
+                        <Link className="enlace" href={f.asiento.href}>
+                          nº {f.asiento.numero}
+                        </Link>
+                      ) : (
+                        <span className="texto-suave">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -202,8 +220,11 @@ export default async function Facturas({
 
       <p className="pista">
         Las filas «Ágora» enlazan a su asiento del diario: las nominativas una a una y las
-        simplificadas agrupadas por día y centro (el total del día incluye propinas). Las del TPV
-        llegarán aquí como facturas propias con su registro Verifactu.
+        simplificadas agrupadas por día y centro (el total del día incluye propinas). El cobro:
+        lo que entra por efectivo, tarjeta, Agorapay o Shopify nace <strong>cobrado</strong> (caja);
+        las de transferencia o giro quedan <strong>pendientes de cobro</strong> hasta que el banco
+        las liquida en la conciliación — esa es la cartera de cobro viva. Las del TPV llegarán aquí
+        como facturas propias con su registro Verifactu.
       </p>
     </>
   );
