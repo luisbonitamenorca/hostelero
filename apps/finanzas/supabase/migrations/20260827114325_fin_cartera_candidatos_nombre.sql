@@ -1,0 +1,5 @@
+-- (28-08-2026, caso Torrella) fin_cartera_candidatos v3: prioridad a los
+-- apuntes cuyo asiento comparte una palabra (≥5 letras) con el
+-- concepto/detalle del movimiento. Sustituida inmediatamente por la v4
+-- (siguiente migración), que además quita la ventana de fechas cuando el
+-- nombre casa. Definición vigente: ver la v4.

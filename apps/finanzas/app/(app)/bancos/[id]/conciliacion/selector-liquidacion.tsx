@@ -31,8 +31,17 @@ export default function SelectorLiquidacion({
   candidatos: CandidatoCartera[];
 }) {
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  const [filtro, setFiltro] = useState("");
   const euros = (n: number) => n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
   const fecha = (f: string) => f.split("-").reverse().join("/");
+
+  // El buscador filtra la lista, pero los ya marcados no desaparecen.
+  const visibles = candidatos.filter(
+    (c) =>
+      marcados.has(c.ap_id) ||
+      !filtro ||
+      `${c.descripcion} ${c.cuenta_codigo} ${c.importe}`.toLowerCase().includes(filtro.toLowerCase()),
+  );
 
   const suma = candidatos
     .filter((c) => marcados.has(c.ap_id))
@@ -56,8 +65,14 @@ export default function SelectorLiquidacion({
     <form action={conciliarLiquidando} style={{ border: "1px solid #DDE2DF", borderRadius: 8, padding: 12, background: "#fff", marginTop: 8 }}>
       <input type="hidden" name="banco" value={bancoId} />
       <input type="hidden" name="mov" value={movId} />
+      <input
+        value={filtro}
+        onChange={(e) => setFiltro(e.target.value)}
+        placeholder="Filtrar por proveedor, cliente, factura o importe…"
+        style={{ width: "100%", padding: "6px 10px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 13, marginBottom: 8 }}
+      />
       <div style={{ maxHeight: 260, overflowY: "auto" }}>
-        {candidatos.map((c) => (
+        {visibles.map((c) => (
           <label key={c.ap_id} style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "3px 0", fontSize: 13, cursor: "pointer" }}>
             <input
               type="checkbox"
@@ -74,9 +89,11 @@ export default function SelectorLiquidacion({
             </span>
           </label>
         ))}
-        {candidatos.length === 0 && (
+        {visibles.length === 0 && (
           <p style={{ color: "#5F6B65", fontSize: 13, margin: 0 }}>
-            No hay facturas ni cuentas pendientes de importe compatible.
+            {candidatos.length === 0
+              ? "No hay facturas ni cuentas pendientes cercanas a esta fecha."
+              : "Nada coincide con el filtro."}
           </p>
         )}
       </div>

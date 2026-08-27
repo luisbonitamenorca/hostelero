@@ -418,8 +418,13 @@ export default async function Conciliacion({
                           {(grupos.get(m.id) ?? []).length === 0 && (
                             <span className="secundario" style={{ display: "inline" }}>sin candidato en el diario</span>
                           )}
-                          <a className="boton-secundario" style={{ fontSize: 12, padding: "3px 10px" }} href={enlace({ grupo: grupoAbierto === m.id ? "" : m.id })}>
-                            {grupoAbierto === m.id ? "Cerrar" : "Elegir varios…"}
+                          <a
+                            className="boton-secundario"
+                            style={{ fontSize: 12, padding: "3px 10px" }}
+                            href={enlace({ grupo: grupoAbierto === m.id ? "" : m.id })}
+                            title="Cruzar contra apuntes del banco (572) que ya estén en el diario"
+                          >
+                            {grupoAbierto === m.id ? "Cerrar" : "Diario…"}
                           </a>
                           <BotonIgnorar bancoId={id} movId={m.id} />
                         </span>
