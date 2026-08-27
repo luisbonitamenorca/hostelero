@@ -132,8 +132,15 @@ export default async function Conciliacion({
   );
 
   const rpc = supabase as unknown as {
-    rpc: (fn: string, args: { p_banco: string }) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+    rpc: (fn: string, args: { p_banco: string; p_desde?: string; p_hasta?: string }) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
   };
+  // Con mes elegido, los indicadores hablan de ESE mes (saldos a fin de mes).
+  const rango: { p_desde?: string; p_hasta?: string } = {};
+  if (mes) {
+    const [a, mm] = mes.split("-").map(Number);
+    rango.p_desde = `${mes}-01`;
+    rango.p_hasta = new Date(Date.UTC(a, mm, 0)).toISOString().slice(0, 10);
+  }
   // El selector de grupo se abre para UN movimiento (?grupo=id): sus
   // candidatos se piden solo entonces, no para toda la tabla.
   const grupoAbierto = sp.grupo ?? "";
@@ -145,7 +152,7 @@ export default async function Conciliacion({
   };
   const [{ data: movsData, error }, { data: resumenData }, { data: sugData }, { data: gruposData }, candResp, cartResp] = await Promise.all([
     consulta,
-    rpc.rpc("fin_conciliacion_resumen", { p_banco: id }),
+    rpc.rpc("fin_conciliacion_resumen", { p_banco: id, ...rango }),
     rpc.rpc("fin_conciliacion_sugerencias", { p_banco: id }),
     rpc.rpc("fin_conciliacion_grupos", { p_banco: id }),
     grupoAbierto ? rpcCand.rpc("fin_conciliacion_candidatos", { p_banco: id, p_mov: grupoAbierto }) : Promise.resolve({ data: null }),
@@ -254,7 +261,7 @@ export default async function Conciliacion({
       {resumen && (
         <div className="tarjetas-kpi" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 18 }}>
           {[
-            ["Movimientos", String(resumen.total)],
+            [mes ? `Movimientos ${mes.split("-").reverse().join("/")}` : "Movimientos", String(resumen.total)],
             ["Conciliados", `${resumen.conciliados} (${pct}%)`],
             ["Pendientes", String(resumen.pendientes)],
             ["· cobros", `${resumen.pend_cobros} (${euros(Number(resumen.pend_cobros_importe))})`],
