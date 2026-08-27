@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
 import { exigirModulo } from "@/lib/supabase/server";
 import { ruta } from "@/lib/rutas";
-import SelectorGrupo from "./selector-grupo";
 import SelectorLiquidacion from "./selector-liquidacion";
 import SelectorMes from "./selector-mes";
 import { euros, fecha } from "@/lib/importes";
 import {
   clasificarMovimiento,
-  conciliarGrupo,
   conciliarManual,
   desconciliarLiquidacion,
   desconciliarMovimiento,
@@ -398,32 +396,7 @@ export default async function Conciliacion({
                         </span>
                       )}
                       {m.estado === "pendiente" && sug.length === 0 && (
-                        <span style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                          {(grupos.get(m.id) ?? []).map((g, gi) => (
-                            <form key={gi} action={conciliarGrupo} style={{ display: "inline" }}>
-                              <input type="hidden" name="banco" value={id} />
-                              <input type="hidden" name="mov" value={m.id} />
-                              {g.ap_ids.map((apId) => (
-                                <input key={apId} type="hidden" name="apunte" value={apId} />
-                              ))}
-                              <button className="boton-secundario" type="submit" style={{ fontSize: 12 }} title="Conciliar contra la suma de estos apuntes">
-                                Σ {g.etiqueta}
-                              </button>
-                            </form>
-                          ))}
-                          {(grupos.get(m.id) ?? []).length === 0 && (
-                            <span className="secundario" style={{ display: "inline" }}>sin candidato en el diario</span>
-                          )}
-                          <a
-                            className="boton-secundario"
-                            style={{ fontSize: 12, padding: "3px 10px" }}
-                            href={enlace({ grupo: grupoAbierto === m.id ? "" : m.id })}
-                            title="Cruzar contra apuntes del banco (572) que ya estén en el diario"
-                          >
-                            {grupoAbierto === m.id ? "Cerrar" : "Diario…"}
-                          </a>
-                          <BotonIgnorar bancoId={id} movId={m.id} />
-                        </span>
+                        <BotonIgnorar bancoId={id} movId={m.id} />
                       )}
                       {m.estado === "pendiente" && (
                         <a
@@ -449,9 +422,6 @@ export default async function Conciliacion({
                             OK
                           </button>
                         </form>
-                      )}
-                      {m.estado === "pendiente" && grupoAbierto === m.id && (
-                        <SelectorGrupo bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatos} />
                       )}
                       {m.estado === "pendiente" && liqAbierto === m.id && (
                         <SelectorLiquidacion bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatosCartera} />
