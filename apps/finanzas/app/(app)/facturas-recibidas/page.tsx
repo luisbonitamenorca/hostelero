@@ -15,33 +15,42 @@ function limpiarBusqueda(texto: string): string {
 export default async function FacturasRecibidas({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; orden?: string; dir?: string }>;
+  searchParams: Promise<{ q?: string; orden?: string; dir?: string; pag?: string }>;
 }) {
   const { q = "", ...sp } = await searchParams;
   const { supabase } = await exigirModulo("compras");
 
   const orden = ["fecha", "proveedor", "num_documento", "base", "total", "estado"].includes(sp.orden ?? "") ? sp.orden! : "fecha";
   const dir = sp.dir === "asc" ? "asc" : "desc";
+  const pag = Math.max(1, parseInt(sp.pag ?? "1", 10) || 1);
+  const termino = limpiarBusqueda(q);
 
-  let consulta = supabase
-    .from("compras_doc")
-    // `canal` es el centro en el mundo de Compras (texto, no uuid): la página
-    // se escribió contra un esquema previsto con centro_id que el port real
-    // no trae. Salió a la luz al regenerar packages/db/types.ts el 25-08-2026.
-    .select("id, fecha, proveedor, proveedor_nif, num_documento, base, iva, total, estado, canal, imagen_url, origen")
-    .eq("tipo", "factura")
+  // La misma consulta dos veces: contada (para paginar) y paginada.
+  const filtrar = <T,>(c: T): T => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let r = (c as any).eq("tipo", "factura");
+    if (termino) {
+      r = r.or(`proveedor.ilike.%${termino}%,proveedor_nif.ilike.%${termino}%,num_documento.ilike.%${termino}%`);
+    }
+    return r as T;
+  };
+
+  const consulta = filtrar(
+    supabase
+      .from("compras_doc")
+      // `canal` es el centro en el mundo de Compras (texto, no uuid): la página
+      // se escribió contra un esquema previsto con centro_id que el port real
+      // no trae. Salió a la luz al regenerar packages/db/types.ts el 25-08-2026.
+      .select("id, fecha, proveedor, proveedor_nif, num_documento, base, iva, total, estado, canal, imagen_url, origen"),
+  )
     .order(orden, { ascending: dir === "asc" })
     .order("fecha", { ascending: false })
-    .limit(LIMITE);
+    .range((pag - 1) * LIMITE, pag * LIMITE - 1);
 
-  const termino = limpiarBusqueda(q);
-  if (termino) {
-    consulta = consulta.or(
-      `proveedor.ilike.%${termino}%,proveedor_nif.ilike.%${termino}%,num_documento.ilike.%${termino}%`,
-    );
-  }
-
-  const { data, error } = await consulta;
+  const [{ data, error }, { count: totalFiltrado }] = await Promise.all([
+    consulta,
+    filtrar(supabase.from("compras_doc").select("id", { count: "exact", head: true })),
+  ]);
 
   // Cuáles ya están en cartera. Si la migración F2a aún no está aplicada, la
   // tabla no existe: se sigue adelante sin la columna en vez de romper la
@@ -71,6 +80,28 @@ export default async function FacturasRecibidas({
 
   const filas = data ?? [];
   const suma = filas.reduce((s, f) => s + Number(f.total ?? 0), 0);
+  const total = totalFiltrado ?? filas.length;
+  const paginas = Math.max(1, Math.ceil(total / LIMITE));
+  const enlace = (cambios: Record<string, string>) => {
+    const base: Record<string, string> = {
+      ...(q ? { q } : {}),
+      ...(orden !== "fecha" || dir !== "desc" ? { orden, dir } : {}),
+      ...(pag > 1 ? { pag: String(pag) } : {}),
+      ...cambios,
+    };
+    return `?${Object.entries(base).filter(([, v]) => v !== "").map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&")}`;
+  };
+  // El centro, abreviado: si no, la tabla no cabe en pantalla.
+  const CENTRO_CORTO: Record<string, string> = {
+    "BINIFADET RESTAURANTE": "Binifadet",
+    "BINIFADET BODEGA": "Bodega",
+    "BINIFADET TIENDA": "Tienda",
+    "TAMARINDOS RESTAURANTE": "Tamarindos",
+    "TAMARINDOS BAR": "Tam. Bar",
+    "CASA TIRANT": "Tirant",
+    "COCINA PRODUCCION": "Producción",
+    ESTRUCTURA: "Estructura",
+  };
 
   return (
     <>
@@ -101,7 +132,7 @@ export default async function FacturasRecibidas({
       {!error && filas.length > 0 && (
         <>
           <div className="tabla-envoltura">
-            <table className="tabla">
+            <table className="tabla" style={{ fontSize: 13 }}>
               <thead>
                 <tr>
                   {(
@@ -111,19 +142,17 @@ export default async function FacturasRecibidas({
                       ["num_documento", "Número", ""],
                       ["", "Centro", ""],
                       ["base", "Base", "a-derecha"],
-                      ["", "IVA", "a-derecha"],
                       ["total", "Total", "a-derecha"],
                     ] as const
                   ).map(([campo, titulo, clase]) => (
-                    <th key={titulo} className={clase || undefined}>
+                    <th key={titulo} className={clase || undefined} style={{ whiteSpace: "nowrap" }}>
                       {campo ? (
                         <a
-                          href={`?${new URLSearchParams({ ...(q ? { q } : {}), orden: campo, dir: orden === campo && dir === "desc" ? "asc" : "desc" }).toString()}`}
+                          href={enlace({ orden: campo, dir: orden === campo && dir === "desc" ? "asc" : "desc", pag: "" })}
                           style={{ color: "inherit", textDecoration: "none" }}
                           title={`Ordenar por ${titulo.toLowerCase()}`}
                         >
-                          {titulo}
-                          {orden === campo ? (dir === "asc" ? " ↑" : " ↓") : ""}
+                          {titulo} {orden === campo ? (dir === "asc" ? "↑" : "↓") : "↕"}
                         </a>
                       ) : (
                         titulo
@@ -138,15 +167,17 @@ export default async function FacturasRecibidas({
               <tbody>
                 {filas.map((f) => (
                   <tr key={f.id}>
-                    <td className="dato">{fecha(f.fecha)}</td>
-                    <td>
-                      {f.proveedor ?? "—"}
-                      {f.proveedor_nif && <span className="secundario">{f.proveedor_nif}</span>}
+                    <td className="dato" style={{ whiteSpace: "nowrap" }}>{fecha(f.fecha)}</td>
+                    <td title={`${f.proveedor ?? ""} · ${f.proveedor_nif ?? ""}`}>
+                      <span style={{ display: "block", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {f.proveedor ?? "—"}
+                      </span>
                     </td>
-                    <td className="dato">{f.num_documento ?? "—"}</td>
-                    <td>{f.canal ?? "—"}</td>
-                    <td className="numero">{euros(Number(f.base ?? 0))}</td>
-                    <td className="numero">{euros(Number(f.iva ?? 0))}</td>
+                    <td className="dato" style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={f.num_documento ?? ""}>
+                      {f.num_documento ?? "—"}
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>{f.canal ? (CENTRO_CORTO[f.canal] ?? f.canal) : "—"}</td>
+                    <td className="numero" title={`IVA ${euros(Number(f.iva ?? 0))}`}>{euros(Number(f.base ?? 0))}</td>
                     <td className="numero">{euros(Number(f.total ?? 0))}</td>
                     <td className="a-derecha">
                       {asientoDoc.has(f.id) ? (
@@ -180,10 +211,18 @@ export default async function FacturasRecibidas({
               </tbody>
             </table>
           </div>
-          <p className="pie-tabla">
-            {filas.length} {filas.length === 1 ? "factura" : "facturas"} · {euros(suma)} en total
-            {filas.length === LIMITE && ` · mostrando las ${LIMITE} más recientes`}
-          </p>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", margin: "10px 0" }}>
+            <p className="pie-tabla" style={{ margin: 0 }}>
+              {total} {total === 1 ? "factura" : "facturas"} · {euros(suma)} en esta página
+            </p>
+            <span style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
+              <span className="secundario" style={{ display: "inline" }}>
+                {(pag - 1) * LIMITE + 1}–{Math.min(pag * LIMITE, total)} de {total}
+              </span>
+              {pag > 1 && <a className="boton-secundario" style={{ padding: "4px 12px", fontSize: 13 }} href={enlace({ pag: String(pag - 1) })}>← Anteriores</a>}
+              {pag < paginas && <a className="boton-secundario" style={{ padding: "4px 12px", fontSize: 13 }} href={enlace({ pag: String(pag + 1) })}>Siguientes →</a>}
+            </span>
+          </div>
         </>
       )}
 
