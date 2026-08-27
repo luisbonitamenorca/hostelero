@@ -25,10 +25,12 @@ export default async function FacturasRecibidas({
   const pag = Math.max(1, parseInt(sp.pag ?? "1", 10) || 1);
   const termino = limpiarBusqueda(q);
 
-  // La misma consulta dos veces: contada (para paginar) y paginada.
+  // La misma consulta dos veces: contada (para paginar) y paginada. Solo
+  // facturas OK: las que están en revisión viven en Compras hasta validarse
+  // (decisión de Luis, 28-08-2026) — aquí ni aparecen.
   const filtrar = <T,>(c: T): T => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let r = (c as any).eq("tipo", "factura");
+    let r = (c as any).eq("tipo", "factura").eq("estado", "OK");
     if (termino) {
       r = r.or(`proveedor.ilike.%${termino}%,proveedor_nif.ilike.%${termino}%,num_documento.ilike.%${termino}%`);
     }
@@ -47,9 +49,10 @@ export default async function FacturasRecibidas({
     .order("fecha", { ascending: false })
     .range((pag - 1) * LIMITE, pag * LIMITE - 1);
 
-  const [{ data, error }, { count: totalFiltrado }] = await Promise.all([
+  const [{ data, error }, { count: totalFiltrado }, { count: enRevision }] = await Promise.all([
     consulta,
     filtrar(supabase.from("compras_doc").select("id", { count: "exact", head: true })),
+    supabase.from("compras_doc").select("id", { count: "exact", head: true }).eq("tipo", "factura").eq("estado", "REVISAR"),
   ]);
 
   // Cuáles ya están en cartera. Si la migración F2a aún no está aplicada, la
@@ -114,6 +117,13 @@ export default async function FacturasRecibidas({
       </div>
 
       <Buscador q={q} soloActivos={false} sinFiltroActivos etiqueta="Buscar por proveedor, NIF o número de factura…" />
+
+      {(enRevision ?? 0) > 0 && (
+        <p className="secundario" style={{ margin: "0 0 10px" }}>
+          {enRevision} {enRevision === 1 ? "factura" : "facturas"} en revisión en el módulo de
+          compras: entrarán aquí (con asiento y cartera) al validarse.
+        </p>
+      )}
 
       {error && (
         <div className="estado-vacio">
@@ -191,10 +201,6 @@ export default async function FacturasRecibidas({
                     <td className="a-derecha">
                       {(() => {
                         const p = pagoDoc.get(f.id);
-                        // Las REVISAR no generan cartera hasta validarse: el
-                        // trigger la crea solo al pasar a OK.
-                        if (!p && f.estado === "REVISAR")
-                          return <span className="texto-suave">al revisar</span>;
                         if (!p) return <BotonVencimiento id={f.id} yaTiene={conVencimiento.has(f.id)} />;
                         if (p.estado === "liquidado") return <span style={{ color: "#0F6E56", fontWeight: 600 }}>✓ pagada</span>;
                         if (p.estado === "parcial")
@@ -203,7 +209,6 @@ export default async function FacturasRecibidas({
                       })()}
                     </td>
                     <td className="a-derecha">
-                      {f.estado === "REVISAR" && <span className="etiqueta-estado">revisar</span>}
                       {f.imagen_url && (
                         <a className="enlace" href={f.imagen_url} target="_blank" rel="noreferrer">
                           Ver
