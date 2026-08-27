@@ -15,10 +15,11 @@ const LIMITE = 200;
 export default async function Facturas({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; orden?: string; dir?: string; pag?: string }>;
+  searchParams: Promise<{ q?: string; orden?: string; dir?: string; pag?: string; cobro?: string }>;
 }) {
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().toLowerCase();
+  const filtroCobro = ["pendientes", "cobradas", "compensadas"].includes(sp.cobro ?? "") ? sp.cobro! : "";
   const orden = ["numero", "cliente", "tipo", "fecha", "total"].includes(sp.orden ?? "") ? sp.orden! : "fecha";
   const dir = sp.dir === "asc" ? 1 : -1;
   const pag = Math.max(1, parseInt(sp.pag ?? "1", 10) || 1);
@@ -80,8 +81,18 @@ export default async function Facturas({
     };
   });
 
+  const grupoCobro = (f: Fila) =>
+    f.estado === "pendiente de cobro"
+      ? "pendientes"
+      : f.estado.startsWith("cobrada")
+        ? "cobradas"
+        : f.estado.startsWith("rectifica") || f.estado.startsWith("anulada por")
+          ? "compensadas"
+          : "otras";
   let filas = [...filasPropias, ...filasIngreso].filter(
-    (f) => !q || f.numero.toLowerCase().includes(q) || f.cliente.toLowerCase().includes(q),
+    (f) =>
+      (!q || f.numero.toLowerCase().includes(q) || f.cliente.toLowerCase().includes(q)) &&
+      (!filtroCobro || grupoCobro(f) === filtroCobro),
   );
   const clave = (f: Fila): string | number => {
     if (orden === "numero") return f.numero;
@@ -100,6 +111,7 @@ export default async function Facturas({
   const enlace = (cambios: Record<string, string>) => {
     const base: Record<string, string> = {
       ...(sp.q ? { q: sp.q } : {}),
+      ...(filtroCobro ? { cobro: filtroCobro } : {}),
       ...(orden !== "fecha" || sp.dir === "asc" ? { orden, dir: sp.dir === "asc" ? "asc" : "desc" } : {}),
       ...(pag > 1 ? { pag: String(pag) } : {}),
       ...cambios,
@@ -120,14 +132,36 @@ export default async function Facturas({
         </Link>
       </div>
 
-      <form method="get" style={{ margin: "0 0 14px" }}>
-        <input
-          name="q"
-          defaultValue={sp.q ?? ""}
-          placeholder="Buscar por número o cliente…"
-          style={{ width: "100%", maxWidth: 420, padding: "8px 12px", border: "1px solid #DDE2DF", borderRadius: 8 }}
-        />
-      </form>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0 0 14px" }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          {(
+            [
+              ["", "Todas"],
+              ["pendientes", "Pendientes de cobro"],
+              ["cobradas", "Cobradas"],
+              ["compensadas", "Compensadas"],
+            ] as const
+          ).map(([v, t]) => (
+            <a
+              key={t}
+              href={enlace({ cobro: v, pag: "" })}
+              className="boton-secundario"
+              style={{ padding: "5px 12px", fontSize: 13, ...(filtroCobro === v ? { background: "#0F6E56", color: "#fff", borderColor: "#0F6E56" } : {}) }}
+            >
+              {t}
+            </a>
+          ))}
+        </div>
+        <form method="get" style={{ flex: "1 1 260px" }}>
+          {filtroCobro && <input type="hidden" name="cobro" value={filtroCobro} />}
+          <input
+            name="q"
+            defaultValue={sp.q ?? ""}
+            placeholder="Buscar por número o cliente…"
+            style={{ width: "100%", maxWidth: 420, padding: "8px 12px", border: "1px solid #DDE2DF", borderRadius: 8 }}
+          />
+        </form>
+      </div>
 
       {error != null && (
         <div className="estado-vacio">
