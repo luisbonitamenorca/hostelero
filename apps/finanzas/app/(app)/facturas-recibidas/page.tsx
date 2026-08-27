@@ -191,6 +191,10 @@ export default async function FacturasRecibidas({
                     <td className="a-derecha">
                       {(() => {
                         const p = pagoDoc.get(f.id);
+                        // Las REVISAR no generan cartera hasta validarse: el
+                        // trigger la crea solo al pasar a OK.
+                        if (!p && f.estado === "REVISAR")
+                          return <span className="texto-suave">al revisar</span>;
                         if (!p) return <BotonVencimiento id={f.id} yaTiene={conVencimiento.has(f.id)} />;
                         if (p.estado === "liquidado") return <span style={{ color: "#0F6E56", fontWeight: 600 }}>✓ pagada</span>;
                         if (p.estado === "parcial")
