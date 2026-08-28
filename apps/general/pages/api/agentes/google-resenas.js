@@ -116,8 +116,10 @@ export default async function handler(req, res) {
               rating: ESTRELLAS[rev.starRating] ?? null,
               review_date: (rev.createTime || "").slice(0, 10) || null,
               text: rev.comment || "",
-              // Si ya tiene respuesta en Google no hay nada que hacer con ella.
+              // Si ya tiene respuesta en Google no hay nada que hacer con ella;
+              // la respuesta publicada se guarda para verla en el panel.
               status: rev.reviewReply ? "publicada" : "pendiente",
+              draft: rev.reviewReply?.comment || null,
               source: "google",
             });
           }

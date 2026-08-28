@@ -406,7 +406,9 @@ function cardHTML(r){
       <div class="save-row"><button class="btn btn-primary btn-sm" data-act="saveedit" data-id="${r.id}">Guardar cambios</button>
       <button class="btn btn-ghost btn-sm" data-act="canceledit" data-id="${r.id}">Cancelar</button></div></div>`;
   } else if(r.draft){
-    draftBlock = `<div class="draft"><div class="draft-label">RESPUESTA PROPUESTA POR EL AGENTE</div><p>${esc(r.draft)}</p></div>`;
+    draftBlock = `<div class="draft"><div class="draft-label">${r.status==="publicada"?"RESPUESTA PUBLICADA":"RESPUESTA PROPUESTA POR EL AGENTE"}</div><p>${esc(r.draft)}</p></div>`;
+  } else if(r.status==="publicada"||r.status==="descartada"){
+    draftBlock = "";
   } else {
     draftBlock = `<div class="draft"><p class="draft-empty">Sin borrador todavía. Pulsa «Generar borradores» arriba.</p></div>`;
   }
