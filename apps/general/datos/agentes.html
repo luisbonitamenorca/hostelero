@@ -394,8 +394,9 @@ function renderBandeja(){
     const gr = grTodo.filter(enAnioMes);
     const avg = a => a.length? (a.reduce((s,r)=>s+r.rating,0)/a.length) : null;
     if(grTodo.length){
-      const g30 = gr.filter(r=>{ const d=new Date(r.review_date); return (Date.now()-d.getTime())<30*864e5; });
-      const media = avg(gr), media30 = avg(g30);
+      const g30 = grTodo.filter(r=>{ const d=new Date(r.review_date); return (Date.now()-d.getTime())<30*864e5; });
+      const g12m = grTodo.filter(r=>{ const d=new Date(r.review_date); return (Date.now()-d.getTime())<365*864e5; });
+      const media = avg(gr), media30 = avg(g30), media12m = avg(g12m);
       const cincos = gr.filter(r=>r.rating===5).length, bajas = gr.filter(r=>r.rating<=2).length;
       const porLocal = Object.entries(venues).map(([k,v])=>{
         const vr = gr.filter(r=>r.venue===k); if(!vr.length) return "";
@@ -419,6 +420,7 @@ function renderBandeja(){
       <div class="kpis">
         <div class="kpi"><div class="v">${media?media.toFixed(2)+"★":"—"}</div><div class="l">Media${f.anio!=="all"||f.mes!=="all"?" del periodo":" global"} (${gr.length} reseñas)</div></div>
         <div class="kpi"><div class="v">${media30?media30.toFixed(2)+"★":"—"}</div><div class="l">Media últimos 30 días${g30.length?" ("+g30.length+")":""}</div></div>
+        <div class="kpi"><div class="v">${media12m?media12m.toFixed(2)+"★":"—"}</div><div class="l">Media últimos 12 meses${g12m.length?" ("+g12m.length+")":""}</div></div>
         <div class="kpi"><div class="v">${gr.length?Math.round(cincos/gr.length*100)+"%":"—"}</div><div class="l">Reseñas de 5★</div></div>
         <div class="kpi"><div class="v">${gr.length?Math.round(bajas/gr.length*100)+"%":"—"}</div><div class="l">Reseñas de 1-2★</div></div>
       </div>
