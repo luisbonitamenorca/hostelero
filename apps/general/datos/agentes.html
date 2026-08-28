@@ -179,7 +179,9 @@ tr:last-child td{border-bottom:none}
 <header>
   <div class="brand">BONITA · AGENTES<small id="mode-label">MARKETING · COMERCIAL</small></div>
   <nav id="nav" style="display:none">
-    <button data-view="bandeja" class="active">Bandeja</button>
+    <button data-view="google" class="active">Google</button>
+    <button data-view="facebook">Facebook</button>
+    <button data-view="instagram">Instagram</button>
     <button data-view="whatsapp">WhatsApp</button>
     <button data-view="prospeccion">Prospección</button>
     <button data-view="horarios">Horarios</button>
@@ -229,14 +231,20 @@ const AGENTS = [
 ];
 
 /* ================= ESTADO ================= */
-let session=null, venues={}, reviews=[], runs=[], view="bandeja";
+let session=null, venues={}, reviews=[], runs=[], view="google";
 let waChats=[], waMsgs={}, waActive=null, waBusy=false, waChannel=null, waFilter="all";
 let knowledge=[];
 let prospects=[], prFilter="nuevo", prBusy=false;
 let syncAlerts=[], syncBusy=null, syncChecks=[];
 let competitors=[], findings=[], compBusy=null;
 let grants=[], grFilter="nueva", grBusy=null, grProfile="";
-let filters={venue:"all",status:"all",platform:"all"};
+let filters={venue:"all",status:"all",platform:"all",anio:"all",mes:"all"};
+/* Pestaña activa → plataforma de reseñas */
+const PLATAFORMA_VISTA = {google:"Google", facebook:"Facebook", instagram:"Instagram"};
+function enAnioMes(r){
+  const d = r.review_date||"";
+  return (filters.anio==="all"||d.slice(0,4)===filters.anio) && (filters.mes==="all"||d.slice(5,7)===filters.mes);
+}
 
 const $ = s => document.querySelector(s);
 const esc = s => (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -330,7 +338,7 @@ function render(){
   const gb = document.querySelector('#nav [data-view="subvenciones"]');
   if(gb){ const n = grants.filter(grAvisa).length; gb.textContent = n ? `Subvenciones (${n})` : "Subvenciones"; }
   $("#main").className = view==="whatsapp" ? "wide" : "";
-  if(view==="bandeja") renderBandeja();
+  if(view==="google"||view==="facebook"||view==="instagram") renderBandeja();
   else if(view==="whatsapp") renderWhatsapp();
   else if(view==="prospeccion") renderProspeccion();
   else if(view==="horarios") renderHorarios();
@@ -341,32 +349,49 @@ function render(){
   else renderAjustes();
 }
 
-/* ================= BANDEJA (reseñas) ================= */
+/* ================= BANDEJA (reseñas, una pestaña por plataforma) ================= */
+function graficoBarras(datos, titulo){
+  if(!datos.some(d=>d.valor!=null)) return "";
+  const W = datos.length*46+16, H = 172;
+  const barras = datos.map((d,i)=>{
+    const x = 8+i*46;
+    if(d.valor==null) return `<text x="${x+16}" y="128" font-size="11" fill="#9AA8B2" text-anchor="middle">—</text>
+      <text x="${x+16}" y="150" font-size="10" fill="#9AA8B2" text-anchor="middle">${d.label}</text>`;
+    const h = d.valor/5*95;
+    return `<rect x="${x}" y="${132-h}" width="32" height="${h}" rx="4" fill="var(--accent)" opacity="${(0.45+0.55*(d.valor/5)).toFixed(2)}"></rect>
+      <text x="${x+16}" y="${122-h}" font-size="11" font-weight="600" fill="currentColor" text-anchor="middle">${d.valor.toFixed(1)}</text>
+      <text x="${x+16}" y="150" font-size="10" fill="#5F6B65" text-anchor="middle">${d.label}</text>
+      <text x="${x+16}" y="164" font-size="9" fill="#9AA8B2" text-anchor="middle">${d.n}</text>`;
+  }).join("");
+  return `<div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;flex:1;min-width:300px;overflow-x:auto">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${titulo}</div>
+    <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block">${barras}</svg></div>`;
+}
+
 function renderBandeja(){
   const f = filters;
+  const plat = PLATAFORMA_VISTA[view] || "Google";
+  const esGoogle = plat==="Google";
+
   const pendingByVenue = {};
-  reviews.forEach(r=>{ if(r.status==="pendiente"||r.status==="borrador"){ pendingByVenue[r.venue]=(pendingByVenue[r.venue]||0)+1; } });
+  reviews.forEach(r=>{ if(r.platform===plat && (r.status==="pendiente"||r.status==="borrador")){ pendingByVenue[r.venue]=(pendingByVenue[r.venue]||0)+1; } });
 
   const rail = Object.entries(venues).map(([k,v])=>
     `<div class="chip" style="--vc:${v.color}">${esc(v.name.replace(" Binifadet","").replace("Restaurante ","Rest. "))} <b>${pendingByVenue[k]||0}</b></div>`).join("");
 
-  const list = reviews.filter(r=>
-    (f.venue==="all"||r.venue===f.venue) &&
-    (f.status==="all"||r.status===f.status) &&
-    (f.platform==="all"||r.platform===f.platform)
-  ).sort((a,b)=> (b.review_date||"").localeCompare(a.review_date||""));
-
-  const pendingCount = reviews.filter(r=>r.status==="pendiente").length;
-
-  const pendCount = p => reviews.filter(r=>(p==="all"||r.platform===p)&&(r.status==="pendiente"||r.status==="borrador")).length;
-  const platTabs = ["all","Google","Facebook","Instagram"].map(p=>
-    `<button class="chip" data-plat="${p}" style="--vc:${f.platform===p?"var(--accent)":"#9AA8B2"};border-color:${f.platform===p?"var(--accent)":"var(--line)"};cursor:pointer;font-weight:${f.platform===p?"700":"600"}">${p==="all"?"Todas":p} <b>${pendCount(p)}</b></button>`).join("");
+  const base = reviews.filter(r=> r.platform===plat && (f.venue==="all"||r.venue===f.venue) && (!esGoogle || enAnioMes(r)));
+  const list = base.filter(r=> f.status==="all"||r.status===f.status)
+    .sort((a,b)=> (b.review_date||"").localeCompare(a.review_date||""));
+  const pendingCount = base.filter(r=>r.status==="pendiente").length;
 
   let googleStats = "";
-  if(f.platform==="Google"){
-    const gr = reviews.filter(r=>r.platform==="Google" && r.rating!=null && r.status!=="descartada");
-    if(gr.length){
-      const avg = a => a.length? (a.reduce((s,r)=>s+r.rating,0)/a.length) : null;
+  let filtrosFecha = "";
+  if(esGoogle){
+    // Los indicadores respetan local y año/mes elegidos (salvo los gráficos, que enseñan la serie completa del local).
+    const grTodo = reviews.filter(r=>r.platform==="Google" && r.rating!=null && r.status!=="descartada" && (f.venue==="all"||r.venue===f.venue));
+    const gr = grTodo.filter(enAnioMes);
+    const avg = a => a.length? (a.reduce((s,r)=>s+r.rating,0)/a.length) : null;
+    if(grTodo.length){
       const g30 = gr.filter(r=>{ const d=new Date(r.review_date); return (Date.now()-d.getTime())<30*864e5; });
       const media = avg(gr), media30 = avg(g30);
       const cincos = gr.filter(r=>r.rating===5).length, bajas = gr.filter(r=>r.rating<=2).length;
@@ -374,20 +399,47 @@ function renderBandeja(){
         const vr = gr.filter(r=>r.venue===k); if(!vr.length) return "";
         return `<div class="chip" style="--vc:${v.color}">${esc(v.name.replace(" Binifadet","").replace("Restaurante ","Rest. "))} <b>${avg(vr).toFixed(1)}★ · ${vr.length}</b></div>`;
       }).join("");
+
+      // Serie por año (toda la historia) y por mes (últimos 12).
+      const porAnio = {};
+      grTodo.forEach(r=>{ const a=(r.review_date||"").slice(0,4); if(a) (porAnio[a]=porAnio[a]||[]).push(r.rating); });
+      const datosAnio = Object.keys(porAnio).sort().map(a=>({label:a, n:porAnio[a].length, valor:porAnio[a].reduce((s,x)=>s+x,0)/porAnio[a].length}));
+      const datosMes = [];
+      const hoy = new Date();
+      for(let i=11;i>=0;i--){
+        const d = new Date(hoy.getFullYear(), hoy.getMonth()-i, 1);
+        const clave = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+        const arr = grTodo.filter(r=>(r.review_date||"").slice(0,7)===clave).map(r=>r.rating);
+        datosMes.push({label:clave.slice(5,7)+"/"+clave.slice(2,4), n:arr.length, valor:arr.length? arr.reduce((s,x)=>s+x,0)/arr.length : null});
+      }
+
       googleStats = `
       <div class="kpis">
-        <div class="kpi"><div class="v">${media.toFixed(2)}★</div><div class="l">Media global (${gr.length} reseñas)</div></div>
+        <div class="kpi"><div class="v">${media?media.toFixed(2)+"★":"—"}</div><div class="l">Media${f.anio!=="all"||f.mes!=="all"?" del periodo":" global"} (${gr.length} reseñas)</div></div>
         <div class="kpi"><div class="v">${media30?media30.toFixed(2)+"★":"—"}</div><div class="l">Media últimos 30 días${g30.length?" ("+g30.length+")":""}</div></div>
-        <div class="kpi"><div class="v">${Math.round(cincos/gr.length*100)}%</div><div class="l">Reseñas de 5★</div></div>
-        <div class="kpi"><div class="v">${Math.round(bajas/gr.length*100)}%</div><div class="l">Reseñas de 1-2★</div></div>
+        <div class="kpi"><div class="v">${gr.length?Math.round(cincos/gr.length*100)+"%":"—"}</div><div class="l">Reseñas de 5★</div></div>
+        <div class="kpi"><div class="v">${gr.length?Math.round(bajas/gr.length*100)+"%":"—"}</div><div class="l">Reseñas de 1-2★</div></div>
       </div>
-      <div class="rail" style="padding-top:0">${porLocal}</div>`;
+      <div class="rail" style="padding-top:0">${porLocal}</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+        ${graficoBarras(datosAnio, "Puntuación media por año · nº de reseñas debajo")}
+        ${graficoBarras(datosMes, "Puntuación media por mes (últimos 12) · nº de reseñas debajo")}
+      </div>`;
     }
+
+    const aniosDisponibles = [...new Set(reviews.filter(r=>r.platform==="Google").map(r=>(r.review_date||"").slice(0,4)).filter(Boolean))].sort().reverse();
+    const MESES = {"01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"Mayo","06":"Junio","07":"Julio","08":"Agosto","09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"};
+    filtrosFecha = `
+      <select id="f-anio"><option value="all">Todos los años</option>${aniosDisponibles.map(a=>`<option value="${a}" ${f.anio===a?"selected":""}>${a}</option>`).join("")}</select>
+      <select id="f-mes"><option value="all">Todos los meses</option>${Object.entries(MESES).map(([k,v])=>`<option value="${k}" ${f.mes===k?"selected":""}>${v}</option>`).join("")}</select>`;
   }
+
+  const vacio = esGoogle
+    ? `<div class="empty"><b>Nada con estos filtros</b>Prueba a cambiar el local, el estado o el periodo.</div>`
+    : `<div class="empty"><b>${plat} está a punto de conectarse</b>La estructura ya está lista: en cuanto Meta apruebe la conexión, los mensajes y comentarios de ${plat} entrarán aquí solos.</div>`;
 
   $("#main").innerHTML = `
     <div class="rail">${rail}</div>
-    <div class="rail" style="padding-top:0">${platTabs}</div>
     ${googleStats}
     <div class="toolbar">
       <select id="f-venue"><option value="all">Todos los locales</option>${Object.entries(venues).map(([k,v])=>`<option value="${k}" ${f.venue===k?"selected":""}>${esc(v.name)}</option>`).join("")}</select>
@@ -396,15 +448,17 @@ function renderBandeja(){
         <option value="borrador" ${f.status==="borrador"?"selected":""}>Con borrador</option>
         <option value="publicada" ${f.status==="publicada"?"selected":""}>Publicada</option>
         <option value="descartada" ${f.status==="descartada"?"selected":""}>Descartada</option></select>
+      ${filtrosFecha}
       <div class="spacer"></div>
       <button class="btn btn-ghost" id="refresh" title="Recargar">↻</button>
       <button class="btn btn-primary" id="run-agent" ${pendingCount===0?"disabled":""}>Generar borradores (${pendingCount})</button>
     </div>
-    <div id="cards">${list.length? list.map(cardHTML).join("") : `<div class="empty"><b>Bandeja al día</b>No hay elementos con estos filtros. Cuando se conecten Google y Meta, las reseñas reales entrarán aquí solas.</div>`}</div>`;
+    <div id="cards">${list.length? list.map(cardHTML).join("") : vacio}</div>`;
 
   $("#f-venue").onchange = e=>{filters.venue=e.target.value;render();};
   $("#f-status").onchange = e=>{filters.status=e.target.value;render();};
-  document.querySelectorAll("[data-plat]").forEach(el=> el.onclick = ()=>{ filters.platform = el.dataset.plat; render(); });
+  const fAnio = $("#f-anio"); if(fAnio) fAnio.onchange = e=>{filters.anio=e.target.value;render();};
+  const fMes = $("#f-mes"); if(fMes) fMes.onchange = e=>{filters.mes=e.target.value;render();};
   $("#refresh").onclick = async ()=>{ await loadAll(); render(); toast("Actualizado"); };
   $("#run-agent").onclick = runAgent;
   bindCardActions();
@@ -492,7 +546,10 @@ function bindCardActions(){
 }
 
 async function runAgent(){
-  const pending = reviews.filter(r=>r.status==="pendiente");
+  // Solo lo que se está viendo: plataforma de la pestaña + local + periodo.
+  const plat = PLATAFORMA_VISTA[view] || "Google";
+  const pending = reviews.filter(r=> r.status==="pendiente" && r.platform===plat &&
+    (filters.venue==="all"||r.venue===filters.venue) && (plat!=="Google"||enAnioMes(r)));
   if(pending.length) await generateDrafts(pending, $("#run-agent"));
 }
 
