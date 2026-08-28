@@ -485,7 +485,8 @@ function cardHTML(r){
     : r._editing ? ""
     : `${r.draft?`<button class="btn btn-primary btn-sm" data-act="approve" data-id="${r.id}">Aprobar y publicar</button>
         <button class="btn btn-ghost btn-sm" data-act="edit" data-id="${r.id}">Editar</button>
-        <button class="btn btn-ghost btn-sm" data-act="regen" data-id="${r.id}">Regenerar</button>`:""}
+        <button class="btn btn-ghost btn-sm" data-act="regen" data-id="${r.id}">Regenerar</button>`
+        :`<button class="btn btn-primary btn-sm" data-act="regen" data-id="${r.id}">Generar borrador</button>`}
        <button class="btn btn-ghost btn-sm" data-act="discard" data-id="${r.id}">Descartar</button>`;
 
   const pill = r.status==="pendiente"?`<span class="status-pill st-pendiente">Pendiente</span>`
