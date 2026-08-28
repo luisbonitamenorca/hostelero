@@ -1,5 +1,6 @@
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros } from "@/lib/importes";
+import { ruta } from "@/lib/rutas";
 
 export const dynamic = "force-dynamic";
 
@@ -122,7 +123,7 @@ export default async function Impuestos({ searchParams }: { searchParams: Promis
                   <a
                     className="boton-secundario"
                     style={{ fontSize: 12, padding: "3px 10px", marginLeft: "auto" }}
-                    href={`/impuestos/fichero?anio=${anio}&t=${t}`}
+                    href={ruta(`/impuestos/fichero?anio=${anio}&t=${t}`)}
                     title="Fichero en formato de presentación de AEAT (borrador para contrastar; se puede validar en la Sede sin firmar)"
                   >
                     Fichero AEAT ↓
