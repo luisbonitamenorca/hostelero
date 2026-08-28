@@ -3,6 +3,7 @@ import { exigirModulo } from "@/lib/supabase/server";
 import { ruta } from "@/lib/rutas";
 import SelectorLiquidacion from "./selector-liquidacion";
 import SelectorMes from "./selector-mes";
+import AsientoManual from "./asiento-manual";
 import { euros, fecha } from "@/lib/importes";
 import {
   clasificarMovimiento,
@@ -146,14 +147,16 @@ export default async function Conciliacion({
   const rpcCand = supabase as unknown as {
     rpc: (fn: "fin_conciliacion_candidatos" | "fin_cartera_candidatos", args: { p_banco: string; p_mov: string }) => PromiseLike<{ data: unknown }>;
   };
-  const [{ data: movsData, error }, { data: resumenData }, { data: sugData }, { data: gruposData }, candResp, cartResp] = await Promise.all([
+  const [{ data: movsData, error }, { data: resumenData }, { data: sugData }, { data: gruposData }, candResp, cartResp, { data: centrosData }] = await Promise.all([
     consulta,
     rpc.rpc("fin_conciliacion_resumen", { p_banco: id, ...rango }),
     rpc.rpc("fin_conciliacion_sugerencias", { p_banco: id }),
     rpc.rpc("fin_conciliacion_grupos", { p_banco: id }),
     grupoAbierto ? rpcCand.rpc("fin_conciliacion_candidatos", { p_banco: id, p_mov: grupoAbierto }) : Promise.resolve({ data: null }),
     liqAbierto ? rpcCand.rpc("fin_cartera_candidatos", { p_banco: id, p_mov: liqAbierto }) : Promise.resolve({ data: null }),
+    supabase.from("centros").select("id, nombre").order("nombre"),
   ]);
+  const centros = (centrosData ?? []) as { id: string; nombre: string }[];
 
   const movs = (movsData ?? []) as Mov[];
   const resumen = ((resumenData as Resumen[] | null) ?? [])[0] ?? null;
@@ -422,6 +425,9 @@ export default async function Conciliacion({
                             OK
                           </button>
                         </form>
+                      )}
+                      {m.estado === "pendiente" && (
+                        <AsientoManual bancoId={id} movId={m.id} objetivo={Number(m.importe)} concepto={m.concepto} centros={centros} />
                       )}
                       {m.estado === "pendiente" && liqAbierto === m.id && (
                         <SelectorLiquidacion bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatosCartera} />

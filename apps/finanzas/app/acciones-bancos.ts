@@ -158,6 +158,29 @@ export async function desconciliarLiquidacion(formData: FormData) {
   volver(bancoId);
 }
 
+export async function conciliarAsientoManual(formData: FormData) {
+  const { supabase } = await exigirModulo("contabilidad");
+  const bancoId = String(formData.get("banco") ?? "");
+  const movId = String(formData.get("mov") ?? "");
+  const descripcion = String(formData.get("descripcion") ?? "").trim();
+  let lineas: unknown = [];
+  try {
+    lineas = JSON.parse(String(formData.get("lineas") ?? "[]"));
+  } catch {
+    volver(bancoId);
+  }
+  if (!bancoId || !movId || !Array.isArray(lineas) || lineas.length === 0) volver(bancoId);
+
+  // Asiento libre: la línea del banco la pone el servidor con el importe del
+  // movimiento; aquí solo viajan las contrapartidas. La función valida cuadre.
+  const rpc = supabase as unknown as {
+    rpc: (fn: "fin_conciliar_asiento_manual", args: { p_banco: string; p_mov: string; p_lineas: unknown; p_descripcion: string | null }) => PromiseLike<{ error: unknown }>;
+  };
+  await rpc.rpc("fin_conciliar_asiento_manual", { p_banco: bancoId, p_mov: movId, p_lineas: lineas, p_descripcion: descripcion || null });
+
+  volver(bancoId);
+}
+
 export async function clasificarMovimiento(formData: FormData) {
   const { supabase } = await exigirModulo("contabilidad");
   const bancoId = String(formData.get("banco") ?? "");
