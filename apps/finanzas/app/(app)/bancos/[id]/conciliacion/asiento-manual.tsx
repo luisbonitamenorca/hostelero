@@ -18,14 +18,18 @@ export default function AsientoManual({
   objetivo,
   concepto,
   centros,
+  abiertoPorDefecto = false,
+  onCerrar,
 }: {
   bancoId: string;
   movId: string;
   objetivo: number;
   concepto: string;
   centros: Centro[];
+  abiertoPorDefecto?: boolean;
+  onCerrar?: () => void;
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(abiertoPorDefecto);
   const ladoInicial: "debe" | "haber" = objetivo > 0 ? "haber" : "debe";
   const [lineas, setLineas] = useState<Linea[]>([
     { codigo: "", descripcion: "", centro: "", importe: Math.abs(objetivo).toFixed(2), lado: ladoInicial },
@@ -147,7 +151,7 @@ export default function AsientoManual({
           )}
         </span>
         <span style={{ marginLeft: "auto", display: "inline-flex", gap: 8 }}>
-          <button type="button" className="boton-secundario" onClick={() => setAbierto(false)}>Cancelar</button>
+          <button type="button" className="boton-secundario" onClick={() => (onCerrar ? onCerrar() : setAbierto(false))}>Cancelar</button>
           <button className="boton" type="submit" disabled={!cuadra} style={{ opacity: cuadra ? 1 : 0.45 }} title="Crea el asiento y concilia el movimiento">
             Contabilizar
           </button>

@@ -3,14 +3,12 @@ import { exigirModulo } from "@/lib/supabase/server";
 import { ruta } from "@/lib/rutas";
 import SelectorLiquidacion from "./selector-liquidacion";
 import SelectorMes from "./selector-mes";
-import AsientoManual from "./asiento-manual";
+import MenuConciliar from "./menu-conciliar";
 import { euros, fecha } from "@/lib/importes";
 import {
-  clasificarMovimiento,
   conciliarManual,
   desconciliarLiquidacion,
   desconciliarMovimiento,
-  ignorarMovimiento,
   lanzarConciliacionAuto,
 } from "@/app/acciones-bancos";
 
@@ -395,39 +393,21 @@ export default async function Conciliacion({
                             </select>
                             <button className="boton-secundario" type="submit" style={{ fontSize: 13 }}>Conciliar</button>
                           </form>
-                          <BotonIgnorar bancoId={id} movId={m.id} />
                         </span>
                       )}
-                      {m.estado === "pendiente" && sug.length === 0 && (
-                        <BotonIgnorar bancoId={id} movId={m.id} />
-                      )}
                       {m.estado === "pendiente" && (
-                        <a
-                          className="boton-secundario"
-                          style={{ fontSize: 12, padding: "3px 10px", marginLeft: 6 }}
-                          href={enlace({ liq: liqAbierto === m.id ? "" : m.id })}
-                          title="Cobrar/pagar facturas o nóminas pendientes: genera el asiento contra el banco"
-                        >
-                          {liqAbierto === m.id ? "Cerrar" : "Liquidar…"}
-                        </a>
-                      )}
-                      {m.estado === "pendiente" && (
-                        <form action={clasificarMovimiento} style={{ display: "inline-flex", gap: 4, marginLeft: 6, alignItems: "center" }}>
-                          <input type="hidden" name="banco" value={id} />
-                          <input type="hidden" name="mov" value={m.id} />
-                          <select name="destino" defaultValue="" style={{ maxWidth: 150, padding: "3px 4px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 12 }}>
-                            <option value="" disabled>Enviar a…</option>
-                            {DESTINOS.map(([v, t]) => (
-                              <option key={v} value={v}>{t}</option>
-                            ))}
-                          </select>
-                          <button className="boton-secundario" type="submit" style={{ fontSize: 12, padding: "3px 8px" }} title="Genera el asiento contra esa cuenta y concilia el movimiento">
-                            OK
-                          </button>
-                        </form>
-                      )}
-                      {m.estado === "pendiente" && (
-                        <AsientoManual bancoId={id} movId={m.id} objetivo={Number(m.importe)} concepto={m.concepto} centros={centros} />
+                        <span style={{ display: "inline-block", marginLeft: sug.length ? 6 : 0 }}>
+                          <MenuConciliar
+                            bancoId={id}
+                            movId={m.id}
+                            objetivo={Number(m.importe)}
+                            concepto={m.concepto}
+                            centros={centros}
+                            destinos={DESTINOS}
+                            hrefLiquidar={enlace({ liq: liqAbierto === m.id ? "" : m.id })}
+                            liquidarAbierto={liqAbierto === m.id}
+                          />
+                        </span>
                       )}
                       {m.estado === "pendiente" && liqAbierto === m.id && (
                         <SelectorLiquidacion bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatosCartera} />
@@ -501,12 +481,3 @@ export default async function Conciliacion({
   );
 }
 
-function BotonIgnorar({ bancoId, movId }: { bancoId: string; movId: string }) {
-  return (
-    <form action={ignorarMovimiento} style={{ display: "inline" }}>
-      <input type="hidden" name="banco" value={bancoId} />
-      <input type="hidden" name="mov" value={movId} />
-      <button className="boton-secundario" type="submit" style={{ fontSize: 12 }}>Ignorar</button>
-    </form>
-  );
-}
