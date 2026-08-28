@@ -111,12 +111,13 @@ export default async function handler(req, res) {
               id: rev.reviewId || rev.name,
               cuenta_id: CUENTA_ID,
               venue,
-              platform: "google",
+              platform: "Google", // el panel filtra por este literal
               author: rev.reviewer?.displayName || "Anónimo",
               rating: ESTRELLAS[rev.starRating] ?? null,
               review_date: (rev.createTime || "").slice(0, 10) || null,
               text: rev.comment || "",
-              status: "pendiente",
+              // Si ya tiene respuesta en Google no hay nada que hacer con ella.
+              status: rev.reviewReply ? "publicada" : "pendiente",
               source: "google",
             });
           }
