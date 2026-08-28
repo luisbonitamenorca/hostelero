@@ -262,10 +262,23 @@ async function enterApp(){
 }
 
 /* ================= DATOS ================= */
+/* Supabase corta toda consulta a 1.000 filas: las reseñas (2.500+) se
+   cargan por tramos para que no desaparezcan centros del panel. */
+async function todasLasResenas(){
+  const todas = [];
+  for (let desde = 0; ; desde += 1000) {
+    const { data, error } = await sb.from("agent_reviews").select("*").order("review_date",{ascending:false}).range(desde, desde + 999);
+    if (error) return { error };
+    todas.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return { data: todas };
+}
+
 async function loadAll(){
   const [t, r, ru, wc, wm, kn, pr, sa, sc, co, fi, gr, gp] = await Promise.all([
     sb.from("agent_tones").select("*").order("sort"),
-    sb.from("agent_reviews").select("*"),
+    todasLasResenas(),
     sb.from("agent_runs").select("*").order("ts",{ascending:false}).limit(100),
     sb.from("agent_wa_chats").select("*").order("last_ts",{ascending:false}),
     sb.from("agent_wa_messages").select("*").order("ts"),
