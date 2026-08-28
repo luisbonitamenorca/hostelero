@@ -22,10 +22,17 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Faltan GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET en Vercel" });
 
   const { code, state, clave } = req.query;
+  // Al pegar la clave en Vercel a veces se cuela un espacio o salto de línea.
+  const secreto = (CRON_SECRET || "").trim();
+  const claveLimpia = (clave || "").trim();
 
   // Paso 1: arrancar la autorización (protegido para que no lo dispare cualquiera).
   if (!code) {
-    if (!CRON_SECRET || clave !== CRON_SECRET) return res.status(401).json({ error: "No autorizado" });
+    if (!secreto || claveLimpia !== secreto)
+      return res.status(401).json({
+        error: "No autorizado",
+        pista: { hay_cron_secret: Boolean(secreto), longitud_cron_secret: secreto.length, longitud_clave_url: claveLimpia.length },
+      });
     const url =
       "https://accounts.google.com/o/oauth2/v2/auth" +
       "?client_id=" + encodeURIComponent(GOOGLE_CLIENT_ID) +
@@ -33,12 +40,12 @@ export default async function handler(req, res) {
       "&response_type=code" +
       "&scope=" + encodeURIComponent(SCOPE) +
       "&access_type=offline&prompt=consent" +
-      "&state=" + encodeURIComponent(clave);
+      "&state=" + encodeURIComponent(claveLimpia);
     return res.redirect(302, url);
   }
 
   // Paso 2: vuelta de Google.
-  if (!CRON_SECRET || state !== CRON_SECRET) return res.status(401).json({ error: "Estado no válido" });
+  if (!secreto || (state || "").trim() !== secreto) return res.status(401).json({ error: "Estado no válido" });
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
