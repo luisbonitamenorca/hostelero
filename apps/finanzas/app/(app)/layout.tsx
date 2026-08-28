@@ -42,6 +42,7 @@ const grupos = [
       { ruta: "/asientos", nombre: "Diario", modulo: "contabilidad" },
       { ruta: "/mayor", nombre: "Libro mayor", modulo: "contabilidad" },
       { ruta: "/activos", nombre: "Activos", modulo: "contabilidad" },
+      { ruta: "/impuestos", nombre: "Impuestos", modulo: "contabilidad" },
       { ruta: "/plan-cuentas", nombre: "Plan de cuentas", modulo: "contabilidad" },
     ],
   },
@@ -57,7 +58,6 @@ const grupos = [
 
 const enCamino = [
   { nombre: "Bancos", fase: "F2" },
-  { nombre: "Impuestos", fase: "F3" },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
