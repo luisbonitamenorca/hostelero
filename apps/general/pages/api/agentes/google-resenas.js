@@ -61,8 +61,22 @@ export default async function handler(req, res) {
 
     // 2) Cuenta y fichas.
     const accRes = await fetch("https://mybusinessaccountmanagement.googleapis.com/v1/accounts", { headers: gHeaders });
-    const accs = (await accRes.json()).accounts || [];
-    if (!accs.length) return res.status(500).json({ error: "Google no devolvió cuentas" });
+    const accsCrudo = await accRes.json();
+    const accs = accsCrudo.accounts || [];
+    if (!accs.length) return res.status(500).json({ error: "Google no devolvió cuentas", detalle: accsCrudo });
+
+    // ?debug=1 → enseñar qué cuentas y fichas ve Google, sin tocar nada.
+    if (req.query.debug) {
+      const vista = [];
+      for (const acc of accs) {
+        const lr = await fetch(
+          "https://mybusinessbusinessinformation.googleapis.com/v1/" + acc.name + "/locations?readMask=name,title&pageSize=100",
+          { headers: gHeaders },
+        );
+        vista.push({ cuenta: acc, estado: lr.status, fichas: await lr.json() });
+      }
+      return res.status(200).json(vista);
+    }
 
     const filas = [];
     let fichas = 0;
