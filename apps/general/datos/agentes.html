@@ -387,8 +387,10 @@ function renderBandeja(){
   let googleStats = "";
   let filtrosFecha = "";
   if(esGoogle){
-    // Los indicadores respetan local y año/mes elegidos (salvo los gráficos, que enseñan la serie completa del local).
-    const grTodo = reviews.filter(r=>r.platform==="Google" && r.rating!=null && r.status!=="descartada" && (f.venue==="all"||r.venue===f.venue));
+    // Los indicadores respetan local y año/mes elegidos (salvo los gráficos, que
+    // enseñan la serie completa del local). Cuentan TODAS las reseñas: las
+    // archivadas sin responder también puntúan en Google.
+    const grTodo = reviews.filter(r=>r.platform==="Google" && r.rating!=null && (f.venue==="all"||r.venue===f.venue));
     const gr = grTodo.filter(enAnioMes);
     const avg = a => a.length? (a.reduce((s,r)=>s+r.rating,0)/a.length) : null;
     if(grTodo.length){
