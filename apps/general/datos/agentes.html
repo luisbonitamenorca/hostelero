@@ -463,7 +463,23 @@ function bindCardActions(){
     btn.onclick = async ()=>{
       const r = reviews.find(x=>x.id===btn.dataset.id);
       const act = btn.dataset.act;
-      if(act==="approve"){ if(await setReview(r.id,{status:"publicada"})) toast(r.source==="mock"?"Aprobada. En producción se publicaría ahora en "+r.platform+".":"Aprobada y en cola de publicación."); }
+      if(act==="approve"){
+        if(r.source==="google"){
+          // Publicación REAL en Google, sin colas.
+          const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = `<span class="spin"></span>Publicando…`;
+          try{
+            const res = await fetch("/api/agentes/google-responder",{
+              method:"POST",
+              headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+              body:JSON.stringify({id:r.id, texto:(r.draft||"").trim()})
+            });
+            const data = await res.json();
+            if(!res.ok) throw new Error(data.error||"Error del servidor");
+            Object.assign(r,{status:"publicada"});
+            toast("Respuesta publicada en Google ✓");
+          }catch(e){ toast("No se pudo publicar: "+e.message); console.error(e); btn.disabled=false; btn.innerHTML=orig; }
+        } else if(await setReview(r.id,{status:"publicada"})) toast(r.source==="mock"?"Aprobada. En producción se publicaría ahora en "+r.platform+".":"Aprobada y en cola de publicación.");
+      }
       else if(act==="discard"){ await setReview(r.id,{status:"descartada"}); }
       else if(act==="restore"){ await setReview(r.id,{status:r.draft?"borrador":"pendiente"}); }
       else if(act==="edit"){ r._editing = true; }
