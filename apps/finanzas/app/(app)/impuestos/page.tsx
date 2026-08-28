@@ -112,11 +112,21 @@ export default async function Impuestos({ searchParams }: { searchParams: Promis
                     </tbody>
                   </table>
                 </div>
-                <p style={{ marginTop: 10, fontSize: 14 }}>
-                  Resultado:{" "}
-                  <strong style={{ color: res > 0 ? "#B4423A" : "#0F6E56" }}>
-                    {euros(res)} {res > 0 ? "a ingresar" : "a compensar"}
-                  </strong>
+                <p style={{ marginTop: 10, fontSize: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span>
+                    Resultado:{" "}
+                    <strong style={{ color: res > 0 ? "#B4423A" : "#0F6E56" }}>
+                      {euros(res)} {res > 0 ? "a ingresar" : "a compensar"}
+                    </strong>
+                  </span>
+                  <a
+                    className="boton-secundario"
+                    style={{ fontSize: 12, padding: "3px 10px", marginLeft: "auto" }}
+                    href={`/impuestos/fichero?anio=${anio}&t=${t}`}
+                    title="Fichero en formato de presentación de AEAT (borrador para contrastar; se puede validar en la Sede sin firmar)"
+                  >
+                    Fichero AEAT ↓
+                  </a>
                 </p>
               </div>
             );
