@@ -522,7 +522,7 @@
           </table>
         </div>
         <div id="emptyA3" class="empty" style="display:none">No hay facturas en ese rango de fechas.</div>
-        <p class="hint">La primera columna del fichero (fecha de registro) lleva siempre la fecha de hoy; la fecha de la factura va en la tercera columna como fecha contable. El rango de fechas de arriba filtra por fecha de factura. Cada fila es una línea del fichero FACTURASCOMPRA de A3. Una factura con varios tipos de IVA o varios centros de coste genera varias líneas que comparten cabecera. Al generar el Excel se asigna el número interno correlativo (no reinicia nunca) y cada fichero contiene SOLO las facturas que no han salido en ningún Excel anterior: lo ya entregado no se repite, así el fichero se puede cargar en A3 tal cual. Solo se exportan facturas en OK y sin bloqueos.</p>
+        <p class="hint">La primera columna del fichero (fecha de registro) lleva siempre la fecha de hoy; la fecha de la factura va en la tercera columna como fecha contable. El rango de fechas de arriba filtra por fecha de factura. Cada fila es una línea del fichero FACTURASCOMPRA de A3. Una factura con varios tipos de IVA o varios centros de coste genera varias líneas que comparten cabecera. El fichero contiene TODAS las facturas del rango en OK y sin bloqueos (Lucía selecciona en el Excel lo que necesita cargar). Al generarlo, las que aún no tienen número interno de A3 lo reciben en ese momento — y con él pasan a Contabilidad: asiento, cartera y cruce automático con el banco.</p>
       </div>
     </section>
 
@@ -4846,14 +4846,14 @@ async function exportarA3(){
   const desde=document.getElementById('a3Desde').value, hasta=document.getElementById('a3Hasta').value;
   if(!desde||!hasta){toast('Elige el rango de fechas',true);return;}
   const pend=a3Rows.filter(r=>(r.bloqueos||[]).length>0);
-  // El fichero solo lleva lo que aún no se ha entregado nunca: las ya
-  // exportadas en un Excel anterior no se repiten (Lucía no las carga dos veces).
-  const nOk=new Set(a3Rows.filter(r=>!(r.bloqueos||[]).length && !r.a3_exportado_at).map(r=>r.doc_id)).size;
-  const nYa=new Set(a3Rows.filter(r=>r.a3_exportado_at).map(r=>r.doc_id)).size;
-  if(!nOk){toast('En ese rango no queda nada nuevo por exportar',true);return;}
+  // El fichero lleva TODO el rango (Lucía selecciona en el Excel lo que
+  // necesita); solo las nuevas reciben número al generarlo.
+  const nOk=new Set(a3Rows.filter(r=>!(r.bloqueos||[]).length).map(r=>r.doc_id)).size;
+  const nNuevas=new Set(a3Rows.filter(r=>!(r.bloqueos||[]).length && !r.a3_exportado_at).map(r=>r.doc_id)).size;
+  if(!nOk){toast('No hay ninguna factura sin bloqueos en ese rango',true);return;}
   const aviso=(pend.length?`\n\nSe quedan fuera ${new Set(pend.map(r=>r.doc_id)).size} facturas con bloqueos.`:'')
-    +(nYa?`\nLas ${nYa} ya entregadas en ficheros anteriores no se repiten.`:'');
-  if(!confirm(`Se van a exportar ${nOk} facturas nuevas y se les asignará su número interno de A3, que ya no cambiará.${aviso}\n\n¿Continuar?`))return;
+    +(nNuevas?`\n${nNuevas} son nuevas y recibirán ahora su número de A3 (y pasarán a Contabilidad).`:'');
+  if(!confirm(`El fichero llevará las ${nOk} facturas del rango.${aviso}\n\n¿Continuar?`))return;
   let rows;
   try{
     rows=await sb('rpc/exportar_a3',{method:'POST',
