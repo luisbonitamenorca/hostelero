@@ -27,11 +27,12 @@ export default async function FacturasRecibidas({
   const termino = limpiarBusqueda(q);
 
   // La misma consulta dos veces: contada (para paginar) y paginada. Solo
-  // facturas OK: las que están en revisión viven en Compras hasta validarse
-  // (decisión de Luis, 28-08-2026) — aquí ni aparecen.
+  // facturas CON NÚMERO DE A3: mientras conviva A3, una factura pasa a
+  // contabilidad al recibir su número al generar el Excel — no al quedar OK
+  // (decisión de Luis, 28-08-2026). Las OK sin numerar esperan al Excel.
   const filtrar = <T,>(c: T): T => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let r = (c as any).eq("tipo", "factura").eq("estado", "OK");
+    let r = (c as any).eq("tipo", "factura").eq("estado", "OK").not("a3_numdoc", "is", null);
     if (termino) {
       r = r.or(`proveedor.ilike.%${termino}%,proveedor_nif.ilike.%${termino}%,num_documento.ilike.%${termino}%`);
     }
@@ -50,10 +51,11 @@ export default async function FacturasRecibidas({
     .order("fecha", { ascending: false })
     .range((pag - 1) * LIMITE, pag * LIMITE - 1);
 
-  const [{ data, error }, { count: totalFiltrado }, { count: enRevision }] = await Promise.all([
+  const [{ data, error }, { count: totalFiltrado }, { count: enRevision }, { count: sinNumerar }] = await Promise.all([
     consulta,
     filtrar(supabase.from("compras_doc").select("id", { count: "exact", head: true })),
     supabase.from("compras_doc").select("id", { count: "exact", head: true }).eq("tipo", "factura").eq("estado", "REVISAR"),
+    supabase.from("compras_doc").select("id", { count: "exact", head: true }).eq("tipo", "factura").eq("estado", "OK").is("a3_numdoc", null),
   ]);
 
   // Cuáles ya están en cartera. Si la migración F2a aún no está aplicada, la
@@ -125,10 +127,12 @@ export default async function FacturasRecibidas({
 
       <Buscador q={q} soloActivos={false} sinFiltroActivos etiqueta="Buscar por proveedor, NIF o número de factura…" />
 
-      {(enRevision ?? 0) > 0 && (
+      {((enRevision ?? 0) > 0 || (sinNumerar ?? 0) > 0) && (
         <p className="secundario" style={{ margin: "0 0 10px" }}>
-          {enRevision} {enRevision === 1 ? "factura" : "facturas"} en revisión en el módulo de
-          compras: entrarán aquí (con asiento y cartera) al validarse.
+          En el módulo de compras: {(enRevision ?? 0) > 0 && `${enRevision} en revisión`}
+          {(enRevision ?? 0) > 0 && (sinNumerar ?? 0) > 0 && " y "}
+          {(sinNumerar ?? 0) > 0 && `${sinNumerar} OK a la espera del Excel de A3`}
+          . Entrarán aquí (con asiento, cartera y autocruce con el banco) al recibir su número de A3.
         </p>
       )}
 
