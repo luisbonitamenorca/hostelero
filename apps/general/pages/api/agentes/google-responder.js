@@ -31,14 +31,18 @@ export default async function handler(req, res) {
   if (!SERVICE_KEY || !GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET)
     return res.status(500).json({ error: "Faltan claves en Vercel" });
 
-  // Sesión del panel (mismo control que el resto de endpoints de agentes).
+  // Sesión del panel (mismo control que el resto de endpoints de agentes)
+  // o el CRON_SECRET para automatizaciones del servidor.
   const auth = req.headers.authorization || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
   if (!token) return res.status(401).json({ error: "Sin sesión" });
-  const userRes = await fetch(SUPABASE_URL + "/auth/v1/user", {
-    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: "Bearer " + token },
-  });
-  if (!userRes.ok) return res.status(401).json({ error: "Sesión no válida" });
+  const esCron = process.env.CRON_SECRET && token === (process.env.CRON_SECRET || "").trim();
+  if (!esCron) {
+    const userRes = await fetch(SUPABASE_URL + "/auth/v1/user", {
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: "Bearer " + token },
+    });
+    if (!userRes.ok) return res.status(401).json({ error: "Sesión no válida" });
+  }
 
   const { id, texto } = req.body || {};
   if (!id || !texto || !String(texto).trim()) return res.status(400).json({ error: "Faltan id o texto" });
