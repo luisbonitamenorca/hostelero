@@ -1119,6 +1119,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
                 <th style="width:90px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','id_interno')">ID<span id="pd-arr-id_interno"></span></span></th>
                 <th style="width:75px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','origen')">Origen<span id="pd-arr-origen"></span></span></th>
                 <th><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','descripcion')">Descripción<span id="pd-arr-descripcion"></span></span></th>
+                <th style="width:150px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','_prov')">Proveedor<span id="pd-arr-_prov"></span></span></th>
                 <th style="width:160px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','familia')">Familia<span id="pd-arr-familia"></span></span></th>
                 <th style="width:180px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','subfamilia')">Subfamilia<span id="pd-arr-subfamilia"></span></span></th>
                 <th class="tr" style="width:70px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','factor')">Factor<span id="pd-arr-factor"></span></span></th>
@@ -1653,7 +1654,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-08-24.4';
+const APP_VERSION = '2026-08-31.1'; // columna Proveedor en Clasificación (cruzada del catálogo de Compras por P-xxx)
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -5851,6 +5852,7 @@ function famSubSelectsRow(prefix, p, id) {
             ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#E3F3EC;color:#1D9E75">App</span>'
             : '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#EFEFEF;color:#888">Dijit</span>'}</td>
       <td style="font-size:12px">${p.descripcion||''}</td>
+      <td style="font-size:11px;color:#555">${p._prov||'—'}</td>
       <td><select onchange="updateProductoFam('dijit',${idEsc},this.value)" style="font-size:11px;padding:2px 4px;width:100%">${famOpts}</select></td>
       <td><select onchange="updateProductoSub('dijit',${idEsc},this.value)" style="font-size:11px;padding:2px 4px;width:100%">${subOpts}</select></td>
       <td class="tr"><input type="number" step="0.01" value="${p.factor||1}" onchange="updateProductoFactor('dijit',${idEsc},this.value)" style="width:55px;font-size:11px;padding:2px 4px;text-align:right"></td>
@@ -5869,7 +5871,9 @@ function renderProdDijit() {
   const famFilter = document.getElementById('pd-fam-filter').value;
   const subFilter = (document.getElementById('pd-sub-filter')||{}).value || '';
   const search = (document.getElementById('pd-search').value || '').toLowerCase().trim();
-  let rows = [...(DB.productos_dijit||[])];
+  let rows = [...(DB.productos_dijit||[])].map(p => ({
+    ...p, _prov: (DB.provPorCodigo && DB.provPorCodigo.get(String(p.id_interno||'').trim())) || ''
+  }));
 
   if (famFilter === '__SIN__') {
     const famSet = new Set((DB.familias||[]).map(f => f.nombre));
@@ -5885,7 +5889,7 @@ function renderProdDijit() {
     rows = rows.filter(p => (p.subfamilia||'').trim() === subFilter);
   }
   if (search) {
-    rows = rows.filter(p => (p.id_interno||'').toLowerCase().includes(search) || (p.descripcion||'').toLowerCase().includes(search));
+    rows = rows.filter(p => (p.id_interno||'').toLowerCase().includes(search) || (p.descripcion||'').toLowerCase().includes(search) || (p._prov||'').toLowerCase().includes(search));
   }
   // Origen: DIJIT es el histórico (se borrará), COMPRAS es lo que va a Hostelero
   const origenFilter = (document.getElementById('pd-origen-filter')||{}).value || '';
@@ -5931,14 +5935,14 @@ function renderProdDijit() {
   });
   let huerfMsg = '';
   if (huerfanos.size > 0 && !famFilter && !subFilter && !search) {
-    huerfMsg = `<tr style="background:#fff3e0"><td colspan="11" style="padding:8px;font-size:12px;color:#BA7517">
+    huerfMsg = `<tr style="background:#fff3e0"><td colspan="12" style="padding:8px;font-size:12px;color:#BA7517">
       ⚠ Hay ${huerfanos.size} productos en compras que NO están en el catálogo.
       <button class="btn-sm" onclick="importarHuerfanos('dijit')" style="margin-left:8px">Importar al catálogo</button>
     </td></tr>`;
   }
 
   if (!rows.length) {
-    tb.innerHTML = huerfMsg + '<tr><td colspan="11" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
+    tb.innerHTML = huerfMsg + '<tr><td colspan="12" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
     return;
   }
 
@@ -6303,6 +6307,9 @@ async function loadFromStorage() {
       safeLoad('doc_subcategorias'),
       safeLoad('doc_documentos'),
     ]);
+    // Proveedor de cada producto de la app de Compras (P-xxx → proveedor); el
+    // catálogo de Ratios no lo guarda, se cruza en memoria para la clasificación
+    const compras_cat = await safeLoad('compras_producto');
     DB.ingresos             = ingresos             || [];
     DB.gastos               = gastos               || [];
     DB.presupuesto          = presupuesto          || [];
@@ -6328,6 +6335,9 @@ async function loadFromStorage() {
     DB.doc_departamentos    = doc_departamentos    || [];
     DB.doc_subcategorias    = doc_subcategorias    || [];
     DB.doc_documentos       = doc_documentos       || [];
+    DB.provPorCodigo        = new Map((compras_cat||[])
+      .filter(p => p.codigo_interno)
+      .map(p => [String(p.codigo_interno).trim(), p.proveedor_nombre || '']));
     aplicarAjustesIngresos();   // reubicación externa de ventas (no toca ficheros ni Supabase)
     invalidateStockCache();
     // Construir índices para resolución dinámica de familia/subfamilia
