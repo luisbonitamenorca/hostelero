@@ -141,6 +141,22 @@ export default async function Impuestos({ searchParams }: { searchParams: Promis
         <p className="sub" style={{ marginBottom: 12 }}>
           Cuotas practicadas en el trimestre (el haber de las 4751). La base del trabajo sale de las nóminas de Ratios.
         </p>
+        <p style={{ marginBottom: 12, fontSize: 13, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {trimestres.map((t) => (
+            <span key={t} style={{ display: "inline-flex", gap: 6 }}>
+              <a className="boton-secundario" style={{ fontSize: 12, padding: "3px 10px" }}
+                 href={ruta(`/impuestos/fichero?anio=${anio}&t=${t}&m=111`)}
+                 title="Fichero del 111 en formato de presentación de AEAT (borrador para contrastar)">
+                111 · {t}T ↓
+              </a>
+              <a className="boton-secundario" style={{ fontSize: 12, padding: "3px 10px" }}
+                 href={ruta(`/impuestos/fichero?anio=${anio}&t=${t}&m=115`)}
+                 title="Fichero del 115 en formato de presentación de AEAT (borrador para contrastar)">
+                115 · {t}T ↓
+              </a>
+            </span>
+          ))}
+        </p>
         <div className="tabla-envoltura">
           <table className="tabla">
             <thead>
