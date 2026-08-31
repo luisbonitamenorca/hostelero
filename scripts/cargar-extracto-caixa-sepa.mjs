@@ -50,5 +50,21 @@ r = await fetch(`${URL}/rest/v1/rpc/fin_n43_absorber`, {
   method: "POST", headers: cab, body: JSON.stringify({ p_banco: bancoCuentaId }),
 });
 if (!r.ok) { console.error(`absorber: ${r.status} ${(await r.text()).slice(0, 300)}`); process.exit(1); }
-console.log("Resultado:", JSON.stringify(await r.json()));
-console.log("HECHO. Siguiente: relanzar el cruce sobre los pendientes.");
+console.log("Absorber:", JSON.stringify(await r.json()));
+
+// Motor de reglas del cruce, por lotes (keyset) hasta agotar los pendientes
+const total = { liquidados: 0, clasificados: 0, ignorados: 0, errores: 0 };
+let desde = null;
+for (;;) {
+  r = await fetch(`${URL}/rest/v1/rpc/fin_cruce_aplicar`, {
+    method: "POST", headers: cab,
+    body: JSON.stringify({ p_banco: bancoCuentaId, p_desde: desde, p_lote: 10 }),
+  });
+  if (!r.ok) { console.error(`cruce: ${r.status} ${(await r.text()).slice(0, 300)}`); process.exit(1); }
+  const paso = await r.json();
+  for (const k of Object.keys(total)) total[k] += paso[k];
+  if (paso.procesados < 10) break;
+  desde = paso.ultimo;
+}
+console.log("Cruce:", JSON.stringify(total));
+console.log("HECHO.");
