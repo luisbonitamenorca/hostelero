@@ -43,4 +43,6 @@ export default async function handler(req, res) {
   }
 }
 
-export const config = { api: { bodyParser: { sizeLimit: "4mb" } } };
+// maxDuration: con max_tokens 16384 (albaranes muy largos, escalada a Opus) la
+// generación puede pasar del minuto; sin esto Vercel corta la función a mitad.
+export const config = { api: { bodyParser: { sizeLimit: "4mb" } }, maxDuration: 300 };
