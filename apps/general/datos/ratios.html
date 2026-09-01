@@ -1016,8 +1016,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
         <span class="fbar-label">Vista</span>
         <button class="fbtn active" onclick="setClasifView('familias',this)">Familias / Subfamilias</button>
         <button class="fbtn" onclick="setClasifView('agora',this)">Productos Ágora</button>
-        <button class="fbtn" onclick="setClasifView('dijit',this)">Productos Dijit</button>
-        <button class="btn-sm" onclick="descargarClasificacionExcel()" title="Descarga un Excel con 4 hojas: Familias, Subfamilias, Productos Ágora y Productos Dijit (catálogo completo)" style="margin-left:auto">⬇ Descargar Excel</button>
+        <button class="fbtn" onclick="setClasifView('dijit',this)">Productos Compras</button>
+        <button class="btn-sm" onclick="descargarClasificacionExcel()" title="Descarga un Excel con 4 hojas: Familias, Subfamilias, Productos Ágora y Productos Compras (catálogo completo)" style="margin-left:auto">⬇ Descargar Excel</button>
       </div>
 
       <!-- Vista FAMILIAS -->
@@ -1029,7 +1029,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
           </div>
           <div style="font-size:12px;color:#888;margin-bottom:12px">Las familias se usan en todos los paneles. Borrar una familia solo es posible si no tiene subfamilias ni productos asignados.</div>
           <div class="tbl-wrap"><table>
-            <thead><tr><th style="width:22%">Familia</th><th class="tr">Subfam.</th><th class="tr">Prod. Ágora</th><th class="tr">Prod. Dijit</th><th class="tr">Ventas Ágora</th><th class="tr">Compras Dijit</th><th class="tr">Ratio</th><th style="width:90px"></th></tr></thead>
+            <thead><tr><th style="width:22%">Familia</th><th class="tr">Subfam.</th><th class="tr">Prod. Ágora</th><th class="tr">Prod. Compras</th><th class="tr">Ventas Ágora</th><th class="tr">Compras</th><th class="tr">Ratio</th><th style="width:90px"></th></tr></thead>
             <tbody id="tb-fam"></tbody>
           </table></div>
         </div>
@@ -1040,7 +1040,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
           </div>
           <div style="font-size:12px;color:#888;margin-bottom:12px">Selecciona una familia arriba para ver y gestionar sus subfamilias.</div>
           <div class="tbl-wrap"><table>
-            <thead><tr><th style="width:28%">Subfamilia</th><th class="tr">Prod. Ágora</th><th class="tr">Prod. Dijit</th><th class="tr">Ventas Ágora</th><th class="tr">Compras Dijit</th><th class="tr">Ratio</th><th style="width:90px"></th></tr></thead>
+            <thead><tr><th style="width:28%">Subfamilia</th><th class="tr">Prod. Ágora</th><th class="tr">Prod. Compras</th><th class="tr">Ventas Ágora</th><th class="tr">Compras</th><th class="tr">Ratio</th><th style="width:90px"></th></tr></thead>
             <tbody id="tb-sub"></tbody>
           </table></div>
         </div>
@@ -1104,12 +1104,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
               <option value="">Todas</option>
               <option value="__SIN__">Sin clasificar</option>
             </select>
-            <span class="fbar-label">Origen</span>
-            <select id="pd-origen-filter" onchange="renderProdDijit()" style="font-size:12px;padding:4px 8px">
-              <option value="">Todos</option>
-              <option value="COMPRAS">App Compras</option>
-              <option value="DIJIT">Dijit (histórico)</option>
-            </select>
             <span class="fbar-label">Buscar</span>
             <input type="text" id="pd-search" placeholder="ID o descripción..." oninput="renderProdDijit()" style="font-size:12px;padding:4px 8px;width:200px">
           </div>
@@ -1117,7 +1111,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
             <thead style="position:sticky;top:0;background:#fff;z-index:2">
               <tr>
                 <th style="width:90px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','id_interno')">ID<span id="pd-arr-id_interno"></span></span></th>
-                <th style="width:75px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','origen')">Origen<span id="pd-arr-origen"></span></span></th>
                 <th><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','descripcion')">Descripción<span id="pd-arr-descripcion"></span></span></th>
                 <th style="width:150px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','_prov')">Proveedor<span id="pd-arr-_prov"></span></span></th>
                 <th style="width:160px"><span style="cursor:pointer;user-select:none" onclick="sortProd('pd','familia')">Familia<span id="pd-arr-familia"></span></span></th>
@@ -1475,7 +1468,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
           <div class="xl-progress-bar"><div class="xl-progress-fill" id="xl-bar" style="width:0%"></div></div>
           <div class="xl-sheet-status" id="xl-status">
             <div class="xl-sheet-row"><span class="sheet-name">📋 AGORA (ventas)</span><span class="sheet-count" id="xl-ing-count">Esperando...</span><span class="sheet-wait" id="xl-ing-ico">○</span></div>
-            <div class="xl-sheet-row"><span class="sheet-name">🛒 DIJIT (compras hasta el corte)</span><span class="sheet-count" id="xl-gas-count">Esperando...</span><span class="sheet-wait" id="xl-gas-ico">○</span></div>
+            <div class="xl-sheet-row"><span class="sheet-name">🛒 DIJIT (jubilado: en vivo desde Compras)</span><span class="sheet-count" id="xl-gas-count">Esperando...</span><span class="sheet-wait" id="xl-gas-ico">○</span></div>
             <div class="xl-sheet-row"><span class="sheet-name">🧾 COMPRAS (App Compras)</span><span class="sheet-count" id="xl-comp-count">Esperando...</span><span class="sheet-wait" id="xl-comp-ico">○</span></div>
             <div class="xl-sheet-row"><span class="sheet-name">📅 PRESUPUESTO INGRESOS</span><span class="sheet-count" id="xl-ppto-count">Esperando...</span><span class="sheet-wait" id="xl-ppto-ico">○</span></div>
             <div class="xl-sheet-row"><span class="sheet-name">💶 NOMINAS</span><span class="sheet-count" id="xl-nm-count">Esperando...</span><span class="sheet-wait" id="xl-nm-ico">○</span></div>
@@ -5848,9 +5841,6 @@ function famSubSelectsRow(prefix, p, id) {
   } else {
     return `<tr style="${bg}">
       <td style="font-size:11px;font-family:monospace">${p.id_interno||''}</td>
-      <td>${(p.origen||'DIJIT')==='COMPRAS'
-            ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#E3F3EC;color:#1D9E75">App</span>'
-            : '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#EFEFEF;color:#888">Dijit</span>'}</td>
       <td style="font-size:12px">${p.descripcion||''}</td>
       <td style="font-size:11px;color:#555">${p._prov||'—'}</td>
       <td><select onchange="updateProductoFam('dijit',${idEsc},this.value)" style="font-size:11px;padding:2px 4px;width:100%">${famOpts}</select></td>
@@ -5918,10 +5908,8 @@ function renderProdDijit() {
   });
 
   {
-    const nApp = (DB.productos_dijit||[]).filter(p => (p.origen||'DIJIT') === 'COMPRAS').length;
-    const nDij = (DB.productos_dijit||[]).length - nApp;
     document.getElementById('pd-count').textContent =
-      `${rows.length} de ${(DB.productos_dijit||[]).length} · ${nApp} App Compras · ${nDij} Dijit`;
+      `${rows.length} de ${(DB.productos_dijit||[]).length}`;
   }
 
   // Huérfanos en gastos
@@ -6059,7 +6047,7 @@ async function addProductoManual(tipo) {
   const newRow = tipo === 'agora'
     ? { id_prod: idTrim, producto: name.trim(), familia: '', subfamilia: '', factor: 1 }
     : { id_interno: idTrim, descripcion: name.trim(), familia: '', subfamilia: '', factor: 1, unidades: '',
-        origen: /^P-/i.test(idTrim) ? 'COMPRAS' : 'DIJIT' };
+        origen: 'COMPRAS' };
   try {
     setSyncStatus('Guardando...', '#BA7517');
     await sbFetch(tabla, {method:'POST', body: JSON.stringify(newRow)});
@@ -6113,8 +6101,7 @@ async function importarHuerfanos(tipo) {
     if (!confirm(`Importar ${huerfanos.size} productos huérfanos al catálogo (sin clasificar)?`)) return;
     const nuevos = [...huerfanos.entries()].map(([id, nm]) => ({
       id_interno: id, descripcion: nm || id, familia: '', subfamilia: '', factor: 1, unidades: '',
-      // Los códigos P-xxxxx vienen de la App Compras; los numéricos, de Dijit.
-      origen: /^P-/i.test(String(id)) ? 'COMPRAS' : 'DIJIT'
+      origen: 'COMPRAS'
     }));
     try {
       setSyncStatus('Importando...', '#BA7517');
@@ -6944,8 +6931,15 @@ async function handleXlFile(file, opts) {
   // Unidades = CANTIDAD × FACTOR.
   document.getElementById('xl-gas-count').textContent = 'Procesando...';
   const gasRows = [];
-  let gasFueraCorte = 0;   // filas de Dijit con fecha >= corte: ya vienen de la App Compras
+  let gasFueraCorte = 0;
   if (hojaDijit) {
+    // DIJIT JUBILADO (01-09-2026): el histórico ene-jul se reprocesó desde las
+    // fotos y vive en el módulo Compras; la vista SQL 'gastos' sirve el año
+    // completo en vivo. La hoja se ignora a propósito para no duplicar.
+    document.getElementById('xl-gas-count').textContent = 'Dijit jubilado: las compras de todo el año entran solas desde el módulo Compras (hoja ignorada)';
+    document.getElementById('xl-gas-ico').textContent = '✓';
+    document.getElementById('xl-gas-ico').className = 'sheet-ok';
+  } else if (false) {
    try {
     const ws = wb.Sheets[hojaDijit];
     const data = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:""});
