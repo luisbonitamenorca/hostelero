@@ -4353,9 +4353,12 @@ function renderConciliacion(){
   });
   // KPIs (sobre lo que muestra el filtro)
   const total=vis.length,ok=vis.filter(r=>r.tiene).length,falta=total-ok;
+  const impFalta=vis.filter(r=>!r.tiene).reduce((s,r)=>s+(num(r.importe)||0),0);
   document.getElementById('concilKpis').innerHTML=[
     ['Albaranes (filtro)',total],['Los tenemos',ok],
-    ['Faltan',`<span style="color:var(--warn)">${falta}</span>`],['Facturas sin albaranes leídos',sinDet]
+    ['Faltan',`<span style="color:var(--warn)">${falta}</span>`],
+    ['Importe que falta',`<span style="color:var(--warn)">${fmt(impFalta)}</span>`],
+    ['Facturas sin albaranes leídos',sinDet]
   ].map(([l,v])=>`<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join('');
   // orden
   const st=sortState.conciliacion;
