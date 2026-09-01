@@ -221,6 +221,10 @@
   .spin.dark{border-color:rgba(29,158,117,.25);border-top-color:var(--wine)}
   @keyframes sp{to{transform:rotate(360deg)}}
 
+  /* selectores rápidos del listado (centro / proveedor / mes) */
+  .selfiltro{padding:7px 10px;border:0.5px solid var(--line);border-radius:8px;background:var(--panel);
+    font:inherit;font-size:13px;color:inherit;max-width:260px;cursor:pointer}
+  .selfiltro:focus{outline:none;border-color:var(--wine)}
   /* modal revisión */
   .modal{position:fixed;inset:0;background:rgba(35,32,28,.55);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
   .modal.show{display:flex}
@@ -403,6 +407,12 @@
             <button class="btn ghost" onclick="loadAlbaranes()">↻ Refrescar</button>
             <button class="btn" onclick="exportAlb()">Exportar Excel</button>
           </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin:2px 0 12px;align-items:center">
+          <select id="selAlbCentro" onchange="renderAlb()" class="selfiltro"><option value="">Todos los centros</option></select>
+          <select id="selAlbProv" onchange="renderAlb()" class="selfiltro"><option value="">Todos los proveedores</option></select>
+          <select id="selAlbMes" onchange="renderAlb()" class="selfiltro"><option value="">Todos los meses</option></select>
+          <span class="link" id="albSelLimpiar" onclick="limpiarSelAlb()" style="display:none">× quitar filtros</span>
         </div>
         <div class="tabla-scroll">
           <table>
@@ -1017,7 +1027,7 @@ function estadoCorreo(txt){
 // trabajando de verdad); en forzado bastan 90 s, porque ningún documento tarda
 // tanto y quien pulsa el botón está viendo que no pasa nada.
 async function sincronizarCorreo(forzado=false){
-  console.log('Compras Bonita · v73 · fecha y nº de documento editables en el modal de revisión (clic sobre ellos en la cabecera): el OCR a veces baila día y mes (un 01-08 leído como 08-01) o inventa un carácter en el número, y hasta ahora solo se podía corregir tocando la base (01-sep-2026) · v72 · candado de duplicados: sobrevive siempre la copia con nº de A3 (detector + trigger en base) y el borrado avisa/bloquea documentos exportados · max_tokens del OCR a 16384 (JSON_TRUNCADO en albaranes muy largos) (31-ago-2026) · v71 ·el indicador de días hasta la carga solo cuenta albaranes desde agosto 2026 (lo anterior fueron cargas de prueba, no gestión de los centros) · la tarjeta de días hasta la carga en vertical (a dos columnas se desbordaba) y por mes solo los últimos 6 · tarjeta «Días hasta la carga» en el Resumen: media de días entre la fecha del albarán y su subida, por centro y por mes (mide lo que tardan los centros en pasar los papeles a Dakota) · botón «descartar» en las propuestas de fusión de productos: la pareja se apunta en compras_dup_descartada y no se vuelve a proponer (se limpia sola si uno de los dos desaparece) · al ordenar por centro, los que NO tienen centro salen primero (antes caían al final por la regla de vacíos y parecían no existir) · el desplegable de centro del listado arrastra también las LÍNEAS del albarán (antes solo cambiaba el documento y el coste seguía en el centro viejo en Compras/Resumen/Ratios; las líneas de un reparto multi-centro deliberado no se tocan) · la pestaña Compras añade una fila de ajuste por albarán cuando las líneas no suman la base (descuentos de pie, líneas con IVA, redondeos): su total ya cuadra con la suma de bases de Albaranes, y la vista de Ratios aplica la misma regla · fechas en dd-mm-aaaa en todas las tablas y modales (en Excel y base siguen aaaa-mm-dd, que ordenan bien) · el aviso naranja de albarán incompleto ya no salta si las líneas cuadran con la base (los "3/3" de JJ Carreras y "1/5" de Distnura son códigos de reparto/envases, no páginas; añadidas pautas de proveedor) · una fecha leída de un año anterior al actual dispara la escalada a Opus y, si persiste, deja el documento en Revisar (con margen de 60 días para no molestar en enero) · la ayuda del modal explica que Guardar cambios es el visto bueno · el reproceso re-evalúa el proveedor cuando el CIF leído casa exacto con otro del maestro · reprocesar dudosos en lote (albaranes y facturas) y detector-fusionador de productos duplicados · escalada de modelo: si la lectura no cuadra, segunda pasada con Opus (y el reproceso manual va directo a Opus) · tablas con barra de scroll siempre visible y cabecera fija (Windows) · el nombre propio ya no puede ser el proveedor (se limpia o se deja vacío para revisión) · los adjuntos del front movil (correo_id nulo) pueden ser albaranes: la regla de solo-facturas es para el correo de verdad · el enlace de linea con el catalogo lo resuelve Postgres (trigger trg_linea_enlaza_producto): por referencia del proveedor y, si el albaran no trae codigos, por nombre normalizado dentro del mismo proveedor; asi enlazan tambien Produccion, Bodega, Santo Domingo o Pain Pigalle, y las lineas creadas a mano en el modal de revision · el codigo de proveedor de A3 se escribe a mano y se guarda tal cual en codigo_a3: el maestro es solo ayuda de busqueda, ya no una lista blanca que bloqueaba las altas recientes (142, 143, 144...) · las claves normalizadas las calcula Postgres, no el navegador · seleccion multiple de productos para borrar y fusionar · las acciones y exportaciones respetan los filtros de columna · borrado de productos sin uso · frecuencia de uso por producto (albaranes en los que aparece) · nombre de proveedor unificado en Compras, Albaranes y Facturas · filtros por columna en todos los listados, fusion manual de productos y limpieza del catalogo · CIF en el listado de productos y nombre de proveedor derivado de la ficha · validacion de CIF por digito de control y comparacion visual de proveedores · código interno de la app en Compras (para Ratios) · desglose de IVA visible, bloqueos de A3 en el listado y en el Excel, matriz centro x IVA · pies de IVA con varias filas leidos y autocorregidos, precio unitario editable y aviso de linea descuadrada (13-ago-2026)');
+  console.log('Compras Bonita · v74 · selectores rápidos en Albaranes (centro, proveedor y mes) que se combinan entre sí y con los filtros de columna; el contador y la base imponible de arriba pasan a sumar lo visible («12 de 899»), igual que el Excel (01-sep-2026) · v73 · fecha y nº de documento editables en el modal de revisión (clic sobre ellos en la cabecera): el OCR a veces baila día y mes (un 01-08 leído como 08-01) o inventa un carácter en el número, y hasta ahora solo se podía corregir tocando la base (01-sep-2026) · v72 · candado de duplicados: sobrevive siempre la copia con nº de A3 (detector + trigger en base) y el borrado avisa/bloquea documentos exportados · max_tokens del OCR a 16384 (JSON_TRUNCADO en albaranes muy largos) (31-ago-2026) · v71 ·el indicador de días hasta la carga solo cuenta albaranes desde agosto 2026 (lo anterior fueron cargas de prueba, no gestión de los centros) · la tarjeta de días hasta la carga en vertical (a dos columnas se desbordaba) y por mes solo los últimos 6 · tarjeta «Días hasta la carga» en el Resumen: media de días entre la fecha del albarán y su subida, por centro y por mes (mide lo que tardan los centros en pasar los papeles a Dakota) · botón «descartar» en las propuestas de fusión de productos: la pareja se apunta en compras_dup_descartada y no se vuelve a proponer (se limpia sola si uno de los dos desaparece) · al ordenar por centro, los que NO tienen centro salen primero (antes caían al final por la regla de vacíos y parecían no existir) · el desplegable de centro del listado arrastra también las LÍNEAS del albarán (antes solo cambiaba el documento y el coste seguía en el centro viejo en Compras/Resumen/Ratios; las líneas de un reparto multi-centro deliberado no se tocan) · la pestaña Compras añade una fila de ajuste por albarán cuando las líneas no suman la base (descuentos de pie, líneas con IVA, redondeos): su total ya cuadra con la suma de bases de Albaranes, y la vista de Ratios aplica la misma regla · fechas en dd-mm-aaaa en todas las tablas y modales (en Excel y base siguen aaaa-mm-dd, que ordenan bien) · el aviso naranja de albarán incompleto ya no salta si las líneas cuadran con la base (los "3/3" de JJ Carreras y "1/5" de Distnura son códigos de reparto/envases, no páginas; añadidas pautas de proveedor) · una fecha leída de un año anterior al actual dispara la escalada a Opus y, si persiste, deja el documento en Revisar (con margen de 60 días para no molestar en enero) · la ayuda del modal explica que Guardar cambios es el visto bueno · el reproceso re-evalúa el proveedor cuando el CIF leído casa exacto con otro del maestro · reprocesar dudosos en lote (albaranes y facturas) y detector-fusionador de productos duplicados · escalada de modelo: si la lectura no cuadra, segunda pasada con Opus (y el reproceso manual va directo a Opus) · tablas con barra de scroll siempre visible y cabecera fija (Windows) · el nombre propio ya no puede ser el proveedor (se limpia o se deja vacío para revisión) · los adjuntos del front movil (correo_id nulo) pueden ser albaranes: la regla de solo-facturas es para el correo de verdad · el enlace de linea con el catalogo lo resuelve Postgres (trigger trg_linea_enlaza_producto): por referencia del proveedor y, si el albaran no trae codigos, por nombre normalizado dentro del mismo proveedor; asi enlazan tambien Produccion, Bodega, Santo Domingo o Pain Pigalle, y las lineas creadas a mano en el modal de revision · el codigo de proveedor de A3 se escribe a mano y se guarda tal cual en codigo_a3: el maestro es solo ayuda de busqueda, ya no una lista blanca que bloqueaba las altas recientes (142, 143, 144...) · las claves normalizadas las calcula Postgres, no el navegador · seleccion multiple de productos para borrar y fusionar · las acciones y exportaciones respetan los filtros de columna · borrado de productos sin uso · frecuencia de uso por producto (albaranes en los que aparece) · nombre de proveedor unificado en Compras, Albaranes y Facturas · filtros por columna en todos los listados, fusion manual de productos y limpieza del catalogo · CIF en el listado de productos y nombre de proveedor derivado de la ficha · validacion de CIF por digito de control y comparacion visual de proveedores · código interno de la app en Compras (para Ratios) · desglose de IVA visible, bloqueos de A3 en el listado y en el Excel, matriz centro x IVA · pies de IVA con varias filas leidos y autocorregidos, precio unitario editable y aviso de linea descuadrada (13-ago-2026)');
   if(_sincronizando){
     if(forzado)toast('Ya hay una revisión del correo en marcha');
     return;
@@ -2379,8 +2389,48 @@ function mapaAlbFactura(){
   return m;
 }
 let albFact=new Map();
+/* Selectores rápidos de Albaranes (centro / proveedor / mes). Se combinan con
+   los filtros de columna y con la ordenación; el Excel y los totales de arriba
+   siguen la misma regla de siempre: lo que se exporta y se suma es lo que se ve. */
+const MESES_TXT=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function mesTxt(v){const m=String(v).match(/^(\d{4})-(\d{2})$/);return m?`${MESES_TXT[Number(m[2])-1]} ${m[1]}`:v;}
+function poblarSelectoresAlb(){
+  const defs=[['selAlbCentro',a=>a.canal||'(sin centro)'],
+              ['selAlbProv',a=>a.proveedor||'(sin proveedor)'],
+              ['selAlbMes',a=>String(a.fecha||'').slice(0,7)||'(sin fecha)']];
+  let activo=false;
+  for(const [id,fn] of defs){
+    const el=document.getElementById(id);if(!el)continue;
+    const cur=el.value;
+    const primera=el.options[0]?el.options[0].textContent:'Todos';
+    let vals=[...new Set(albaranes.map(fn))].sort((a,b)=>String(a).localeCompare(String(b)));
+    if(id==='selAlbMes')vals.reverse();
+    el.innerHTML=`<option value="">${primera}</option>`+vals.map(v=>{
+      const vv=String(v).replace(/"/g,'&quot;');
+      return `<option value="${vv}"${v===cur?' selected':''}>${id==='selAlbMes'?mesTxt(v):v}</option>`;}).join('');
+    if(cur&&!vals.includes(cur))el.value='';
+    if(el.value)activo=true;
+  }
+  const l=document.getElementById('albSelLimpiar');
+  if(l)l.style.display=activo?'':'none';
+}
+function limpiarSelAlb(){
+  for(const id of ['selAlbCentro','selAlbProv','selAlbMes']){
+    const el=document.getElementById(id);if(el)el.value='';
+  }
+  renderAlb();
+}
+function filtroSelAlb(rows){
+  const v=id=>{const el=document.getElementById(id);return el?el.value:'';};
+  const fc=v('selAlbCentro'),fp=v('selAlbProv'),fm=v('selAlbMes');
+  if(fc)rows=rows.filter(a=>(a.canal||'(sin centro)')===fc);
+  if(fp)rows=rows.filter(a=>(a.proveedor||'(sin proveedor)')===fp);
+  if(fm)rows=rows.filter(a=>(String(a.fecha||'').slice(0,7)||'(sin fecha)')===fm);
+  return rows;
+}
 function renderAlb(){
-  let rows=[...albaranes];
+  poblarSelectoresAlb();
+  let rows=filtroSelAlb([...albaranes]);
   albFact=mapaAlbFactura();
   const st=sortState.albaranes;
   const keymap={fecha:a=>a.fecha,cargado:a=>a.created_at,prov:a=>a.proveedor,ndoc:a=>a.num_documento,centro:a=>((centrosPorFactura[a.id]||{}).n_centros>1?'zzz varios':(a.canal||'\u0000 sin centro')),fact:a=>(albFact.get(a.id)||{}).num||'\u0000 sin factura',base:a=>num(a.base)||0,iva:a=>num(a.iva)||0,reten:a=>num(a.retencion)||0,total:a=>a.total,estado:a=>a.estado_detalle||'REVISAR'};
@@ -2394,14 +2444,17 @@ function renderAlb(){
     thh('albaranes','centro','Centro')+thh('albaranes','fact','Factura')+thh('albaranes','base','Base','num')+thh('albaranes','iva','IVA','num')+thh('albaranes','reten','Retención','num')+thh('albaranes','total','Total','num')+thh('albaranes','estado','Estado')+'<th>Revisar</th><th></th>';
   const tb=document.getElementById('albBody');
   const nInc=albaranes.filter(pagsFaltan).length;
-  document.getElementById('albCount').textContent=albaranes.length;
+  // los totales de arriba cuentan lo que se ve (selectores + filtros de columna),
+  // igual que el Excel; sin filtros son los de siempre
+  document.getElementById('albCount').textContent=rows.length<albaranes.length
+    ? `${rows.length} de ${albaranes.length}` : albaranes.length;
   const elInc=document.getElementById('albIncompletos');
   if(elInc){
     elInc.textContent=nInc;
     elInc.parentElement.style.display=nInc?'':'none';
     elInc.parentElement.title=nInc?'Albaranes que dicen tener mas paginas de las que se han cargado':'';
   }
-  document.getElementById('albTotal').textContent=fmt(albaranes.reduce((s,a)=>s+(num(a.base)||0),0));
+  document.getElementById('albTotal').textContent=fmt(rows.reduce((s,a)=>s+(num(a.base)||0),0));
   document.getElementById('emptyA').style.display=albaranes.length?'none':'block';
   tb.innerHTML=rows.map(a=>`<tr>
     <td class="fecha">${fmtF(a.fecha)}</td><td style="white-space:nowrap">${fmtCarga(a.created_at)}</td><td>${a.origen==='correo'?'<span title="Recibido por correo">\u{1F4E7}</span> ':''}${a.proveedor||''}</td><td>${a.num_documento||''}${avisoPags(a)}</td>
