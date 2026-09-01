@@ -466,7 +466,7 @@
           </table>
         </div>
         <div id="emptyCon" class="empty" style="display:none">No hay albaranes detectados en las facturas todavía. Sube alguna factura con su lista de albaranes.</div>
-        <p class="hint">Solo facturas de MERCANCÍA: proveedores con cuenta de gasto 600000000, que son los que entran por albarán. Servicios, enología, gas… quedan fuera a propósito. Cada fila es un albarán que aparece dentro de una factura. «✓ Sí» = cruzado por número. «≈ Revisar» = el número no coincide al 100% pero cuadran al menos 3 de 4 parámetros (proveedor, importe al céntimo, fecha ±7 días, centro) y el número se parece: casi seguro es el mismo albarán con el número o el proveedor mal escritos — pasa el ratón para ver por qué casa y clic para abrirlo. «Falta» = no está en tu listado de Albaranes: probablemente quede por entrar. El objetivo no es cuadrar el céntimo, sino que no se escape ningún albarán del coste analítico.</p>
+        <p class="hint">Solo facturas de MERCANCÍA: proveedores con cuenta de gasto 600000000, que son los que entran por albarán. Servicios, enología, gas… quedan fuera a propósito. Cada fila es un albarán que aparece dentro de una factura. «✓ Sí» = cruzado por número. «≈ Revisar» = el número no coincide al 100% pero cuadran al menos 3 de 4 parámetros (proveedor, importe al céntimo, fecha ±7 días, centro) y el número se parece: casi seguro es el mismo albarán con el número o el proveedor mal escritos — pasa el ratón para ver por qué casa, clic para abrirlo y «✔ dar por bueno» para conciliarlo definitivamente (queda en verde con ✍️ y se puede deshacer con la ✕). «Falta» = no está en tu listado de Albaranes: probablemente quede por entrar. El objetivo no es cuadrar el céntimo, sino que no se escape ningún albarán del coste analítico.</p>
       </div>
     </section>
 
@@ -2443,7 +2443,11 @@ async function loadFacturas(){
     try{
       const rc=await sbAll('compras_factura_centros?select=doc_id,n_centros,centros');
       centrosPorFactura={}; rc.forEach(x=>{centrosPorFactura[x.doc_id]=x;});
-    }catch(e){centrosPorFactura={};}renderFac();renderConciliacion();}
+    }catch(e){centrosPorFactura={};}
+    // Cruces probables dados por buenos a mano (pestaña Conciliación).
+    try{concilConf=await sbAll('compras_concil_confirmada?select=id,factura_id,num_albaran,albaran_id');}
+    catch(e){concilConf=[];}
+    renderFac();renderConciliacion();}
   catch(err){toast('No pude cargar facturas: '+err.message,true);}
 }
 // Repasa TODOS los documentos del tipo y marca como DUPLICADO los que repiten
@@ -4314,6 +4318,7 @@ function nuevoProveedor(){
 
 /* ---------- conciliación: ¿qué albaranes de las facturas tenemos registrados? ---------- */
 let conciliacionRows=[];
+let concilConf=[];   // cruces probables dados por buenos a mano (persisten en base)
 // normaliza un nº de albarán (mayúsculas, solo alfanumérico)
 function normAlb(x){return x?String(x).toUpperCase().replace(/[^A-Z0-9]/g,''):'';}
 // núcleo numérico: el grupo de dígitos más largo sin ceros a la izquierda
@@ -4357,6 +4362,7 @@ function renderConciliacion(){
     if(p.nombre)provMercancia.add('n:'+normName(p.nombre));
   }});
   const albCanal=new Map(albaranes.map(a=>[a.id,a.canal]));
+  const confMap=new Map(concilConf.map(c=>[c.factura_id+'|'+normAlb(c.num_albaran),c]));
   // una fila por cada albarán que aparece en una factura
   let rows=[],sinDet=0;
   facturas.forEach(f=>{
@@ -4368,11 +4374,19 @@ function renderConciliacion(){
     arr.forEach(al=>{
       const numAlb=(al.num_albaran||'').toString().trim();
       if(!numAlb)return;
-      const albId=buscar(f,al);
+      // Una confirmación manual manda sobre el matching automático.
+      const conf=confMap.get(f.id+'|'+normAlb(numAlb));
       const rc=centrosPorFactura[f.id];
+      let match,albId,motivo='',confId=null;
+      if(conf&&albCanal.has(conf.albaran_id)){
+        match='si';albId=conf.albaran_id;confId=conf.id;
+        motivo='Dado por bueno a mano: el nº de la factura y el del albarán no coinciden, pero alguien los revisó y son el mismo.';
+      }else{
+        albId=buscar(f,al);match=albId?'si':'no';
+      }
       rows.push({proveedor:f.proveedor||'',proveedor_id:f.proveedor_id,fecha:al.fecha||f.fecha||'',num_albaran:numAlb,
         centroFactura:(rc&&rc.centros)||f.canal||'',factura:f.num_documento||'',importe:al.importe,facturaId:f.id,
-        match:albId?'si':'no',albId,motivo:''});
+        match,albId,motivo,confId});
     });
   });
   // Segundo pase: conciliación PROBABLE. Cuatro parámetros (proveedor, importe
@@ -4446,17 +4460,38 @@ function renderConciliacion(){
     thh('conciliacion','centro','Centro')+
     thh('conciliacion','fact','Factura')+thh('conciliacion','imp','Importe','num')+thh('conciliacion','estado','¿Lo tenemos?');
   document.getElementById('emptyCon').style.display=vis.length?'none':'block';
-  document.getElementById('concilBody').innerHTML=vis.map(r=>`<tr>
+  document.getElementById('concilBody').innerHTML=vis.map((r,i)=>`<tr>
     <td>${r.proveedor}</td><td>${r.fecha||''}</td><td>${r.num_albaran}</td>
     <td>${r.centro||''}</td>
     <td><span class="link" onclick="revisar('${r.facturaId}')">${r.factura||'(ver factura)'}</span></td>
     <td class="num">${r.importe!=null?fmt(r.importe):''}</td>
-    <td>${r.match==='si'
-      ?`<span class="est correcto" title="Abrir el albarán" style="cursor:pointer" onclick="revisar('${r.albId}')">✓ Sí</span>`
+    <td style="white-space:nowrap">${r.match==='si'
+      ?`<span class="est correcto" title="${r.confId?'Dado por bueno a mano. Abrir el albarán':'Abrir el albarán'}" style="cursor:pointer" onclick="revisar('${r.albId}')">✓ Sí${r.confId?' ✍️':''}</span>${r.confId?` <span class="link" title="Deshacer la confirmación manual" onclick="desconfirmarConcil('${r.confId}')">✕</span>`:''}`
       :r.match==='prob'
-      ?`<span class="est nocuadra" title="${(r.motivo||'').replace(/"/g,'&quot;')}" style="cursor:pointer" onclick="revisar('${r.albId}')">≈ Revisar</span>`
+      ?`<span class="est nocuadra" title="${(r.motivo||'').replace(/"/g,'&quot;')}" style="cursor:pointer" onclick="revisar('${r.albId}')">≈ Revisar</span> <span class="link" title="Confirmar que es el mismo albarán: pasa a verde y se recuerda" onclick="confirmarConcil(${i})">✔ dar por bueno</span>`
       :'<span class="est nocuadra">⚠️ Falta</span>'}</td>
   </tr>`).join('');
+}
+// Dar por bueno un cruce probable: guarda la pareja factura+nº → albarán y
+// desde entonces sale en verde (con ✍️). Se puede deshacer con la ✕.
+async function confirmarConcil(i){
+  const r=(conciliacionRows||[])[i];
+  if(!r||r.match!=='prob'||!r.albId)return;
+  try{
+    const ins=await sb('compras_concil_confirmada',{method:'POST',
+      body:JSON.stringify({factura_id:r.facturaId,num_albaran:r.num_albaran,albaran_id:r.albId})});
+    concilConf.push(ins[0]||{factura_id:r.facturaId,num_albaran:r.num_albaran,albaran_id:r.albId});
+    toast('Dado por bueno: conciliado');
+    renderConciliacion();
+  }catch(err){toast('No pude guardarlo: '+err.message,true);}
+}
+async function desconfirmarConcil(id){
+  try{
+    await sb(`compras_concil_confirmada?id=eq.${id}`,{method:'DELETE',prefer:'return=minimal'});
+    concilConf=concilConf.filter(c=>c.id!==id);
+    toast('Confirmación deshecha');
+    renderConciliacion();
+  }catch(err){toast('No pude deshacerla: '+err.message,true);}
 }
 function exportConcil(){
   const rows=conciliacionRows||[];
