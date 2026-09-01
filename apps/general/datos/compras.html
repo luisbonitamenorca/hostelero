@@ -4317,6 +4317,7 @@ function renderConciliacion(){
     if(p.id)provMercancia.add(p.id);
     if(p.nombre)provMercancia.add('n:'+normName(p.nombre));
   }});
+  const albCanal=new Map(albaranes.map(a=>[a.id,a.canal]));
   // una fila por cada albarán que aparece en una factura
   let rows=[],sinDet=0;
   facturas.forEach(f=>{
@@ -4329,8 +4330,12 @@ function renderConciliacion(){
       const numAlb=(al.num_albaran||'').toString().trim();
       if(!numAlb)return;
       const albId=buscar(f,al);
+      // Centro: si el albarán está cargado, el suyo; si falta, el de la
+      // factura (o su reparto cuando está dividida entre varios centros).
+      const rc=centrosPorFactura[f.id];
+      const centro=albId?(albCanal.get(albId)||''):((rc&&rc.centros)||f.canal||'');
       rows.push({proveedor:f.proveedor||'',fecha:al.fecha||f.fecha||'',num_albaran:numAlb,
-        factura:f.num_documento||'',importe:al.importe,facturaId:f.id,tiene:!!albId,albId});
+        centro,factura:f.num_documento||'',importe:al.importe,facturaId:f.id,tiene:!!albId,albId});
     });
   });
   // poblar filtros de proveedor y mes (desde todas las filas)
@@ -4362,15 +4367,17 @@ function renderConciliacion(){
   ].map(([l,v])=>`<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join('');
   // orden
   const st=sortState.conciliacion;
-  const keymap={prov:r=>r.proveedor,fecha:r=>r.fecha,nalb:r=>r.num_albaran,fact:r=>r.factura,imp:r=>num(r.importe),estado:r=>r.tiene?1:0};
+  const keymap={prov:r=>r.proveedor,fecha:r=>r.fecha,nalb:r=>r.num_albaran,centro:r=>r.centro||'',fact:r=>r.factura,imp:r=>num(r.importe),estado:r=>r.tiene?1:0};
   if(st.key&&keymap[st.key])vis=sortRows(vis,keymap[st.key],st.dir);
   conciliacionRows=vis;
   document.getElementById('headConcil').innerHTML=
     thh('conciliacion','prov','Proveedor')+thh('conciliacion','fecha','Fecha')+thh('conciliacion','nalb','Nº albarán')+
+    thh('conciliacion','centro','Centro')+
     thh('conciliacion','fact','Factura')+thh('conciliacion','imp','Importe','num')+thh('conciliacion','estado','¿Lo tenemos?');
   document.getElementById('emptyCon').style.display=vis.length?'none':'block';
   document.getElementById('concilBody').innerHTML=vis.map(r=>`<tr>
     <td>${r.proveedor}</td><td>${r.fecha||''}</td><td>${r.num_albaran}</td>
+    <td>${r.centro||''}</td>
     <td><span class="link" onclick="revisar('${r.facturaId}')">${r.factura||'(ver factura)'}</span></td>
     <td class="num">${r.importe!=null?fmt(r.importe):''}</td>
     <td>${r.tiene
@@ -4382,7 +4389,7 @@ function exportConcil(){
   const rows=conciliacionRows||[];
   if(!rows.length){toast('No hay nada que exportar',true);return;}
   const data=rows.map(r=>({Proveedor:r.proveedor,Fecha:r.fecha||'','Nº albarán':r.num_albaran,
-    Factura:r.factura,Importe:r.importe??'','¿Lo tenemos?':r.tiene?'SÍ':'FALTA'}));
+    Centro:r.centro||'',Factura:r.factura,Importe:r.importe??'','¿Lo tenemos?':r.tiene?'SÍ':'FALTA'}));
   const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Conciliación');
   XLSX.writeFile(wb,`conciliacion_${new Date().toISOString().slice(0,10)}.xlsx`);
