@@ -450,6 +450,7 @@
           <div><label class="fld">Mostrar</label><select id="concilEstado" onchange="renderConciliacion()">
             <option value="">Todos</option>
             <option value="falta">Solo los que faltan</option>
+            <option value="prob">Solo probables (revisar)</option>
             <option value="ok">Solo los que tenemos</option>
           </select></div>
           <div style="flex:1 1 auto;text-align:right;align-self:flex-end;display:flex;gap:10px;justify-content:flex-end">
@@ -465,7 +466,7 @@
           </table>
         </div>
         <div id="emptyCon" class="empty" style="display:none">No hay albaranes detectados en las facturas todavía. Sube alguna factura con su lista de albaranes.</div>
-        <p class="hint">Solo facturas de MERCANCÍA: proveedores con cuenta de gasto 600000000, que son los que entran por albarán. Servicios, enología, gas… quedan fuera a propósito. Cada fila es un albarán que aparece dentro de una factura. «Falta» significa que ese albarán no está en tu listado de Albaranes: probablemente quede por entrar. El objetivo no es cuadrar el céntimo, sino que no se escape ningún albarán del coste analítico.</p>
+        <p class="hint">Solo facturas de MERCANCÍA: proveedores con cuenta de gasto 600000000, que son los que entran por albarán. Servicios, enología, gas… quedan fuera a propósito. Cada fila es un albarán que aparece dentro de una factura. «✓ Sí» = cruzado por número. «≈ Revisar» = el número no coincide al 100% pero cuadran al menos 3 de 4 parámetros (proveedor, importe al céntimo, fecha ±7 días, centro) y el número se parece: casi seguro es el mismo albarán con el número o el proveedor mal escritos — pasa el ratón para ver por qué casa y clic para abrirlo. «Falta» = no está en tu listado de Albaranes: probablemente quede por entrar. El objetivo no es cuadrar el céntimo, sino que no se escape ningún albarán del coste analítico.</p>
       </div>
     </section>
 
@@ -4338,6 +4339,14 @@ function renderConciliacion(){
       if(nu&&e.nucleo.has(nu))return e.nucleo.get(nu);}
     return null;
   };
+  // Distancia de edición con tope: cuántas letras/dígitos hay que cambiar
+  // para pasar de un nº al otro. 9 = "ni parecido".
+  const lev=(x,y)=>{if(Math.abs(x.length-y.length)>2)return 9;let p=[...Array(y.length+1).keys()];
+    for(let i=1;i<=x.length;i++){const c=[i];for(let j=1;j<=y.length;j++)c.push(Math.min(p[j]+1,c[j-1]+1,p[j-1]+(x[i-1]!==y[j-1])));p=c;}
+    return p[y.length];};
+  const diasEntre=(a,b)=>{const ta=Date.parse(String(a||'').slice(0,10)),tb=Date.parse(String(b||'').slice(0,10));
+    return (isNaN(ta)||isNaN(tb))?999:Math.abs(ta-tb)/86400000;};
+  const impCuadra=(imp,a)=>imp!=null&&[num(a.base),num(a.total)].some(v=>v!=null&&Math.abs(v-imp)<=0.02);
   // Solo facturas de MERCANCÍA (cuenta 600000000): los proveedores que entran
   // por albarán. Servicios, enología, gas, uniformes… no traen albaranes de
   // compra y solo meten ruido — esta pestaña sirve para detectar albaranes
@@ -4360,14 +4369,42 @@ function renderConciliacion(){
       const numAlb=(al.num_albaran||'').toString().trim();
       if(!numAlb)return;
       const albId=buscar(f,al);
-      // Centro: si el albarán está cargado, el suyo; si falta, el de la
-      // factura (o su reparto cuando está dividida entre varios centros).
       const rc=centrosPorFactura[f.id];
-      const centro=albId?(albCanal.get(albId)||''):((rc&&rc.centros)||f.canal||'');
-      rows.push({proveedor:f.proveedor||'',fecha:al.fecha||f.fecha||'',num_albaran:numAlb,
-        centro,factura:f.num_documento||'',importe:al.importe,facturaId:f.id,tiene:!!albId,albId});
+      rows.push({proveedor:f.proveedor||'',proveedor_id:f.proveedor_id,fecha:al.fecha||f.fecha||'',num_albaran:numAlb,
+        centroFactura:(rc&&rc.centros)||f.canal||'',factura:f.num_documento||'',importe:al.importe,facturaId:f.id,
+        match:albId?'si':'no',albId,motivo:''});
     });
   });
+  // Segundo pase: conciliación PROBABLE. Cuatro parámetros (proveedor, importe
+  // al céntimo, fecha ±7 días, centro) más el nº de albarán. Si el nº se parece
+  // (≤2 caracteres de diferencia o mismo núcleo numérico) y coinciden al menos
+  // 3 de los 4, es casi seguro el mismo albarán con el número o el proveedor
+  // mal escritos: se concilia en ámbar («revísalo»), no en verde. Cada albarán
+  // cargado solo puede resolver un hueco.
+  const usados=new Set(rows.filter(r=>r.albId).map(r=>r.albId));
+  rows.filter(r=>r.match==='no').forEach(r=>{
+    const ne=normAlb(r.num_albaran),nu=nucleoNum(r.num_albaran);
+    let mejor=null;
+    albaranes.forEach(a=>{
+      if(usados.has(a.id))return;
+      const d=lev(ne,normAlb(a.num_documento));
+      if(d>2&&!(nu&&nu===nucleoNum(a.num_documento)))return;
+      const pProv=(r.proveedor_id&&a.proveedor_id===r.proveedor_id)||!!(r.proveedor&&a.proveedor&&normName(a.proveedor)===normName(r.proveedor));
+      const pImp=impCuadra(num(r.importe),a);
+      const pFecha=diasEntre(r.fecha,a.fecha)<=7;
+      const pCentro=!!(a.canal&&r.centroFactura&&String(r.centroFactura).includes(a.canal));
+      const n=[pProv,pImp,pFecha,pCentro].filter(Boolean).length;
+      if(n<3)return;
+      const motivo=['proveedor','importe','fecha','centro'].filter((_,i)=>[pProv,pImp,pFecha,pCentro][i]).join(' + ');
+      if(!mejor||n>mejor.n||(n===mejor.n&&d<mejor.d))mejor={a,n,d,motivo};
+    });
+    if(mejor){
+      r.match='prob';r.albId=mejor.a.id;usados.add(mejor.a.id);
+      r.motivo=`Casa por ${mejor.motivo}. El albarán cargado es «${mejor.a.num_documento}»${mejor.a.proveedor&&normName(mejor.a.proveedor)!==normName(r.proveedor)?` de «${mejor.a.proveedor}»`:''}. Conciliado como probable: revísalo.`;
+    }
+  });
+  // Centro definitivo: el del albarán si lo hay; si no, el de la factura.
+  rows.forEach(r=>{r.centro=r.albId?(albCanal.get(r.albId)||''):r.centroFactura;});
   // poblar filtros de proveedor y mes (desde todas las filas)
   const provs=[...new Set(rows.map(r=>r.proveedor).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   setOpts('concilProv',provs,'Todos los proveedores');
@@ -4382,22 +4419,26 @@ function renderConciliacion(){
   let vis=rows.filter(r=>{
     if(fp&&r.proveedor!==fp)return false;
     if(fmes&&String(r.fecha||'').slice(0,7)!==fmes)return false;
-    if(fe==='falta'&&r.tiene)return false;
-    if(fe==='ok'&&!r.tiene)return false;
+    if(fe==='falta'&&r.match!=='no')return false;
+    if(fe==='ok'&&r.match!=='si')return false;
+    if(fe==='prob'&&r.match!=='prob')return false;
     return true;
   });
   // KPIs (sobre lo que muestra el filtro)
-  const total=vis.length,ok=vis.filter(r=>r.tiene).length,falta=total-ok;
-  const impFalta=vis.filter(r=>!r.tiene).reduce((s,r)=>s+(num(r.importe)||0),0);
+  const total=vis.length,ok=vis.filter(r=>r.match==='si').length,
+        prob=vis.filter(r=>r.match==='prob').length,
+        falta=vis.filter(r=>r.match==='no').length;
+  const impFalta=vis.filter(r=>r.match==='no').reduce((s,r)=>s+(num(r.importe)||0),0);
   document.getElementById('concilKpis').innerHTML=[
     ['Albaranes (filtro)',total],['Los tenemos',ok],
+    ['Probables (revisar)',`<span style="color:var(--warn)">${prob}</span>`],
     ['Faltan',`<span style="color:var(--warn)">${falta}</span>`],
     ['Importe que falta',`<span style="color:var(--warn)">${fmt(impFalta)}</span>`],
     ['Facturas sin albaranes leídos',sinDet]
   ].map(([l,v])=>`<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join('');
   // orden
   const st=sortState.conciliacion;
-  const keymap={prov:r=>r.proveedor,fecha:r=>r.fecha,nalb:r=>r.num_albaran,centro:r=>r.centro||'',fact:r=>r.factura,imp:r=>num(r.importe),estado:r=>r.tiene?1:0};
+  const keymap={prov:r=>r.proveedor,fecha:r=>r.fecha,nalb:r=>r.num_albaran,centro:r=>r.centro||'',fact:r=>r.factura,imp:r=>num(r.importe),estado:r=>({si:2,prob:1,no:0})[r.match]};
   if(st.key&&keymap[st.key])vis=sortRows(vis,keymap[st.key],st.dir);
   conciliacionRows=vis;
   document.getElementById('headConcil').innerHTML=
@@ -4410,8 +4451,10 @@ function renderConciliacion(){
     <td>${r.centro||''}</td>
     <td><span class="link" onclick="revisar('${r.facturaId}')">${r.factura||'(ver factura)'}</span></td>
     <td class="num">${r.importe!=null?fmt(r.importe):''}</td>
-    <td>${r.tiene
+    <td>${r.match==='si'
       ?`<span class="est correcto" title="Abrir el albarán" style="cursor:pointer" onclick="revisar('${r.albId}')">✓ Sí</span>`
+      :r.match==='prob'
+      ?`<span class="est nocuadra" title="${(r.motivo||'').replace(/"/g,'&quot;')}" style="cursor:pointer" onclick="revisar('${r.albId}')">≈ Revisar</span>`
       :'<span class="est nocuadra">⚠️ Falta</span>'}</td>
   </tr>`).join('');
 }
@@ -4419,7 +4462,9 @@ function exportConcil(){
   const rows=conciliacionRows||[];
   if(!rows.length){toast('No hay nada que exportar',true);return;}
   const data=rows.map(r=>({Proveedor:r.proveedor,Fecha:r.fecha||'','Nº albarán':r.num_albaran,
-    Centro:r.centro||'',Factura:r.factura,Importe:r.importe??'','¿Lo tenemos?':r.tiene?'SÍ':'FALTA'}));
+    Centro:r.centro||'',Factura:r.factura,Importe:r.importe??'',
+    '¿Lo tenemos?':r.match==='si'?'SÍ':r.match==='prob'?'PROBABLE (revisar)':'FALTA',
+    'Aviso':r.motivo||''}));
   const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Conciliación');
   XLSX.writeFile(wb,`conciliacion_${new Date().toISOString().slice(0,10)}.xlsx`);
