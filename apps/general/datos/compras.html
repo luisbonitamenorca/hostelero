@@ -501,8 +501,6 @@
     <section id="v-a3" class="view">
       <div class="panel">
         <div class="filters">
-          <div><label class="fld">Desde</label><input type="date" id="a3Desde"></div>
-          <div><label class="fld">Hasta</label><input type="date" id="a3Hasta"></div>
           <div><label class="fld">Mostrar</label><select id="a3Filtro" onchange="renderA3()">
             <option value="">Todas</option>
             <option value="listas">Solo listas</option>
@@ -510,8 +508,7 @@
           </select></div>
           <div><label class="fld">Buscar</label><input type="search" id="a3Busca" placeholder="proveedor, referencia, nº…" oninput="renderA3()" style="min-width:190px"></div>
           <div style="flex:1 1 auto;text-align:right;align-self:flex-end;display:flex;gap:10px;justify-content:flex-end">
-            <button class="btn ghost" onclick="renderA3()">↻ Previsualizar</button>
-            <button class="btn" onclick="exportarA3()">Generar Excel para A3</button>
+            <button class="btn" onclick="exportarA3()">Generar Excel para A3 (año completo)</button>
           </div>
         </div>
         <div id="a3Kpis" class="kpis"></div>
@@ -521,8 +518,8 @@
             <tbody id="a3Body"></tbody>
           </table>
         </div>
-        <div id="emptyA3" class="empty" style="display:none">No hay facturas en ese rango de fechas.</div>
-        <p class="hint">La primera columna del fichero (fecha de registro) lleva siempre la fecha de hoy; la fecha de la factura va en la tercera columna como fecha contable. El rango de fechas de arriba filtra por fecha de factura. Cada fila es una línea del fichero FACTURASCOMPRA de A3. Una factura con varios tipos de IVA o varios centros de coste genera varias líneas que comparten cabecera. El fichero contiene TODAS las facturas del rango en OK y sin bloqueos (Lucía selecciona en el Excel lo que necesita cargar). Al generarlo, las que aún no tienen número interno de A3 lo reciben en ese momento — y con él pasan a Contabilidad: asiento, cartera y cruce automático con el banco.</p>
+        <div id="emptyA3" class="empty" style="display:none">No hay facturas pendientes de numerar. El fichero llevará las ya numeradas del año.</div>
+        <p class="hint">La tabla enseña lo PENDIENTE: facturas que aún no tienen número de A3, con sus bloqueos si los hay. El fichero lleva SIEMPRE todas las facturas del año — las ya numeradas más las pendientes sin bloqueos, que reciben su número al generarlo (da igual su fecha, así ninguna se queda huérfana) y con él pasan a Contabilidad: asiento, cartera y cruce automático con el banco. Lucía selecciona en el Excel lo que necesita cargar. La primera columna del fichero (fecha de registro) lleva siempre la fecha de hoy; la fecha de la factura va en la tercera columna como fecha contable. Cada fila es una línea del fichero FACTURASCOMPRA de A3; una factura con varios tipos de IVA o varios centros de coste genera varias líneas que comparten cabecera.</p>
       </div>
     </section>
 
@@ -4772,19 +4769,11 @@ const A3_COLS=['cabFecha','cabnumdoc','cabfechacontable','CABREFERENCIA','cabcod
                'linunidades','lincodart',
                'lindesclin','linprcmoneda','lintipiva','linctacon','lincentrocoste'];
 let a3Rows=[];
-function initA3(){
-  const h=document.getElementById('a3Hasta'), d=document.getElementById('a3Desde');
-  if(!h.value||!d.value){
-    const hoy=new Date(), ini=new Date(hoy.getFullYear(),hoy.getMonth(),1);
-    const iso=x=>x.toISOString().slice(0,10);
-    d.value=iso(ini); h.value=iso(hoy);
-  }
-}
 async function cargarA3(){
-  const desde=document.getElementById('a3Desde').value, hasta=document.getElementById('a3Hasta').value;
-  if(!desde||!hasta)return[];
-  // La previsualización lee la VISTA (no numera nada). Numerar es exclusivo del botón de generar.
-  return await sb(`compras_a3_export_preview?cabfecha=gte.${desde}&cabfecha=lte.${hasta}`
+  // La previsualización enseña lo PENDIENTE de numerar (el fichero lleva
+  // además todo lo ya numerado del año). Lee la VISTA, no numera nada:
+  // numerar es exclusivo del botón de generar.
+  return await sbAll(`compras_a3_export_preview?cabnumdoc=is.null`
     +`&select=doc_id,orden,cabfecha,cabnumdoc,cabreferencia,cabcodpro,lindesclin,linprcmoneda,lintipiva,linctacon,lincentrocoste,proveedor_nombre,bloqueos,reparto_explicito,a3_exportado_at`
     +`&order=cabfecha.asc,cabreferencia.asc,orden.asc`);
 }
@@ -4834,7 +4823,7 @@ async function renderA3(){
   // num() explícito: si el serializador devuelve los numeric como texto, sumar concatenaría.
   const baseListas=a3Rows.filter(r=>!bloqueada(r)).reduce((s,r)=>s+(num(r.linprcmoneda)||0),0);
   document.getElementById('a3Kpis').innerHTML=[
-    ['Facturas en el rango',docs.size],['Listas para exportar',nListas],
+    ['Pendientes de numerar',docs.size],['Recibirán número',nListas],
     ['Con bloqueos',docsBloq.size],['Base de las listas',fmt(baseListas)]
   ].map(([l,v])=>`<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join('');
 
@@ -4859,21 +4848,32 @@ async function renderA3(){
       <td>${estado}</td></tr>`;}).join('');
 }
 async function exportarA3(){
-  const desde=document.getElementById('a3Desde').value, hasta=document.getElementById('a3Hasta').value;
-  if(!desde||!hasta){toast('Elige el rango de fechas',true);return;}
-  const pend=a3Rows.filter(r=>(r.bloqueos||[]).length>0);
-  // El fichero lleva TODO el rango (Lucía selecciona en el Excel lo que
-  // necesita); solo las nuevas reciben número al generarlo.
-  const nOk=new Set(a3Rows.filter(r=>!(r.bloqueos||[]).length).map(r=>r.doc_id)).size;
-  const nNuevas=new Set(a3Rows.filter(r=>!(r.bloqueos||[]).length && !r.a3_exportado_at).map(r=>r.doc_id)).size;
-  if(!nOk){toast('No hay ninguna factura sin bloqueos en ese rango',true);return;}
-  const aviso=(pend.length?`\n\nSe quedan fuera ${new Set(pend.map(r=>r.doc_id)).size} facturas con bloqueos.`:'')
-    +(nNuevas?`\n${nNuevas} son nuevas y recibirán ahora su número de A3 (y pasarán a Contabilidad).`:'');
-  if(!confirm(`El fichero llevará las ${nOk} facturas del rango.${aviso}\n\n¿Continuar?`))return;
-  let rows;
+  // El fichero lleva SIEMPRE el año completo: todas las facturas con número de
+  // A3 más las que lo reciben ahora (OK y sin bloqueos, da igual la fecha).
+  // Un único Excel del que Lucía selecciona lo que carga; el rango de fechas
+  // de arriba solo afecta a la previsualización.
+  let pendientes;
+  try{pendientes=await cargarA3();}
+  catch(err){toast('Error al preparar la exportación: '+err.message,true);return;}
+  const conBloqueo=new Set(pendientes.filter(r=>(r.bloqueos||[]).length).map(r=>r.doc_id));
+  const nuevas=new Set(pendientes.map(r=>r.doc_id).filter(id=>!conBloqueo.has(id))).size;
+  const aviso=(nuevas?`\n\n${nuevas} facturas recibirán ahora su número de A3 (y pasarán a Contabilidad).`:'')
+    +(conBloqueo.size?`\nSe quedan fuera ${conBloqueo.size} facturas con bloqueos.`:'');
+  if(!confirm(`El fichero llevará TODAS las facturas del año con número de A3.${aviso}\n\n¿Continuar?`))return;
+  // La respuesta de Supabase se corta en 1.000 filas también en las funciones,
+  // y el año completo pasa de largo: se pide por páginas. Solo la primera
+  // llamada confirma (numera); las siguientes solo leen, y como el orden es
+  // por número de A3 las páginas no se pisan.
+  const rows=[];
   try{
-    rows=await sb('rpc/exportar_a3',{method:'POST',
-      body:JSON.stringify({p_desde:desde,p_hasta:hasta,p_confirmar:true})});
+    const tam=1000;
+    for(let pag=0;;pag++){
+      const trozo=await sb(`rpc/exportar_a3_anual?limit=${tam}&offset=${pag*tam}`,{method:'POST',
+        body:JSON.stringify({p_confirmar:pag===0})});
+      rows.push(...trozo);
+      if(trozo.length<tam)break;
+      if(pag>50)throw new Error('demasiadas páginas: aborto por seguridad');
+    }
   }catch(err){toast('Error al exportar: '+err.message,true);return;}
   if(!rows||!rows.length){toast('El servidor no devolvió ninguna línea',true);return;}
   const REGISTRO_A3=hoyA3();   // el mismo valor para todas las filas del fichero
@@ -4901,8 +4901,8 @@ async function exportarA3(){
   XLSX.utils.book_append_sheet(wb,ws,'FACTURASCOMPRA');
   // A3 espera el formato antiguo .xls (BIFF8 / Excel 97-2004), no .xlsx.
   // La plantilla que nos pasaron es un .xls, así que se genera igual.
-  XLSX.writeFile(wb,`FACTURASCOMPRA_${desde}_${hasta}.xls`,{bookType:'biff8'});
-  toast(`Exportadas ${new Set(rows.map(r=>r.cabnumdoc)).size} facturas · ${rows.length} líneas`);
+  XLSX.writeFile(wb,`FACTURASCOMPRA_${new Date().getFullYear()}_completo.xls`,{bookType:'biff8'});
+  toast(`Fichero anual: ${new Set(rows.map(r=>r.cabnumdoc)).size} facturas · ${rows.length} líneas`);
   renderA3();
 }
 
@@ -4913,7 +4913,7 @@ function tab(v){[...document.querySelectorAll('.tab-btn')].forEach(b=>b.classLis
   if(v==='resumen')renderDashboard();
   if(v==='conciliacion')renderConciliacion();
   if(v==='buzon')loadBuzon();
-  if(v==='a3'){initA3();renderA3();}}
+  if(v==='a3'){renderA3();}}
 /* ---------- Buzón: conciliación correo -> app ----------
    Responde a "¿ha llegado todo?" mirando el inventario del buzón contra lo que
    se generó, en vez de suponerlo. La vista compras_conciliacion_correo hace el
