@@ -613,6 +613,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
             <th class="tr">Ingresos 26</th>
             <th class="tr">Presupuesto</th>
             <th class="tr">Compras</th>
+            <th class="tr" id="th-sem-int" title="Salidas internas de Producción: lo que repartió a los centros, valorado. Solo aparece en el centro Producción.">Internos</th>
             <th class="tr" id="th-sem-fc">Food cost</th>
             <th class="tr" id="th-sem-fc-acum">FC acumulado</th>
             <th class="tr">Stock teórico €</th>
@@ -624,6 +625,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
               <td class="tr" id="tf-sem-ing"></td>
               <td class="tr" id="tf-sem-ppto"></td>
               <td class="tr" id="tf-sem-gas"></td>
+              <td class="tr" id="tf-sem-int"></td>
               <td class="tr" id="tf-sem-ratio"></td>
               <td class="tr" id="tf-sem-ratio-acum"></td>
               <td class="tr" id="tf-sem-stock"></td>
@@ -633,6 +635,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
               <td class="tr" id="tf-sem-acum-ing"></td>
               <td class="tr" id="tf-sem-acum-ppto"></td>
               <td class="tr" id="tf-sem-acum-gas"></td>
+              <td class="tr" id="tf-sem-acum-int"></td>
               <td class="tr" id="tf-sem-acum-ratio"></td>
               <td class="tr" id="tf-sem-acum-ratio-acum"></td>
               <td class="tr" id="tf-sem-acum-stock"></td>
@@ -3194,6 +3197,7 @@ function renderSemanal() {
     if (!rowMap[k]) rowMap[k] = {
       per, ct,
       i:0, p:0, g:0,
+      gc:0, gi:0,   // compras (entradas) e internos (salidas de Producción), sin compensar
       iFam:0, gFam:0,
       ultFecha:null
     };
@@ -3207,8 +3211,12 @@ function renderSemanal() {
   // Ingresos 2026: respetan el filtro de familia (esta pestaña es "Compras por familia",
   // todas las columnas deben coherentemente reflejar la familia seleccionada).
   ingShow.forEach(r => { const row=ensure(periodoOf(r), r.centro); row.i += r.base; updFecha(row, r.fecha); });
-  // Compras (respetan filtro familia)
-  gasShow.forEach(r => { const row=ensure(periodoOf(r), r.centro); row.g += r.base; updFecha(row, r.fecha); });
+  // Compras (respetan filtro familia). El neto (g) alimenta food cost y stock;
+  // gc/gi separan entradas y salidas internas para que Producción no enseñe la
+  // compensación sino las dos películas (petición de Luis 02-09).
+  gasShow.forEach(r => { const row=ensure(periodoOf(r), r.centro); row.g += r.base;
+    if (r.base < 0) row.gi += -r.base; else row.gc += r.base;
+    updFecha(row, r.fecha); });
   // Presupuesto: ya está filtrado por familia más arriba
   ppto.forEach(r => { ensure(periodoOf(r), r.centro).p += r.importe; });
 
@@ -3218,7 +3226,7 @@ function renderSemanal() {
 
   // Filtrar filas sin datos y ordenar
   const rows = Object.values(rowMap)
-    .filter(r => r.i || r.g || r.p)
+    .filter(r => r.i || r.g || r.p || r.gc || r.gi)
     .sort((a,b) => periodoCmp(a.per, b.per) || a.ct.localeCompare(b.ct));
 
   // ── Labels de la cabecera según la vista ──
@@ -3298,7 +3306,8 @@ function renderSemanal() {
       <td><span class="pill ${CPILL[r.ct]||'b-gray'}">${r.ct}</span></td>
       <td class="tr">€${fmt(r.i)}</td>
       <td class="tr"><span class="${r.i>=r.p&&r.p>0?'vs-ok':r.p>0?'vs-bad':''}">€${fmt(r.p)}</span></td>
-      <td class="tr">€${fmt(r.g)}</td>
+      <td class="tr">€${fmt(r.gc)}</td>
+      <td class="tr">${r.gi>0.005 ? '−€'+fmt(r.gi) : '—'}</td>
       ${fcCell}
       ${fcACell}
       <td class="tr">${stockVal!=null ? '€'+fmt(stockVal) : '—'}</td>
@@ -3307,12 +3316,13 @@ function renderSemanal() {
 
   // ── TOTAL (todas las filas) ──
   const sum = (key) => rows.reduce((s,r)=>s+r[key], 0);
-  const tI = sum('i'), tP = sum('p'), tG = sum('g');
+  const tI = sum('i'), tP = sum('p'), tGc = sum('gc'), tGi = sum('gi');
   const tIFam = sum('iFam'), tGFam = sum('gFam');
 
   document.getElementById('tf-sem-ing').textContent   = '€'+fmt(tI);
   document.getElementById('tf-sem-ppto').textContent  = '€'+fmt(tP);
-  document.getElementById('tf-sem-gas').textContent   = '€'+fmt(tG);
+  document.getElementById('tf-sem-gas').textContent   = '€'+fmt(tGc);
+  document.getElementById('tf-sem-int').textContent   = tGi>0.005 ? '−€'+fmt(tGi) : '—';
   document.getElementById('tf-sem-ratio').innerHTML   = tIFam>0 ? ratioCell(tGFam/tIFam).replace(/<\/?td[^>]*>/g,'') : '—';
   // FC acumulado en TOTAL = FC del global de filas (=FC total con todos los datos)
   document.getElementById('tf-sem-ratio-acum').innerHTML = tIFam>0 ? ratioCell(tGFam/tIFam).replace(/<\/?td[^>]*>/g,'') : '—';
@@ -3325,7 +3335,8 @@ function renderSemanal() {
   // Todas las cifras respetan el filtro de familia (coherencia con la pestaña).
   const aI    = ingShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
   const aP    = ppto.filter(enAcum).reduce((s,r)=>s+r.importe, 0);
-  const aG    = gasShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
+  const aGc   = gasShow.filter(enAcum).reduce((s,r)=>s+(r.base>0?r.base:0), 0);
+  const aGi   = gasShow.filter(enAcum).reduce((s,r)=>s+(r.base<0?-r.base:0), 0);
   const aIFam = ingShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
   const aGFam = gasShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
 
@@ -3337,7 +3348,8 @@ function renderSemanal() {
 
   document.getElementById('tf-sem-acum-ing').textContent   = '€'+fmt(aI);
   document.getElementById('tf-sem-acum-ppto').textContent  = '€'+fmt(aP);
-  document.getElementById('tf-sem-acum-gas').textContent   = '€'+fmt(aG);
+  document.getElementById('tf-sem-acum-gas').textContent   = '€'+fmt(aGc);
+  document.getElementById('tf-sem-acum-int').textContent   = aGi>0.005 ? '−€'+fmt(aGi) : '—';
   document.getElementById('tf-sem-acum-ratio').innerHTML   = aIFam>0 ? ratioCell(aGFam/aIFam).replace(/<\/?td[^>]*>/g,'') : '—';
   document.getElementById('tf-sem-acum-ratio-acum').innerHTML = aIFam>0 ? ratioCell(aGFam/aIFam).replace(/<\/?td[^>]*>/g,'') : '—';
   const fechaStockAcum = hasta || ultFechaGlobal;
