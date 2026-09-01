@@ -4319,6 +4319,7 @@ function nuevoProveedor(){
 /* ---------- conciliación: ¿qué albaranes de las facturas tenemos registrados? ---------- */
 let conciliacionRows=[];
 let concilConf=[];   // cruces probables dados por buenos a mano (persisten en base)
+let concilTodas=[];  // todas las filas del último render, sin filtrar (para el buscador)
 // normaliza un nº de albarán (mayúsculas, solo alfanumérico)
 function normAlb(x){return x?String(x).toUpperCase().replace(/[^A-Z0-9]/g,''):'';}
 // núcleo numérico: el grupo de dígitos más largo sin ceros a la izquierda
@@ -4402,15 +4403,19 @@ function renderConciliacion(){
     albaranes.forEach(a=>{
       if(usados.has(a.id))return;
       const d=lev(ne,normAlb(a.num_documento));
-      if(d>2&&!(nu&&nu===nucleoNum(a.num_documento)))return;
+      const casi=d<=2||(nu&&nu===nucleoNum(a.num_documento));
       const pProv=(r.proveedor_id&&a.proveedor_id===r.proveedor_id)||!!(r.proveedor&&a.proveedor&&normName(a.proveedor)===normName(r.proveedor));
       const pImp=impCuadra(num(r.importe),a);
       const pFecha=diasEntre(r.fecha,a.fecha)<=7;
       const pCentro=!!(a.canal&&r.centroFactura&&String(r.centroFactura).includes(a.canal));
       const n=[pProv,pImp,pFecha,pCentro].filter(Boolean).length;
-      if(n<3)return;
-      const motivo=['proveedor','importe','fecha','centro'].filter((_,i)=>[pProv,pImp,pFecha,pCentro][i]).join(' + ');
-      if(!mejor||n>mejor.n||(n===mejor.n&&d<mejor.d))mejor={a,n,d,motivo};
+      // nº parecido + 3 de 4, o los 4 clavados aunque el nº no se parezca
+      // (caso Xoriguer: el albarán entra con el nº de PEDIDO y la factura
+      // lo llama por el nº de albarán — números completamente distintos).
+      if(!(casi&&n>=3)&&n<4)return;
+      const motivo=['proveedor','importe','fecha','centro'].filter((_,i)=>[pProv,pImp,pFecha,pCentro][i]).join(' + ')
+        +(casi?'':' (el nº no se parece en nada: puede ser el nº de pedido en vez del de albarán)');
+      if(!mejor||n>mejor.n||(n===mejor.n&&(casi&&!mejor.casi))||(n===mejor.n&&casi===mejor.casi&&d<mejor.d))mejor={a,n,d,casi,motivo};
     });
     if(mejor){
       r.match='prob';r.albId=mejor.a.id;usados.add(mejor.a.id);
@@ -4419,6 +4424,7 @@ function renderConciliacion(){
   });
   // Centro definitivo: el del albarán si lo hay; si no, el de la factura.
   rows.forEach(r=>{r.centro=r.albId?(albCanal.get(r.albId)||''):r.centroFactura;});
+  concilTodas=rows;
   // poblar filtros de proveedor y mes (desde todas las filas)
   const provs=[...new Set(rows.map(r=>r.proveedor).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   setOpts('concilProv',provs,'Todos los proveedores');
@@ -4468,9 +4474,67 @@ function renderConciliacion(){
     <td style="white-space:nowrap">${r.match==='si'
       ?`<span class="est correcto" title="${r.confId?'Dado por bueno a mano. Abrir el albarán':'Abrir el albarán'}" style="cursor:pointer" onclick="revisar('${r.albId}')">✓ Sí${r.confId?' ✍️':''}</span>${r.confId?` <span class="link" title="Deshacer la confirmación manual" onclick="desconfirmarConcil('${r.confId}')">✕</span>`:''}`
       :r.match==='prob'
-      ?`<span class="est nocuadra" title="${(r.motivo||'').replace(/"/g,'&quot;')}" style="cursor:pointer" onclick="revisar('${r.albId}')">≈ Revisar</span> <span class="link" title="Confirmar que es el mismo albarán: pasa a verde y se recuerda" onclick="confirmarConcil(${i})">✔ dar por bueno</span>`
-      :'<span class="est nocuadra">⚠️ Falta</span>'}</td>
+      ?`<span class="est nocuadra" title="${(r.motivo||'').replace(/"/g,'&quot;')}" style="cursor:pointer" onclick="revisar('${r.albId}')">≈ Revisar</span> <span class="link" title="Confirmar que es el mismo albarán: pasa a verde y se recuerda" onclick="confirmarConcil(${i})">✔ dar por bueno</span> <span class="link" title="Elegir otro albarán a mano" onclick="buscarAlbConcil(${i})">🔍</span>`
+      :`<span class="est nocuadra">⚠️ Falta</span> <span class="link" title="Buscar el albarán a mano entre los del proveedor" onclick="buscarAlbConcil(${i})">🔍 buscar</span>`}</td>
   </tr>`).join('');
+}
+// Buscador manual de albarán (estilo conciliación bancaria, como en Yurest):
+// enseña los albaranes del proveedor ordenados por lo bien que casan con lo
+// que pide la factura (importe, fecha, centro) y al elegir uno la pareja se
+// guarda como confirmada (✍️), igual que «dar por bueno».
+function buscarAlbConcil(i){
+  const r=(conciliacionRows||[])[i];
+  if(!r)return;
+  const usados=new Map();
+  (concilTodas||[]).forEach(x=>{if(x.albId&&!(x.facturaId===r.facturaId&&x.num_albaran===r.num_albaran))usados.set(x.albId,x.factura||'otra factura');});
+  const delProv=albaranes.filter(a=>(r.proveedor_id&&a.proveedor_id===r.proveedor_id)||(r.proveedor&&a.proveedor&&normName(a.proveedor)===normName(r.proveedor)));
+  const imp=num(r.importe);
+  const dias=(a,b)=>{const ta=Date.parse(String(a||'').slice(0,10)),tb=Date.parse(String(b||'').slice(0,10));
+    return (isNaN(ta)||isNaN(tb))?999:Math.abs(ta-tb)/86400000;};
+  const puntos=a=>{let s=0;
+    if(imp!=null&&[num(a.base),num(a.total)].some(v=>v!=null&&Math.abs(v-imp)<=0.02))s+=4;
+    const d=dias(r.fecha,a.fecha);if(d<=1)s+=3;else if(d<=7)s+=2;else if(d<=31)s+=1;
+    if(a.canal&&r.centroFactura&&String(r.centroFactura).includes(a.canal))s+=1;
+    return s;};
+  const lista=delProv.map(a=>({a,s:puntos(a),usado:usados.get(a.id)}))
+    .sort((x,y)=>(x.usado?1:0)-(y.usado?1:0)||y.s-x.s||String(y.a.fecha||'').localeCompare(String(x.a.fecha||'')));
+  const fila=x=>`<tr style="${x.usado?'opacity:.45':''}">
+    <td>${fmtF(x.a.fecha)}</td><td>${x.a.num_documento||''}</td><td>${x.a.canal||''}</td>
+    <td class="num">${fmt(x.a.base)}</td><td class="num">${fmt(x.a.total)}</td>
+    <td>${x.usado?`<small>ya cruzado con ${x.usado}</small>`:`<button class="btn sm" style="padding:4px 10px" onclick="elegirAlbConcil(${i},'${x.a.id}')">elegir</button>`}</td></tr>`;
+  const ov=document.createElement('div');
+  ov.className='modal show';ov.style.zIndex='80';
+  ov.innerHTML=`<div class="box" style="max-width:760px">
+    <div class="head"><h3>Buscar albarán · ${r.proveedor}</h3><button class="close" type="button">×</button></div>
+    <div style="padding:14px 20px">
+      <p style="margin:0 0 10px;font-size:13px">La factura <b>${r.factura||''}</b> pide el albarán <b>«${r.num_albaran}»</b>${r.importe!=null?` de <b>${fmt(r.importe)}</b>`:''}${r.fecha?` (${r.fecha})`:''}.</p>
+      <input type="search" id="baBuscar" placeholder="filtrar por nº, centro, fecha…" style="width:100%;margin-bottom:10px">
+      <div class="tabla-scroll" style="max-height:420px">
+        <table><thead><tr><th>Fecha</th><th>Nº albarán</th><th>Centro</th><th class="num">Base</th><th class="num">Total</th><th></th></tr></thead>
+        <tbody id="baBody">${lista.map(fila).join('')||'<tr><td colspan="6">Este proveedor no tiene albaranes cargados.</td></tr>'}</tbody></table>
+      </div>
+      <p class="hint" style="margin-top:10px">Ordenados por lo bien que casan (importe al céntimo, fecha cercana, centro). Los grises ya están cruzados con otra factura. Al elegir, la pareja queda confirmada (✍️) y se puede deshacer con la ✕.</p>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('.close').onclick=()=>ov.remove();
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  window.__baOv=ov;
+  const inp=ov.querySelector('#baBuscar');
+  inp.oninput=()=>{const q=inp.value.trim().toLowerCase();
+    ov.querySelector('#baBody').innerHTML=lista.filter(x=>!q||`${x.a.num_documento} ${x.a.canal} ${x.a.fecha}`.toLowerCase().includes(q)).map(fila).join('');};
+  setTimeout(()=>inp.focus(),50);
+}
+async function elegirAlbConcil(i,albId){
+  const r=(conciliacionRows||[])[i];
+  if(!r)return;
+  try{
+    const ins=await sb('compras_concil_confirmada',{method:'POST',
+      body:JSON.stringify({factura_id:r.facturaId,num_albaran:r.num_albaran,albaran_id:albId})});
+    concilConf.push(ins[0]||{factura_id:r.facturaId,num_albaran:r.num_albaran,albaran_id:albId});
+    if(window.__baOv){window.__baOv.remove();window.__baOv=null;}
+    toast('Conciliado a mano');
+    renderConciliacion();
+  }catch(err){toast('No pude guardarlo: '+err.message,true);}
 }
 // Dar por bueno un cruce probable: guarda la pareja factura+nº → albarán y
 // desde entonces sale en verde (con ✍️). Se puede deshacer con la ✕.
