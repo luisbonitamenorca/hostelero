@@ -465,7 +465,7 @@
           </table>
         </div>
         <div id="emptyCon" class="empty" style="display:none">No hay albaranes detectados en las facturas todavía. Sube alguna factura con su lista de albaranes.</div>
-        <p class="hint">Cada fila es un albarán que aparece dentro de una factura. «Falta» significa que ese albarán no está en tu listado de Albaranes: probablemente quede por entrar. El objetivo no es cuadrar el céntimo, sino que no se escape ningún albarán del coste analítico.</p>
+        <p class="hint">Solo facturas de MERCANCÍA: proveedores con cuenta de gasto 600000000, que son los que entran por albarán. Servicios, enología, gas… quedan fuera a propósito. Cada fila es un albarán que aparece dentro de una factura. «Falta» significa que ese albarán no está en tu listado de Albaranes: probablemente quede por entrar. El objetivo no es cuadrar el céntimo, sino que no se escape ningún albarán del coste analítico.</p>
       </div>
     </section>
 
@@ -4308,9 +4308,21 @@ function renderConciliacion(){
       if(nu&&e.nucleo.has(nu))return e.nucleo.get(nu);}
     return null;
   };
+  // Solo facturas de MERCANCÍA (cuenta 600000000): los proveedores que entran
+  // por albarán. Servicios, enología, gas, uniformes… no traen albaranes de
+  // compra y solo meten ruido — esta pestaña sirve para detectar albaranes
+  // de compras que faltan por cargar.
+  const provMercancia=new Set();
+  (proveedores||[]).forEach(p=>{if(p.cuenta_contable==='600000000'){
+    if(p.id)provMercancia.add(p.id);
+    if(p.nombre)provMercancia.add('n:'+normName(p.nombre));
+  }});
   // una fila por cada albarán que aparece en una factura
   let rows=[],sinDet=0;
   facturas.forEach(f=>{
+    const esMercancia=(f.proveedor_id&&provMercancia.has(f.proveedor_id))
+      ||(f.proveedor&&provMercancia.has('n:'+normName(f.proveedor)));
+    if(!esMercancia)return;
     const arr=Array.isArray(f.albaranes_detectados)?f.albaranes_detectados:[];
     if(!arr.length){sinDet++;return;}
     arr.forEach(al=>{
@@ -4414,6 +4426,9 @@ async function loadProveedores(){
     const cnt={};docs.forEach(d=>{if(d.proveedor_id)cnt[d.proveedor_id]=(cnt[d.proveedor_id]||0)+1;});
     proveedores.forEach(p=>p._n=cnt[p.id]||0);
     renderProv();
+    // La conciliación filtra por la cuenta contable del proveedor: repintar
+    // ahora que el maestro está cargado (pudo pintarse antes, vacía).
+    renderConciliacion();
   }catch(err){toast('No pude cargar proveedores: '+err.message,true);}
 }
 // Proveedores que tienen alguna factura con retención. Permite filtrar justo los
