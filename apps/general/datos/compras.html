@@ -2350,18 +2350,47 @@ function avisoPags(a){
     : `solo ${f.vis.length} de ${f.tot} paginas cargadas`;
   return ` <span style="cursor:help" title="Albaran incompleto: ${txt}. Las lineas que faltan no estan cargadas.">\u{1F7E0}</span>`;
 }
+// Cruce inverso: qué factura menciona cada albarán cargado. Mismo motor que
+// la conciliación (nº exacto o núcleo numérico, dentro del mismo proveedor).
+// Un albarán viejo sin factura aquí es sospechoso: o la factura no ha llegado,
+// o el albarán entró con el número/proveedor mal escrito y no cruza.
+function mapaAlbFactura(){
+  const m=new Map();
+  const idx=new Map();
+  const ensure=k=>{if(!idx.has(k))idx.set(k,{exact:new Map(),nucleo:new Map()});return idx.get(k);};
+  albaranes.forEach(a=>{
+    const ne=normAlb(a.num_documento),nu=nucleoNum(a.num_documento);
+    const keys=[];
+    if(a.proveedor_id)keys.push(a.proveedor_id);
+    if(a.proveedor)keys.push('n:'+normName(a.proveedor));
+    keys.forEach(k=>{const e=ensure(k);if(ne&&!e.exact.has(ne))e.exact.set(ne,a.id);if(nu&&!e.nucleo.has(nu))e.nucleo.set(nu,a.id);});
+  });
+  (facturas||[]).forEach(f=>{
+    (Array.isArray(f.albaranes_detectados)?f.albaranes_detectados:[]).forEach(al=>{
+      const ne=normAlb(al.num_albaran),nu=nucleoNum(al.num_albaran);
+      const keys=[];if(f.proveedor_id)keys.push(f.proveedor_id);if(f.proveedor)keys.push('n:'+normName(f.proveedor));
+      for(const k of keys){const e=idx.get(k);if(!e)continue;
+        const id=(ne&&e.exact.get(ne))||(nu&&e.nucleo.get(nu))||null;
+        if(id){if(!m.has(id))m.set(id,{num:f.num_documento||'(sin nº)',id:f.id});break;}
+      }
+    });
+  });
+  return m;
+}
+let albFact=new Map();
 function renderAlb(){
   let rows=[...albaranes];
+  albFact=mapaAlbFactura();
   const st=sortState.albaranes;
-  const keymap={fecha:a=>a.fecha,cargado:a=>a.created_at,prov:a=>a.proveedor,ndoc:a=>a.num_documento,centro:a=>((centrosPorFactura[a.id]||{}).n_centros>1?'zzz varios':(a.canal||'\u0000 sin centro')),base:a=>num(a.base)||0,iva:a=>num(a.iva)||0,reten:a=>num(a.retencion)||0,total:a=>a.total,estado:a=>a.estado_detalle||'REVISAR'};
+  const keymap={fecha:a=>a.fecha,cargado:a=>a.created_at,prov:a=>a.proveedor,ndoc:a=>a.num_documento,centro:a=>((centrosPorFactura[a.id]||{}).n_centros>1?'zzz varios':(a.canal||'\u0000 sin centro')),fact:a=>(albFact.get(a.id)||{}).num||'\u0000 sin factura',base:a=>num(a.base)||0,iva:a=>num(a.iva)||0,reten:a=>num(a.retencion)||0,total:a=>a.total,estado:a=>a.estado_detalle||'REVISAR'};
   const todas=rows;
   rows=aplicaColFiltros('albaranes',rows,keymap);
   if(st.key&&keymap[st.key])rows=sortRows(rows,keymap[st.key],st.dir);
   registraVisibles('albaranes',rows);
-  pintaFiltros('albaranes','fltAlb',['fecha','cargado','prov','ndoc','centro','base','iva','reten','total','estado',null,null],todas,keymap,'renderAlb');
+  pintaFiltros('albaranes','fltAlb',['fecha','cargado','prov','ndoc','centro','fact','base','iva','reten','total','estado',null,null],todas,keymap,'renderAlb');
   document.getElementById('headAlb').innerHTML=
     thh('albaranes','fecha','Fecha','fecha')+thh('albaranes','cargado','Cargado')+thh('albaranes','prov','Proveedor')+thh('albaranes','ndoc','Nº albarán')+
-    thh('albaranes','centro','Centro')+thh('albaranes','base','Base','num')+thh('albaranes','iva','IVA','num')+thh('albaranes','reten','Retención','num')+thh('albaranes','total','Total','num')+thh('albaranes','estado','Estado')+'<th>Revisar</th><th></th>';
+    thh('albaranes','centro','Centro')+thh('albaranes','fact','Factura')+thh('albaranes','base','Base','num')+thh('albaranes','iva','IVA','num')+thh('albaranes','reten','Retención','num')+thh('albaranes','total','Total','num')+thh('albaranes','estado','Estado')+'<th>Revisar</th><th></th>';
   const tb=document.getElementById('albBody');
   const nInc=albaranes.filter(pagsFaltan).length;
   document.getElementById('albCount').textContent=albaranes.length;
@@ -2375,7 +2404,8 @@ function renderAlb(){
   document.getElementById('emptyA').style.display=albaranes.length?'none':'block';
   tb.innerHTML=rows.map(a=>`<tr>
     <td class="fecha">${fmtF(a.fecha)}</td><td style="white-space:nowrap">${fmtCarga(a.created_at)}</td><td>${a.origen==='correo'?'<span title="Recibido por correo">\u{1F4E7}</span> ':''}${a.proveedor||''}</td><td>${a.num_documento||''}${avisoPags(a)}</td>
-    <td>${selectCentro(a.id,a.canal)}</td><td class="num">${fmt(a.base)}</td><td class="num">${fmt(a.iva)}</td><td class="num">${a.retencion?'-'+fmt(a.retencion):''}</td><td class="num">${fmt(a.total)}</td>
+    <td>${selectCentro(a.id,a.canal)}</td>
+    <td>${(function(){const f=albFact.get(a.id);return f?`<span class="link" onclick="revisar('${f.id}')">${f.num}</span>`:'<span style="color:var(--muted)">—</span>';})()}</td><td class="num">${fmt(a.base)}</td><td class="num">${fmt(a.iva)}</td><td class="num">${a.retencion?'-'+fmt(a.retencion):''}</td><td class="num">${fmt(a.total)}</td>
     <td>${estBadge(a.estado_detalle)}</td>
     <td><span class="link" onclick="revisar('${a.id}')">ver foto + detalle</span></td>
     <td><span class="del" onclick="borrarDoc('${a.id}','${(a.proveedor||'').replace(/'/g,'')} ${a.num_documento||''}','${a.imagen_url||''}')" title="Borrar">🗑</span></td></tr>`).join('');
@@ -2391,7 +2421,7 @@ function exportAlb(){
     'Páginas':(function(){const f=pagsFaltan(a);const t=num(a.paginas)||1;
       if(f)return `${f.vis.length}/${f.tot} (faltan ${f.faltan.join(', ')})`;
       return t>1?`${t}/${t}`:'';})(),
-    Centro:a.canal||'',Base:a.base??'',IVA:a.iva??'','Retención':a.retencion??'','Total':a.total??'',Estado:estTexto(a.estado_detalle)}));
+    Centro:a.canal||'',Factura:(albFact.get(a.id)||{}).num||'',Base:a.base??'',IVA:a.iva??'','Retención':a.retencion??'','Total':a.total??'',Estado:estTexto(a.estado_detalle)}));
   if(!data.length){toast('No hay albaranes que exportar',true);return;}
   const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Albaranes');
