@@ -21,6 +21,12 @@ export default async function Bancos() {
         <p className="sub">Las cuentas desde las que se cobra y se paga. Sin al menos una no hay remesas.</p>
       </div>
 
+      <div style={{ marginBottom: 14 }}>
+        <a className="boton" href={ruta(`/bancos/todos/conciliacion`)}>
+          Conciliación de todos los bancos
+        </a>
+      </div>
+
       {error && (
         <div className="estado-vacio">
           <strong>No se pudieron cargar las cuentas</strong>

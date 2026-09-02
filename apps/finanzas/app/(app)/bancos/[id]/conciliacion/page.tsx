@@ -42,6 +42,7 @@ type Mov = {
   estado: string;
   conciliado_via: string | null;
   apunte_id: string | null;
+  banco_cuenta_id: string;
 };
 type Sugerencia = { mov_id: string; ap_id: string; asiento_numero: number; asiento_fecha: string; descripcion: string; importe: number; dias: number };
 type Grupo = { mov_id: string; ap_ids: string[]; etiqueta: string };
@@ -71,12 +72,20 @@ export default async function Conciliacion({
   const sp = await searchParams;
   const { supabase } = await exigirModulo("contabilidad");
 
-  const { data: banco } = await supabase
+  // «todos» es un banco virtual: la misma pantalla sin filtro de cuenta, con
+  // columna de banco y los indicadores sumados. Cada acción usa el banco del
+  // propio movimiento, así que todo lo demás funciona igual.
+  const esTodos = id === "todos";
+  const { data: bancosData } = await supabase
     .from("fin_bancos_cuentas")
     .select("id, nombre, iban")
-    .eq("id", id)
-    .maybeSingle();
+    .order("nombre");
+  const bancos = (bancosData ?? []) as { id: string; nombre: string; iban: string | null }[];
+  const banco = esTodos
+    ? { id: "todos", nombre: "Todos los bancos", iban: `${bancos.length} cuentas · visión única del extracto` }
+    : bancos.find((b) => b.id === id) ?? null;
   if (!banco) notFound();
+  const nombreBanco = new Map(bancos.map((b) => [b.id, b.nombre]));
 
   const estadoFiltro = ["pendiente", "conciliado", "ignorado", "todos"].includes(sp.estado ?? "")
     ? sp.estado!
@@ -100,7 +109,7 @@ export default async function Conciliacion({
     // (con y sin count) de la misma consulta.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const b = c as any;
-    let r = b.eq("banco_cuenta_id", id);
+    let r = esTodos ? b : b.eq("banco_cuenta_id", id);
     if (estadoFiltro !== "todos") r = r.eq("estado", estadoFiltro);
     if (q) r = r.or(`concepto.ilike.%${q.replace(/[,()*%\\]/g, " ")}%,detalle.ilike.%${q.replace(/[,()*%\\]/g, " ")}%`);
     if (mes) {
@@ -116,7 +125,7 @@ export default async function Conciliacion({
   const consulta = filtrar(
     supabase
       .from("fin_banco_movimientos")
-      .select("id, fecha, concepto, detalle, importe, saldo, estado, conciliado_via, apunte_id"),
+      .select("id, fecha, concepto, detalle, importe, saldo, estado, conciliado_via, apunte_id, banco_cuenta_id"),
   )
     .order(orden, { ascending: dir === "asc" })
     .order("fecha", { ascending: false })
@@ -145,26 +154,62 @@ export default async function Conciliacion({
   const rpcCand = supabase as unknown as {
     rpc: (fn: "fin_conciliacion_candidatos" | "fin_cartera_candidatos", args: { p_banco: string; p_mov: string }) => PromiseLike<{ data: unknown }>;
   };
-  const [{ data: movsData, error }, { data: resumenData }, { data: sugData }, { data: gruposData }, candResp, cartResp, { data: centrosData }] = await Promise.all([
+  // En «todos», los selectores de grupo/liquidación necesitan el banco del
+  // movimiento abierto; se resuelve con una consulta mínima antes del resto.
+  const bancoDeAbierto = async (movId: string) => {
+    if (!esTodos) return id;
+    const { data } = await supabase.from("fin_banco_movimientos").select("banco_cuenta_id").eq("id", movId).maybeSingle();
+    return (data?.banco_cuenta_id as string | undefined) ?? id;
+  };
+  const [bGrupo, bLiq] = await Promise.all([
+    grupoAbierto ? bancoDeAbierto(grupoAbierto) : Promise.resolve(id),
+    liqAbierto ? bancoDeAbierto(liqAbierto) : Promise.resolve(id),
+  ]);
+  // Los RPC de resumen/sugerencias/grupos van por banco: en «todos» se piden
+  // para cada cuenta y se agregan.
+  const idsBancos = esTodos ? bancos.map((b) => b.id) : [id];
+  const [{ data: movsData, error }, resumenResps, sugResps, gruposResps, candResp, cartResp, { data: centrosData }] = await Promise.all([
     consulta,
-    rpc.rpc("fin_conciliacion_resumen", { p_banco: id, ...rango }),
-    rpc.rpc("fin_conciliacion_sugerencias", { p_banco: id }),
-    rpc.rpc("fin_conciliacion_grupos", { p_banco: id }),
-    grupoAbierto ? rpcCand.rpc("fin_conciliacion_candidatos", { p_banco: id, p_mov: grupoAbierto }) : Promise.resolve({ data: null }),
-    liqAbierto ? rpcCand.rpc("fin_cartera_candidatos", { p_banco: id, p_mov: liqAbierto }) : Promise.resolve({ data: null }),
+    Promise.all(idsBancos.map((b) => rpc.rpc("fin_conciliacion_resumen", { p_banco: b, ...rango }))),
+    Promise.all(idsBancos.map((b) => rpc.rpc("fin_conciliacion_sugerencias", { p_banco: b }))),
+    Promise.all(idsBancos.map((b) => rpc.rpc("fin_conciliacion_grupos", { p_banco: b }))),
+    grupoAbierto ? rpcCand.rpc("fin_conciliacion_candidatos", { p_banco: bGrupo, p_mov: grupoAbierto }) : Promise.resolve({ data: null }),
+    liqAbierto ? rpcCand.rpc("fin_cartera_candidatos", { p_banco: bLiq, p_mov: liqAbierto }) : Promise.resolve({ data: null }),
     supabase.from("centros").select("id, nombre").order("nombre"),
   ]);
   const centros = (centrosData ?? []) as { id: string; nombre: string }[];
 
   const movs = (movsData ?? []) as Mov[];
-  const resumen = ((resumenData as Resumen[] | null) ?? [])[0] ?? null;
+  // Agregado de resúmenes: contadores sumados; los saldos solo si todas las
+  // cuentas los aportan (una a null convertiría la suma en mentira).
+  const resumenes = resumenResps
+    .map((r) => (((r.data as Resumen[] | null) ?? [])[0] ?? null))
+    .filter(Boolean) as Resumen[];
+  const resumen: Resumen | null = resumenes.length
+    ? resumenes.reduce((acc, r) => ({
+        total: acc.total + Number(r.total),
+        conciliados: acc.conciliados + Number(r.conciliados),
+        pendientes: acc.pendientes + Number(r.pendientes),
+        ignorados: acc.ignorados + Number(r.ignorados),
+        saldo_banco: acc.saldo_banco != null && r.saldo_banco != null ? Number(acc.saldo_banco) + Number(r.saldo_banco) : null,
+        saldo_contable: acc.saldo_contable != null && r.saldo_contable != null ? Number(acc.saldo_contable) + Number(r.saldo_contable) : null,
+        pend_cobros: acc.pend_cobros + Number(r.pend_cobros),
+        pend_cobros_importe: acc.pend_cobros_importe + Number(r.pend_cobros_importe),
+        pend_pagos: acc.pend_pagos + Number(r.pend_pagos),
+        pend_pagos_importe: acc.pend_pagos_importe + Number(r.pend_pagos_importe),
+      }))
+    : null;
   const sugerencias = new Map<string, Sugerencia[]>();
-  for (const s of ((sugData as Sugerencia[] | null) ?? [])) {
-    (sugerencias.get(s.mov_id) ?? sugerencias.set(s.mov_id, []).get(s.mov_id)!).push(s);
+  for (const resp of sugResps) {
+    for (const s of ((resp.data as Sugerencia[] | null) ?? [])) {
+      (sugerencias.get(s.mov_id) ?? sugerencias.set(s.mov_id, []).get(s.mov_id)!).push(s);
+    }
   }
   const grupos = new Map<string, Grupo[]>();
-  for (const g of ((gruposData as Grupo[] | null) ?? [])) {
-    (grupos.get(g.mov_id) ?? grupos.set(g.mov_id, []).get(g.mov_id)!).push(g);
+  for (const resp of gruposResps) {
+    for (const g of ((resp.data as Grupo[] | null) ?? [])) {
+      (grupos.get(g.mov_id) ?? grupos.set(g.mov_id, []).get(g.mov_id)!).push(g);
+    }
   }
   const candidatos = ((candResp.data as Candidato[] | null) ?? []);
   const candidatosCartera = ((cartResp.data as CandidatoCartera[] | null) ?? []);
@@ -255,6 +300,26 @@ export default async function Conciliacion({
         </p>
       </div>
 
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+        <a
+          href={ruta(`/bancos/todos/conciliacion`)}
+          className="boton-secundario"
+          style={{ padding: "5px 12px", fontSize: 13, ...(esTodos ? { background: "#1B2420", color: "#fff", borderColor: "#1B2420" } : {}) }}
+        >
+          Todos los bancos
+        </a>
+        {bancos.map((b) => (
+          <a
+            key={b.id}
+            href={ruta(`/bancos/${b.id}/conciliacion`)}
+            className="boton-secundario"
+            style={{ padding: "5px 12px", fontSize: 13, ...(b.id === id ? { background: "#1B2420", color: "#fff", borderColor: "#1B2420" } : {}) }}
+          >
+            {b.nombre}
+          </a>
+        ))}
+      </div>
+
       {resumen && (
         <div className="tarjetas-kpi" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 18 }}>
           {[
@@ -311,12 +376,14 @@ export default async function Conciliacion({
           <input name="q" defaultValue={q} placeholder="Buscar en concepto o detalle…" style={{ flex: 1, padding: "6px 10px", border: "1px solid #DDE2DF", borderRadius: 6 }} />
           <button className="boton-secundario" type="submit">Buscar</button>
         </form>
-        <form action={lanzarConciliacionAuto}>
-          <input type="hidden" name="banco" value={id} />
-          <button className="boton" type="submit" title="Vuelve a cruzar los pendientes contra el diario (tras cargar extracto o diario nuevos)">
-            ↻ Cruce automático
-          </button>
-        </form>
+        {!esTodos && (
+          <form action={lanzarConciliacionAuto}>
+            <input type="hidden" name="banco" value={id} />
+            <button className="boton" type="submit" title="Vuelve a cruzar los pendientes contra el diario (tras cargar extracto o diario nuevos)">
+              ↻ Cruce automático
+            </button>
+          </form>
+        )}
       </div>
 
       {error && (
@@ -357,12 +424,14 @@ export default async function Conciliacion({
                     </a>
                   </th>
                 ))}
+                {esTodos && <th>Banco</th>}
                 <th style={{ minWidth: 340 }}>Conciliación</th>
               </tr>
             </thead>
             <tbody>
               {movs.map((m) => {
                 const sug = sugerencias.get(m.id) ?? [];
+                const idBanco = esTodos ? m.banco_cuenta_id : id;
                 return (
                   <tr key={m.id}>
                     <td className="dato">{fecha(m.fecha)}</td>
@@ -378,11 +447,18 @@ export default async function Conciliacion({
                         ? `✓ ${m.conciliado_via === "liquidacion" ? "liquidación" : m.conciliado_via === "clasificacion" ? "clasificado" : m.conciliado_via ?? "manual"}`
                         : m.estado}
                     </td>
+                    {esTodos && (
+                      <td className="dato" style={{ whiteSpace: "nowrap" }}>
+                        <a className="enlace" href={ruta(`/bancos/${m.banco_cuenta_id}/conciliacion`)}>
+                          {(nombreBanco.get(m.banco_cuenta_id) ?? "?").replace(" cuenta principal", "").replace(" (póliza)", " pól.")}
+                        </a>
+                      </td>
+                    )}
                     <td>
                       {m.estado === "pendiente" && sug.length > 0 && (
                         <span style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                           <form action={conciliarManual} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                            <input type="hidden" name="banco" value={id} />
+                            <input type="hidden" name="banco" value={idBanco} />
                             <input type="hidden" name="mov" value={m.id} />
                             <select name="apunte" style={{ maxWidth: 240, padding: "4px 6px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 13 }}>
                               {sug.map((s) => (
@@ -398,7 +474,7 @@ export default async function Conciliacion({
                       {m.estado === "pendiente" && (
                         <span style={{ display: "inline-block", marginLeft: sug.length ? 6 : 0 }}>
                           <MenuConciliar
-                            bancoId={id}
+                            bancoId={idBanco}
                             movId={m.id}
                             objetivo={Number(m.importe)}
                             concepto={m.concepto}
@@ -410,7 +486,7 @@ export default async function Conciliacion({
                         </span>
                       )}
                       {m.estado === "pendiente" && liqAbierto === m.id && (
-                        <SelectorLiquidacion bancoId={id} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatosCartera} />
+                        <SelectorLiquidacion bancoId={idBanco} movId={m.id} objetivo={Number(m.importe)} candidatos={candidatosCartera} />
                       )}
                       {m.estado === "conciliado" && asientoDeMov.has(m.id) && (
                         <span className="secundario" style={{ display: "block", marginBottom: 4 }}>
@@ -435,7 +511,7 @@ export default async function Conciliacion({
                           action={m.conciliado_via === "liquidacion" || m.conciliado_via === "clasificacion" ? desconciliarLiquidacion : desconciliarMovimiento}
                           style={{ display: "inline" }}
                         >
-                          <input type="hidden" name="banco" value={id} />
+                          <input type="hidden" name="banco" value={idBanco} />
                           <input type="hidden" name="mov" value={m.id} />
                           <button
                             className="boton-secundario"
