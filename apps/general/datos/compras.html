@@ -5090,7 +5090,12 @@ function fechaA3(iso){
 // columnas de IRPF van en las posiciones 6 y 7, entre cabcodpro y linunidades.
 // Si se mueven, A3 lee el modelo de retención donde espera las unidades y la
 // importación entra mal SIN dar error.
+// cabregiva (régimen de IVA de la cabecera) va en la posición 6, entre
+// cabcodpro y las de IRPF — verificado contra el ejemplo de la técnico de A3
+// (FACTURASCOMPRA_desde_2375 ESTHER.xls, 02-09-2026): CNAC interiores,
+// CCEE intracomunitarias, REGESP regímenes especiales.
 const A3_COLS=['cabFecha','cabnumdoc','cabfechacontable','CABREFERENCIA','cabcodpro',
+               'cabregiva',
                'captipoirpf','capporirpf',
                'linunidades','lincodart',
                'lindesclin','linprcmoneda','lintipiva','linctacon','lincentrocoste'];
@@ -5206,6 +5211,7 @@ async function exportarA3(){
   const data=rows.map(r=>({
     cabFecha:REGISTRO_A3, cabnumdoc:r.cabnumdoc??'', cabfechacontable:fechaA3(r.cabfechacontable),
     CABREFERENCIA:r.cabreferencia||'', cabcodpro:r.cabcodpro||'',
+    cabregiva:r.cabregiva||'CNAC',
     // Vacías cuando no hay retención: A3 no debe ver un modelo sin importe retenido.
     captipoirpf:r.captipoirpf||'', capporirpf:num(r.capporirpf)??'',
     linunidades:A3_UNIDADES, lincodart:A3_CODART,
