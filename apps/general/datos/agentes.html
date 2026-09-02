@@ -231,7 +231,7 @@ const AGENTS = [
 ];
 
 /* ================= ESTADO ================= */
-let session=null, venues={}, reviews=[], runs=[], view="google";
+let session=null, venues={}, reviews=[], runs=[], consumo=[], view="google";
 let waChats=[], waMsgs={}, waActive=null, waBusy=false, waChannel=null, waFilter="all";
 let knowledge=[];
 let prospects=[], prFilter="nuevo", prBusy=false;
@@ -297,8 +297,9 @@ async function loadAll(){
     sb.from("agent_competitors").select("*").order("created_at"),
     sb.from("agent_watch_findings").select("*").order("created_at",{ascending:false}).limit(120),
     sb.from("agent_grants").select("*").order("encaje",{ascending:false}).order("created_at",{ascending:false}).limit(300),
-    sb.from("agent_grant_profile").select("*").limit(1)
-  ]);
+    sb.from("agent_grant_profile").select("*").limit(1),
+    sb.from("ia_consumo_v").select("modulo,ts,tokens_in,tokens_out,coste")
+  ]).then(a=>{ consumo = (a[13] && a[13].data) || []; return a; });
   if(t.error||r.error||ru.error||wc.error||wm.error||kn.error||pr.error||sa.error||sc.error||co.error||fi.error||gr.error){ toast("Error cargando datos de Supabase"); console.error(t.error||r.error||ru.error||wc.error||wm.error||kn.error||pr.error||sa.error||sc.error||co.error||fi.error||gr.error); return; }
   grants = gr.data||[];
   grProfile = (gp.data && gp.data[0] && gp.data[0].perfil) || "";
@@ -1234,19 +1235,58 @@ function renderAgentes(){
     </div>`).join("")}</div>`;
 }
 
-/* ================= ACTIVIDAD ================= */
+/* ================= ACTIVIDAD Y CONSUMO IA ================= */
+const MESNOM=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+function eur(v){ return Number(v||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"; }
 function renderActividad(){
-  const tin = runs.reduce((a,r)=>a+(r.tokens_in||0),0), tout = runs.reduce((a,r)=>a+(r.tokens_out||0),0);
-  const cost = runs.reduce((a,r)=>a+Number(r.cost||0),0);
-  $("#main").innerHTML = `<h2>Actividad y coste</h2>
+  // consumo = vista ia_consumo_v (todos los módulos). Si por lo que sea no cargó,
+  // cae a los runs de agentes para no quedarse en blanco.
+  const filas = (consumo && consumo.length)
+    ? consumo
+    : runs.map(r=>({modulo:"agentes",ts:r.ts,tokens_in:r.tokens_in,tokens_out:r.tokens_out,coste:r.cost}));
+  const mesAct = new Date().toISOString().slice(0,7);
+  const esMes = f => (f.ts||"").slice(0,7)===mesAct;
+  const costeTotal = filas.reduce((a,f)=>a+Number(f.coste||0),0);
+  const costeMes   = filas.filter(esMes).reduce((a,f)=>a+Number(f.coste||0),0);
+  const tokTotal   = filas.reduce((a,f)=>a+(f.tokens_in||0)+(f.tokens_out||0),0);
+
+  // agregados por módulo
+  const porMod={};
+  filas.forEach(f=>{ const m=f.modulo||"otros"; const e=porMod[m]||(porMod[m]={n:0,tok:0,coste:0,mes:0});
+    e.n++; e.tok+=(f.tokens_in||0)+(f.tokens_out||0); e.coste+=Number(f.coste||0); if(esMes(f))e.mes+=Number(f.coste||0); });
+  const mods=Object.entries(porMod).sort((a,b)=>b[1].coste-a[1].coste);
+
+  // agregados por mes (últimos 6) × módulo
+  const meses=[...new Set(filas.map(f=>(f.ts||"").slice(0,7)).filter(Boolean))].sort().slice(-6);
+  const porMes={}; meses.forEach(m=>porMes[m]={});
+  filas.forEach(f=>{ const m=(f.ts||"").slice(0,7); if(porMes[m]){ const k=f.modulo||"otros"; porMes[m][k]=(porMes[m][k]||0)+Number(f.coste||0); }});
+  const modsMes=mods.map(x=>x[0]);
+
+  $("#main").innerHTML = `<h2>Actividad y consumo de IA</h2>
   <div class="kpis">
-    <div class="kpi"><div class="v">${runs.length}</div><div class="l">Ejecuciones</div></div>
-    <div class="kpi"><div class="v">${(tin+tout).toLocaleString("es-ES")}</div><div class="l">Tokens totales</div></div>
-    <div class="kpi"><div class="v">${money(cost)}</div><div class="l">Coste acumulado (Sonnet 4.6)</div></div>
-    <div class="kpi"><div class="v">${reviews.filter(r=>r.status==="publicada").length}</div><div class="l">Respuestas publicadas</div></div>
+    <div class="kpi"><div class="v">${eur(costeMes)}</div><div class="l">Coste este mes (${MESNOM[new Date().getMonth()]})</div></div>
+    <div class="kpi"><div class="v">${eur(costeTotal)}</div><div class="l">Coste acumulado</div></div>
+    <div class="kpi"><div class="v">${(tokTotal/1e6).toFixed(1)}M</div><div class="l">Tokens totales</div></div>
+    <div class="kpi"><div class="v">${filas.length}</div><div class="l">Ejecuciones</div></div>
   </div>
+  <p class="meta" style="margin:2px 0 14px">Coste de API de Anthropic (≈ €). El OCR de Compras y otros módulos se irán sumando aquí a medida que registren su consumo; los agentes ya cuentan.</p>
+
+  <h3 style="margin:14px 0 6px;font-size:15px">Por módulo</h3>
+  <table><thead><tr><th>Módulo</th><th class="num">Ejecuciones</th><th class="num">Tokens</th><th class="num">Coste total</th><th class="num">Este mes</th></tr></thead>
+  <tbody>${mods.map(([m,e])=>`<tr><td><b>${esc(m)}</b></td><td class="num">${e.n}</td>
+    <td class="num">${(e.tok/1e6).toFixed(2)}M</td><td class="num">${eur(e.coste)}</td><td class="num">${eur(e.mes)}</td></tr>`).join("")}
+    <tr style="border-top:2px solid var(--line);font-weight:700"><td>TOTAL</td><td class="num">${filas.length}</td><td class="num">${(tokTotal/1e6).toFixed(2)}M</td><td class="num">${eur(costeTotal)}</td><td class="num">${eur(costeMes)}</td></tr>
+  </tbody></table>
+
+  ${meses.length>1?`<h3 style="margin:18px 0 6px;font-size:15px">Por mes</h3>
+  <table><thead><tr><th>Mes</th>${modsMes.map(m=>`<th class="num">${esc(m)}</th>`).join("")}<th class="num">Total</th></tr></thead>
+  <tbody>${meses.map(mm=>{const fila=porMes[mm]||{};const tot=Object.values(fila).reduce((a,b)=>a+b,0);
+    return `<tr><td>${MESNOM[+mm.slice(5,7)-1]} ${mm.slice(0,4)}</td>${modsMes.map(m=>`<td class="num">${fila[m]?eur(fila[m]):"—"}</td>`).join("")}<td class="num"><b>${eur(tot)}</b></td></tr>`;}).join("")}
+  </tbody></table>`:""}
+
+  <h3 style="margin:18px 0 6px;font-size:15px">Últimas ejecuciones de agentes</h3>
   ${runs.length? `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Ítems</th><th>Tokens in</th><th>Tokens out</th><th>Coste</th></tr></thead>
-  <tbody>${runs.map(r=>`<tr><td>${new Date(r.ts).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td>
+  <tbody>${runs.slice(0,40).map(r=>`<tr><td>${new Date(r.ts).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td>
     <td>${esc(r.agent)}</td><td class="num">${r.items}</td><td class="num">${(r.tokens_in||0).toLocaleString("es-ES")}</td>
     <td class="num">${(r.tokens_out||0).toLocaleString("es-ES")}</td><td class="num">${money(r.cost||0)}</td></tr>`).join("")}</tbody></table>`
   : `<div class="empty"><b>Sin ejecuciones todavía</b>Genera borradores desde la Bandeja o habla con el conserje de WhatsApp y aquí quedará el registro con tokens y coste de cada run.</div>`}

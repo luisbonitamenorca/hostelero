@@ -1261,6 +1261,17 @@ async function callAI(content,modelo){
   if(data.stop_reason==='max_tokens'){
     throw new Error('JSON_TRUNCADO: la respuesta se cortó por longitud (documento con muchas líneas)');
   }
+  // Registrar el consumo para el contador de IA (módulo compras). Sin bloquear:
+  // si el registro falla, el OCR sigue igual. Precios por millón: sonnet 3/15, opus 5/25.
+  try{
+    const u=data.usage||{}, tin=u.input_tokens||0, tout=u.output_tokens||0;
+    const m=(modelo||'').toLowerCase();
+    const [pin,pout]=m.includes('opus')?[5,25]:[3,15];
+    const coste=(tin*pin+tout*pout)/1e6;
+    if(tin||tout) sb('rpc/ia_registrar',{method:'POST',body:JSON.stringify({
+      p_modulo:'compras',p_proceso:'OCR documento',p_modelo:modelo||'claude-sonnet-4-6',
+      p_tin:tin,p_tout:tout,p_coste:coste})}).catch(()=>{});
+  }catch(e){/* el contador nunca frena el OCR */}
   return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
 }
 // Extrae el PRIMER objeto JSON completo respetando cadenas y escapes.
