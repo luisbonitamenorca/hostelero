@@ -293,6 +293,7 @@
       <button class="tab-btn" data-v="albaranes" onclick="tab('albaranes')">Albaranes</button>
       <button class="tab-btn" data-v="facturas" onclick="tab('facturas')">Facturas</button>
       <button class="tab-btn" data-v="conciliacion" onclick="tab('conciliacion')">Conciliación</button>
+      <button class="tab-btn" data-v="cuadre" onclick="tab('cuadre')">Cuadre</button>
       <button class="tab-btn" data-v="buzon" onclick="tab('buzon')">Buzón</button>
       <button class="tab-btn" data-v="a3" onclick="tab('a3')">Exportar A3</button>
       <button class="tab-btn" data-v="productos" onclick="tab('productos')">Productos</button>
@@ -478,6 +479,41 @@
         </div>
         <div id="emptyCon" class="empty" style="display:none">No hay albaranes detectados en las facturas todavía. Sube alguna factura con su lista de albaranes.</div>
         <p class="hint">Solo facturas de MERCANCÍA: proveedores con cuenta de gasto 600000000, que son los que entran por albarán. Servicios, enología, gas… quedan fuera a propósito. Cada fila es un albarán que aparece dentro de una factura. «✓ Sí» = cruzado por número. «≈ Revisar» = el número no coincide al 100% pero cuadran al menos 3 de 4 parámetros (proveedor, importe al céntimo, fecha ±7 días, centro) y el número se parece: casi seguro es el mismo albarán con el número o el proveedor mal escritos — pasa el ratón para ver por qué casa, clic para abrirlo y «✔ dar por bueno» para conciliarlo definitivamente (queda en verde con ✍️ y se puede deshacer con la ✕). «Falta» = no está en tu listado de Albaranes: probablemente quede por entrar. El objetivo no es cuadrar el céntimo, sino que no se escape ningún albarán del coste analítico.</p>
+      </div>
+    </section>
+
+    <!-- CUADRE: total albaranes vs total facturas por proveedor y mes -->
+    <section id="v-cuadre" class="view">
+      <div class="panel">
+        <div class="filters">
+          <div><label class="fld">Mes</label><select id="cuaMes" onchange="renderCuadre()"></select></div>
+          <div><label class="fld">Centro</label><select id="cuaCentro" onchange="renderCuadre()"></select></div>
+          <div><label class="fld">Tipo</label><select id="cuaTipo" onchange="renderCuadre()">
+            <option value="merc">Solo mercancía</option>
+            <option value="">Todos los proveedores</option>
+          </select></div>
+          <div><label class="fld">Estado</label><select id="cuaEstado" onchange="renderCuadre()">
+            <option value="desc">Solo descuadres</option>
+            <option value="">Todos</option>
+            <option value="ok">Solo los que cuadran</option>
+          </select></div>
+          <div style="flex:1 1 auto;text-align:right;align-self:flex-end;display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn ghost" onclick="loadCuadre()">↻ Refrescar</button>
+            <button class="btn" onclick="exportCuadre()">Exportar Excel</button>
+          </div>
+        </div>
+        <div id="cuaKpis" class="kpis"></div>
+        <div class="tabla-scroll">
+          <table>
+            <thead><tr>
+              <th>Proveedor</th><th>Mes</th>
+              <th class="num">Albaranes</th><th class="num">Facturas</th>
+              <th class="num">Diferencia</th><th>Cuadre</th></tr></thead>
+            <tbody id="cuaBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyCua" class="empty" style="display:none">Sin datos para este filtro.</div>
+        <p class="hint">Cruza el total de <b>albaranes recibidos</b> contra el total <b>facturado</b> por proveedor y mes. Si cuadran, tienes todos los albaranes de ese proveedor ese mes — no hace falta procesar la factura. Si no, ahí es donde faltan albaranes (diferencia positiva = facturado de más = falta algún albarán) o facturas (diferencia negativa = más albaranes que facturas). El margen de tolerancia para «✓ cuadra» es 2 % o 5 €. El filtro por centro reparte los <b>albaranes</b> por su centro; las facturas no se reparten por centro, así que el cuadre exacto es con «Todos los centros». Los proveedores internos (Bodega, Producción) no facturan: su columna Facturas es 0 a propósito.</p>
       </div>
     </section>
 
@@ -5256,7 +5292,88 @@ function tab(v){[...document.querySelectorAll('.tab-btn')].forEach(b=>b.classLis
   if(v==='resumen')renderDashboard();
   if(v==='conciliacion')renderConciliacion();
   if(v==='buzon')loadBuzon();
-  if(v==='a3'){renderA3();}}
+  if(v==='a3'){renderA3();}
+  if(v==='cuadre'){ if(!cuadreRows.length)loadCuadre(); else renderCuadre(); }}
+/* ---------- Cuadre: total albaranes vs total facturas por proveedor y mes ----------
+   Lee la vista compras_cuadre (una fila por proveedor×mes con base_albaranes,
+   base_facturas y el desglose de albaranes por_centro). El objetivo: ver de un
+   vistazo dónde NO cuadra, para revisar solo esos y no procesar todas las facturas. */
+let cuadreRows=[];
+async function loadCuadre(){
+  try{
+    cuadreRows=await sbAll('compras_cuadre?select=proveedor,mes,mercancia,base_albaranes,base_facturas,por_centro&order=mes.desc');
+    // poblar selectores de mes y centro a partir de los datos
+    const meses=[...new Set(cuadreRows.map(r=>r.mes))].sort().reverse();
+    const centros=[...new Set(cuadreRows.flatMap(r=>Object.keys(r.por_centro||{})))].filter(c=>c&&c!=='(sin centro)').sort();
+    const sMes=document.getElementById('cuaMes');
+    if(sMes)sMes.innerHTML='<option value="">Todos los meses</option>'+meses.map(m=>`<option value="${m}">${mesTxt(m)}</option>`).join('');
+    const sCen=document.getElementById('cuaCentro');
+    if(sCen)sCen.innerHTML='<option value="">Todos los centros</option>'+centros.map(c=>`<option value="${c}">${c}</option>`).join('')+'<option value="(sin centro)">(sin centro)</option>';
+    renderCuadre();
+  }catch(err){toast('No pude cargar el cuadre: '+err.message,true);}
+}
+function cuadreFilas(){
+  const mes=document.getElementById('cuaMes').value;
+  const cen=document.getElementById('cuaCentro').value;
+  const tipo=document.getElementById('cuaTipo').value;   // 'merc' | ''
+  const est=document.getElementById('cuaEstado').value;  // 'desc' | '' | 'ok'
+  // con centro, la base de albaranes es la de ese centro; las facturas no se reparten
+  const rows=[];
+  const agrup={};
+  cuadreRows.forEach(r=>{
+    if(mes && r.mes!==mes)return;
+    if(tipo==='merc' && !r.mercancia)return;
+    const alb = cen ? Number((r.por_centro||{})[cen]||0) : Number(r.base_albaranes||0);
+    const fac = cen ? null : Number(r.base_facturas||0);  // sin centro-split para facturas
+    if(cen && alb===0)return;   // con filtro de centro, solo proveedores con albaranes ahí
+    rows.push({proveedor:r.proveedor, mes:r.mes, alb, fac:fac==null?Number(r.base_facturas||0):fac, soloAlb:!!cen});
+  });
+  const conEstado=rows.map(r=>{
+    const dif=Math.round((r.fac-r.alb)*100)/100;
+    const cuadra=Math.abs(dif)<=Math.max(Math.abs(r.fac||r.alb)*0.02,5);
+    return {...r, dif, cuadra};
+  });
+  return conEstado.filter(r=>{
+    if(est==='desc')return !r.cuadra;
+    if(est==='ok')return r.cuadra;
+    return true;
+  }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+}
+function renderCuadre(){
+  const filas=cuadreFilas();
+  const cen=document.getElementById('cuaCentro').value;
+  const nDesc=filas.filter(r=>!r.cuadra).length;
+  const impDesc=filas.filter(r=>!r.cuadra).reduce((s,r)=>s+Math.abs(r.dif),0);
+  document.getElementById('cuaKpis').innerHTML=
+    `<div class="total"><small>Filas (proveedor·mes)</small><span>${filas.length}</span></div>
+     <div class="total"><small>Descuadran</small><span>${nDesc}</span></div>
+     <div class="total"><small>Importe en descuadre</small><span>${fmt(impDesc)}</span></div>`
+    +(cen?`<div class="total" style="max-width:340px"><small>⚠ Centro seleccionado</small><span style="font-size:12px;font-weight:normal">las facturas no se reparten por centro; compara con «Todos»</span></div>`:'');
+  const tb=document.getElementById('cuaBody');
+  document.getElementById('emptyCua').style.display=filas.length?'none':'block';
+  tb.innerHTML=filas.map(r=>{
+    const badge=r.cuadra
+      ? '<span class="est correcto">✓ cuadra</span>'
+      : (r.dif>0?'<span class="est nocuadra">⚠ faltan albaranes</span>':'<span class="est nocuadra">⚠ faltan facturas</span>');
+    return `<tr>
+      <td>${r.proveedor||''}</td><td class="fecha">${mesTxt(r.mes)}</td>
+      <td class="num">${fmt(r.alb)}</td>
+      <td class="num">${r.soloAlb?'<span style="color:var(--muted)">—*</span>':fmt(r.fac)}</td>
+      <td class="num" style="${!r.cuadra?'font-weight:600':''}">${r.soloAlb?'':fmt(r.dif)}</td>
+      <td>${r.soloAlb?'<span style="color:var(--muted)">solo albaranes</span>':badge}</td></tr>`;
+  }).join('');
+}
+function exportCuadre(){
+  const filas=cuadreFilas();
+  if(!filas.length){toast('No hay filas que exportar',true);return;}
+  const data=filas.map(r=>({Proveedor:r.proveedor,Mes:mesTxt(r.mes),
+    'Base albaranes':r.alb,'Base facturas':r.soloAlb?'':r.fac,
+    Diferencia:r.soloAlb?'':r.dif,Cuadre:r.cuadra?'cuadra':(r.dif>0?'faltan albaranes':'faltan facturas')}));
+  const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Cuadre');
+  XLSX.writeFile(wb,`cuadre_albaranes_facturas_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 /* ---------- Buzón: conciliación correo -> app ----------
    Responde a "¿ha llegado todo?" mirando el inventario del buzón contra lo que
    se generó, en vez de suponerlo. La vista compras_conciliacion_correo hace el
