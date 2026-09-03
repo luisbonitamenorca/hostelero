@@ -7238,38 +7238,65 @@ async function handleXlFile(file, opts) {
     try {
       const ws = wb.Sheets[SH['NOMINAS']];
       const data = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:""});
+      // Mapeo POR NOMBRE de columna, no por posición: la gestoría añade columnas
+      // (p. ej. ANTICIPO ALOJAMIENTO) y antes eso descuadraba todo lo que venía
+      // detrás — el coste total se leía de otra columna sin dar error.
+      const norm = s => (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+                        .toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();
+      const cab = (data[0]||[]).map(norm);
+      const col = (...nombres) => {
+        for (const n of nombres){ const k=norm(n); const i=cab.indexOf(k); if(i!==-1)return i; }
+        return -1;
+      };
+      const IX = {
+        anio: col('Año período','Ano periodo'), mes: col('Mes período','Mes periodo'),
+        canal: col('CENTRO DE TRABAJO','CANAL'), codigo_depto: col('CODIGO DEPARTAMENTO'),
+        depto: col('DEPARTAMENTO'), dni: col('CODIGO TRABAJADOR'), nombre: col('NOMBRE TRABAJADOR'),
+        categoria: col('Descr categoría','Descr categoria','DESCR CATEGORIA'),
+        dias: col('DIAS'), horas: col('Horas trabajo'), horas_extra: col('NUMERO HORAS EXTRAS','NUMERO HORAS EXTRA'),
+        sueldo: col('SUELDO'), total_devengado: col('TOTAL DEVENGADO'),
+        anticipo_manutencion: col('ANTICIPO MANUTENCION'), anticipo_autonomo: col('ANTICIPO AUTONOMO'),
+        anticipo: col('ANTICIPO'), anticipo_alojamiento: col('ANTICIPO ALOJAMIENTO'),
+        cuota_obrera: col('CUOTA OBRERA'), irpf: col('RETENCION IRPF'), embargos: col('EMBARGOS'),
+        liquido: col('LIQUIDO A PERCIBIR'), coste_ss: col('TOTAL COSTE SS'),
+        coste_total: col('COSTE TOTAL'), concepto: col('CONCEPTO')
+      };
+      const criticas = ['anio','mes','canal','coste_total'].filter(k=>IX[k]===-1);
+      if (criticas.length) throw new Error('faltan columnas en NOMINAS: '+criticas.join(', '));
+      const g   = (cols,k) => IX[k]===-1 ? '' : cols[IX[k]];
+      const gn  = (cols,k) => parseFloat(g(cols,k))||0;
+      const gi  = (cols,k) => parseInt(g(cols,k))||0;
+      const gs  = (cols,k) => (g(cols,k)||'').toString().trim();
       for (let i = 1; i < data.length; i++) {
         const cols = data[i];
         if (!cols || cols.length === 0) continue;
-        const anio = parseInt(cols[0])||0;
-        const mes  = mesANumero(cols[1]);
-        const canal = (cols[2]||'').toString().trim().toUpperCase();
+        const anio = gi(cols,'anio');
+        const mes  = mesANumero(g(cols,'mes'));
+        const canal = gs(cols,'canal').toUpperCase();
         if (!canal || !mes) continue;
         nomRows.push({
           id: nextId(),
-          anio:           anio,
-          mes:            mes,
-          canal:          canal,
-          codigo_depto:   (cols[3]||'').toString().trim(),
-          depto:          (cols[4]||'').toString().trim().toUpperCase(),
-          dni:            (cols[6]||'').toString().trim(),
-          nombre:         (cols[7]||'').toString().trim(),
-          categoria:      (cols[10]||'').toString().trim(),
-          dias:           parseInt(cols[13])||0,
-          horas:          parseFloat(cols[16])||0,
-          horas_extra:    parseFloat(cols[17])||0,
-          sueldo:         parseFloat(cols[20])||0,
-          total_devengado:parseFloat(cols[24])||0,
-          anticipo_manutencion: parseFloat(cols[25])||0,  // Z  → 755.0
-          anticipo_autonomo:    parseFloat(cols[26])||0,  // AA → 476.1
-          anticipo:             parseFloat(cols[27])||0,  // AB → 465.2
-          cuota_obrera:         parseFloat(cols[28])||0,  // AC → 476.0 (parte trabajador)
-          irpf:                 parseFloat(cols[29])||0,  // AD → 4751.0
-          embargos:             parseFloat(cols[30])||0,  // AE → 465.1
-          liquido:        parseFloat(cols[31])||0,
-          coste_ss:       parseFloat(cols[36])||0,
-          coste_total:    parseFloat(cols[37])||0,
-          concepto:       (cols[38]||'').toString().trim()
+          anio, mes, canal,
+          codigo_depto:   gs(cols,'codigo_depto'),
+          depto:          gs(cols,'depto').toUpperCase(),
+          dni:            gs(cols,'dni'),
+          nombre:         gs(cols,'nombre'),
+          categoria:      gs(cols,'categoria'),
+          dias:           gi(cols,'dias'),
+          horas:          gn(cols,'horas'),
+          horas_extra:    gn(cols,'horas_extra'),
+          sueldo:         gn(cols,'sueldo'),
+          total_devengado:gn(cols,'total_devengado'),
+          anticipo_manutencion: gn(cols,'anticipo_manutencion'),
+          anticipo_autonomo:    gn(cols,'anticipo_autonomo'),
+          anticipo:             gn(cols,'anticipo'),
+          cuota_obrera:         gn(cols,'cuota_obrera'),
+          irpf:                 gn(cols,'irpf'),
+          embargos:             gn(cols,'embargos'),
+          liquido:        gn(cols,'liquido'),
+          coste_ss:       gn(cols,'coste_ss'),
+          coste_total:    gn(cols,'coste_total'),
+          concepto:       gs(cols,'concepto')
         });
       }
       document.getElementById('xl-nm-count').textContent = nomRows.length + ' filas';
