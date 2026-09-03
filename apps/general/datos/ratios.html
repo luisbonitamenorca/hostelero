@@ -901,7 +901,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
         <span class="fbar-label" style="margin-left:8px">Año</span>
         <select id="as-anio" onchange="renderAsiento()" style="font-size:12px;padding:5px 8px"></select>
         <button class="fbtn" onclick="descargarAsientoExcel()" style="margin-left:auto;font-weight:600">⬇ Descargar Excel (A3)</button>
+        <button class="fbtn" onclick="enviarAsientoContabilidad(this)" style="font-weight:600;background:#534AB7;color:#fff;border-color:#534AB7">→ Enviar a Contabilidad</button>
       </div>
+      <div id="as-envio" style="font-size:12px;margin:0 0 6px"></div>
       <div class="card">
         <div class="card-t">🧾 Asiento de nóminas — <span id="as-titulo"></span></div>
         <div style="font-size:12px;color:#888;margin-bottom:10px;max-width:880px">
@@ -2959,6 +2961,64 @@ function descargarAsientoExcel(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'ASIENTO');
   XLSX.writeFile(wb, `Asiento_Nominas_${anio}_${mesNom}.xlsx`);
+}
+
+// ── Empuje del asiento a Contabilidad (módulo fin_) ────────────────────
+// Mapa canal (reparto) → centro_id contable (sociedad Bonita Menorca SL).
+// Sacado del asiento real de julio ya contabilizado, para no inventar ids.
+const CANAL_CENTRO = {
+  'ESTRUCTURA':    '88f1be30-83c7-4318-9a57-87aff1971881',
+  'BINIFADET':     'a35c261e-181d-41ec-a855-9a900bba263e',
+  'TIENDA':        '830f1334-a7d6-48d1-802b-c0522e2d049c',
+  'TAMARINDOS':    '671356b6-148f-4cda-bcb1-5d1169dbbc4e',
+  'TAMARINDOS BAR':'dc0c7224-20c9-4825-babc-5209a7d3eaac',
+  'TIRANT':        '2480c776-f15d-49fb-9bfb-3461696fb7e6',
+  'BODEGA':        '7a7c65fd-505c-4030-941a-1eedc9e1d724',
+  'PRODUCCION':    '626e99fe-d3d1-4870-9863-96f329fd98f0'
+};
+// Códigos abreviados del asiento → código real de 9 dígitos del plan contable.
+const ASIENTO_CTA = {
+  '640000000':'640000000','640000001':'640000001','640000002':'640000002',
+  '642000000':'642000000',
+  '476.0':'476000000','476.1':'476000001',
+  '755.0':'755000000','755.1':'755000001',
+  '465.0':'465000000','465.1':'465000001','465.2':'465000002',
+  '4751.0':'475100000'
+};
+
+async function enviarAsientoContabilidad(btn){
+  const msg=document.getElementById('as-envio');
+  const say=(t,c)=>{ if(msg){ msg.textContent=t; msg.style.color=c||'#888'; } };
+  if(!_asientoCache || !_asientoCache.rows.length){ say('No hay asiento que enviar.', '#A32D2D'); return; }
+  const {mes, anio, rows, totDebe, totHaber, faltanDeducciones}=_asientoCache;
+  if(faltanDeducciones){ say('Este mes no tiene las deducciones cargadas (no cuadra). Re-sube el Excel de nóminas antes de enviar.', '#A32D2D'); return; }
+  if(Math.abs(totDebe-totHaber)>0.01){ say('El asiento no cuadra, no se envía.', '#A32D2D'); return; }
+
+  // Construir las líneas para el RPC, mapeando cuenta y centro.
+  const lineas=[]; const sinCuenta=[];
+  rows.forEach(r=>{
+    if(!(r.debe>0.005 || r.haber>0.005)) return;
+    const cod=ASIENTO_CTA[r.cuenta];
+    if(!cod){ sinCuenta.push(r.cuenta); return; }
+    const centro = r.depto ? (CANAL_CENTRO[r.depto.toUpperCase()]||'') : '';
+    lineas.push({ codigo:cod, debe:r.debe||0, haber:r.haber||0, centro:centro, descripcion:r.obs||'' });
+  });
+  if(sinCuenta.length){ say('Cuentas sin mapear: '+[...new Set(sinCuenta)].join(', '), '#A32D2D'); return; }
+
+  if(!confirm(`Se enviará el asiento de nóminas de ${MESES_LARGOS[mes]} ${anio} a Contabilidad como BORRADOR (${lineas.length} líneas). Luego lo confirmas tú en el módulo de Contabilidad. ¿Continuar?`)) return;
+
+  if(btn) btn.disabled=true; say('Enviando…', '#888');
+  try{
+    await sbFetch('rpc/fin_asiento_nominas', {
+      method:'POST',
+      body: JSON.stringify({ p_anio:anio, p_mes:mes, p_lineas:lineas })
+    });
+    say(`✓ Asiento borrador creado en Contabilidad (${MESES_LARGOS[mes]} ${anio}). Revísalo y confírmalo allí.`, '#1D9E75');
+  }catch(e){
+    let m = e && e.message ? e.message : 'Error al enviar';
+    try{ const j=JSON.parse(m); m = j.message || j.hint || m; }catch(_){}
+    say('✗ '+m, '#A32D2D');
+  }finally{ if(btn) btn.disabled=false; }
 }
 
 function nominasCosteCentro(ct, m) {
