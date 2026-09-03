@@ -2413,6 +2413,13 @@ function nominasEfectivas() {
 
   const out = [];
   (DB.nominas||[]).forEach(r=>{
+    // Solo NÓMINAS en el análisis de coste de personal. Finiquitos e
+    // indemnizaciones se excluyen (van en cuentas de gasto aparte y se
+    // presupuestan por separado); las filas viejas sin concepto se mantienen.
+    const cc=(r.concepto||'').toString().trim().toLowerCase()
+             .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(cc==='finiquito'||cc==='indemnizacion'||cc==='indemnizaciones')return;
+
     const d = (r.dni||'').trim();
 
     // PRIORIDAD 1 — reparto por horas de Skello
@@ -7290,6 +7297,7 @@ async function handleXlFile(file, opts) {
           anticipo_manutencion: gn(cols,'anticipo_manutencion'),
           anticipo_autonomo:    gn(cols,'anticipo_autonomo'),
           anticipo:             gn(cols,'anticipo'),
+          anticipo_alojamiento: gn(cols,'anticipo_alojamiento'),
           cuota_obrera:         gn(cols,'cuota_obrera'),
           irpf:                 gn(cols,'irpf'),
           embargos:             gn(cols,'embargos'),
