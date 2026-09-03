@@ -134,6 +134,17 @@ export default async function Facturas({
         </Link>
       </div>
 
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "0 0 14px" }}>
+        <div style={{ flex: "1 1 160px", background: "#fff", border: "1px solid var(--linea, #DDE3E0)", borderRadius: 8, padding: "10px 14px" }}>
+          <div className="secundario" style={{ fontSize: 12 }}>Facturas de ingreso</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56" }}>{totalFilas}</div>
+        </div>
+        <div style={{ flex: "1 1 160px", background: "#fff", border: "1px solid var(--linea, #DDE3E0)", borderRadius: 8, padding: "10px 14px" }}>
+          <div className="secundario" style={{ fontSize: 12 }}>Importe total</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56" }}>{euros(sumaTotal)}</div>
+        </div>
+      </div>
+
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0 0 14px" }}>
         <div style={{ display: "flex", gap: 6 }}>
           {(

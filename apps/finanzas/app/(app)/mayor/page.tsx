@@ -23,6 +23,7 @@ type ApunteMayor = {
 const PESTANAS = [
   { id: "clientes", titulo: "Clientes (430)", prefijos: ["430"] },
   { id: "proveedores", titulo: "Proveedores (400/410)", prefijos: ["400", "410"] },
+  { id: "todas", titulo: "Todas las cuentas", prefijos: ["1", "2", "3", "4", "5", "6", "7"] },
 ] as const;
 
 /**

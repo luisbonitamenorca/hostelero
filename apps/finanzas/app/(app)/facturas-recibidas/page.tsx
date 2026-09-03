@@ -90,6 +90,16 @@ export default async function FacturasRecibidas({
   );
   const asientoDoc = new Map(asientosCompra.map((a) => [a.origen_id, a]));
 
+  // Sumatorio GLOBAL del listado (no solo la página): se traen solo los totales
+  // de todas las facturas filtradas y se suman, para el indicador de cabecera.
+  const totalesFiltrados = await paginar((d, h) =>
+    filtrar(supabase.from("compras_doc").select("total")).range(d, h),
+  );
+  const sumaGlobal = totalesFiltrados.reduce(
+    (s, f) => s + Number((f as { total: number | null }).total ?? 0),
+    0,
+  );
+
   const filas = data ?? [];
   const suma = filas.reduce((s, f) => s + Number(f.total ?? 0), 0);
   const total = totalFiltrado ?? filas.length;
@@ -123,6 +133,17 @@ export default async function FacturasRecibidas({
           Las que emiten tus proveedores. Llegan por el módulo de compras y aquí se consultan con
           ojos de contabilidad.
         </p>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "0 0 14px" }}>
+        <div style={{ flex: "1 1 160px", background: "#fff", border: "1px solid var(--linea, #DDE3E0)", borderRadius: 8, padding: "10px 14px" }}>
+          <div className="secundario" style={{ fontSize: 12 }}>Facturas de gasto{termino ? " (filtradas)" : ""}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56" }}>{total}</div>
+        </div>
+        <div style={{ flex: "1 1 160px", background: "#fff", border: "1px solid var(--linea, #DDE3E0)", borderRadius: 8, padding: "10px 14px" }}>
+          <div className="secundario" style={{ fontSize: 12 }}>Importe total</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56" }}>{euros(sumaGlobal)}</div>
+        </div>
       </div>
 
       <Buscador q={q} soloActivos={false} sinFiltroActivos etiqueta="Buscar por proveedor, NIF o número de factura…" />
