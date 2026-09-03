@@ -4028,73 +4028,84 @@ function isoWeek(fecha) {
 }
 
 // ── Super Excel de ingresos (para Patricia) ────────────────────────────
-// Importe = base (neto). Pestañas globales por mes/semana/día (periodo × centro)
-// + una pestaña por centro con sus tres desgloses.
+// Real 2026 (base) + Presupuesto (importe) + Real 2025 (histórico), a nivel
+// mes / semana / día. Hojas: comparativa TOTAL, pivotes globales por centro
+// (real 2026) y una hoja por centro con la comparativa de los tres niveles.
 function descargarIngresosExcel(btn){
   const msg=document.getElementById('ing-xls-msg');
   const say=(t,c)=>{ if(msg){ msg.textContent=t; msg.style.color=c||'#888'; } };
   const r2=x=>Math.round((x||0)*100)/100;
-  const rows=(DB.ingresos||[]);
-  if(!rows.length){ say('No hay ingresos cargados.', '#A32D2D'); return; }
+  if(!(DB.ingresos||[]).length){ say('No hay ingresos cargados.', '#A32D2D'); return; }
   if(btn) btn.disabled=true; say('Generando…');
   try{
-    const gMes={}, gSem={}, gDia={};      // global: periodo -> {centro: sum}
-    const cMes={}, cSem={}, cDia={};      // por centro: centro -> {periodo: sum}
+    // data[metric][gran][periodo][centro] = suma
+    const data={ r26:{mes:{},sem:{},dia:{}}, ppto:{mes:{},sem:{},dia:{}}, r25:{mes:{},sem:{},dia:{}} };
     const centrosSet=new Set();
-    rows.forEach(r=>{
-      const f=parseFecha(r.fecha); if(!f) return;
-      const c=(r.centro||'—').toString();
-      const base=+r.base||0;
-      const mes=f.slice(0,7);
-      const sem=f.slice(0,4)+'-S'+String(isoWeek(f)).padStart(2,'0');
-      const dia=f;
-      centrosSet.add(c);
-      const addG=(g,p)=>{ (g[p]=g[p]||{}); g[p][c]=(g[p][c]||0)+base; };
-      addG(gMes,mes); addG(gSem,sem); addG(gDia,dia);
-      const addC=(cc,p)=>{ (cc[c]=cc[c]||{}); cc[c][p]=(cc[c][p]||0)+base; };
-      addC(cMes,mes); addC(cSem,sem); addC(cDia,dia);
+    const acc=(metric,fecha,centro,val)=>{
+      const f=parseFecha(fecha); if(!f||!val) return;
+      const per={ mes:f.slice(0,7), sem:f.slice(0,4)+'-S'+String(isoWeek(f)).padStart(2,'0'), dia:f };
+      centrosSet.add(centro);
+      ['mes','sem','dia'].forEach(g=>{
+        const D=data[metric][g]; (D[per[g]]=D[per[g]]||{}); D[per[g]][centro]=(D[per[g]][centro]||0)+val;
+      });
+    };
+    (DB.ingresos||[]).forEach(r=> acc('r26', r.fecha, (r.centro||'—').toString(), +r.base||0));
+    (DB.presupuesto||[]).forEach(r=> acc('ppto', r.fecha, (r.centro||'—').toString(), +r.importe||0));
+    (DB.ingresos_historico||[]).forEach(r=>{
+      const yr = r.fecha ? +(''+r.fecha).slice(0,4) : (r.año||r.anio);
+      if(yr===2025) acc('r25', r.fecha, (r.centro||'—').toString(), +r.base||0);
     });
     const centros=CENTROS.filter(c=>centrosSet.has(c))
       .concat([...centrosSet].filter(c=>!CENTROS.includes(c)).sort());
 
-    // Hoja pivote global (periodo en filas, centros en columnas + Total)
-    const pivot=(map,label)=>{
-      const periodos=Object.keys(map).sort();
+    // valor de un centro (o 'TOTAL') en metric/gran/periodo
+    const val=(metric,g,p,centro)=>{
+      const row=data[metric][g][p]; if(!row) return 0;
+      if(centro==='TOTAL'){ let s=0; for(const k in row) s+=row[k]; return s; }
+      return row[centro]||0;
+    };
+    // pivote global real 2026: periodo × centro
+    const pivot=(g,label)=>{
+      const periodos=Object.keys(data.r26[g]).sort();
       const aoa=[[label, ...centros, 'Total']];
       periodos.forEach(p=>{
-        const row=[p]; let tot=0;
-        centros.forEach(c=>{ const v=map[p][c]||0; row.push(v?r2(v):''); tot+=v; });
-        row.push(r2(tot)); aoa.push(row);
+        const row=[p];
+        centros.forEach(c=>{ const v=val('r26',g,p,c); row.push(v?r2(v):''); });
+        row.push(r2(val('r26',g,p,'TOTAL'))); aoa.push(row);
       });
-      const tr=['TOTAL']; let g=0;
-      centros.forEach(c=>{ let s=0; periodos.forEach(p=>s+=map[p][c]||0); tr.push(r2(s)); g+=s; });
-      tr.push(r2(g)); aoa.push(tr);
       const ws=XLSX.utils.aoa_to_sheet(aoa);
-      ws['!cols']=[{wch:12}, ...centros.map(()=>({wch:14})), {wch:15}];
+      ws['!cols']=[{wch:12}, ...centros.map(()=>({wch:13})), {wch:14}];
       return ws;
     };
-    // Hoja por centro: tres desgloses apilados
-    const hojaCentro=(c)=>{
-      const aoa=[['INGRESOS · '+c],[]];
-      const bloque=(titulo,map)=>{
-        aoa.push([titulo,'Ingresos €']);
-        Object.keys(map||{}).sort().forEach(p=> aoa.push([p, r2(map[p])]));
+    // comparativa (real 26 / ppto / real 25 / desviaciones) para un centro o TOTAL
+    const comparativa=(centro)=>{
+      const aoa=[['INGRESOS · '+(centro==='TOTAL'?'TODOS LOS CENTROS':centro)],[]];
+      const bloque=(titulo,g)=>{
+        const periodos=[...new Set([
+          ...Object.keys(data.r26[g]), ...Object.keys(data.ppto[g]), ...Object.keys(data.r25[g])
+        ])].filter(p=> val('r26',g,p,centro)||val('ppto',g,p,centro)||val('r25',g,p,centro)).sort();
+        aoa.push([titulo,'Real 2026','Presupuesto','Real 2025','Desv. ppto €','Desv. 2025 €']);
+        periodos.forEach(p=>{
+          const a=val('r26',g,p,centro), b=val('ppto',g,p,centro), d=val('r25',g,p,centro);
+          aoa.push([p, r2(a), b?r2(b):'', d?r2(d):'', r2(a-b), r2(a-d)]);
+        });
         aoa.push([]);
       };
-      bloque('Por mes', cMes[c]); bloque('Por semana', cSem[c]); bloque('Por día', cDia[c]);
+      bloque('Por mes','mes'); bloque('Por semana','sem'); bloque('Por día','dia');
       const ws=XLSX.utils.aoa_to_sheet(aoa);
-      ws['!cols']=[{wch:14},{wch:15}];
+      ws['!cols']=[{wch:12},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13}];
       return ws;
     };
     const safe=s=>s.replace(/[\\\/\?\*\[\]:]/g,' ').substring(0,31);
 
     const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, pivot(gMes,'Mes'),    'Meses (global)');
-    XLSX.utils.book_append_sheet(wb, pivot(gSem,'Semana'), 'Semanas (global)');
-    XLSX.utils.book_append_sheet(wb, pivot(gDia,'Día'),    'Días (global)');
-    centros.forEach(c=> XLSX.utils.book_append_sheet(wb, hojaCentro(c), safe(c)));
+    XLSX.utils.book_append_sheet(wb, comparativa('TOTAL'), 'Comparativa TOTAL');
+    XLSX.utils.book_append_sheet(wb, pivot('mes','Mes'),    'Meses x centro');
+    XLSX.utils.book_append_sheet(wb, pivot('sem','Semana'), 'Semanas x centro');
+    XLSX.utils.book_append_sheet(wb, pivot('dia','Día'),    'Días x centro');
+    centros.forEach(c=> XLSX.utils.book_append_sheet(wb, comparativa(c), safe(c)));
     XLSX.writeFile(wb, 'Ingresos_Bonita_'+(new Date().toISOString().slice(0,10))+'.xlsx');
-    say('✓ Descargado ('+centros.length+' centros)', '#1D9E75');
+    say('✓ Descargado ('+centros.length+' centros · real+ppto+2025)', '#1D9E75');
   }catch(e){ say('✗ '+(e&&e.message?e.message:'Error'), '#A32D2D'); }
   finally{ if(btn) btn.disabled=false; }
 }
