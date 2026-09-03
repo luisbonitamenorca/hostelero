@@ -2365,7 +2365,11 @@ function ratioCellPersonal(r) {
 // distribución entre centros.
 // IMPORTANTE: todo consumo de nóminas agrupado por centro debe leer de aquí,
 // nunca de DB.nominas directamente (mismo principio que resolveIng).
-function nominasEfectivas() {
+function nominasEfectivas(opts) {
+  // Por defecto SOLO nóminas (para el análisis de coste). El asiento la llama
+  // con {soloNominas:false} porque ahí sí necesita finiquitos e indemnizaciones,
+  // que se reparten igual por centro pero luego van a cuentas de gasto aparte.
+  const soloNominas = !(opts && opts.soloNominas===false);
   // ── (1) Reparto por % fijo: dni -> [{centro, pct}] ──
   const fijo = {};
   (DB.nominas_reparto||[]).forEach(x=>{
@@ -2418,7 +2422,7 @@ function nominasEfectivas() {
     // presupuestan por separado); las filas viejas sin concepto se mantienen.
     const cc=(r.concepto||'').toString().trim().toLowerCase()
              .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    if(cc==='finiquito'||cc==='indemnizacion'||cc==='indemnizaciones')return;
+    if(soloNominas && (cc==='finiquito'||cc==='indemnizacion'||cc==='indemnizaciones'))return;
 
     const d = (r.dni||'').trim();
 
@@ -2828,11 +2832,26 @@ function populateAsientoSelectors(){
 
 // Construye las líneas del asiento para un mes/año. Devuelve {rows, totDebe, totHaber, faltanDeducciones}
 function _buildAsiento(mes, anio){
-  // 640 (devengado) y 642 (SS empresa) por centro CON reparto
-  const ef = nominasEfectivas().filter(r=> r.mes===mes && r.anio===anio);
-  const dev={}, ss={};
-  ASIENTO_CENTROS.forEach(c=>{ dev[c]=0; ss[c]=0; });
-  ef.forEach(r=>{ const c=(r.canal||'').toUpperCase(); if(!(c in dev)){ dev[c]=0; ss[c]=0; } dev[c]+=(r.total_devengado||0); ss[c]+=(r.coste_ss||0); });
+  // 640 (devengado) y 642 (SS empresa) por centro CON reparto.
+  // El devengado se separa por concepto en tres cuentas de gasto correlativas:
+  //   640000000 Nómina · 640000001 Finiquito · 640000002 Indemnización
+  // (para poder presupuestar cada cosa por separado). La SS de empresa (642) va
+  // agregada en su única cuenta. Se piden TODAS las nóminas (soloNominas:false)
+  // porque el asiento sí incluye finiquitos e indemnizaciones.
+  const ef = nominasEfectivas({soloNominas:false}).filter(r=> r.mes===mes && r.anio===anio);
+  const devN={}, devF={}, devI={}, ss={};
+  ASIENTO_CENTROS.forEach(c=>{ devN[c]=0; devF[c]=0; devI[c]=0; ss[c]=0; });
+  ef.forEach(r=>{
+    const c=(r.canal||'').toUpperCase();
+    if(!(c in devN)){ devN[c]=0; devF[c]=0; devI[c]=0; ss[c]=0; }
+    const cc=(r.concepto||'').toString().trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const bucket = (cc==='finiquito') ? devF
+                 : (cc==='indemnizacion'||cc==='indemnizaciones') ? devI
+                 : devN;
+    bucket[c]+=(r.total_devengado||0);
+    ss[c]+=(r.coste_ss||0);
+  });
+  const dev={}; Object.keys(devN).forEach(c=> dev[c]=devN[c]+devF[c]+devI[c]);
   // HABER: totales de empresa desde los datos en bruto (el reparto no los cambia)
   const raw=(DB.nominas||[]).filter(r=> r.mes===mes && r.anio===anio);
   const sum=f=>raw.reduce((s,r)=>s+(+r[f]||0),0);
@@ -2844,7 +2863,9 @@ function _buildAsiento(mes, anio){
   const centrosUsados = orden.filter(c=> Math.abs(dev[c]||0)>0.005 || Math.abs(ss[c]||0)>0.005);
   const tot642 = centrosUsados.reduce((s,c)=>s+ss[c],0);
   const rows=[];
-  centrosUsados.forEach(c=> rows.push({cuenta:'640000000', num:true, depto:c, debe:dev[c], haber:0, col:'Y'}));
+  centrosUsados.forEach(c=>{ if(Math.abs(devN[c])>0.005) rows.push({cuenta:'640000000', num:true, depto:c, debe:devN[c], haber:0, col:'Y', obs:'Nómina'}); });
+  centrosUsados.forEach(c=>{ if(Math.abs(devF[c])>0.005) rows.push({cuenta:'640000001', num:true, depto:c, debe:devF[c], haber:0, col:'Y', obs:'Finiquito'}); });
+  centrosUsados.forEach(c=>{ if(Math.abs(devI[c])>0.005) rows.push({cuenta:'640000002', num:true, depto:c, debe:devI[c], haber:0, col:'Y', obs:'Indemnización'}); });
   centrosUsados.forEach(c=> rows.push({cuenta:'642000000', num:true, depto:c, debe:ss[c],  haber:0, col:'AK'}));
   rows.push({cuenta:'476.0', depto:'', debe:0, haber: totCuotaObrera+tot642, col:'AC', obs:'Cuota obrera + SS empresa'});
   rows.push({cuenta:'476.1', depto:'', debe:0, haber: totAutonomo, col:'AA', obs:'Anticipo autónomo (Luis/Patri)'});
