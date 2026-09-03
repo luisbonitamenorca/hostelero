@@ -901,7 +901,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
         <span class="fbar-label" style="margin-left:8px">Año</span>
         <select id="as-anio" onchange="renderAsiento()" style="font-size:12px;padding:5px 8px"></select>
         <button class="fbtn" onclick="descargarAsientoExcel()" style="margin-left:auto;font-weight:600">⬇ Descargar Excel (A3)</button>
-        <button class="fbtn" onclick="enviarAsientoContabilidad(this)" style="font-weight:600;background:#534AB7;color:#fff;border-color:#534AB7">→ Enviar a Contabilidad</button>
+        <button class="fbtn" onclick="enviarAsientoContabilidad(this)" style="font-weight:600;background:#534AB7;color:#fff;border-color:#534AB7">→ Enviar mes a Contabilidad</button>
+        <button class="fbtn" onclick="enviarAsientoTodos(this)" style="font-weight:600;background:#3d3688;color:#fff;border-color:#3d3688">→ Enviar todo el año</button>
       </div>
       <div id="as-envio" style="font-size:12px;margin:0 0 6px"></div>
       <div class="card">
@@ -2986,16 +2987,10 @@ const ASIENTO_CTA = {
   '4751.0':'475100000'
 };
 
-async function enviarAsientoContabilidad(btn){
-  const msg=document.getElementById('as-envio');
-  const say=(t,c)=>{ if(msg){ msg.textContent=t; msg.style.color=c||'#888'; } };
-  if(!_asientoCache || !_asientoCache.rows.length){ say('No hay asiento que enviar.', '#A32D2D'); return; }
-  const {mes, anio, rows, totDebe, totHaber, faltanDeducciones}=_asientoCache;
-  if(faltanDeducciones){ say('Este mes no tiene las deducciones cargadas (no cuadra). Re-sube el Excel de nóminas antes de enviar.', '#A32D2D'); return; }
-  if(Math.abs(totDebe-totHaber)>0.01){ say('El asiento no cuadra, no se envía.', '#A32D2D'); return; }
-
-  // Construir las líneas para el RPC, mapeando cuenta y centro.
-  const lineas=[]; const sinCuenta=[];
+// Construye las líneas del RPC a partir de las filas del asiento (mapea
+// código abreviado→9 dígitos y canal→centro_id). Devuelve {lineas, sinCuenta}.
+function _lineasAsiento(rows){
+  const lineas=[], sinCuenta=[];
   rows.forEach(r=>{
     if(!(r.debe>0.005 || r.haber>0.005)) return;
     const cod=ASIENTO_CTA[r.cuenta];
@@ -3003,22 +2998,57 @@ async function enviarAsientoContabilidad(btn){
     const centro = r.depto ? (CANAL_CENTRO[r.depto.toUpperCase()]||'') : '';
     lineas.push({ codigo:cod, debe:r.debe||0, haber:r.haber||0, centro:centro, descripcion:r.obs||'' });
   });
-  if(sinCuenta.length){ say('Cuentas sin mapear: '+[...new Set(sinCuenta)].join(', '), '#A32D2D'); return; }
+  return {lineas, sinCuenta};
+}
+// Envía UN mes. Devuelve la id del asiento; lanza Error con mensaje legible.
+async function _enviarMes(mes, anio, A){
+  if(A.faltanDeducciones) throw new Error('faltan deducciones (no cuadra) — re-sube el Excel');
+  if(Math.abs(A.totDebe-A.totHaber)>0.01) throw new Error('el asiento no cuadra');
+  const {lineas, sinCuenta}=_lineasAsiento(A.rows);
+  if(sinCuenta.length) throw new Error('cuentas sin mapear: '+[...new Set(sinCuenta)].join(', '));
+  if(!lineas.length) throw new Error('sin líneas');
+  return sbFetch('rpc/fin_asiento_nominas', {
+    method:'POST',
+    body: JSON.stringify({ p_anio:anio, p_mes:mes, p_lineas:lineas })
+  });
+}
+function _errMsg(e){ let m=e&&e.message?e.message:'Error'; try{const j=JSON.parse(m); m=j.message||j.hint||m;}catch(_){}; return m; }
 
-  if(!confirm(`Se enviará el asiento de nóminas de ${MESES_LARGOS[mes]} ${anio} a Contabilidad como BORRADOR (${lineas.length} líneas). Luego lo confirmas tú en el módulo de Contabilidad. ¿Continuar?`)) return;
-
+async function enviarAsientoContabilidad(btn){
+  const msg=document.getElementById('as-envio');
+  const say=(t,c)=>{ if(msg){ msg.textContent=t; msg.style.color=c||'#888'; } };
+  if(!_asientoCache || !_asientoCache.rows.length){ say('No hay asiento que enviar.', '#A32D2D'); return; }
+  const {mes, anio}=_asientoCache;
+  if(!confirm(`Se enviará el asiento de ${MESES_LARGOS[mes]} ${anio} a Contabilidad como BORRADOR. Luego lo confirmas tú allí. ¿Continuar?`)) return;
   if(btn) btn.disabled=true; say('Enviando…', '#888');
   try{
-    await sbFetch('rpc/fin_asiento_nominas', {
-      method:'POST',
-      body: JSON.stringify({ p_anio:anio, p_mes:mes, p_lineas:lineas })
-    });
-    say(`✓ Asiento borrador creado en Contabilidad (${MESES_LARGOS[mes]} ${anio}). Revísalo y confírmalo allí.`, '#1D9E75');
-  }catch(e){
-    let m = e && e.message ? e.message : 'Error al enviar';
-    try{ const j=JSON.parse(m); m = j.message || j.hint || m; }catch(_){}
-    say('✗ '+m, '#A32D2D');
-  }finally{ if(btn) btn.disabled=false; }
+    await _enviarMes(mes, anio, _asientoCache);
+    say(`✓ Borrador de ${MESES_LARGOS[mes]} ${anio} creado en Contabilidad. Revísalo y confírmalo allí.`, '#1D9E75');
+  }catch(e){ say('✗ '+_errMsg(e), '#A32D2D'); }
+  finally{ if(btn) btn.disabled=false; }
+}
+
+// Envía TODOS los meses que tengan nóminas cargadas (uno por uno, borradores).
+async function enviarAsientoTodos(btn){
+  const msg=document.getElementById('as-envio');
+  const say=(t,c)=>{ if(msg){ msg.innerHTML=t; msg.style.color=c||'#888'; } };
+  // Meses/años presentes en las nóminas cargadas.
+  const set=new Set();
+  (DB.nominas||[]).forEach(r=>{ if(r.anio&&r.mes) set.add(r.anio+'-'+r.mes); });
+  const meses=[...set].map(k=>k.split('-').map(Number)).sort((a,b)=> a[0]-b[0] || a[1]-b[1]);
+  if(!meses.length){ say('No hay nóminas cargadas.', '#A32D2D'); return; }
+  if(!confirm(`Se enviarán ${meses.length} asientos (uno por mes con nóminas) a Contabilidad como BORRADOR. Reenviar un mes ya enviado lo reemplaza; los ya CONFIRMADOS se saltan. ¿Continuar?`)) return;
+  if(btn) btn.disabled=true;
+  const ok=[], fail=[];
+  for(const [anio,mes] of meses){
+    say(`Enviando ${MESES_LARGOS[mes]} ${anio}… (${ok.length+fail.length+1}/${meses.length})`, '#888');
+    try{ await _enviarMes(mes, anio, _buildAsiento(mes, anio)); ok.push(`${mes}/${anio}`); }
+    catch(e){ fail.push(`${MESES_LARGOS[mes]} ${anio}: ${_errMsg(e)}`); }
+  }
+  if(btn) btn.disabled=false;
+  let h=`✓ ${ok.length} enviado(s) como borrador.`;
+  if(fail.length) h+=`<br><span style="color:#A32D2D">✗ ${fail.length} con problema:<br>· `+fail.join('<br>· ')+'</span>';
+  say(h, fail.length?'#A32D2D':'#1D9E75');
 }
 
 function nominasCosteCentro(ct, m) {
