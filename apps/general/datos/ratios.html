@@ -567,6 +567,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
 
     <!-- ══════════════ DASHBOARD ══════════════ -->
     <div id="tab-dash" class="tab-pane active">
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:10px">
+        <span id="ing-xls-msg" style="font-size:12px;color:#888"></span>
+        <button class="fbtn" onclick="descargarIngresosExcel(this)" style="font-weight:600;background:#1D9E75;color:#fff;border-color:#1D9E75">⬇ Descargar Excel de ingresos</button>
+      </div>
       <div class="card" style="margin-bottom:12px">
         <div class="card-t">Ingresos totales vs presupuesto — por mes</div>
         <div class="chart-wrap" style="height:220px"><canvas id="ch-ing-vs-ppto"></canvas></div>
@@ -4021,6 +4025,78 @@ function isoWeek(fecha) {
   d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
   const week1 = new Date(d.getFullYear(), 0, 4);
   return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+// ── Super Excel de ingresos (para Patricia) ────────────────────────────
+// Importe = base (neto). Pestañas globales por mes/semana/día (periodo × centro)
+// + una pestaña por centro con sus tres desgloses.
+function descargarIngresosExcel(btn){
+  const msg=document.getElementById('ing-xls-msg');
+  const say=(t,c)=>{ if(msg){ msg.textContent=t; msg.style.color=c||'#888'; } };
+  const r2=x=>Math.round((x||0)*100)/100;
+  const rows=(DB.ingresos||[]);
+  if(!rows.length){ say('No hay ingresos cargados.', '#A32D2D'); return; }
+  if(btn) btn.disabled=true; say('Generando…');
+  try{
+    const gMes={}, gSem={}, gDia={};      // global: periodo -> {centro: sum}
+    const cMes={}, cSem={}, cDia={};      // por centro: centro -> {periodo: sum}
+    const centrosSet=new Set();
+    rows.forEach(r=>{
+      const f=parseFecha(r.fecha); if(!f) return;
+      const c=(r.centro||'—').toString();
+      const base=+r.base||0;
+      const mes=f.slice(0,7);
+      const sem=f.slice(0,4)+'-S'+String(isoWeek(f)).padStart(2,'0');
+      const dia=f;
+      centrosSet.add(c);
+      const addG=(g,p)=>{ (g[p]=g[p]||{}); g[p][c]=(g[p][c]||0)+base; };
+      addG(gMes,mes); addG(gSem,sem); addG(gDia,dia);
+      const addC=(cc,p)=>{ (cc[c]=cc[c]||{}); cc[c][p]=(cc[c][p]||0)+base; };
+      addC(cMes,mes); addC(cSem,sem); addC(cDia,dia);
+    });
+    const centros=CENTROS.filter(c=>centrosSet.has(c))
+      .concat([...centrosSet].filter(c=>!CENTROS.includes(c)).sort());
+
+    // Hoja pivote global (periodo en filas, centros en columnas + Total)
+    const pivot=(map,label)=>{
+      const periodos=Object.keys(map).sort();
+      const aoa=[[label, ...centros, 'Total']];
+      periodos.forEach(p=>{
+        const row=[p]; let tot=0;
+        centros.forEach(c=>{ const v=map[p][c]||0; row.push(v?r2(v):''); tot+=v; });
+        row.push(r2(tot)); aoa.push(row);
+      });
+      const tr=['TOTAL']; let g=0;
+      centros.forEach(c=>{ let s=0; periodos.forEach(p=>s+=map[p][c]||0); tr.push(r2(s)); g+=s; });
+      tr.push(r2(g)); aoa.push(tr);
+      const ws=XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols']=[{wch:12}, ...centros.map(()=>({wch:14})), {wch:15}];
+      return ws;
+    };
+    // Hoja por centro: tres desgloses apilados
+    const hojaCentro=(c)=>{
+      const aoa=[['INGRESOS · '+c],[]];
+      const bloque=(titulo,map)=>{
+        aoa.push([titulo,'Ingresos €']);
+        Object.keys(map||{}).sort().forEach(p=> aoa.push([p, r2(map[p])]));
+        aoa.push([]);
+      };
+      bloque('Por mes', cMes[c]); bloque('Por semana', cSem[c]); bloque('Por día', cDia[c]);
+      const ws=XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols']=[{wch:14},{wch:15}];
+      return ws;
+    };
+    const safe=s=>s.replace(/[\\\/\?\*\[\]:]/g,' ').substring(0,31);
+
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, pivot(gMes,'Mes'),    'Meses (global)');
+    XLSX.utils.book_append_sheet(wb, pivot(gSem,'Semana'), 'Semanas (global)');
+    XLSX.utils.book_append_sheet(wb, pivot(gDia,'Día'),    'Días (global)');
+    centros.forEach(c=> XLSX.utils.book_append_sheet(wb, hojaCentro(c), safe(c)));
+    XLSX.writeFile(wb, 'Ingresos_Bonita_'+(new Date().toISOString().slice(0,10))+'.xlsx');
+    say('✓ Descargado ('+centros.length+' centros)', '#1D9E75');
+  }catch(e){ say('✗ '+(e&&e.message?e.message:'Error'), '#A32D2D'); }
+  finally{ if(btn) btn.disabled=false; }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
