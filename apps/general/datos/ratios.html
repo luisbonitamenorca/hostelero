@@ -2894,9 +2894,22 @@ function _buildAsiento(mes, anio){
   rows.push({cuenta:'465.1', depto:'', debe:0, haber: totEmbargos, col:'AE', obs:'Embargos'});
   rows.push({cuenta:'465.2', depto:'', debe:0, haber: totAnticipo, col:'AB', obs:'Anticipos nómina'});
   rows.push({cuenta:'4751.0',depto:'', debe:0, haber: totIrpf,     col:'AD', obs:'Retención IRPF'});
+  // Cuadre exacto al céntimo. El reparto por centro produce decimales y, al
+  // redondear cada línea a 2 decimales (que es como se contabilizan), la suma
+  // del DEBE puede quedar a 1 céntimo del HABER. Contabilidad exige cuadre
+  // exacto, así que se redondean todas las líneas y el céntimo de redondeo se
+  // absorbe en la línea de DEBE de mayor importe (invisible sobre decenas de miles).
+  rows.forEach(r=>{ r.debe=Math.round((r.debe||0)*100)/100; r.haber=Math.round((r.haber||0)*100)/100; });
+  // Si hay devengado pero faltan retenciones/cuota, el Excel no se ha re-subido: no se fuerza el cuadre (debe verse el aviso).
+  const faltanDeducciones = (rows.reduce((s,r)=>s+r.debe,0)>0.005) && (totCuotaObrera+totIrpf===0);
+  if(!faltanDeducciones){
+    const diff = Math.round((rows.reduce((s,r)=>s+r.debe,0) - rows.reduce((s,r)=>s+r.haber,0))*100)/100;
+    if(Math.abs(diff) > 0.0001){
+      let big=null; rows.forEach(r=>{ if(r.debe>0 && (!big || r.debe>big.debe)) big=r; });
+      if(big) big.debe = Math.round((big.debe - diff)*100)/100;
+    }
+  }
   const totDebe=rows.reduce((s,r)=>s+r.debe,0), totHaber=rows.reduce((s,r)=>s+r.haber,0);
-  // Si hay devengado pero faltan retenciones/cuota, es que el Excel no se ha re-subido con las columnas nuevas
-  const faltanDeducciones = (totDebe>0.005) && (totCuotaObrera+totIrpf===0);
   return {rows, totDebe, totHaber, faltanDeducciones};
 }
 
