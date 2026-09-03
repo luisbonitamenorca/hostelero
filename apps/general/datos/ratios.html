@@ -2399,7 +2399,10 @@ function nominasEfectivas(opts) {
       const f=String(r.fecha||'');
       const anio = r.anio || parseInt(f.slice(0,4),10) || 0;
       const mes  = parseInt(f.slice(5,7),10) || 0;
-      const ct   = (r.centro||'').toUpperCase();
+      // Skello escribe "TAMARINDOS_BAR" con guión bajo; la gestoría y el resto
+      // de la app usan "TAMARINDOS BAR" con espacio. Se normaliza para que sean
+      // el mismo centro (si no, esa reparto quedaba en un canal que no mapeaba).
+      const ct   = (r.centro||'').toUpperCase().replace(/_/g,' ');
       const h    = (+r.horas_reales)||0;
       if(!mes || !ct || h<=0) return;
       const kk = d+'||'+anio+'||'+mes;
@@ -2975,7 +2978,10 @@ const CANAL_CENTRO = {
   'TAMARINDOS BAR':'e89c055e-956d-4eba-a1f3-581dd7740a6f',
   'TIRANT':        'c974f3b0-ffbf-45f2-90ae-26745bb2f8f1',
   'BODEGA':        'a2c6e3e1-c8e0-4c0a-a70f-8c612a3a2d77',
-  'PRODUCCION':    'b62bee30-03d3-4f61-9cc7-1c0f5492873b'
+  'PRODUCCION':    'b62bee30-03d3-4f61-9cc7-1c0f5492873b',
+  // OFICINA solo aparece en las horas de Skello (nunca en la gestoría) y no es
+  // un centro contable propio en Bonita: se imputa a Estructura (overhead).
+  'OFICINA':       '0e5c90bd-62e9-4f6f-877e-bb2228f10325'
 };
 // Códigos abreviados del asiento → código real de 9 dígitos del plan contable.
 const ASIENTO_CTA = {
@@ -2995,7 +3001,7 @@ function _lineasAsiento(rows){
     if(!(r.debe>0.005 || r.haber>0.005)) return;
     const cod=ASIENTO_CTA[r.cuenta];
     if(!cod){ sinCuenta.push(r.cuenta); return; }
-    const centro = r.depto ? (CANAL_CENTRO[r.depto.toUpperCase()]||'') : '';
+    const centro = r.depto ? (CANAL_CENTRO[r.depto.toUpperCase().replace(/_/g,' ')]||'') : '';
     lineas.push({ codigo:cod, debe:r.debe||0, haber:r.haber||0, centro:centro, descripcion:r.obs||'' });
   });
   return {lineas, sinCuenta};
