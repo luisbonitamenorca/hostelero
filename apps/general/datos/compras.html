@@ -1211,22 +1211,30 @@ async function sb(path,opts={}){
 // Supabase corta las respuestas en 1.000 filas y NO avisa: simplemente devuelve
 // menos datos. Así, la pestaña Compras llevaba tiempo enseñando solo las 1.000
 // líneas más recientes (275 albaranes de 338) sin que nada lo indicara.
-// sbAll pide de mil en mil hasta que la página viene incompleta.
-async function sbAll(path,tam=1000,maxPaginas=50){
+// sbAll pide de mil en mil hasta tenerlas TODAS. La fuente de verdad es el
+// total que Supabase manda en Content-Range (0-999/3676): así una página que
+// llegue corta por un hipo de red NO corta la carga y deja filas fuera. Con
+// cache:'no-store' para que el navegador nunca sirva una respuesta vieja/parcial.
+async function sbAll(path,tam=1000,maxPaginas=200){
   const filas=[]; const sep=path.includes('?')?'&':'?';
+  let total=null;
   for(let i=0;i<maxPaginas;i++){
     const desde=i*tam, hasta=desde+tam-1;
-    const r=await fetch(`${SB_URL}/rest/v1/${path}${sep}limit=${tam}&offset=${desde}`,{
-      headers:{apikey:SB_KEY,Authorization:`Bearer ${SB_TOKEN||SB_KEY}`,'Content-Type':'application/json',
-        Range:`${desde}-${hasta}`}
-    });
+    const headers={apikey:SB_KEY,Authorization:`Bearer ${SB_TOKEN||SB_KEY}`,'Content-Type':'application/json',
+      Range:`${desde}-${hasta}`};
+    if(i===0)headers.Prefer='count=exact';   // solo en la 1ª: pedir el total
+    const r=await fetch(`${SB_URL}/rest/v1/${path}${sep}limit=${tam}&offset=${desde}`,{cache:'no-store',headers});
     if(!r.ok){const t=await r.text();throw new Error(`Supabase ${r.status}: ${t}`);}
+    if(total===null){const cr=r.headers.get('content-range')||'';const m=cr.match(/\/(\d+)\s*$/);if(m)total=+m[1];}
     const txt=await r.text();
     const lote=txt?JSON.parse(txt):[];
     filas.push(...lote);
-    if(lote.length<tam)return filas;     // página incompleta = ya no hay más
+    if(lote.length===0)break;                       // no hay más
+    if(total!=null){ if(filas.length>=total)break; }// total fiable: paro cuando las tengo todas
+    else if(lote.length<tam)break;                  // sin total: patrón clásico
   }
-  console.warn(`sbAll: alcanzado el tope de ${maxPaginas} páginas en ${path}`);
+  if(total!=null && filas.length<total)
+    console.warn(`sbAll: ${filas.length}/${total} en ${path} (carga incompleta)`);
   return filas;
 }
 // Maestros para los desplegables del reparto. Se cargan una vez por sesión.
