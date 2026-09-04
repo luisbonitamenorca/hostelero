@@ -390,6 +390,24 @@ details.pliegue > summary:hover { background: var(--papel); }
   cursor: default;
 }
 .tarjeta-modulo.no-disponible:hover { border-color: var(--gris); }
+/* Módulo contratado por la cuenta pero sin permiso para este usuario: se ve
+   atenuado (que sepa que existe) pero no se puede abrir. */
+.tarjeta-modulo.sin-acceso {
+  opacity: 0.5;
+  background: transparent;
+  border-color: var(--borde);
+  cursor: not-allowed;
+}
+.tarjeta-modulo.sin-acceso:hover { border-color: var(--borde); }
+.etiqueta-sin-acceso {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gris);
+}
 .etiqueta-proximamente {
   display: block;
   margin-top: 4px;

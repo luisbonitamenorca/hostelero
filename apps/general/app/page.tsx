@@ -55,14 +55,17 @@ export default async function Portada() {
   const idsVetados = new Set((vetos ?? []).map((v) => v.modulo_id));
   const idsConcedidos = new Set((concesiones ?? []).map((c) => c.modulo_id));
 
-  const visibles = (modulos ?? []).filter(
-    (m) =>
-      idsContratados.has(m.id) &&
-      (rolIncluye(perfil.rol, m.id) || idsConcedidos.has(m.id)) &&
-      !idsVetados.has(m.id)
+  // Se muestran TODOS los módulos que la cuenta tiene contratados. Los que este
+  // usuario no puede abrir (su rol no los incluye, o están vetados) salen
+  // atenuados en vez de ocultos, para que vea que existen más cosas.
+  const contratadosMod = (modulos ?? []).filter((m) => idsContratados.has(m.id));
+  const idsAccesibles = new Set(
+    contratadosMod
+      .filter((m) => (rolIncluye(perfil.rol, m.id) || idsConcedidos.has(m.id)) && !idsVetados.has(m.id))
+      .map((m) => m.id)
   );
 
-  const areas = [...new Set(visibles.map((m) => m.area))];
+  const areas = [...new Set(contratadosMod.map((m) => m.area))];
 
   return (
     <>
@@ -95,7 +98,7 @@ export default async function Portada() {
             No se han podido cargar tus módulos. Recarga la página; si sigue
             pasando, escribe a soporte.
           </p>
-        ) : visibles.length === 0 ? (
+        ) : contratadosMod.length === 0 ? (
           <div className="tarjeta">
             <p className="vacio">
               Tu cuenta no tiene módulos activos ahora mismo. Habla con
@@ -104,7 +107,7 @@ export default async function Portada() {
           </div>
         ) : (
           areas.map((area) => {
-            const delArea = visibles.filter((m) => m.area === area);
+            const delArea = contratadosMod.filter((m) => m.area === area);
             // Los módulos que comparten app se colapsan en una sola ficha.
             const grupos = GRUPOS_PORTADA.filter((g) =>
               delArea.some((m) => g.modulos.includes(m.id))
@@ -116,22 +119,42 @@ export default async function Portada() {
             const esBeta = (m: { madurez?: string | null }) => m.madurez !== "operativo";
             const grupoBeta = (g: (typeof grupos)[number]) =>
               delArea.filter((m) => g.modulos.includes(m.id)).every(esBeta);
+            // Un grupo es accesible si el usuario puede abrir alguno de sus módulos.
+            const grupoAccesible = (g: (typeof grupos)[number]) =>
+              delArea.some((m) => g.modulos.includes(m.id) && idsAccesibles.has(m.id));
+            // Accesibles primero; los "Sin acceso" al final. Dentro, beta después.
             const sueltosOrdenados = [...sueltos].sort(
-              (a, b) => Number(esBeta(a)) - Number(esBeta(b))
+              (a, b) =>
+                Number(!idsAccesibles.has(a.id)) - Number(!idsAccesibles.has(b.id)) ||
+                Number(esBeta(a)) - Number(esBeta(b))
             );
 
             return (
               <section key={area} style={{ marginBottom: 26 }}>
                 <h2 className="rotulo">{area}</h2>
                 <div className="rejilla-lanzadera">
-                  {grupos.map((g) => (
-                    <Link key={g.id} href={g.ruta} className="tarjeta-modulo">
-                      <span className="nombre-modulo">{g.nombre}</span>
-                      {grupoBeta(g) && <span className="etiqueta-beta">Versión beta</span>}
-                    </Link>
-                  ))}
+                  {grupos.map((g) =>
+                    grupoAccesible(g) ? (
+                      <Link key={g.id} href={g.ruta} className="tarjeta-modulo">
+                        <span className="nombre-modulo">{g.nombre}</span>
+                        {grupoBeta(g) && <span className="etiqueta-beta">Versión beta</span>}
+                      </Link>
+                    ) : (
+                      // Contratado por la cuenta pero sin permiso para este usuario: atenuado.
+                      <div key={g.id} className="tarjeta-modulo sin-acceso" aria-disabled="true" title="No tienes acceso a este módulo">
+                        <span className="nombre-modulo">{g.nombre}</span>
+                        <span className="etiqueta-sin-acceso">Sin acceso</span>
+                      </div>
+                    )
+                  )}
                   {sueltosOrdenados.map((m) =>
-                    RUTAS_MODULO[m.id] ? (
+                    !idsAccesibles.has(m.id) ? (
+                      // Sin permiso: atenuado, sin enlace (pero se ve que existe).
+                      <div key={m.id} className="tarjeta-modulo sin-acceso" aria-disabled="true" title="No tienes acceso a este módulo">
+                        <span className="nombre-modulo">{m.nombre}</span>
+                        <span className="etiqueta-sin-acceso">Sin acceso</span>
+                      </div>
+                    ) : RUTAS_MODULO[m.id] ? (
                       <Link key={m.id} href={`/m/${m.id}`} className="tarjeta-modulo">
                         <span className="nombre-modulo">{m.nombre}</span>
                         {esBeta(m) && <span className="etiqueta-beta">Versión beta</span>}
