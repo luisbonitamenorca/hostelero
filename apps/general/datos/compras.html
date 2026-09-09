@@ -5151,7 +5151,7 @@ function fechaA3(iso){
 // CCEE intracomunitarias, REGESP regímenes especiales.
 const A3_COLS=['cabFecha','cabnumdoc','cabfechacontable','CABREFERENCIA','cabcodpro',
                'cabregiva',
-               'captipoirpf','capporirpf',
+               'CABTIPOIRPF','CABPORIRPF',
                'linunidades','lincodart',
                'lindesclin','linprcmoneda','lintipiva','linctacon','lincentrocoste'];
 let a3Rows=[];
@@ -5268,7 +5268,11 @@ async function exportarA3(){
     CABREFERENCIA:r.cabreferencia||'', cabcodpro:r.cabcodpro||'',
     cabregiva:r.cabregiva||'CNAC',
     // Vacías cuando no hay retención: A3 no debe ver un modelo sin importe retenido.
-    captipoirpf:r.captipoirpf||'', capporirpf:num(r.capporirpf)??'',
+    // CABTIPOIRPF es el TIPO de retención que espera A3, no el modelo: tanto el
+    // 115 (alquiler) como el 111 (profesional/agrícola) van como tipo 1
+    // (indicación de Esther/Microgés, 03-09-2026).
+    CABTIPOIRPF:(r.captipoirpf==='115'||r.captipoirpf==='111')?'1':(r.captipoirpf||''),
+    CABPORIRPF:num(r.capporirpf)??'',
     linunidades:A3_UNIDADES, lincodart:A3_CODART,
     lindesclin:r.lindesclin||'',
     linprcmoneda:num(r.linprcmoneda)??'', lintipiva:r.lintipiva||'',
