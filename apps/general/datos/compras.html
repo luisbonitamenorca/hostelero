@@ -177,7 +177,7 @@
   .est.duplicado{background:#FCEBEB;color:#A32D2D}
   .est.nocuadra{background:#FAEEDA;color:#854F0B}
   .est.revisar{background:var(--warn-soft);color:var(--warn)}
-  .selcentro{font-size:12px;padding:3px 6px;border:0.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer;max-width:150px}
+  .selcentro{font-size:12px;padding:3px 6px;border:0.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer;max-width:230px}
   .selcentro:hover{border-color:var(--wine)}
   .selcuenta{font-size:12px;padding:3px 6px;border:0.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer;max-width:240px}
   .selcuenta:hover{border-color:var(--wine)}
@@ -2064,22 +2064,32 @@ async function procesarUno(c){
   if(match){
     proveedor_id=match.id;
   }else if(d.proveedor||d.proveedor_nif){
-    // proveedor no reconocido: se crea pero NO autorizado, para que salte el aviso
+    // proveedor no reconocido: se crea pero NO autorizado, para que salte el aviso.
+    // GUARD DEL CIF (10-sep-2026): si el CIF leído es un CIF español que NO pasa el
+    // dígito de control, es basura del OCR y NO se guarda. Antes cada lectura
+    // errónea del CIF creaba una ficha nueva y un mismo proveedor acababa partido
+    // en una docena (ILLAFRUITS: 12 fichas). El maestro oficial manda: el que
+    // venga después con un CIF distinto e inválido es el malo. cifValido() devuelve
+    // null (no false) para CIF vacío, extranjero o de persona física: esos se
+    // conservan; solo se descarta el CIF español con dígito de control incorrecto.
+    const nifOK = cifValido(d.proveedor_nif)===false ? null : (d.proveedor_nif||null);
+    if(d.proveedor_nif && nifOK===null)
+      console.warn('CIF inválido descartado al crear proveedor:',d.proveedor_nif,'·',d.proveedor);
     // ¿lo conoce A3? entonces ya nace con su cuenta puesta
-    const a3=await cuentaA3(d.proveedor_nif,d.proveedor);
+    const a3=await cuentaA3(nifOK,d.proveedor);
     const np=await sb('compras_proveedor',{method:'POST',body:JSON.stringify({
       // nombre_norm y nif_norm NO se envían: los calcula un trigger con las
       // funciones de Postgres. Escribirlos desde aquí fue lo que dejó 38 fichas
       // con claves mal normalizadas cuando normName() tenía el fallo del "S.L.",
       // y una casando con una cuenta de A3 que no le correspondía.
-      nombre:d.proveedor||'(sin nombre)',nif:d.proveedor_nif||null,
+      nombre:d.proveedor||'(sin nombre)',nif:nifOK,
       codigo_a3:a3?a3.codigo:null,
       cuenta_proveedor:a3?a3.cuenta:null,
       cuenta_contable:a3?a3.contrapartida:null,
       autorizado:false})});
     proveedor_id=np[0].id;
     // refrescar el array local para que el siguiente documento ya lo conozca
-    proveedores.push({id:np[0].id,nombre:d.proveedor||'(sin nombre)',nif:d.proveedor_nif||null,
+    proveedores.push({id:np[0].id,nombre:d.proveedor||'(sin nombre)',nif:nifOK,
       codigo_a3:a3?a3.codigo:null,
       cuenta_proveedor:a3?a3.cuenta:null,cuenta_contable:a3?a3.contrapartida:null,autorizado:false,_n:0});
   }
