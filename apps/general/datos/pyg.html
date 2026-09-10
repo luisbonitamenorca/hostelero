@@ -306,7 +306,8 @@ select,input[type=password],input[type=text]{font-family:inherit}
         <option value="11">Noviembre</option>
         <option value="12" selected>Diciembre</option>
       </select>
-      <button class="btn btn-g" onclick="exportExcel()" title="Descargar el detalle en Excel (cuenta · centro · proveedor)">↓ Descargar Excel</button>
+      <button class="btn btn-g" onclick="exportExcel()" title="Descargar el PyG en Excel (cuenta · centro · proveedor)">↓ Descargar PyG</button>
+      <button class="btn btn-g" onclick="exportPresupuesto()" title="Descargar el presupuesto en Excel (cuenta · centro · mes)">↓ Descargar presupuesto</button>
     </div>
   </header>
 
@@ -1841,6 +1842,29 @@ function exportExcel(){
   }
   const fecha = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `PyG_Bonita_detalle_${fecha}.xlsx`);
+}
+
+function exportPresupuesto(){
+  if (!D || !D.pre || !D.pre.length) { alert('No hay presupuesto cargado.'); return; }
+  const MESES_TXT = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const tipoTxt = c => getTipo(c) === 'ingreso' ? 'Ingreso' : (getTipo(c) === 'gasto' ? 'Gasto' : 'Otro');
+  const head = ['Tipo','Grupo','Nº Cuenta','Cuenta','Centro de coste', ...MESES_TXT, 'Total año'];
+  const rows = [head];
+  [...D.pre].sort((a,b)=>{
+    const ta=getTipo(a.cuenta), tb=getTipo(b.cuenta);
+    if (ta!==tb) return ta==='ingreso'?-1:1;
+    if (a.cuenta!==b.cuenta) return String(a.cuenta).localeCompare(String(b.cuenta));
+    return String(a.canal).localeCompare(String(b.canal));
+  }).forEach(r=>{
+    rows.push([ tipoTxt(r.cuenta), getGrupo(r.cuenta), r.cuenta, r.desc, r.canal,
+      ...r.mensual.map(expRound2), expRound2(r.mensual.reduce((a,b)=>a+b,0)) ]);
+  });
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  expStyleSheet(ws, head);
+  XLSX.utils.book_append_sheet(wb, ws, 'Presupuesto');
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Presupuesto_Bonita_${fecha}.xlsx`);
 }
 
 // Mantenemos toggleExpand por si alguna versión antigua lo invoca (compat.)
