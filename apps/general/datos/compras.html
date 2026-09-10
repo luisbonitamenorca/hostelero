@@ -2969,6 +2969,7 @@ function renderDetalle(){
     dc.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         ${estBadge(a.estado_detalle)}
         ${selectCentroModal(a.canal)}
+        ${selectProvModal(a)}
         <span class="hint" style="margin:0">Nº <span class="editable" contenteditable
           title="Nº de documento (editable)"
           onblur="saveDatoDoc('${a.id}','num_documento',this.textContent)">${a.num_documento||''}</span>
@@ -3022,6 +3023,7 @@ function renderDetalle(){
   dc.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       ${estBadge(a.estado_detalle)}
       ${selectCentroModal(a.canal)}
+      ${selectProvModal(a)}
       <span class="hint" style="margin:0">Nº <span class="editable" contenteditable
         title="Nº de documento (editable)"
         onblur="saveDatoDoc('${a.id}','num_documento',this.textContent)">${a.num_documento||''}</span>
@@ -4238,6 +4240,30 @@ async function saveCanalModal(val){
     toast(v?`Centro: ${v}`:'Centro quitado');
     await loadCompras();   // refresca listado de Compras y el Resumen sin cerrar el modal
   }catch(err){toast('Error: '+err.message,true);}
+}
+
+/* ---------- cambiar el proveedor desde el modal ----------
+   El OCR a veces coge mal el proveedor y hasta ahora no había forma de
+   corregirlo sin borrar y recargar. Al cambiarlo, el trigger de base
+   (trg_doc_reenlaza_lineas) reengancha las líneas al catálogo del proveedor
+   nuevo. Elegir uno EXISTENTE (nunca crear aquí): así no se abren fichas nuevas. */
+function selectProvModal(a){
+  const actual=a.proveedor_id||'';
+  const lista=(proveedores||[]).slice().sort((x,y)=>String(x.nombre||'').localeCompare(String(y.nombre||''),'es'));
+  const ops=['<option value="">— proveedor sin asignar —</option>']
+    .concat(lista.map(p=>`<option value="${p.id}"${p.id===actual?' selected':''}>${esc(p.nombre||'(sin nombre)')}${p.nif?' · '+esc(p.nif):''}</option>`)).join('');
+  return `<select class="selcuenta" style="max-width:280px" onchange="saveProvModal(this.value)" title="Proveedor del documento. Cámbialo si el OCR lo cogió mal — las líneas se reenlazan al catálogo del proveedor elegido.">${ops}</select>`;
+}
+async function saveProvModal(val){
+  if(!revisarDoc)return;
+  const p=(proveedores||[]).find(x=>x.id===val);
+  try{
+    await sb(`compras_doc?id=eq.${revisarDoc.id}`,{method:'PATCH',body:JSON.stringify({
+      proveedor_id: val||null, proveedor: p?(p.nombre||null):null})});
+    toast(p?`Proveedor: ${p.nombre}`:'Proveedor quitado');
+    await revisar(revisarDoc.id);   // recarga el modal: las líneas ya salen reenlazadas al nuevo proveedor
+    loadAlbaranes(); loadFacturas(); loadCompras();
+  }catch(err){toast('No se pudo cambiar el proveedor: '+err.message,true);}
 }
 
 /* ---------- Resumen / mini-dashboard ---------- */
