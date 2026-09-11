@@ -243,7 +243,7 @@ select,input[type=password],input[type=text]{font-family:inherit}
 <div class="modal-overlay" id="admin-modal">
   <div class="modal">
     <h3>Actualizar datos</h3>
-    <p>Selecciona el Excel con las pestañas SUMAS Y SALDOS, PRESUPUESTO y PLAN DE CUENTAS.</p>
+    <p>Sube un Excel con lo que quieras actualizar. Puede traer <strong>todo junto</strong> o <strong>solo una cosa</strong> (p. ej. solo sumas y saldos, solo proveedores o solo el presupuesto): se reconoce por su contenido y <strong>solo se actualiza eso</strong>, el resto se conserva.</p>
     <div class="drop-zone" id="admin-drop" onclick="document.getElementById('admin-fi').click()" style="margin-bottom:10px;padding:1rem">
       <p id="admin-drop-label"><strong>Seleccionar Excel</strong> o arrastrar aquí</p>
     </div>
@@ -600,26 +600,70 @@ function checkAdminReady() {
   document.getElementById('btn-do-upload').disabled = !adminFile;
 }
 
+// Reconoce el CONCEPTO de una hoja por su contenido (no por el nombre), para
+// que valga aunque venga con cualquier título (p. ej. "16 Sumas y saldos").
+const HOJAS_CANON = ['SUMAS Y SALDOS','POR PROVEEDOR','NOMINAS','PRESUPUESTO','PLAN DE CUENTAS','POOL BANCARIO','TESORERIA'];
+function classifySheet(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  let H = null;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const r = (rows[i]||[]).map(v => v ? String(v).toUpperCase().trim() : '');
+    if (r.filter(Boolean).length >= 3) { H = r; break; }
+  }
+  if (!H) return null;
+  const has = k => H.some(h => h.includes(k));
+  if (has('CENTRO DE TRABAJO') || has('NOMBRE TRABAJADOR')) return 'NOMINAS';
+  if (has('ID GRUPO CUENTAS') || has('TIPO CUENTA')) return 'PLAN DE CUENTAS';
+  if (has('PRESTAMO') || has('CAPITAL PENDIENTE')) return 'POOL BANCARIO';
+  if (has('EJERCICIO') && has('CANAL') && has('CUENTA')) return 'SUMAS Y SALDOS';
+  if (has('NOMBRE PROVEEDOR') || (has('PROVEEDOR') && has('BASE'))) return 'POR PROVEEDOR';
+  if (has('CUENTA') && has('CANAL') && (has('ENERO') || has('DESCRIPCION'))) return 'PRESUPUESTO';
+  if (has('CONCEPTO') && has('VENCIMIENTO')) return 'TESORERIA';
+  return null;
+}
+
+// Subida FUNDIDA: solo reemplaza en el datos.xlsx del servidor las pestañas que
+// trae el fichero subido; el resto se conserva. Así una recarga de datos no
+// machaca el presupuesto (ni al revés).
 async function doUpload() {
   const btn = document.getElementById('btn-do-upload');
-  btn.disabled = true;
-  btn.textContent = 'Subiendo…';
-  document.getElementById('upload-status').textContent = '';
-
+  const status = document.getElementById('upload-status');
+  btn.disabled = true; btn.textContent = 'Procesando…'; status.textContent = '';
   try {
     const buffer = await adminFile.arrayBuffer();
-    await uploadToSupabase(buffer);
-    document.getElementById('upload-status').textContent = '✓ Subido correctamente';
-    document.getElementById('upload-status').style.color = 'var(--green)';
-    setTimeout(() => {
-      closeAdmin();
-      processWorkbook(buffer, adminFile.name);
-    }, 800);
+    const wbUp = XLSX.read(buffer, {type:'array'});
+    // 1) clasificar por contenido las hojas del fichero subido
+    const detectado = {}; // canónico -> nombre real en el subido
+    wbUp.SheetNames.forEach(n => {
+      const cls = classifySheet(wbUp.Sheets[n]);
+      if (cls && !detectado[cls]) detectado[cls] = n;
+    });
+    const conceptos = Object.keys(detectado);
+    if (!conceptos.length) throw new Error('No reconozco ninguna pestaña (sumas y saldos, presupuesto, proveedores, plan de cuentas…). Revisa el Excel.');
+    // 2) descargar el datos.xlsx actual (si existe) para fundir sobre él
+    let wbBase;
+    try { wbBase = XLSX.read(await downloadFromSupabase(), {type:'array'}); }
+    catch(e) { wbBase = XLSX.utils.book_new(); }
+    // 3) fundir: reemplazar/añadir SOLO las hojas detectadas
+    conceptos.forEach(canon => {
+      wbBase.Sheets[canon] = wbUp.Sheets[detectado[canon]];
+      if (!wbBase.SheetNames.includes(canon)) wbBase.SheetNames.push(canon);
+    });
+    wbBase.SheetNames.sort((a,b) => {
+      const ia = HOJAS_CANON.indexOf(a), ib = HOJAS_CANON.indexOf(b);
+      return (ia<0?99:ia) - (ib<0?99:ib);
+    });
+    // 4) subir el libro fundido
+    const out = XLSX.write(wbBase, {type:'array', bookType:'xlsx'});
+    await uploadToSupabase(out);
+    const conservadas = wbBase.SheetNames.filter(n => !conceptos.includes(n));
+    status.style.color = 'var(--green)';
+    status.textContent = '✓ Actualizado: ' + conceptos.join(', ') + (conservadas.length ? ' · se conserva: ' + conservadas.join(', ') : '');
+    setTimeout(() => { closeAdmin(); processWorkbook(out, 'fusionado'); }, 1400);
   } catch(err) {
-    document.getElementById('upload-status').textContent = '⚠️ ' + err.message;
-    document.getElementById('upload-status').style.color = 'var(--red)';
-    btn.disabled = false;
-    btn.textContent = 'Subir';
+    status.style.color = 'var(--red)';
+    status.textContent = '⚠️ ' + err.message;
+    btn.disabled = false; btn.textContent = 'Subir';
   }
 }
 
