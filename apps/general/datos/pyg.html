@@ -544,7 +544,9 @@ function processWorkbook(buffer, source) {
     updatePeriodoBadge();
     refresh();
     renderConcilBanner();
-    refreshMercadoInterno();  // recalcula el mercado interno en vivo desde Ratios
+    // Refrescos en vivo desde Ratios (secuenciales para no competir por D.pyg):
+    // ventas 700 con el centro correcto + mercado interno.
+    (async () => { await refreshVentasRatios(); await refreshMercadoInterno(); })();
     const now = new Date();
     setStatus('ok', `Actualizado ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
   } catch(err) {
@@ -668,6 +670,61 @@ async function refreshMercadoInterno() {
     if (D.canales.join(',') !== prev) buildToolbar();
     refresh();
   } catch(e) { /* silencioso: el mercado interno se queda con la hoja del Excel */ }
+}
+
+// =============================================================
+// VENTAS (cuentas 700) EN VIVO DESDE RATIOS — mientras A3 corrige los traspasos
+// (p.ej. el cruce Tamarindos/Bar de abr-jun 2026), las ventas 700 se toman de la
+// tabla `ingresos` de Ratios (Ágora), que tiene bien el centro. El resto de
+// cuentas 7xx (708 devoluciones, 740 subvenciones, 755 servicios al personal,
+// 778 extraordinarios…) se siguen cogiendo del Excel de A3. Las familias de
+// Ratios mapean 1:1 a las subcuentas de venta de A3, así que se conserva el
+// desglose (vino/comida/bebidas/alcoholes/visitas…). Si falla, se mantienen las
+// 700 del A3 como respaldo.
+const VENTA_FAM_CUENTA = {
+  'COMIDA':'700000200', 'VINO':'700000100', 'BEBIDAS':'700000300',
+  'ALCOHOLES':'700000400', 'VINO EXT':'700000500', 'VISITAS':'700000600',
+  'VARIOS':'700000700', 'ENVIOS':'700000700'
+};
+const VENTA_CUENTA_DESC = {
+  '700000000':'VENTAS', '700000100':'VENTAS VINO', '700000200':'VENTAS COMIDA',
+  '700000300':'VENTAS BEBIDAS', '700000400':'VENTAS ALCOHOLES', '700000500':'VENTAS VINO EXT',
+  '700000600':'VENTAS VISITAS', '700000700':'VENTAS VARIOS'
+};
+async function fetchVentasRatios() {
+  let all = [], off = 0;
+  while (true) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/ingresos?select=centro,familia,base,mes&limit=1000&offset=${off}`, { headers: sbHeaders() });
+    if (!r.ok) return null;
+    const d = await r.json();
+    all = all.concat(d);
+    if (d.length < 1000) break;
+    off += 1000;
+  }
+  if (!all.length) return null;
+  const acc = {}; // 'cuenta|canal' -> {cuenta,canal,mensual[12]}
+  const ensure = (c, canal) => { const k = c+'|'+canal; if (!acc[k]) acc[k] = {cuenta:c, canal, mensual:new Array(12).fill(0)}; return acc[k]; };
+  all.forEach(g => {
+    const fam = (g.familia || '').toUpperCase().trim();
+    const cuenta = VENTA_FAM_CUENTA[fam] || '700000000';
+    const canal = normalizeCanal(g.centro);
+    const mi = Math.min(11, Math.max(0, (parseInt(g.mes, 10) || 1) - 1));
+    ensure(cuenta, canal).mensual[mi] += parseFloat(g.base) || 0;
+  });
+  return Object.values(acc).map(r => ({ cuenta:r.cuenta, desc:VENTA_CUENTA_DESC[r.cuenta]||'VENTAS', canal:r.canal, mensual:r.mensual, total:r.mensual.reduce((a,b)=>a+b,0) }));
+}
+async function refreshVentasRatios() {
+  try {
+    const rows = await fetchVentasRatios();
+    if (!rows || !D) return; // sin conexión → se mantienen las 700 del A3
+    const prev = (D.canales || []).join(',');
+    // fuera las 700* del A3 (menos las de mercado interno), dentro las de Ratios
+    D.pyg = D.pyg.filter(r => !(String(r.cuenta).startsWith('700') && !MI_CUENTAS.includes(r.cuenta))).concat(rows);
+    D.canales = [...new Set(D.pyg.map(r => r.canal).filter(Boolean))].sort();
+    D.ventasRatios = true;
+    if (D.canales.join(',') !== prev) buildToolbar();
+    refresh();
+  } catch(e) { /* silencioso: las ventas se quedan con el A3 */ }
 }
 
 // ---- ADMIN MODAL ----
