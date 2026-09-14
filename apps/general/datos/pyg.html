@@ -243,7 +243,7 @@ select,input[type=password],input[type=text]{font-family:inherit}
 <div class="modal-overlay" id="admin-modal">
   <div class="modal">
     <h3>Actualizar datos</h3>
-    <p>Sube un Excel con lo que quieras actualizar. Puede traer <strong>todo junto</strong> o <strong>solo una cosa</strong> (p. ej. solo sumas y saldos, solo proveedores o solo el presupuesto): se reconoce por su contenido y <strong>solo se actualiza eso</strong>, el resto se conserva.</p>
+    <p>Sube un Excel con lo que quieras actualizar (sumas y saldos, proveedores, nóminas…). Se reconoce por su contenido y <strong>solo se actualiza eso</strong>; el resto se conserva. <strong>El presupuesto y el plan de cuentas están protegidos</strong> y no se tocan desde aquí (los mantiene el equipo aparte), aunque el Excel los incluya.</p>
     <div class="drop-zone" id="admin-drop" onclick="document.getElementById('admin-fi').click()" style="margin-bottom:10px;padding:1rem">
       <p id="admin-drop-label"><strong>Seleccionar Excel</strong> o arrastrar aquí</p>
     </div>
@@ -638,13 +638,19 @@ async function doUpload() {
       const cls = classifySheet(wbUp.Sheets[n]);
       if (cls && !detectado[cls]) detectado[cls] = n;
     });
-    const conceptos = Object.keys(detectado);
-    if (!conceptos.length) throw new Error('No reconozco ninguna pestaña (sumas y saldos, presupuesto, proveedores, plan de cuentas…). Revisa el Excel.');
+    // PRESUPUESTO y PLAN DE CUENTAS están BLINDADOS: los mantiene Luis/Code por
+    // separado y NO se tocan desde aquí, para que una carga de datos (sumas y
+    // saldos, proveedores…) no pueda revertirlos por accidente.
+    const PROTEGIDAS = ['PRESUPUESTO','PLAN DE CUENTAS'];
+    const todos = Object.keys(detectado);
+    const conceptos = todos.filter(c => !PROTEGIDAS.includes(c));
+    const ignoradas = todos.filter(c => PROTEGIDAS.includes(c));
+    if (!conceptos.length) throw new Error('Solo reconozco pestañas protegidas (presupuesto / plan de cuentas), que no se actualizan desde aquí. Sube sumas y saldos, proveedores, nóminas…');
     // 2) descargar el datos.xlsx actual (si existe) para fundir sobre él
     let wbBase;
     try { wbBase = XLSX.read(await downloadFromSupabase(), {type:'array'}); }
     catch(e) { wbBase = XLSX.utils.book_new(); }
-    // 3) fundir: reemplazar/añadir SOLO las hojas detectadas
+    // 3) fundir: reemplazar/añadir SOLO las hojas detectadas y NO protegidas
     conceptos.forEach(canon => {
       wbBase.Sheets[canon] = wbUp.Sheets[detectado[canon]];
       if (!wbBase.SheetNames.includes(canon)) wbBase.SheetNames.push(canon);
@@ -656,9 +662,9 @@ async function doUpload() {
     // 4) subir el libro fundido
     const out = XLSX.write(wbBase, {type:'array', bookType:'xlsx'});
     await uploadToSupabase(out);
-    const conservadas = wbBase.SheetNames.filter(n => !conceptos.includes(n));
     status.style.color = 'var(--green)';
-    status.textContent = '✓ Actualizado: ' + conceptos.join(', ') + (conservadas.length ? ' · se conserva: ' + conservadas.join(', ') : '');
+    status.textContent = '✓ Actualizado: ' + conceptos.join(', ')
+      + (ignoradas.length ? ' · ignorado (protegido): ' + ignoradas.join(', ') : '');
     setTimeout(() => { closeAdmin(); processWorkbook(out, 'fusionado'); }, 1400);
   } catch(err) {
     status.style.color = 'var(--red)';
