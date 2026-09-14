@@ -311,6 +311,9 @@ select,input[type=password],input[type=text]{font-family:inherit}
     </div>
   </header>
 
+  <!-- AVISO DE CONCILIACIÓN 2/6 (detalle proveedor vs saldos Sumas) -->
+  <div id="concil-banner" style="display:none;margin:0 0 10px;padding:9px 14px;border-radius:8px;font-size:12.5px;line-height:1.45;cursor:pointer" onclick="toggleConcilDetalle()"></div>
+
   <div class="content">
     <!-- TOOLBAR -->
     <div class="toolbar">
@@ -540,6 +543,7 @@ function processWorkbook(buffer, source) {
     buildToolbar();
     updatePeriodoBadge();
     refresh();
+    renderConcilBanner();
     const now = new Date();
     setStatus('ok', `Actualizado ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
   } catch(err) {
@@ -567,6 +571,48 @@ function setStatus(type, label) {
   const dot = document.getElementById('status-dot');
   dot.className = 'status-dot ' + type;
   document.getElementById('status-label').textContent = label;
+}
+
+// Pinta el banner de conciliación 2/6 al cargar (además del aviso de la subida).
+let _concilData = null;
+function renderConcilBanner() {
+  const el = document.getElementById('concil-banner');
+  if (!el) return;
+  el.style.display = 'none';
+  if (!D || !D.saldoCuenta || !D.prov) return;
+  const con = conciliarProveedor(D.saldoCuenta, D.prov);
+  if (!con || !con.nCuentas) return;
+  _concilData = con;
+  const cuadran = con.nCuentas - con.desc.length;
+  if (con.desc.length === 0) {
+    el.style.background = 'rgba(46,160,67,.12)';
+    el.style.color = 'var(--green)';
+    el.innerHTML = `✓ <strong>Conciliación 2/6 correcta</strong> — el detalle por proveedor cuadra con los saldos del Sumas en las ${con.nCuentas} cuentas con facturas.`;
+  } else {
+    el.style.background = 'rgba(255,180,0,.13)';
+    el.style.color = 'var(--amber)';
+    const eur = n => (n>0?'+':'') + Math.round(n).toLocaleString('es-ES') + '€';
+    const filas = con.desc.map(f =>
+      `<tr><td style="padding:2px 12px 2px 0">${f.cuenta}</td>`
+      + `<td style="padding:2px 12px 2px 0;text-align:right">${Math.round(f.saldo).toLocaleString('es-ES')}</td>`
+      + `<td style="padding:2px 12px 2px 0;text-align:right">${Math.round(f.detalle).toLocaleString('es-ES')}</td>`
+      + `<td style="padding:2px 0;text-align:right;font-weight:600">${eur(f.dif)}</td></tr>`).join('');
+    el.innerHTML =
+      `⚠️ <strong>Conciliación 2/6:</strong> ${cuadran}/${con.nCuentas} cuentas con facturas cuadran · `
+      + `<strong>${con.desc.length} descuadres</strong> <span style="opacity:.7">(clic para ver detalle)</span>`
+      + `<div id="concil-detalle" style="display:none;margin-top:8px">`
+      + `<table style="border-collapse:collapse;font-size:11.5px"><tr style="opacity:.7;text-align:left">`
+      + `<th style="padding:2px 12px 4px 0">Cuenta</th><th style="padding:2px 12px 4px 0;text-align:right">Saldo Sumas</th>`
+      + `<th style="padding:2px 12px 4px 0;text-align:right">Detalle prov.</th><th style="padding:2px 0 4px;text-align:right">Diferencia</th></tr>`
+      + filas + `</table>`
+      + `<div style="opacity:.7;margin-top:6px;font-size:11px">Diferencia = saldo del Sumas − suma de bases del detalle. Descuadres en cuentas 2x suelen ser altas de inmovilizado por asiento (no factura); en 6x, apuntes sin factura de proveedor (domiciliaciones, ajustes).</div>`
+      + `</div>`;
+  }
+  el.style.display = 'block';
+}
+function toggleConcilDetalle() {
+  const d = document.getElementById('concil-detalle');
+  if (d) d.style.display = d.style.display === 'none' ? 'block' : 'none';
 }
 
 // ---- ADMIN MODAL ----
@@ -662,10 +708,32 @@ async function doUpload() {
     // 4) subir el libro fundido
     const out = XLSX.write(wbBase, {type:'array', bookType:'xlsx'});
     await uploadToSupabase(out);
-    status.style.color = 'var(--green)';
+    // 5) AVISO de conciliación: si el libro resultante tiene sumas y detalle de
+    //    proveedor, comprueba que las bases por cuenta cuadran con los saldos 2/6.
+    let aviso = '', hayDescuadre = false;
+    try {
+      if (wbBase.Sheets['SUMAS Y SALDOS'] && wbBase.Sheets['POR PROVEEDOR']) {
+        const saldos = saldoPorCuenta(wbBase.Sheets['SUMAS Y SALDOS']);
+        const pd = parsePorProveedor(wbBase.Sheets['POR PROVEEDOR']);
+        const con = conciliarProveedor(saldos, pd ? pd.prov : null);
+        if (con) {
+          if (con.desc.length === 0) {
+            aviso = ` · ✓ conciliación 2/6: cuadran las ${con.nCuentas} cuentas con facturas`;
+          } else {
+            hayDescuadre = true;
+            const top = con.desc.slice(0,3).map(f =>
+              `${f.cuenta} ${f.dif>0?'+':''}${Math.round(f.dif).toLocaleString('es-ES')}€`).join(', ');
+            aviso = ` · ⚠️ conciliación 2/6: ${con.nCuentas-con.desc.length}/${con.nCuentas} cuadran, `
+              + `${con.desc.length} descuadres (${top}${con.desc.length>3?'…':''})`;
+          }
+        }
+      }
+    } catch(e) { /* la conciliación es informativa: nunca bloquea la subida */ }
+    status.style.color = hayDescuadre ? 'var(--amber)' : 'var(--green)';
     status.textContent = '✓ Actualizado: ' + conceptos.join(', ')
-      + (ignoradas.length ? ' · ignorado (protegido): ' + ignoradas.join(', ') : '');
-    setTimeout(() => { closeAdmin(); processWorkbook(out, 'fusionado'); }, 1400);
+      + (ignoradas.length ? ' · ignorado (protegido): ' + ignoradas.join(', ') : '')
+      + aviso;
+    setTimeout(() => { closeAdmin(); processWorkbook(out, 'fusionado'); }, hayDescuadre ? 3200 : 1400);
   } catch(err) {
     status.style.color = 'var(--red)';
     status.textContent = '⚠️ ' + err.message;
@@ -699,8 +767,9 @@ function parseWorkbook(wb) {
   const provIndex = provData ? provData.index : {};
 
   const canales = [...new Set(pyg.map(r=>r.canal).filter(Boolean))].sort();
+  const saldoCuenta = saldoPorCuenta(wb.Sheets[sheetSyS]);
 
-  return {pyg, pre, pdc, canales, balanceRows, pool, tes, prov, provIndex};
+  return {pyg, pre, pdc, canales, balanceRows, pool, tes, prov, provIndex, saldoCuenta};
 }
 
 // Parser específico para Balance: cuentas 1-5, sin invertir signo.
@@ -956,6 +1025,50 @@ function parsePorProveedor(ws) {
   const prov = Object.values(map);
   prov.forEach(p => { p.total = p.mensual.reduce((a,b)=>a+b,0); });
   return {prov, index};
+}
+
+// =============================================================
+// CONCILIACIÓN — ¿cuadran las bases del detalle por proveedor con los saldos
+// de las cuentas 6 y 2 del Sumas y Saldos? Las facturas de proveedor se
+// contabilizan en esas cuentas, así que el sumatorio de bases por cuenta del
+// detalle debería coincidir con el saldo de esa cuenta en el Sumas y Saldos.
+// Un descuadre = faltan/sobran facturas en el detalle (p.ej. si el export no
+// trae un tramo de fechas) o hay apuntes que no son factura de proveedor.
+// -------------------------------------------------------------
+// Saldo anual (suma Ene..Dic) por número de cuenta, tal cual el Sumas y Saldos.
+function saldoPorCuenta(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  const hi = findHeaderRow(rows);
+  const H = rows[hi].map(v => v ? String(v).toUpperCase().trim() : '');
+  const ci = H.findIndex(h => h === 'CUENTA');
+  if (ci < 0) return {};
+  const mi = {}; MESES.forEach(m => { const i = H.indexOf(m); if (i >= 0) mi[m] = i; });
+  const map = {};
+  for (let r = hi+1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row || row[ci] == null || row[ci] === '') continue;
+    const c = String(row[ci]).trim(); if (!c) continue;
+    let t = 0;
+    MESES.forEach(m => { const idx = mi[m]; if (idx != null) { const v = parseFloat(String(row[idx]).replace(',', '.')); if (!isNaN(v)) t += v; } });
+    map[c] = (map[c] || 0) + t;
+  }
+  return map;
+}
+// Compara, sólo para las cuentas que TOCA el detalle de proveedor, el saldo del
+// Sumas contra el sumatorio de bases. Devuelve las filas ordenadas por descuadre.
+function conciliarProveedor(saldos, prov) {
+  if (!saldos || !prov) return null;
+  const det = {};
+  prov.forEach(p => { det[p.cuenta] = (det[p.cuenta] || 0) + p.total; });
+  const filas = [];
+  Object.keys(det).forEach(c => {
+    if (Math.abs(det[c]) < 0.005) return;
+    const s = saldos[c] || 0, d = det[c];
+    filas.push({cuenta: c, saldo: s, detalle: d, dif: s - d});
+  });
+  filas.sort((a,b) => Math.abs(b.dif) - Math.abs(a.dif));
+  const desc = filas.filter(f => Math.abs(f.dif) >= 1);
+  return {filas, desc, nCuentas: filas.length, totalDet: filas.reduce((a,f)=>a+f.detalle,0)};
 }
 
 // Encuentra la fila de cabeceras (la que contiene 'ENERO' / 'Enero' / 'enero')
