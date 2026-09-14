@@ -648,7 +648,7 @@ function checkAdminReady() {
 
 // Reconoce el CONCEPTO de una hoja por su contenido (no por el nombre), para
 // que valga aunque venga con cualquier título (p. ej. "16 Sumas y saldos").
-const HOJAS_CANON = ['SUMAS Y SALDOS','POR PROVEEDOR','NOMINAS','PRESUPUESTO','PLAN DE CUENTAS','POOL BANCARIO','TESORERIA'];
+const HOJAS_CANON = ['SUMAS Y SALDOS','POR PROVEEDOR','NOMINAS','PRESUPUESTO','PLAN DE CUENTAS','POOL BANCARIO','TESORERIA','MERCADO INTERNO'];
 function classifySheet(ws) {
   const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
   let H = null;
@@ -687,7 +687,7 @@ async function doUpload() {
     // PRESUPUESTO y PLAN DE CUENTAS están BLINDADOS: los mantiene Luis/Code por
     // separado y NO se tocan desde aquí, para que una carga de datos (sumas y
     // saldos, proveedores…) no pueda revertirlos por accidente.
-    const PROTEGIDAS = ['PRESUPUESTO','PLAN DE CUENTAS'];
+    const PROTEGIDAS = ['PRESUPUESTO','PLAN DE CUENTAS','MERCADO INTERNO'];
     const todos = Object.keys(detectado);
     const conceptos = todos.filter(c => !PROTEGIDAS.includes(c));
     const ignoradas = todos.filter(c => PROTEGIDAS.includes(c));
@@ -751,12 +751,21 @@ function parseWorkbook(wb) {
   const sheetPOOL = findSheet(wb, ['POOL BANCARIO','POOL_BANCARIO','POOL']);
   const sheetTES  = findSheet(wb, ['TESORERIA','TESORERÍA','TES']);
   const sheetPROV = findSheet(wb, ['POR PROVEEDOR','POR_PROVEEDOR','PROVEEDORES','GASTOS POR PROVEEDOR']);
+  const sheetMI   = findSheet(wb, ['MERCADO INTERNO','MERCADO_INTERNO']);
 
   if (!sheetSyS) throw new Error('No se encuentra la pestaña SUMAS Y SALDOS');
 
   const pdc = sheetPDC ? parsePDC(wb.Sheets[sheetPDC]) : {};
   // pyg = cuentas 6/7 (signo invertido en 7), tal cual venía
   const pyg = parseSumasYSaldos(wb.Sheets[sheetSyS]);
+  // MERCADO INTERNO: ventas/compras internas entre centros (Producción y Bodega
+  // venden a los demás). No están en la contabilidad oficial (se eliminan al
+  // consolidar), así que se mantienen en una hoja aparte generada desde Ratios y
+  // se concatenan aquí. Misma forma que el SyS (compras 6xx positivas, ventas
+  // 7xx negativas que el parser invierte). Cuadran al 100% (ventas = espejo de
+  // compras). En la vista por centro se ven; en TODOS se excluyen (excl) para no
+  // inflar el consolidado.
+  if (sheetMI) pyg.push(...parseSumasYSaldos(wb.Sheets[sheetMI]));
   // balanceRows = cuentas 1-5 sin invertir signo (necesario para el Balance)
   const balanceRows = parseSumasYSaldosBalance(wb.Sheets[sheetSyS]);
   const pre = sheetPRE ? parsePresupuesto(wb.Sheets[sheetPRE]) : null;
