@@ -544,6 +544,7 @@ function processWorkbook(buffer, source) {
     updatePeriodoBadge();
     refresh();
     renderConcilBanner();
+    refreshMercadoInterno();  // recalcula el mercado interno en vivo desde Ratios
     const now = new Date();
     setStatus('ok', `Actualizado ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
   } catch(err) {
@@ -613,6 +614,60 @@ function renderConcilBanner() {
 function toggleConcilDetalle() {
   const d = document.getElementById('concil-detalle');
   if (d) d.style.display = d.style.display === 'none' ? 'block' : 'none';
+}
+
+// =============================================================
+// MERCADO INTERNO EN VIVO — se recalcula desde Ratios (tabla gastos) en cada
+// carga, para que se mueva solo cuando se muevan las compras internas. Los
+// proveedores internos son 'BODEGA (INTERNO)' (vino) y 'PRODUCCION (INTERNA)'
+// (comida). Cada compra interna de un centro genera, en espejo, una venta
+// interna de Bodega/Producción → cuadran al 100% por construcción. Si la
+// consulta falla, se mantiene la hoja MERCADO INTERNO del Excel como respaldo.
+// -------------------------------------------------------------
+const MI_CUENTAS = ['600000101','600000201','700000101','700000201'];
+async function fetchMercadoInternoLive() {
+  const sel = 'select=centro,proveedor,base,mes&proveedor=ilike.*intern*';
+  let all = [], off = 0;
+  while (true) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/gastos?${sel}&limit=1000&offset=${off}`, { headers: sbHeaders() });
+    if (!r.ok) return null;
+    const d = await r.json();
+    all = all.concat(d);
+    if (d.length < 1000) break;
+    off += 1000;
+  }
+  if (!all.length) return null;
+  const acc = {}; // 'cuenta|canal' -> {cuenta,canal,mensual[12]}
+  const ventas = { '700000101': new Array(12).fill(0), '700000201': new Array(12).fill(0) };
+  const ensure = (c, canal) => { const k = c+'|'+canal; if (!acc[k]) acc[k] = {cuenta:c, canal, mensual:new Array(12).fill(0)}; return acc[k]; };
+  all.forEach(g => {
+    const p = (g.proveedor || '').toUpperCase();
+    const esVino = p.includes('BODEGA');
+    if (!esVino && !p.includes('PRODUCC')) return;
+    const cCompra = esVino ? '600000101' : '600000201';
+    const cVenta  = esVino ? '700000101' : '700000201';
+    const mi = Math.min(11, Math.max(0, (parseInt(g.mes, 10) || 1) - 1));
+    const base = parseFloat(g.base) || 0;
+    ensure(cCompra, normalizeCanal(g.centro)).mensual[mi] += base;
+    ventas[cVenta][mi] += base;  // venta interna = espejo exacto de la compra
+  });
+  const descCompra = c => c === '600000101' ? 'COMPRAS INTERNAS VINO' : 'COMPRAS INTERNAS COMIDA';
+  const rows = Object.values(acc).map(r => ({ cuenta:r.cuenta, desc:descCompra(r.cuenta), canal:r.canal, mensual:r.mensual, total:r.mensual.reduce((a,b)=>a+b,0) }));
+  rows.push({ cuenta:'700000101', desc:'VENTAS INTERNAS VINO',   canal:'BODEGA',     mensual:ventas['700000101'], total:ventas['700000101'].reduce((a,b)=>a+b,0) });
+  rows.push({ cuenta:'700000201', desc:'VENTAS INTERNAS COMIDA', canal:'PRODUCCION', mensual:ventas['700000201'], total:ventas['700000201'].reduce((a,b)=>a+b,0) });
+  return rows;
+}
+async function refreshMercadoInterno() {
+  try {
+    const rows = await fetchMercadoInternoLive();
+    if (!rows || !D) return; // sin conexión/datos → se mantiene la hoja de respaldo
+    const prev = (D.canales || []).join(',');
+    D.pyg = D.pyg.filter(r => !MI_CUENTAS.includes(r.cuenta)).concat(rows);
+    D.canales = [...new Set(D.pyg.map(r => r.canal).filter(Boolean))].sort();
+    D.miLive = true;
+    if (D.canales.join(',') !== prev) buildToolbar();
+    refresh();
+  } catch(e) { /* silencioso: el mercado interno se queda con la hoja del Excel */ }
 }
 
 // ---- ADMIN MODAL ----
