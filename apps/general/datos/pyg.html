@@ -2403,6 +2403,38 @@ function buildNegocioTable() {
   html += negTotalRow('RESULTADO NETO', totResMens, totResMensP, true,  'r-result', null);
 
   html += '</tbody>';
+  // ---- Ratios por centro (pedido de Luis 15-09): EBITDA, compras 600+602 y personal 640+642
+  //      sobre ingresos (internos incluidos). Acumulado hasta el mes elegido.
+  const ratiosDe = (rs) => {
+    if (!rs) return null;
+    const acum = a => sumHasta(a, mesHasta);
+    const serie = pref => MESES.map((_,i) => rs.filter(r => pref.some(p => String(r.cuenta).startsWith(p))).reduce((s,r) => s + r.mensual[i], 0));
+    const ing = acum(sumMensual(rs,'ingreso')), ebitda = acum(calcEbitdaMensual(rs));
+    const com = acum(serie(['600','602'])), per = acum(serie(['640','642']));
+    const pct = n => ing ? n/ing*100 : null;
+    return { ebitda, ebitdaPct: pct(ebitda), compras: pct(com), personal: pct(per) };
+  };
+  const rT = ratiosDe(rowsTotal), rTP = ratiosDe(rowsPTotal);
+  const rC = rowsPC.map(ratiosDe), rCP = rowsPC_P ? rowsPC_P.map(ratiosDe) : null;
+  const fe = v => v == null ? '—' : fmt(v), fp = v => v == null ? '—' : v.toFixed(1) + '%';
+  const filaRatio = (label, key, f, kind) => {
+    const vR = rT ? rT[key] : null, vP = rTP ? rTP[key] : null;
+    const dif = (vR != null && vP != null) ? vR - vP : null;
+    const bueno = kind === 'ebitda' ? (dif != null && dif >= 0) : (dif != null && dif <= 0);
+    const difTxt = dif == null ? '—' : (key === 'ebitda' ? fmt(dif) : dif.toFixed(1) + ' p.p.');
+    const varTxt = (dif != null && vP) ? ((key === 'ebitda' ? dif/Math.abs(vP)*100 : dif).toFixed(1) + '%') : '—';
+    return `<tr class="r-total"><td style="text-align:left;position:sticky;left:0;background:var(--panel);font-weight:600">${label}</td>
+      <td style="font-weight:600">${f(vR)}</td><td>${f(vP)}</td>
+      <td class="${dif == null ? '' : bueno ? 'dv-pos' : 'dv-neg'}">${difTxt}</td><td class="${dif == null ? '' : bueno ? 'dv-pos' : 'dv-neg'}">${key === 'ebitda' ? varTxt : ''}</td>
+      ${rC.map((r,i) => { const vr = r ? r[key] : null, vp = rCP && rCP[i] ? rCP[i][key] : null;
+        return `<td>${f(vr)}${usePresup && vp != null ? `<div style="font-size:10px;color:var(--muted)">ppto ${f(vp)}</div>` : ''}</td>`; }).join('')}
+    </tr>`;
+  };
+  html += `<tr><td colspan="${5 + canales.length}" style="background:var(--hdr);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:8px 7px 4px">Ratios · acumulado ene–${monthLabel}</td></tr>`;
+  html += filaRatio('EBITDA €', 'ebitda', fe, 'ebitda');
+  html += filaRatio('EBITDA % s/ ingresos', 'ebitdaPct', fp, 'ebitda');
+  html += filaRatio('Ratio de compras (600 + 602)', 'compras', fp, 'ratio');
+  html += filaRatio('Ratio de personal (640 + 642)', 'personal', fp, 'ratio');
   document.getElementById('tbl-pyg').innerHTML = html;
 }
 
