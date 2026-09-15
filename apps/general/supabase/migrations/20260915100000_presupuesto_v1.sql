@@ -229,7 +229,7 @@ end $$;
 
 -- ─── Módulo en el esqueleto ─────────────────────────────────────────────────
 insert into modulos (id, nombre, area, madurez)
-  values ('presupuesto', 'Presupuesto', 'Análisis', 'beta')
+  values ('presupuesto', 'Presupuesto', 'Finanzas', 'beta')
   on conflict (id) do nothing;
 insert into modulos_contratados (cuenta_id, modulo_id, activo)
   values ('082c5366-d9ae-49b9-a8b8-8caad73985bd', 'presupuesto', true)
