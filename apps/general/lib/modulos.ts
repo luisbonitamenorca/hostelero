@@ -23,6 +23,8 @@ export const RUTAS_MODULO: Record<string, string> = {
   // /api/compras/* a su Vercel. La URL original sigue viva para el equipo.
   compras: "/compras",
   mantenimiento: "/mantenimiento",
+  // Presupuesto (15-09-2026): tablas pre_* en esta casa, sin login interno.
+  presupuesto: "/presupuesto",
   // Autogestion del dueño: alta de usuarios y vetos por modulo (solo direccion).
   usuarios: "/usuarios",
   contabilidad: "/finanzas",

@@ -15,6 +15,7 @@ const nextConfig = {
     "/agentes": ["./datos/agentes.html"],
     "/compras": ["./datos/compras.html"],
     "/mantenimiento": ["./datos/mantenimiento.html"],
+    "/presupuesto": ["./datos/presupuesto.html"],
   },
   async rewrites() {
     return [

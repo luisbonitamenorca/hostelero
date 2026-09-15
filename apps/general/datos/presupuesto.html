@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<!-- Servido en /presupuesto por hostelero-app: la sesión y el módulo los valida
+     el route handler ANTES de entregar este HTML. Datos en tablas pre_* de esta
+     casa (RLS authenticated), leídas con el token de sesión inyectado.
+     v1 sesión 1 (15-09-2026): versiones + INGRESOS (pauta, % subida, mix por
+     familia, diario editable, anual, carga inicial desde Ratios, descarga). -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presupuesto — Bonita Menorca</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f8f6;--surface:#fff;--panel:#f3f3f0;--hdr:#fafaf8;
+  --border:#e0e0e0;--border-med:#d6d6d0;--text:#1a1a1a;--muted:#888;
+  --green:#1D9E75;--green-dark:#085041;--green-bg:#E1F5EE;
+  --blue:#185FA5;--blue-bg:#E6F1FB;--purple:#534AB7;--purple-bg:#EEEDFE;
+  --amber:#BA7517;--amber-bg:#FAEEDA;--red:#A32D2D;--red-bg:#FCEBEB;
+  --acc:#eaf5f0;--acc-cell:#eef7f3;--acc-total:#cfe9de;
+  --radius:8px;--radius-lg:10px;--shadow:0 1px 3px rgba(0,0,0,.06);
+}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+
+/* layout */
+#app-screen{display:flex;align-items:flex-start;min-height:100vh}
+.side-nav{width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#fdfdfc;border-right:0.5px solid var(--border);padding:18px 10px 18px 14px;display:flex;flex-direction:column}
+.side-brand{padding:0 4px 14px;border-bottom:0.5px solid var(--border);margin-bottom:12px}
+.app-title{font-size:18px;font-weight:500;letter-spacing:-.2px}
+.app-title span{color:var(--green)}
+.app-subtitle{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.45}
+.side-badge{margin-top:8px;display:inline-block;padding:4px 10px;background:var(--green);color:#fff;font-size:11px;font-weight:500;border-radius:4px;letter-spacing:.3px}
+.side-foot{margin-top:auto;padding-top:14px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.side-status{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);padding:0 4px;line-height:1.3}
+.side-version{font-size:10px;color:#aaa;padding:0 4px}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-dot.ok{background:var(--green)}.status-dot.loading{background:var(--amber)}.status-dot.err{background:var(--red)}
+.main-col{flex:1;min-width:0;padding:0 16px 40px}
+.main-inner{max-width:1500px;margin:0 auto}
+.app-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:20}
+.header-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.header-label{font-size:11px;color:var(--muted)}
+.content{padding-top:14px}
+.tabs{display:flex;flex-direction:column;gap:1px}
+.tab{padding:8px 10px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:12px;font-family:inherit;text-align:left;width:100%;border-left:3px solid transparent;border-radius:0 6px 6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s,border-color .15s,background .15s}
+.tab.active{color:var(--green);border-left-color:var(--green);background:rgba(29,158,117,.09);font-weight:500}
+.tab:hover:not(.active){color:var(--text);background:rgba(0,0,0,.04)}
+.tab.soon{opacity:.45;cursor:default}
+.section{display:none}.section.active{display:block}
+
+/* toolbar, seg, cards */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.toolbar-group{display:flex;align-items:center;gap:6px}
+.toolbar-label{font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.seg{display:flex;gap:3px;flex-wrap:wrap}
+.seg button{padding:4px 10px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;border:0.5px solid var(--border);border-radius:4px;background:var(--panel);color:#555;transition:all .12s}
+.seg button:hover:not(.active){border-color:#999;color:var(--text)}
+.seg button.active{background:var(--green);color:#fff;border-color:var(--green);font-weight:500}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:13px 14px;margin-bottom:12px}
+.card-title{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.card-sub{font-size:11px;color:#aaa;margin-bottom:10px;line-height:1.5}
+.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.metric{background:var(--panel);border-radius:var(--radius);padding:11px 13px}
+.m-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.m-value{font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2}
+.m-delta{font-size:10px;margin-top:2px;font-weight:500}
+.pos{color:var(--green)}.neg{color:var(--red)}.neu{color:var(--muted)}
+
+/* buttons, inputs */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .12s}
+.btn:hover{background:var(--panel)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-g{background:var(--green);color:#fff;border-color:var(--green);font-weight:500}
+.btn-g:hover{background:var(--green-dark);border-color:var(--green-dark)}
+.btn-sm{padding:4px 10px;font-size:11px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);color:#555;cursor:pointer;font-family:inherit}
+.btn-sm:hover{background:var(--panel);color:var(--text)}
+.btn-danger{color:var(--red);border-color:#e8c4c4}
+select,input{font-family:inherit}
+.hdr-select{height:30px;font-size:12px;padding:0 9px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);cursor:pointer}
+.hdr-select:focus{outline:none;border-color:var(--green)}
+.inp{height:28px;font-size:12px;padding:0 8px;border:0.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)}
+.inp:focus{outline:none;border-color:var(--green)}
+.inp.num{text-align:right;font-variant-numeric:tabular-nums;width:90px}
+.inp.pct{width:64px}
+.dirty-pill{font-size:11px;padding:3px 9px;border-radius:99px;background:var(--amber-bg);color:var(--amber);font-weight:500;display:none}
+.dirty-pill.on{display:inline-block}
+.chip{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;background:var(--panel);color:var(--muted)}
+.chip.manual{background:var(--purple-bg);color:var(--purple);cursor:pointer}
+.chip.cerrado{background:var(--red-bg);color:var(--red)}
+.chip.ok{background:var(--green-bg);color:var(--green-dark)}
+
+/* tables */
+.tbl-wrap{border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:auto;max-height:72vh}
+table.g{width:100%;border-collapse:collapse;font-size:12px}
+table.g th{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:6px 7px;text-align:right;border-bottom:0.5px solid var(--border);background:var(--hdr);white-space:nowrap;position:sticky;top:0;z-index:2}
+table.g th:first-child,table.g td:first-child{text-align:left;position:sticky;left:0;z-index:3;background:var(--hdr)}
+table.g td{padding:4px 7px;text-align:right;border-bottom:0.5px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.3}
+table.g td:first-child{background:var(--surface)}
+table.g tr:hover td{filter:brightness(.975)}
+table.g tr.r-total td{font-weight:500;background:var(--panel);border-top:0.5px solid var(--border-med);position:sticky;bottom:0;z-index:2}
+table.g tr.r-total td:first-child{z-index:3}
+table.g tr.cerrado td{color:#bbb}
+table.g tr.cerrado td:first-child{color:var(--red)}
+table.g tr.finde td:first-child{font-weight:500}
+table.g td.edit{padding:2px 4px}
+table.g td.edit input{width:92px;height:26px;text-align:right;font-size:12px;border:0.5px solid transparent;border-radius:5px;background:transparent;padding:0 6px;font-variant-numeric:tabular-nums}
+table.g td.edit input:hover{border-color:var(--border)}
+table.g td.edit input:focus{outline:none;border-color:var(--green);background:#fff}
+table.g td.edit input.manual{background:var(--purple-bg);font-weight:500}
+table.g td.sub{color:var(--muted)}
+table.g td.acc{background:var(--acc-cell);font-weight:500}
+.dv-pos{color:var(--green);font-weight:500}.dv-neg{color:var(--red);font-weight:500}
+
+/* pauta (calendarios) */
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.cal{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:8px;user-select:none}
+.cal h4{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:flex;justify-content:space-between}
+.cal h4 span{color:var(--text);font-weight:400;text-transform:none;letter-spacing:0}
+.cal .days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal .dow{font-size:9px;color:#bbb;text-align:center}
+.cal .d{height:24px;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;background:var(--green-bg);color:var(--green-dark)}
+.cal .d.off{background:var(--red-bg);color:var(--red)}
+.cal .d.empty{background:transparent;cursor:default}
+.cal .d.hoy{outline:1.5px solid var(--blue)}
+.pauta-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.pauta-tools label{font-size:11px;color:#555;display:inline-flex;align-items:center;gap:4px}
+
+/* param grids */
+.grid12{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
+.grid12 .cell{background:var(--panel);border-radius:6px;padding:6px;text-align:center}
+.grid12 .cell .l{font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.grid12 .cell input{width:100%;text-align:center}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* loading, toast, modal */
+#loading{display:none;position:fixed;inset:0;background:rgba(248,248,246,.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#loading.on{display:flex}
+#loading p{color:var(--muted);font-size:13px}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:1000;max-width:90vw}
+#toast.on{opacity:1}
+#toast.err{background:var(--red)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:20px;width:min(520px,94vw);border:0.5px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.12);max-height:90vh;overflow:auto}
+.modal h3{font-size:15px;font-weight:500;margin-bottom:6px}
+.modal p{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.modal .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.modal .row label{font-size:11px;color:#555;width:150px;flex-shrink:0}
+.modal .row .inp{flex:1}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7}
+.note{font-size:11px;color:var(--muted);line-height:1.6}
+
+@media(max-width:900px){
+  #app-screen{flex-direction:column}
+  .side-nav{position:static;width:100%;height:auto;border-right:none;border-bottom:0.5px solid var(--border);padding:12px 12px 0}
+  .side-foot{margin-top:8px;border-top:none;flex-direction:row;align-items:center;justify-content:space-between;padding-top:0}
+  .tabs{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:2px;padding-bottom:6px}
+  .tab{width:auto;border-left:none;border-bottom:2px solid transparent;border-radius:0}
+  .tab.active{border-left:none;border-bottom-color:var(--green);background:none}
+  .grid12{grid-template-columns:repeat(4,1fr)}
+  .two{grid-template-columns:1fr}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p id="loading-msg">Cargando…</p></div>
+<div id="toast"></div>
+
+<div id="app-screen">
+  <aside class="side-nav">
+    <div class="side-brand">
+      <div class="app-title">Bonita <span>Menorca</span></div>
+      <div class="app-subtitle">Presupuesto</div>
+      <div class="side-badge" id="side-badge">—</div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" onclick="showTab('ingresos',this)">💶 Ingresos</button>
+      <button class="tab soon" title="Sesión 2">🛒 Compras</button>
+      <button class="tab soon" title="Sesión 2">👥 Personal</button>
+      <button class="tab soon" title="Sesión 3">📑 Otros gastos</button>
+      <button class="tab soon" title="Sesión 3">📊 Resumen</button>
+      <button class="tab" onclick="showTab('ajustes',this)">⚙️ Versiones y ajustes</button>
+    </nav>
+    <div class="side-foot">
+      <div class="side-status"><div class="status-dot ok" id="status-dot"></div><span id="status-label">—</span></div>
+      <a class="btn-sm" href="/" style="text-align:center;text-decoration:none;display:block">← Inicio</a>
+      <div class="side-version">Presupuesto · v1 s1</div>
+    </div>
+  </aside>
+
+  <div class="main-col"><div class="main-inner">
+  <header class="app-header">
+    <div class="header-controls">
+      <label class="header-label" for="sel-version">Versión</label>
+      <select id="sel-version" class="hdr-select" onchange="cambiarVersion(this.value)"></select>
+      <span class="chip ok" id="chip-vigente" style="display:none">vigente</span>
+      <div class="seg" id="seg-centro"></div>
+    </div>
+    <div class="header-controls">
+      <span class="dirty-pill" id="dirty-pill">Cambios sin guardar</span>
+      <button class="btn" onclick="recalcularCentro()" title="Recalcula el centro actual a partir de la base, la pauta y los parámetros. Los días marcados como manual no se tocan.">↻ Recalcular</button>
+      <button class="btn btn-g" id="btn-guardar" onclick="guardar()">Guardar</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+  <!-- ══ INGRESOS ══ -->
+  <section class="section active" id="sec-ingresos">
+    <div class="toolbar">
+      <div class="seg" id="seg-ing">
+        <button class="active" onclick="setSub('diario',this)">Diario</button>
+        <button onclick="setSub('pauta',this)">Pauta (días abiertos)</button>
+        <button onclick="setSub('param',this)">% subida y mix familias</button>
+        <button onclick="setSub('anual',this)">Anual (todos los centros)</button>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="abrirCargaInicial()">⬇ Carga inicial desde Ratios</button>
+      <button class="btn" onclick="descargarIngresos()">⬆ Descargar Excel (formato Ratios)</button>
+    </div>
+
+    <div id="sub-diario">
+      <div class="metrics" id="ing-metrics"></div>
+      <div class="toolbar">
+        <div class="toolbar-group"><span class="toolbar-label">Mes</span><div class="seg" id="seg-mes"></div></div>
+        <div style="flex:1"></div>
+        <span class="note">Base = mismo día de la semana del año anterior (−364 días). Editar el total marca el día como <span class="chip manual">manual</span>; pulsa el chip para volver a automático.</span>
+      </div>
+      <div class="tbl-wrap"><table class="g" id="tbl-diario"></table></div>
+    </div>
+
+    <div id="sub-pauta" style="display:none">
+      <div class="card">
+        <div class="card-title">Pauta de apertura · <span id="pauta-centro"></span></div>
+        <div class="card-sub">Clic en un día para abrir/cerrar; arrastra para pintar varios. O define un rango y los días de cierre semanal. Un día cerrado presupuesta 0 (salvo que esté en manual). Sin pauta definida, el día se considera abierto.</div>
+        <div class="pauta-tools">
+          <label>Desde <input type="date" class="inp" id="pauta-desde"></label>
+          <label>Hasta <input type="date" class="inp" id="pauta-hasta"></label>
+          <span class="toolbar-label">Cierra:</span>
+          <label><input type="checkbox" class="pauta-dow" value="1">L</label>
+          <label><input type="checkbox" class="pauta-dow" value="2">M</label>
+          <label><input type="checkbox" class="pauta-dow" value="3">X</label>
+          <label><input type="checkbox" class="pauta-dow" value="4">J</label>
+          <label><input type="checkbox" class="pauta-dow" value="5">V</label>
+          <label><input type="checkbox" class="pauta-dow" value="6">S</label>
+          <label><input type="checkbox" class="pauta-dow" value="7">D</label>
+          <button class="btn btn-sm" onclick="aplicarRango(true)">Abrir rango</button>
+          <button class="btn btn-sm" onclick="aplicarRango(false)">Cerrar rango</button>
+          <span class="sep"></span>
+          <button class="btn btn-sm" onclick="pautaTodo(true)">Abrir todo el año</button>
+          <button class="btn btn-sm" onclick="pautaTodo(false)">Cerrar todo el año</button>
+          <span class="note" id="pauta-resumen"></span>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+    </div>
+
+    <div id="sub-param" style="display:none">
+      <div class="card">
+        <div class="card-title">% de subida sobre la base del año anterior · <span id="param-centro"></span></div>
+        <div class="card-sub">Se aplica a cada día del mes sobre el importe del día equivalente del año base. Un −100 cierra el mes.</div>
+        <div class="grid12" id="grid-subida"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Reparto por familia (% anual)</div>
+        <div class="card-sub">El total diario se reparte con estos porcentajes. A la izquierda, la referencia del año base. Deben sumar 100.</div>
+        <div class="tbl-wrap" style="max-height:none"><table class="g" id="tbl-mix"></table></div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <select id="sel-add-fam" class="hdr-select"></select>
+          <button class="btn btn-sm" onclick="addFamilia()">+ Añadir familia</button>
+          <button class="btn btn-sm" onclick="mixDesdeRef()">Copiar % de referencia</button>
+          <span class="note" id="mix-total"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="sub-anual" style="display:none">
+      <div class="card">
+        <div class="card-title">Ingresos presupuestados por centro y mes</div>
+        <div class="card-sub">Fila "Ratios hoy" = tabla <code>presupuesto</code> que usa Ratios ahora mismo (solo referencia, no se toca).</div>
+        <div class="tbl-wrap" style="max-height:none"><table class="g" id="tbl-anual"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ AJUSTES ══ -->
+  <section class="section" id="sec-ajustes">
+    <div class="two">
+      <div class="card">
+        <div class="card-title">Versiones</div>
+        <div class="card-sub">Un presupuesto por ejercicio. La versión <b>vigente</b> es la que leerán Ratios y PyG cuando se conecten.</div>
+        <div class="tbl-wrap" style="max-height:none"><table class="g" id="tbl-versiones"></table></div>
+        <div style="margin-top:10px"><button class="btn btn-g" onclick="abrirNuevaVersion()">+ Nueva versión</button></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Parámetros de la versión</div>
+        <div class="card-sub">Se usan en Personal y Compras (sesiones siguientes). Se guardan con el botón Guardar.</div>
+        <div id="params-box"></div>
+        <div class="card-title" style="margin-top:16px">Familias y cuentas</div>
+        <div class="tbl-wrap" style="max-height:none"><table class="g" id="tbl-familias"></table></div>
+      </div>
+    </div>
+  </section>
+
+  </div>
+  </div></div>
+</div>
+
+<!-- MODAL nueva versión -->
+<div class="modal-overlay" id="modal-version">
+  <div class="modal">
+    <h3>Nueva versión de presupuesto</h3>
+    <p>El año base es el real de referencia. El mes de cierre indica hasta qué mes hay real; el resto se completa con el presupuesto vigente del año base.</p>
+    <div class="row"><label>Ejercicio</label><input class="inp" type="number" id="nv-ejercicio"></div>
+    <div class="row"><label>Nombre</label><input class="inp" type="text" id="nv-nombre" value="Presupuesto"></div>
+    <div class="row"><label>Año base (real)</label><input class="inp" type="number" id="nv-base"></div>
+    <div class="row"><label>Último mes cerrado del base</label><input class="inp" type="number" id="nv-mes" min="0" max="12" value="12"></div>
+    <div class="row"><label>Copiar drivers de</label><select class="inp hdr-select" id="nv-copiar"><option value="">— vacía —</option></select></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModal('modal-version')">Cancelar</button>
+      <button class="btn btn-g" onclick="crearVersion()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL carga inicial -->
+<div class="modal-overlay" id="modal-carga">
+  <div class="modal">
+    <h3>Carga inicial desde Ratios</h3>
+    <p>Lee la tabla <code>presupuesto</code> de Ratios (diario por centro y familia) del ejercicio de esta versión y la vuelca aquí: totales diarios (marcados como <b>manual</b> para que un recálculo no los pise), mix por familia (% anual) y pauta (abierto = día con venta &gt; 0). <b>Sustituye</b> lo que haya en ingresos de esta versión.</p>
+    <div id="carga-preview" class="note">Analizando…</div>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModal('modal-carga')">Cancelar</button>
+      <button class="btn btn-g" id="btn-carga" onclick="ejecutarCargaInicial()" disabled>Cargar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ───────────────────────────── CONFIG ─────────────────────────────
+const SUPABASE_URL = '__SUPABASE_URL__';
+const SUPABASE_KEY = '__SUPABASE_ANON__';
+const SB_TOKEN = '__SB_TOKEN__';
+const CUENTA_ID = '__CUENTA_ID__';
+setTimeout(()=>{ if(!dirty()) location.reload(); }, 50*60*1000);
+const _fetchOriginal = window.fetch.bind(window);
+window.fetch = async (u,o) => { const r = await _fetchOriginal(u,o); if (r.status===401 && String(u).startsWith(SUPABASE_URL)) setTimeout(()=>location.reload(),800); return r; };
+
+const CENTROS = ['BODEGA','BINIFADET','TIENDA','TAMARINDOS','TAMARINDOS BAR','TIRANT','PRODUCCION','ESTRUCTURA'];
+const MS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const DOW = ['L','M','X','J','V','S','D'];
+const PARAMS_DEF = [['ss_pct','% Seguridad Social sobre bruto',33],['finiquito_pct','% finiquito sobre coste bruto acumulado',10],['horas_semana','Horas/semana jornada completa',40]];
+
+// ───────────────────────────── ESTADO ─────────────────────────────
+let versiones = [], V = null;          // versión activa
+let familias = [], cuentas = [];
+let centro = 'BINIFADET', mes = new Date().getMonth()+1, sub = 'diario';
+let D = null;      // datos de la versión: {pauta, subida, mix, dia, params}
+let BASE = null;   // base año anterior: {dia:{centro:{fecha:imp}}, fam:{centro:{familia:imp}}, origen}
+let RATIOS = null; // tabla presupuesto de Ratios del ejercicio (referencia)
+let dirtySet = new Set();   // 'pauta','subida','mix','dia:<centro>','params'
+let recalcCentros = new Set(); // centros cuyo pre_ingresos hay que regenerar al guardar
+
+const fmt = n => (n==null||isNaN(n)) ? '—' : Math.round(n).toLocaleString('es-ES');
+const fmt2 = n => (n==null||isNaN(n)) ? '' : n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2 = n => Math.round((+n||0)*100)/100;
+const iso = d => d.toISOString().slice(0,10);
+const addDays = (s,n) => { const d = new Date(s+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return iso(d); };
+const dow = s => { const d = new Date(s+'T00:00:00Z').getUTCDay(); return d===0?7:d; }; // 1=L..7=D
+const diasMes = (y,m) => new Date(Date.UTC(y,m,0)).getUTCDate();
+const fechasAnio = y => { const out=[]; for(let m=1;m<=12;m++) for(let d=1;d<=diasMes(y,m);d++) out.push(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`); return out; };
+const dirty = () => dirtySet.size>0;
+function markDirty(k){ dirtySet.add(k); document.getElementById('dirty-pill').classList.add('on'); }
+function clearDirty(){ dirtySet.clear(); recalcCentros.clear(); document.getElementById('dirty-pill').classList.remove('on'); }
+window.addEventListener('beforeunload', e => { if(dirty()){ e.preventDefault(); e.returnValue=''; } });
+
+// ───────────────────────────── SUPABASE ─────────────────────────────
+function sbHeaders(extra={}) { return { 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SB_TOKEN||SUPABASE_KEY}`, 'Content-Type':'application/json', ...extra }; }
+async function sbFetch(path, options={}) {
+  const res = await fetch(SUPABASE_URL+'/rest/v1/'+path, { cache:'no-store', ...options, headers: sbHeaders(options.headers||{}) });
+  if (!res.ok) throw new Error((await res.text()) || ('HTTP '+res.status));
+  if (res.status===204) return null;
+  const t = await res.text(); return t ? JSON.parse(t) : null;
+}
+async function sbAll(path) {  // pagina de 1000 en 1000 (límite de PostgREST)
+  const out=[]; let from=0;
+  while(true){
+    const page = await sbFetch(path, { headers:{ 'Range-Unit':'items', 'Range':`${from}-${from+999}` } }) || [];
+    out.push(...page); if(page.length<1000) break; from+=1000;
+  }
+  return out;
+}
+async function sbUpsert(table, rows, conflict) {
+  for(let i=0;i<rows.length;i+=500){
+    await sbFetch(`${table}?on_conflict=${conflict}`, { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates,return=minimal' }, body:JSON.stringify(rows.slice(i,i+500)) });
+  }
+}
+async function sbInsert(table, rows, prefer='return=minimal') {
+  for(let i=0;i<rows.length;i+=500) await sbFetch(table, { method:'POST', headers:{ 'Prefer':prefer }, body:JSON.stringify(rows.slice(i,i+500)) });
+}
+const sbDelete = (table, q) => sbFetch(`${table}?${q}`, { method:'DELETE', headers:{ 'Prefer':'return=minimal' } });
+const enc = encodeURIComponent;
+
+// ───────────────────────────── UI helpers ─────────────────────────────
+function loading(on,msg){ document.getElementById('loading').classList.toggle('on',!!on); if(msg) document.getElementById('loading-msg').textContent=msg; }
+let toastT; function toast(msg,err){ const t=document.getElementById('toast'); t.textContent=msg; t.className='on'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:2600); }
+function status(kind,label){ document.getElementById('status-dot').className='status-dot '+kind; document.getElementById('status-label').textContent=label; }
+function showTab(id,btn){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById('sec-'+id).classList.add('active'); document.querySelectorAll('.side-nav .tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); if(id==='ajustes') renderAjustes(); }
+function setSub(s,btn){ sub=s; document.querySelectorAll('#seg-ing button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); ['diario','pauta','param','anual'].forEach(k=>document.getElementById('sub-'+k).style.display=(k===s?'':'none')); renderIngresos(); }
+function cerrarModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ───────────────────────────── ARRANQUE ─────────────────────────────
+(async function init(){
+  try{
+    loading(true,'Cargando presupuesto…'); status('loading','cargando');
+    [versiones, familias, cuentas] = await Promise.all([
+      sbFetch(`pre_versiones?cuenta_id=eq.${CUENTA_ID}&order=ejercicio.desc,nombre`),
+      sbFetch('pre_familias?select=*&order=orden'),
+      sbFetch('pre_cuentas?select=*&order=cuenta'),
+    ]);
+    renderSegCentro(); renderSegMes(); fillVersionSelect();
+    const pref = localStorage.getItem('pre_version');
+    const v = versiones.find(x=>x.id===pref) || versiones.find(x=>x.vigente) || versiones[0];
+    if(v) await cambiarVersion(v.id); else { loading(false); status('ok','sin versiones'); document.getElementById('sec-ingresos').innerHTML='<div class="empty">No hay ninguna versión de presupuesto.<br>Crea una en <b>Versiones y ajustes</b> y luego usa <b>Carga inicial desde Ratios</b>.</div>'; }
+  }catch(e){ loading(false); status('err','error'); toast('Error al cargar: '+e.message,true); console.error(e); }
+})();
+
+function fillVersionSelect(){
+  const s=document.getElementById('sel-version');
+  s.innerHTML = versiones.map(v=>`<option value="${v.id}">${v.ejercicio} · ${v.nombre}${v.vigente?' ★':''}</option>`).join('') || '<option value="">(sin versiones)</option>';
+  if(V) s.value=V.id;
+}
+function renderSegCentro(){ document.getElementById('seg-centro').innerHTML = CENTROS.map(c=>`<button class="${c===centro?'active':''}" onclick="setCentro('${c}')">${c}</button>`).join(''); }
+function renderSegMes(){ document.getElementById('seg-mes').innerHTML = MS.map((m,i)=>`<button class="${i+1===mes?'active':''}" onclick="mes=${i+1};renderSegMes();renderIngresos()">${m}</button>`).join(''); }
+function setCentro(c){ centro=c; renderSegCentro(); renderIngresos(); }
+
+async function cambiarVersion(id){
+  if(dirty() && !confirm('Hay cambios sin guardar. ¿Cambiar de versión y perderlos?')) { fillVersionSelect(); return; }
+  V = versiones.find(v=>v.id===id); if(!V) return;
+  localStorage.setItem('pre_version', id); fillVersionSelect(); clearDirty();
+  document.getElementById('side-badge').textContent = `${V.ejercicio} · ${V.nombre}`;
+  document.getElementById('chip-vigente').style.display = V.vigente?'':'none';
+  try{
+    loading(true,`Cargando ${V.ejercicio}…`); status('loading','cargando');
+    const q = `version_id=eq.${V.id}`;
+    const [pauta, subida, mix, dia, params] = await Promise.all([
+      sbAll(`pre_pauta?${q}&select=centro,fecha,abierto,hora_apertura,hora_cierre,nota`),
+      sbAll(`pre_subida_mes?${q}&select=centro,mes,pct`),
+      sbAll(`pre_mix_familia?${q}&select=centro,familia,pct,pct_ref`),
+      sbAll(`pre_ingresos_dia?${q}&select=centro,fecha,importe,base_importe,manual`),
+      sbAll(`pre_parametros?${q}&select=clave,valor`),
+    ]);
+    D = { pauta:{}, subida:{}, mix:{}, dia:{}, params:{} };
+    pauta.forEach(r=>{ (D.pauta[r.centro] ||= {})[r.fecha] = r; });
+    subida.forEach(r=>{ (D.subida[r.centro] ||= {})[r.mes] = +r.pct; });
+    mix.forEach(r=>{ (D.mix[r.centro] ||= {})[r.familia] = { pct:+r.pct, ref:r.pct_ref==null?null:+r.pct_ref }; });
+    dia.forEach(r=>{ (D.dia[r.centro] ||= {})[r.fecha] = { importe:+r.importe, base:r.base_importe==null?null:+r.base_importe, manual:!!r.manual }; });
+    params.forEach(r=>{ D.params[r.clave] = +r.valor; });
+    PARAMS_DEF.forEach(([k,,d])=>{ if(D.params[k]==null) D.params[k]=d; });
+    await cargarBase();
+    RATIOS = null; cargarRatiosRef();   // en segundo plano
+    if(mes<1||mes>12) mes=1;
+    renderIngresos(); status('ok',`${V.ejercicio} cargado`);
+  }catch(e){ status('err','error'); toast('Error: '+e.message,true); console.error(e); }
+  finally{ loading(false); }
+}
+
+// Base del año anterior: real de Ratios (v_ingresos_real_dia) hasta mes_cierre_base;
+// el resto, presupuesto vigente del año base (pre_ingresos) o, si no hay, tabla presupuesto de Ratios.
+async function cargarBase(){
+  BASE = { dia:{}, fam:{}, origen:[] };
+  const y = V.base_ejercicio || (V.ejercicio-1), mc = V.mes_cierre_base==null?12:+V.mes_cierre_base;
+  const add = (c,f,fam,imp)=>{ (BASE.dia[c] ||= {})[f] = r2(((BASE.dia[c]||{})[f]||0)+imp); const F=(BASE.fam[c] ||= {}); F[fam]=r2((F[fam]||0)+imp); };
+  if(mc>=1){
+    const real = await sbAll(`v_ingresos_real_dia?fecha=gte.${y}-01-01&fecha=lte.${y}-${String(mc).padStart(2,'0')}-31&select=fecha,centro,familia,importe`);
+    real.forEach(r=>add(r.centro,r.fecha,r.familia,+r.importe));
+    if(real.length) BASE.origen.push(`real ${y} hasta ${MS[mc-1]} (${real.length} filas)`);
+  }
+  if(mc<12){
+    const desde = `${y}-${String(mc+1).padStart(2,'0')}-01`;
+    const vb = versiones.find(v=>v.ejercicio===y && v.vigente);
+    let rows = [];
+    if(vb) rows = await sbAll(`pre_ingresos?version_id=eq.${vb.id}&fecha=gte.${desde}&select=fecha,centro,familia,importe`);
+    if(!rows.length) rows = await sbAll(`presupuesto?fecha=gte.${desde}&fecha=lte.${y}-12-31&select=fecha,centro,familia,importe`);
+    rows.forEach(r=>add(r.centro,r.fecha,r.familia,+r.importe));
+    if(rows.length) BASE.origen.push(`presupuesto ${y} desde ${MS[mc]} (${vb?'módulo':'Ratios'}, ${rows.length} filas)`);
+  }
+  if(!BASE.origen.length) BASE.origen.push(`sin datos del año base ${y}`);
+}
+async function cargarRatiosRef(){
+  try{
+    const rows = await sbAll(`presupuesto?fecha=gte.${V.ejercicio}-01-01&fecha=lte.${V.ejercicio}-12-31&select=fecha,centro,familia,importe`);
+    RATIOS = { rows, mes:{} };
+    rows.forEach(r=>{ const m=+r.fecha.slice(5,7); const M=(RATIOS.mes[r.centro] ||= {}); M[m]=(M[m]||0)+(+r.importe); });
+    if(sub==='anual') renderIngresos();
+  }catch(e){ console.warn('Sin referencia Ratios',e); }
+}
+
+// ───────────────────────────── CÁLCULO ─────────────────────────────
+const baseDe = (c,f) => (BASE && BASE.dia[c]) ? BASE.dia[c][addDays(f,-364)] : undefined;
+const abierto = (c,f) => { const p=(D.pauta[c]||{})[f]; return p ? !!p.abierto : true; };
+function pctSubida(c,m){ return +((D.subida[c]||{})[m] ?? 0); }
+function mixDe(c){ return D.mix[c] || {}; }
+
+function recalcularCentro(c=centro, silencioso=false){
+  if(!D) return;
+  const rows = (D.dia[c] ||= {});
+  fechasAnio(V.ejercicio).forEach(f=>{
+    const b = baseDe(c,f), m = +f.slice(5,7);
+    const row = (rows[f] ||= { importe:0, base:null, manual:false });
+    row.base = b==null ? null : b;
+    if(!row.manual) row.importe = abierto(c,f) ? r2((b||0)*(1+pctSubida(c,m)/100)) : 0;
+  });
+  markDirty('dia:'+c); recalcCentros.add(c);
+  if(!silencioso){ toast(`${c} recalculado. Guarda para aplicar.`); renderIngresos(); }
+}
+// filas diarias por familia (materialización) para un centro
+function filasFamilia(c){
+  const mix = mixDe(c), fams = Object.keys(mix).filter(f=>mix[f].pct>0);
+  const out=[]; const rows=D.dia[c]||{};
+  Object.keys(rows).forEach(f=>{ const imp=rows[f].importe; if(!imp) return; fams.forEach(fam=>{ const v=r2(imp*mix[fam].pct/100); if(v) out.push({version_id:V.id,centro:c,familia:fam,fecha:f,importe:v}); }); });
+  return out;
+}
+function totalMes(c,m){ let t=0; const rows=D.dia[c]||{}; Object.keys(rows).forEach(f=>{ if(+f.slice(5,7)===m) t+=rows[f].importe; }); return t; }
+function totalAnio(c){ let t=0; for(let m=1;m<=12;m++) t+=totalMes(c,m); return t; }
+
+// ───────────────────────────── RENDER INGRESOS ─────────────────────────────
+function renderIngresos(){
+  if(!D) return;
+  document.getElementById('pauta-centro').textContent = centro;
+  document.getElementById('param-centro').textContent = centro;
+  if(sub==='diario') renderDiario();
+  if(sub==='pauta') renderPauta();
+  if(sub==='param') renderParam();
+  if(sub==='anual') renderAnual();
+}
+
+function renderDiario(){
+  const y=V.ejercicio, rows=D.dia[centro]||{}, mix=mixDe(centro), fams=Object.keys(mix).filter(f=>mix[f].pct>0);
+  const tMes=totalMes(centro,mes), tAnio=totalAnio(centro);
+  let bMes=0, dias=0, manual=0, cerrados=0;
+  for(let d=1;d<=diasMes(y,mes);d++){ const f=`${y}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const b=baseDe(centro,f); bMes+=(b||0); if(rows[f]?.importe) dias++; if(rows[f]?.manual) manual++; if(!abierto(centro,f)) cerrados++; }
+  const delta = bMes ? (tMes-bMes)/bMes*100 : null;
+  document.getElementById('ing-metrics').innerHTML = `
+    <div class="metric"><div class="m-label">${MESES[mes-1]} ${y}</div><div class="m-value">${fmt(tMes)} €</div><div class="m-delta ${delta==null?'neu':delta>=0?'pos':'neg'}">${delta==null?'sin base':(delta>=0?'+':'')+delta.toFixed(1)+'% vs base'}</div></div>
+    <div class="metric"><div class="m-label">Base año anterior (mes)</div><div class="m-value">${fmt(bMes)} €</div><div class="m-delta neu">${BASE.origen.join(' · ')}</div></div>
+    <div class="metric"><div class="m-label">Días con venta</div><div class="m-value">${dias}</div><div class="m-delta neu">${cerrados} cerrados por pauta</div></div>
+    <div class="metric"><div class="m-label">Días en manual</div><div class="m-value">${manual}</div><div class="m-delta neu">no los toca el recálculo</div></div>
+    <div class="metric"><div class="m-label">Total año ${centro}</div><div class="m-value">${fmt(tAnio)} €</div><div class="m-delta neu">todas las familias</div></div>`;
+
+  let h = `<thead><tr><th>Día</th><th>Base AA</th><th>%</th><th>Total</th><th></th>${fams.map(f=>`<th>${f} <span class="chip">${mix[f].pct}%</span></th>`).join('')}</tr></thead><tbody>`;
+  const tf = {}; fams.forEach(f=>tf[f]=0); let tb=0;
+  for(let d=1;d<=diasMes(y,mes);d++){
+    const f=`${y}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`, r=rows[f]||{importe:0,base:null,manual:false};
+    const b=baseDe(centro,f), ab=abierto(centro,f), dw=dow(f), p=pctSubida(centro,mes);
+    tb+=(b||0);
+    h += `<tr class="${ab?'':'cerrado'} ${dw>=6?'finde':''}"><td>${d} <span style="color:var(--muted)">${DOW[dw-1]}</span>${ab?'':' <span class="chip cerrado">cerrado</span>'}</td>
+      <td class="sub">${b==null?'—':fmt(b)}</td><td class="sub">${b!=null&&!r.manual&&ab?(p>=0?'+':'')+p+'%':''}</td>
+      <td class="edit"><input type="text" inputmode="decimal" class="${r.manual?'manual':''}" value="${r.importe?fmt2(r.importe):''}" data-f="${f}" onchange="editDia(this)" onfocus="this.select()"></td>
+      <td>${r.manual?`<span class="chip manual" title="Volver a automático" onclick="autoDia('${f}')">manual ✕</span>`:''}</td>
+      ${fams.map(fa=>{ const v=r2(r.importe*mix[fa].pct/100); tf[fa]+=v; return `<td class="sub">${v?fmt(v):''}</td>`; }).join('')}</tr>`;
+  }
+  h += `</tbody><tfoot><tr class="r-total"><td>Total ${MS[mes-1]}</td><td>${fmt(tb)}</td><td></td><td>${fmt(tMes)}</td><td></td>${fams.map(f=>`<td>${fmt(tf[f])}</td>`).join('')}</tr></tfoot>`;
+  document.getElementById('tbl-diario').innerHTML = h;
+}
+function parseNum(s){ s=String(s||'').trim().replace(/\./g,'').replace(',','.'); const n=parseFloat(s); return isNaN(n)?0:n; }
+function editDia(inp){
+  const f=inp.dataset.f, rows=(D.dia[centro] ||= {}), row=(rows[f] ||= {importe:0,base:baseDe(centro,f)??null,manual:false});
+  row.importe = r2(parseNum(inp.value)); row.manual = true;
+  markDirty('dia:'+centro); recalcCentros.add(centro); renderDiario();
+}
+function autoDia(f){
+  const row=D.dia[centro]?.[f]; if(!row) return; row.manual=false;
+  row.importe = abierto(centro,f) ? r2((baseDe(centro,f)||0)*(1+pctSubida(centro,+f.slice(5,7))/100)) : 0;
+  markDirty('dia:'+centro); recalcCentros.add(centro); renderDiario();
+}
+
+// ── pauta ──
+let paint=null;
+function renderPauta(){
+  const y=V.ejercicio, P=D.pauta[centro]||{}, hoy=iso(new Date());
+  let abiertos=0, cerrados=0;
+  let h='';
+  for(let m=1;m<=12;m++){
+    const n=diasMes(y,m), first=dow(`${y}-${String(m).padStart(2,'0')}-01`);
+    let cells = DOW.map(d=>`<div class="dow">${d}</div>`).join('');
+    for(let i=1;i<first;i++) cells+='<div class="d empty"></div>';
+    let ab=0;
+    for(let d=1;d<=n;d++){ const f=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const a=abierto(centro,f); if(a){ab++;abiertos++;} else cerrados++; cells+=`<div class="d ${a?'':'off'} ${f===hoy?'hoy':''}" data-f="${f}" onmousedown="pautaDown(event,'${f}')" onmouseenter="pautaOver('${f}')">${d}</div>`; }
+    h+=`<div class="cal"><h4>${MESES[m-1]} <span>${ab}/${n}</span></h4><div class="days">${cells}</div></div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=h;
+  document.getElementById('pauta-resumen').textContent = `${abiertos} días abiertos · ${cerrados} cerrados`;
+  if(!document.getElementById('pauta-desde').value){ document.getElementById('pauta-desde').value=`${y}-01-01`; document.getElementById('pauta-hasta').value=`${y}-12-31`; }
+}
+function setPauta(f,ab){ const P=(D.pauta[centro] ||= {}); const cur=P[f]; if(cur && !!cur.abierto===ab) return; P[f]={...(cur||{}),abierto:ab}; markDirty('pauta'); }
+function pautaDown(e,f){ e.preventDefault(); paint = !abierto(centro,f); setPauta(f,paint); recalcSilencioso(); renderPauta(); }
+function pautaOver(f){ if(paint===null) return; setPauta(f,paint); const el=document.querySelector(`.d[data-f="${f}"]`); if(el) el.classList.toggle('off',!paint); }
+document.addEventListener('mouseup',()=>{ if(paint!==null){ paint=null; recalcSilencioso(); renderPauta(); } });
+function aplicarRango(abrir){
+  const a=document.getElementById('pauta-desde').value, b=document.getElementById('pauta-hasta').value; if(!a||!b||a>b) return toast('Rango no válido',true);
+  const cierra=[...document.querySelectorAll('.pauta-dow:checked')].map(x=>+x.value);
+  for(let f=a; f<=b; f=addDays(f,1)){ if(f.slice(0,4)!==String(V.ejercicio)) continue; setPauta(f, abrir ? !cierra.includes(dow(f)) : false); }
+  recalcSilencioso(); renderPauta(); toast(abrir?'Rango abierto':'Rango cerrado');
+}
+function pautaTodo(ab){ fechasAnio(V.ejercicio).forEach(f=>setPauta(f,ab)); recalcSilencioso(); renderPauta(); }
+function recalcSilencioso(){ recalcularCentro(centro,true); }
+
+// ── parámetros ──
+function renderParam(){
+  const S=(D.subida[centro] ||= {});
+  document.getElementById('grid-subida').innerHTML = MS.map((m,i)=>`<div class="cell"><div class="l">${m}</div><input class="inp pct" type="number" step="0.5" value="${S[i+1]??0}" onchange="setSubida(${i+1},this.value)"></div>`).join('');
+  const mix=mixDe(centro), refTot=Object.values(BASE.fam[centro]||{}).reduce((a,b)=>a+b,0);
+  const fams=familias.map(f=>f.familia);
+  let h='<thead><tr><th>Familia</th><th>Cuenta venta</th><th>Base AA €</th><th>% ref</th><th>% presupuesto</th><th></th></tr></thead><tbody>'; let tot=0;
+  Object.keys(mix).sort((a,b)=>fams.indexOf(a)-fams.indexOf(b)).forEach(f=>{
+    const refImp=(BASE.fam[centro]||{})[f]||0, ref=refTot?refImp/refTot*100:null; tot+=mix[f].pct;
+    h+=`<tr><td>${f}</td><td class="sub">${(familias.find(x=>x.familia===f)||{}).cuenta_venta||''}</td><td class="sub">${fmt(refImp)}</td><td class="sub">${ref==null?'—':ref.toFixed(2)+'%'}</td>
+      <td class="edit"><input type="number" step="0.01" value="${mix[f].pct}" onchange="setMix('${f}',this.value)"></td><td><span class="chip" style="cursor:pointer" onclick="delMix('${f}')">quitar</span></td></tr>`;
+  });
+  h+=`</tbody><tfoot><tr class="r-total"><td>Total</td><td></td><td>${fmt(refTot)}</td><td>100%</td><td class="${Math.abs(tot-100)<0.05?'dv-pos':'dv-neg'}">${tot.toFixed(2)}%</td><td></td></tr></tfoot>`;
+  document.getElementById('tbl-mix').innerHTML=h;
+  document.getElementById('mix-total').textContent = Math.abs(tot-100)<0.05 ? 'Suma 100 ✓' : `Suma ${tot.toFixed(2)}% (debe ser 100)`;
+  document.getElementById('sel-add-fam').innerHTML = fams.filter(f=>!mix[f]).map(f=>`<option>${f}</option>`).join('');
+}
+function setSubida(m,v){ (D.subida[centro] ||= {})[m]=+v||0; markDirty('subida'); recalcSilencioso(); }
+function setMix(f,v){ (D.mix[centro] ||= {})[f].pct=+v||0; markDirty('mix'); recalcCentros.add(centro); markDirty('dia:'+centro); renderParam(); }
+function addFamilia(){ const f=document.getElementById('sel-add-fam').value; if(!f) return; (D.mix[centro] ||= {})[f]={pct:0,ref:null}; markDirty('mix'); renderParam(); }
+function delMix(f){ delete D.mix[centro][f]; markDirty('mix'); recalcCentros.add(centro); markDirty('dia:'+centro); renderParam(); }
+function mixDesdeRef(){
+  const F=BASE.fam[centro]||{}, tot=Object.values(F).reduce((a,b)=>a+b,0); if(!tot) return toast('Sin base del año anterior para este centro',true);
+  const mix=(D.mix[centro]={}); Object.keys(F).forEach(f=>{ if(F[f]>0) mix[f]={pct:r2(F[f]/tot*100),ref:r2(F[f]/tot*100)}; });
+  // ajustar redondeo a 100
+  const keys=Object.keys(mix); const s=keys.reduce((a,k)=>a+mix[k].pct,0); if(keys.length){ const big=keys.sort((a,b)=>mix[b].pct-mix[a].pct)[0]; mix[big].pct=r2(mix[big].pct+(100-s)); }
+  markDirty('mix'); recalcCentros.add(centro); markDirty('dia:'+centro); renderParam();
+}
+
+// ── anual ──
+function renderAnual(){
+  let h=`<thead><tr><th>Centro</th>${MS.map(m=>`<th>${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+  const tm=Array(13).fill(0), tr=Array(13).fill(0); let hayR=false;
+  CENTROS.forEach(c=>{
+    const t=totalAnio(c); if(!t && !(RATIOS?.mes[c])) return;
+    h+=`<tr><td><b>${c}</b></td>${MS.map((_,i)=>{ const v=totalMes(c,i+1); tm[i]+=v; return `<td>${v?fmt(v):''}</td>`; }).join('')}<td class="acc">${fmt(t)}</td></tr>`;
+    tm[12]+=t;
+    if(RATIOS?.mes[c]){ hayR=true; let tt=0; h+=`<tr><td class="sub">&nbsp;&nbsp;Ratios hoy</td>${MS.map((_,i)=>{ const v=RATIOS.mes[c][i+1]||0; tr[i]+=v; tt+=v; const d=totalMes(c,i+1)-v; return `<td class="sub">${v?fmt(v):''}${Math.abs(d)>1?` <span class="${d>0?'dv-pos':'dv-neg'}" style="font-size:10px">${d>0?'+':''}${fmt(d)}</span>`:''}</td>`; }).join('')}<td class="sub">${fmt(tt)}</td></tr>`; tr[12]+=tt; }
+  });
+  h+=`</tbody><tfoot><tr class="r-total"><td>TOTAL</td>${tm.map(v=>`<td>${fmt(v)}</td>`).join('')}</tr>${hayR?`<tr class="r-total"><td class="sub">Ratios hoy</td>${tr.map(v=>`<td class="sub">${fmt(v)}</td>`).join('')}</tr>`:''}</tfoot>`;
+  document.getElementById('tbl-anual').innerHTML=h;
+}
+
+// ───────────────────────────── GUARDAR ─────────────────────────────
+async function guardar(){
+  if(!V) return; if(!dirty()) return toast('Nada que guardar');
+  const btn=document.getElementById('btn-guardar'); btn.disabled=true;
+  try{
+    loading(true,'Guardando…');
+    const vid=V.id;
+    if(dirtySet.has('pauta')){
+      const rows=[]; Object.keys(D.pauta).forEach(c=>Object.keys(D.pauta[c]).forEach(f=>{ const p=D.pauta[c][f]; rows.push({version_id:vid,centro:c,fecha:f,abierto:!!p.abierto,hora_apertura:p.hora_apertura||null,hora_cierre:p.hora_cierre||null,nota:p.nota||null}); }));
+      await sbUpsert('pre_pauta',rows,'version_id,centro,fecha');
+    }
+    if(dirtySet.has('subida')){
+      const rows=[]; Object.keys(D.subida).forEach(c=>Object.keys(D.subida[c]).forEach(m=>rows.push({version_id:vid,centro:c,mes:+m,pct:D.subida[c][m]})));
+      await sbUpsert('pre_subida_mes',rows,'version_id,centro,mes');
+    }
+    if(dirtySet.has('mix')){
+      await sbDelete('pre_mix_familia',`version_id=eq.${vid}`);
+      const rows=[]; Object.keys(D.mix).forEach(c=>Object.keys(D.mix[c]).forEach(f=>rows.push({version_id:vid,centro:c,familia:f,pct:D.mix[c][f].pct,pct_ref:D.mix[c][f].ref})));
+      if(rows.length) await sbInsert('pre_mix_familia',rows);
+    }
+    if(dirtySet.has('params')){
+      await sbUpsert('pre_parametros',Object.keys(D.params).map(k=>({version_id:vid,clave:k,valor:D.params[k]})),'version_id,clave');
+    }
+    for(const c of [...recalcCentros]){
+      loading(true,`Guardando ${c}…`);
+      const rows=D.dia[c]||{};
+      const dia=Object.keys(rows).map(f=>({version_id:vid,centro:c,fecha:f,importe:rows[f].importe,base_importe:rows[f].base,manual:rows[f].manual,actualizado_en:new Date().toISOString()}));
+      await sbUpsert('pre_ingresos_dia',dia,'version_id,centro,fecha');
+      await sbDelete('pre_ingresos',`version_id=eq.${vid}&centro=eq.${enc(c)}`);
+      const fam=filasFamilia(c); if(fam.length) await sbInsert('pre_ingresos',fam);
+    }
+    clearDirty(); toast('Guardado ✓'); status('ok','guardado');
+  }catch(e){ toast('Error al guardar: '+e.message,true); console.error(e); }
+  finally{ loading(false); btn.disabled=false; }
+}
+
+// ───────────────────────────── CARGA INICIAL (Ratios → módulo) ─────────────────────────────
+let cargaRows=null;
+async function abrirCargaInicial(){
+  if(!V) return; document.getElementById('modal-carga').classList.add('open');
+  const pv=document.getElementById('carga-preview'); pv.textContent='Leyendo tabla presupuesto de Ratios…'; document.getElementById('btn-carga').disabled=true;
+  try{
+    cargaRows = await sbAll(`presupuesto?fecha=gte.${V.ejercicio}-01-01&fecha=lte.${V.ejercicio}-12-31&select=fecha,centro,familia,importe`);
+    if(!cargaRows.length){ pv.textContent=`Ratios no tiene presupuesto para ${V.ejercicio}.`; return; }
+    const porC={}; cargaRows.forEach(r=>{ porC[r.centro]=(porC[r.centro]||0)+(+r.importe); });
+    pv.innerHTML = `${cargaRows.length} filas · total ${fmt(Object.values(porC).reduce((a,b)=>a+b,0))} €<br>` + Object.keys(porC).sort().map(c=>`${c}: ${fmt(porC[c])} €`).join(' · ');
+    document.getElementById('btn-carga').disabled=false;
+  }catch(e){ pv.textContent='Error: '+e.message; }
+}
+async function ejecutarCargaInicial(){
+  cerrarModal('modal-carga');
+  try{
+    loading(true,'Volcando presupuesto de Ratios…');
+    const dia={}, fam={}, tot={};
+    cargaRows.forEach(r=>{ const c=r.centro, imp=+r.importe||0; (dia[c] ||= {})[r.fecha]=r2(((dia[c]||{})[r.fecha]||0)+imp); const F=(fam[c] ||= {}); F[r.familia]=(F[r.familia]||0)+imp; tot[c]=(tot[c]||0)+imp; });
+    const fechas=fechasAnio(V.ejercicio), vid=V.id;
+    const fams=familias.map(f=>f.familia);
+    for(const c of Object.keys(dia)){
+      // pauta: abierto = día con venta; el resto cerrado
+      const pauta=fechas.map(f=>({version_id:vid,centro:c,fecha:f,abierto:(dia[c][f]||0)>0}));
+      await sbUpsert('pre_pauta',pauta,'version_id,centro,fecha');
+      // totales diarios en manual
+      const rows=fechas.map(f=>({version_id:vid,centro:c,fecha:f,importe:dia[c][f]||0,base_importe:baseDe(c,f)??null,manual:(dia[c][f]||0)>0}));
+      await sbUpsert('pre_ingresos_dia',rows,'version_id,centro,fecha');
+      // mix anual
+      await sbDelete('pre_mix_familia',`version_id=eq.${vid}&centro=eq.${enc(c)}`);
+      const mix=Object.keys(fam[c]).filter(f=>fams.includes(f)&&fam[c][f]>0).map(f=>({version_id:vid,centro:c,familia:f,pct:r2(fam[c][f]/tot[c]*100),pct_ref:null}));
+      const s=mix.reduce((a,m)=>a+m.pct,0); if(mix.length){ mix.sort((a,b)=>b.pct-a.pct)[0].pct=r2(mix[0].pct+(100-s)); }
+      if(mix.length) await sbInsert('pre_mix_familia',mix);
+      // materializado: tal cual viene de Ratios (por familia real, no por mix)
+      await sbDelete('pre_ingresos',`version_id=eq.${vid}&centro=eq.${enc(c)}`);
+      const agg={}; cargaRows.filter(r=>r.centro===c&&fams.includes(r.familia)).forEach(r=>{ const k=r.familia+'|'+r.fecha; agg[k]=r2((agg[k]||0)+(+r.importe)); });
+      await sbInsert('pre_ingresos',Object.keys(agg).filter(k=>agg[k]).map(k=>{ const [familia,fecha]=k.split('|'); return {version_id:vid,centro:c,familia,fecha,importe:agg[k]}; }));
+    }
+    clearDirty(); toast('Carga inicial completada ✓'); await cambiarVersion(vid);
+  }catch(e){ toast('Error en la carga: '+e.message,true); console.error(e); }
+  finally{ loading(false); }
+}
+
+// ───────────────────────────── DESCARGA (formato hoja PRESUPUESTO INGRESOS de Ratios) ─────────────────────────────
+function descargarIngresos(){
+  if(!D) return;
+  const cols=[]; // {centro, familia|TODAS}
+  CENTROS.forEach(c=>{ if(!totalAnio(c)) return; cols.push({c,f:'TODAS'}); Object.keys(mixDe(c)).filter(f=>mixDe(c)[f].pct>0).forEach(f=>cols.push({c,f})); });
+  const aoa=[['CANAL',...cols.map(x=>x.c)],['FAMILIA',...cols.map(x=>x.f)],['%',...cols.map(x=>x.f==='TODAS'?1:mixDe(x.c)[x.f].pct/100)],['SUMA',...cols.map(()=>null)],['FECHA',...cols.map(()=>null)]];
+  const sums=cols.map(()=>0);
+  fechasAnio(V.ejercicio).forEach(f=>{
+    const row=[new Date(f+'T00:00:00')]; cols.forEach((x,i)=>{ const t=(D.dia[x.c]||{})[f]?.importe||0; const v=x.f==='TODAS'?t:r2(t*mixDe(x.c)[x.f].pct/100); sums[i]+=v; row.push(v||0); }); aoa.push(row);
+  });
+  aoa[3]=['SUMA',...sums.map(r2)];
+  const ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true}); ws['!cols']=[{wch:12},...cols.map(()=>({wch:11}))];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'PRESUPUESTO INGRESOS');
+  // hoja plana
+  const plano=[['FECHA','CENTRO','FAMILIA','IMPORTE']]; CENTROS.forEach(c=>filasFamilia(c).forEach(r=>plano.push([r.fecha,r.centro,r.familia,r.importe])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(plano),'DIARIO');
+  XLSX.writeFile(wb,`PRESUPUESTO INGRESOS ${V.ejercicio} ${V.nombre}.xlsx`);
+}
+
+// ───────────────────────────── AJUSTES ─────────────────────────────
+function renderAjustes(){
+  let h='<thead><tr><th>Ejercicio</th><th>Nombre</th><th>Base</th><th>Cierre base</th><th>Vigente</th><th></th></tr></thead><tbody>';
+  versiones.forEach(v=>{ h+=`<tr><td><b>${v.ejercicio}</b></td><td>${v.nombre}</td><td>${v.base_ejercicio??'—'}</td><td>${v.mes_cierre_base==null?'—':MS[Math.max(0,v.mes_cierre_base-1)]}</td><td>${v.vigente?'<span class="chip ok">vigente</span>':`<span class="chip" style="cursor:pointer" onclick="marcarVigente('${v.id}')">marcar</span>`}</td><td><span class="chip" style="cursor:pointer" onclick="editarVersion('${v.id}')">editar</span> <span class="chip" style="cursor:pointer;color:var(--red)" onclick="borrarVersion('${v.id}')">borrar</span></td></tr>`; });
+  document.getElementById('tbl-versiones').innerHTML=h+'</tbody>';
+  document.getElementById('params-box').innerHTML = D ? PARAMS_DEF.map(([k,l])=>`<div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><label style="font-size:11px;color:#555;width:260px">${l}</label><input class="inp num" type="number" step="0.01" value="${D.params[k]}" onchange="D.params['${k}']=+this.value||0;markDirty('params')"></div>`).join('') : '<span class="note">Sin versión.</span>';
+  document.getElementById('tbl-familias').innerHTML = '<thead><tr><th>Familia</th><th>Venta</th><th>Compra</th><th>Compra interna</th></tr></thead><tbody>'+familias.map(f=>`<tr><td>${f.familia}</td><td>${f.cuenta_venta}</td><td>${f.cuenta_compra||''}</td><td>${f.cuenta_interna||''}</td></tr>`).join('')+'</tbody>';
+}
+function abrirNuevaVersion(){
+  const y=(versiones[0]?.ejercicio||new Date().getFullYear())+ (versiones.length?1:0);
+  document.getElementById('nv-ejercicio').value=y; document.getElementById('nv-base').value=y-1; document.getElementById('nv-nombre').value='Presupuesto'; document.getElementById('nv-mes').value=versiones.length?9:12;
+  document.getElementById('nv-copiar').innerHTML='<option value="">— vacía —</option>'+versiones.map(v=>`<option value="${v.id}">${v.ejercicio} · ${v.nombre}</option>`).join('');
+  document.getElementById('modal-version').classList.add('open');
+}
+async function crearVersion(){
+  const ej=+document.getElementById('nv-ejercicio').value, nombre=document.getElementById('nv-nombre').value.trim()||'Presupuesto';
+  const base=+document.getElementById('nv-base').value||null, mc=+document.getElementById('nv-mes').value, copiar=document.getElementById('nv-copiar').value;
+  if(!ej) return toast('Ejercicio obligatorio',true);
+  cerrarModal('modal-version');
+  try{
+    loading(true,'Creando versión…');
+    const [nv] = await sbFetch('pre_versiones',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({cuenta_id:CUENTA_ID,ejercicio:ej,nombre,base_ejercicio:base,mes_cierre_base:mc,vigente:!versiones.some(v=>v.ejercicio===ej)})});
+    if(copiar){
+      const q=`version_id=eq.${copiar}`, strip=r=>{ const {version_id,...o}=r; return {...o,version_id:nv.id}; };
+      const [sub,mix,cp,par,coef,pl] = await Promise.all([sbAll(`pre_subida_mes?${q}&select=centro,mes,pct`),sbAll(`pre_mix_familia?${q}&select=centro,familia,pct,pct_ref`),sbAll(`pre_compras_pct?${q}&select=centro,familia,pct_ext,pct_int,ref_ext,ref_int`),sbAll(`pre_parametros?${q}&select=clave,valor`),sbAll(`pre_coef_cuenta?${q}&select=centro,cuenta,coef`),sbAll(`pre_plantilla?${q}&select=id,centro,departamento,nombre,nivel,bruto_manual,pct_extra,fecha_fin,empleado_id,orden,notas`)]);
+      const vid=nv.id;
+      if(sub.length) await sbInsert('pre_subida_mes',sub.map(r=>({...r,version_id:vid})));
+      if(mix.length) await sbInsert('pre_mix_familia',mix.map(r=>({...r,version_id:vid})));
+      if(cp.length) await sbInsert('pre_compras_pct',cp.map(r=>({...r,version_id:vid})));
+      if(par.length) await sbInsert('pre_parametros',par.map(r=>({...r,version_id:vid})));
+      if(coef.length) await sbInsert('pre_coef_cuenta',coef.map(r=>({...r,version_id:vid})));
+      // pauta: misma pauta desplazada 364 días (mismo día de la semana)
+      const pauta=await sbAll(`pre_pauta?${q}&select=centro,fecha,abierto,hora_apertura,hora_cierre`);
+      const pv=versiones.find(v=>v.id===copiar); const shift=pv?(ej-pv.ejercicio)*364:0;
+      const pRows=pauta.map(r=>({...r,version_id:vid,fecha:addDays(r.fecha,shift)})).filter(r=>r.fecha.slice(0,4)===String(ej));
+      if(pRows.length) await sbUpsert('pre_pauta',pRows,'version_id,centro,fecha');
+      // plantilla + horas
+      for(const p of pl){ const {id,...o}=p; const [np]=await sbFetch('pre_plantilla',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({...o,version_id:vid})}); const hs=await sbAll(`pre_plantilla_horas?plantilla_id=eq.${id}&select=semana,horas`); if(hs.length) await sbInsert('pre_plantilla_horas',hs.map(h=>({...h,plantilla_id:np.id}))); }
+    }
+    versiones = await sbFetch(`pre_versiones?cuenta_id=eq.${CUENTA_ID}&order=ejercicio.desc,nombre`);
+    fillVersionSelect(); await cambiarVersion(nv.id); renderAjustes();
+    toast(`Versión ${ej} creada. Ahora: Recalcular cada centro (o Carga inicial).`);
+  }catch(e){ toast('Error: '+e.message,true); console.error(e); }
+  finally{ loading(false); }
+}
+async function marcarVigente(id){
+  const v=versiones.find(x=>x.id===id); if(!v) return;
+  try{ loading(true,'Marcando vigente…');
+    await sbFetch(`pre_versiones?cuenta_id=eq.${CUENTA_ID}&ejercicio=eq.${v.ejercicio}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({vigente:false})});
+    await sbFetch(`pre_versiones?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({vigente:true})});
+    versiones = await sbFetch(`pre_versiones?cuenta_id=eq.${CUENTA_ID}&order=ejercicio.desc,nombre`); if(V) V=versiones.find(x=>x.id===V.id); fillVersionSelect(); renderAjustes();
+    document.getElementById('chip-vigente').style.display = V?.vigente?'':'none'; toast('Versión vigente actualizada');
+  }catch(e){ toast('Error: '+e.message,true); } finally{ loading(false); }
+}
+async function editarVersion(id){
+  const v=versiones.find(x=>x.id===id); if(!v) return;
+  const nombre=prompt('Nombre de la versión',v.nombre); if(nombre===null) return;
+  const base=prompt('Año base (real de referencia)',v.base_ejercicio??v.ejercicio-1); if(base===null) return;
+  const mc=prompt('Último mes cerrado del año base (0-12)',v.mes_cierre_base??12); if(mc===null) return;
+  try{ await sbFetch(`pre_versiones?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({nombre:nombre.trim()||v.nombre,base_ejercicio:+base||null,mes_cierre_base:+mc})});
+    versiones = await sbFetch(`pre_versiones?cuenta_id=eq.${CUENTA_ID}&order=ejercicio.desc,nombre`); fillVersionSelect(); renderAjustes(); if(V&&V.id===id) await cambiarVersion(id);
+  }catch(e){ toast('Error: '+e.message,true); }
+}
+async function borrarVersion(id){
+  const v=versiones.find(x=>x.id===id); if(!v) return;
+  if(!confirm(`¿Borrar la versión ${v.ejercicio} · ${v.nombre} con TODOS sus datos? No se puede deshacer.`)) return;
+  try{ loading(true,'Borrando…'); await sbFetch(`pre_versiones?id=eq.${id}`,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+    versiones = await sbFetch(`pre_versiones?cuenta_id=eq.${CUENTA_ID}&order=ejercicio.desc,nombre`); fillVersionSelect(); renderAjustes();
+    if(V&&V.id===id){ V=null; D=null; if(versiones[0]) await cambiarVersion(versiones[0].id); else location.reload(); }
+    toast('Versión borrada');
+  }catch(e){ toast('Error: '+e.message,true); } finally{ loading(false); }
+}
+</script>
+</body>
+</html>
