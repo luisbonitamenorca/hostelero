@@ -361,6 +361,11 @@ select,input[type=password],input[type=text]{font-family:inherit}
         <div style="position:relative;height:220px"><canvas id="c-overview" role="img" aria-label="Ingresos y gastos mensuales"></canvas></div>
         <div class="tbl-wrap" style="margin-top:16px"><table class="pyg" id="tbl-resumen"></table></div>
       </div>
+      <div class="card">
+        <div class="card-title">Ratios</div>
+        <div class="card-sub">EBITDA (resultado + amortizaciones + financieros) · Compras = cuentas 600 + 602 sobre ingresos (con ingresos internos) · Personal = cuentas 640 + 642 sobre ingresos</div>
+        <div class="tbl-wrap"><table class="pyg" id="tbl-ratios-resumen"></table></div>
+      </div>
     </div>
 
     <!-- PYG COMPLETO -->
@@ -369,6 +374,11 @@ select,input[type=password],input[type=text]{font-family:inherit}
         <div class="card-title" id="pyg-title">Cuenta de resultados</div>
         <div class="card-sub" id="pyg-sub"></div>
         <div class="tbl-wrap"><table class="pyg" id="tbl-pyg"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ratios</div>
+        <div class="card-sub">EBITDA (resultado + amortizaciones + financieros) · Compras = cuentas 600 + 602 sobre ingresos (con ingresos internos) · Personal = cuentas 640 + 642 sobre ingresos</div>
+        <div class="tbl-wrap"><table class="pyg" id="tbl-ratios-pyg"></table></div>
       </div>
     </div>
 
@@ -387,6 +397,11 @@ select,input[type=password],input[type=text]{font-family:inherit}
         <div class="card-title">Resultado acumulado — Real vs Presupuesto</div>
         <div class="card-sub">Suma acumulada mes a mes</div>
         <div style="position:relative;height:200px"><canvas id="c-acumulado" role="img" aria-label="Resultado acumulado"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ratios</div>
+        <div class="card-sub">EBITDA (resultado + amortizaciones + financieros) · Compras = cuentas 600 + 602 sobre ingresos (con ingresos internos) · Personal = cuentas 640 + 642 sobre ingresos</div>
+        <div class="tbl-wrap"><table class="pyg" id="tbl-ratios-evolucion"></table></div>
       </div>
     </div>
 
@@ -1752,6 +1767,7 @@ function refresh() {
   buildResumenCharts(rows, rowsP);
   buildPYGTable(rows, rowsP);
   buildEvolucionCharts(rows, rowsP);
+  buildRatios(rows, rowsP);
   if (document.getElementById('tab-comparar').classList.contains('active')) buildComparar();
 }
 
@@ -1761,6 +1777,52 @@ function fmtK(v){const a=Math.abs(v);if(a>=1e6)return(v/1e6).toFixed(2)+'M€';i
 function pctDiff(a,b){if(!b)return null;return((a-b)/Math.abs(b)*100)}
 
 // EBITDA = Resultado + Amortizaciones (68x) + Gastos financieros (66x/67x)
+// =============================================================
+// RATIOS (15-09-2026, pedido de Luis): EBITDA, ratio de compras y ratio de
+// personal al pie de Resumen, PyG completo y Evolución. Denominador = todos
+// los ingresos (7xx) del canal, internos incluidos; en TODOS los internos ya
+// están excluidos por el agregado, así que no se cuentan dos veces.
+// =============================================================
+function buildRatios(rows, rowsP) {
+  const serie = (rs, pref) => MESES.map((_,i) => rs.filter(r => pref.some(p => String(r.cuenta).startsWith(p))).reduce((s,r) => s + r.mensual[i], 0));
+  const calc = (rs) => {
+    if (!rs) return null;
+    const ing = sumMensual(rs,'ingreso'), ebitda = calcEbitdaMensual(rs), com = serie(rs, ['600','602']), per = serie(rs, ['640','642']);
+    const acum = a => sumHasta(a, mesHasta);
+    const pct = (num, den) => den ? num/den*100 : null;
+    return {
+      ebitda:    { m: ebitda, a: acum(ebitda) },
+      ebitdaPct: { m: ebitda.map((v,i) => pct(v, ing[i])), a: pct(acum(ebitda), acum(ing)) },
+      compras:   { m: com.map((v,i) => pct(v, ing[i])),    a: pct(acum(com), acum(ing)) },
+      personal:  { m: per.map((v,i) => pct(v, ing[i])),    a: pct(acum(per), acum(ing)) },
+    };
+  };
+  const R = calc(rows), P = calc(rowsP);
+  if (!R) return;
+  const fp = v => v == null ? '—' : v.toFixed(1) + '%';
+  const fe = v => v == null ? '—' : fmt(v);
+  const celda = (v, f, i, cls='') => `<td class="${cls}" style="${i != null && i >= mesHasta ? 'opacity:.35' : ''}">${f(v)}</td>`;
+  const fila = (label, obj, f, cls, kind) => {
+    // kind: 'ebitda' → verde si positivo; 'ratio' → cuanto más bajo, mejor (color neutro)
+    const clsA = kind === 'ebitda' ? ((obj.a||0) >= 0 ? 'dv-pos' : 'dv-neg') : '';
+    return `<tr class="${cls}"><td style="text-align:left;position:sticky;left:0;background:inherit">${label}</td>`
+      + `<td class="${clsA}" style="font-weight:600">${f(obj.a)}</td>`
+      + obj.m.map((v,i) => celda(v, f, i)).join('') + `</tr>`;
+  };
+  const cab = `<thead><tr><th style="text-align:left">Ratio</th><th>Acum. ene–${MS[mesHasta-1]}</th>${MS.map(m => `<th>${m}</th>`).join('')}</tr></thead>`;
+  let body = '';
+  body += fila('EBITDA €', R.ebitda, fe, 'r-total', 'ebitda');
+  if (P) body += fila('· presupuesto', P.ebitda, fe, 'r-det', 'ebitda');
+  body += fila('EBITDA % s/ ingresos', R.ebitdaPct, fp, '', 'ratio');
+  if (P) body += fila('· presupuesto', P.ebitdaPct, fp, 'r-det', 'ratio');
+  body += fila('Ratio de compras (600 + 602)', R.compras, fp, 'r-gto', 'ratio');
+  if (P) body += fila('· presupuesto', P.compras, fp, 'r-det', 'ratio');
+  body += fila('Ratio de personal (640 + 642)', R.personal, fp, 'r-gto', 'ratio');
+  if (P) body += fila('· presupuesto', P.personal, fp, 'r-det', 'ratio');
+  const html = cab + '<tbody>' + body + '</tbody>';
+  ['resumen','pyg','evolucion'].forEach(id => { const el = document.getElementById('tbl-ratios-' + id); if (el) el.innerHTML = html; });
+}
+
 function calcEbitda(rows) {
   const res = sumByTipo(rows,'ingreso') - sumByTipo(rows,'gasto');
   const amort = rows.filter(r=>r.tipo==='gasto' && String(r.cuenta).startsWith('68')).reduce((s,r)=>s+r.total,0);
