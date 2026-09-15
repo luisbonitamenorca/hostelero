@@ -181,8 +181,8 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
     </div>
     <nav class="tabs">
       <button class="tab active" onclick="showTab('ingresos',this)">💶 Ingresos</button>
-      <button class="tab soon" title="Sesión 2">🛒 Compras</button>
-      <button class="tab soon" title="Sesión 2">👥 Personal</button>
+      <button class="tab" onclick="showTab('compras',this)">🛒 Compras</button>
+      <button class="tab" onclick="showTab('personal',this)">👥 Personal</button>
       <button class="tab soon" title="Sesión 3">📑 Otros gastos</button>
       <button class="tab soon" title="Sesión 3">📊 Resumen</button>
       <button class="tab" onclick="showTab('ajustes',this)">⚙️ Versiones y ajustes</button>
@@ -190,7 +190,7 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
     <div class="side-foot">
       <div class="side-status"><div class="status-dot ok" id="status-dot"></div><span id="status-label">—</span></div>
       <a class="btn-sm" href="/" style="text-align:center;text-decoration:none;display:block">← Inicio</a>
-      <div class="side-version">Presupuesto · v1 s1</div>
+      <div class="side-version">Presupuesto · v1 s2</div>
     </div>
   </aside>
 
@@ -289,6 +289,67 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
     </div>
   </section>
 
+  <!-- ══ COMPRAS ══ -->
+  <section class="section" id="sec-compras">
+    <div class="metrics" id="com-metrics"></div>
+    <div class="card" id="com-card-pct">
+      <div class="card-title">% de compras sobre ventas por familia · <span id="com-centro"></span></div>
+      <div class="card-sub">Externo = compras a proveedores (cuentas 6000001xx a 6000007xx). Interno = compras a Bodega (vino) y a Producción (comida), cuentas 600000101 y 600000201. La referencia es el ratio real del año base o, si no hay, del real de este año a fecha de hoy.</div>
+      <div class="tbl-wrap" style="max-height:none"><table class="g" id="tbl-compras-pct"></table></div>
+    </div>
+    <div class="card" id="com-card-mes">
+      <div class="card-title">Compras presupuestadas por mes</div>
+      <div class="tbl-wrap"><table class="g" id="tbl-compras-mes"></table></div>
+    </div>
+  </section>
+
+  <!-- ══ PERSONAL ══ -->
+  <section class="section" id="sec-personal">
+    <div class="toolbar">
+      <div class="seg" id="seg-per">
+        <button class="active" onclick="setSubPer('plantilla',this)">Plantilla</button>
+        <button onclick="setSubPer('horas',this)">Horas por semana</button>
+        <button onclick="setSubPer('resumen',this)">Resumen mensual</button>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="addEmpleado()">+ Empleado</button>
+      <button class="btn" onclick="importarDesdeRRHH()" title="Trae los empleados activos del módulo Personal con centro en este centro">⬇ Importar desde Personal</button>
+      <button class="btn" onclick="abrirPegarHoras()">📋 Pegar horas</button>
+    </div>
+    <div class="metrics" id="per-metrics"></div>
+
+    <div id="per-plantilla">
+      <div class="card">
+        <div class="card-title">Plantilla prevista · <span id="per-centro"></span></div>
+        <div class="card-sub">Bruto mensual del convenio según nivel, o bruto manual si se informa (jefes). % extra = horas extra presupuestadas (0 si no cobra horas). Fecha fin = finiquito ese mes y sin horas después. SS se calcula con el parámetro de la versión.</div>
+        <div class="tbl-wrap" style="max-height:none"><table class="g" id="tbl-plantilla"></table></div>
+      </div>
+    </div>
+
+    <div id="per-horas" style="display:none">
+      <div class="card">
+        <div class="card-title">Horas por semana · <span id="per-centro2"></span></div>
+        <div class="pauta-tools">
+          <label>Empleado <select class="inp" id="fill-emp"></select></label>
+          <label>Semanas <input class="inp num" style="width:60px" type="number" id="fill-desde" min="1" value="1"> a <input class="inp num" style="width:60px" type="number" id="fill-hasta" min="1"></label>
+          <label>Horas <input class="inp num" style="width:64px" type="number" id="fill-horas" value="40"></label>
+          <button class="btn btn-sm" onclick="rellenarHoras()">Aplicar</button>
+          <button class="btn btn-sm" onclick="rellenarSegunPauta()" title="Pone las horas de jornada a las semanas en las que el centro abre según la pauta, y 0 al resto">Según pauta</button>
+          <span class="note">Cada celda son las horas de esa semana. Las semanas son ISO: la semana pertenece al mes de su jueves.</span>
+        </div>
+        <div class="tbl-wrap"><table class="g" id="tbl-horas"></table></div>
+      </div>
+    </div>
+
+    <div id="per-resumen" style="display:none">
+      <div class="card">
+        <div class="card-title">Coste de personal por mes · <span id="per-centro3"></span></div>
+        <div class="card-sub">Bruto por departamento (lo que alimenta la hoja de nóminas de Ratios, con SS incluida), y las cuentas 640000000 salarios, 640000001 finiquitos y 642000000 Seguridad Social que van al PyG.</div>
+        <div class="tbl-wrap" style="max-height:none"><table class="g" id="tbl-per-resumen"></table></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ══ AJUSTES ══ -->
   <section class="section" id="sec-ajustes">
     <div class="two">
@@ -300,8 +361,12 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
       </div>
       <div class="card">
         <div class="card-title">Parámetros de la versión</div>
-        <div class="card-sub">Se usan en Personal y Compras (sesiones siguientes). Se guardan con el botón Guardar.</div>
+        <div class="card-sub">SS y finiquitos se usan en Personal. Se guardan con el botón Guardar.</div>
         <div id="params-box"></div>
+        <div class="card-title" style="margin-top:16px">Convenio (bruto mensual por nivel)</div>
+        <div class="card-sub">Una tabla por vigencia. Se aplica la última cuya fecha sea anterior a la semana calculada. Se guarda con el botón Guardar.</div>
+        <div id="convenio-box"></div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><input type="date" class="inp" id="conv-nueva-fecha"><button class="btn btn-sm" onclick="nuevaTablaConvenio()">+ Nueva tabla (copia la última)</button></div>
         <div class="card-title" style="margin-top:16px">Familias y cuentas</div>
         <div class="tbl-wrap" style="max-height:none"><table class="g" id="tbl-familias"></table></div>
       </div>
@@ -325,6 +390,20 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
     <div class="modal-btns">
       <button class="btn" onclick="cerrarModal('modal-version')">Cancelar</button>
       <button class="btn btn-g" onclick="crearVersion()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL pegar horas -->
+<div class="modal-overlay" id="modal-horas">
+  <div class="modal" style="width:min(640px,94vw)">
+    <h3>Pegar horas desde Excel</h3>
+    <p>Una fila por empleado: <b>nombre</b> y a continuación las horas de cada semana (S1, S2, …) separadas por tabulador. Si el nombre no existe en este centro, se crea en el departamento elegido.</p>
+    <div class="row"><label>Departamento para nuevos</label><select class="inp hdr-select" id="ph-depto"></select></div>
+    <textarea id="ph-text" class="inp" style="width:100%;height:180px;padding:8px;font-family:ui-monospace,monospace;font-size:11px" placeholder="Sonia&#9;40&#9;40&#9;40…"></textarea>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModal('modal-horas')">Cancelar</button>
+      <button class="btn btn-g" onclick="pegarHoras()">Aplicar</button>
     </div>
   </div>
 </div>
@@ -365,8 +444,16 @@ let centro = 'BINIFADET', mes = new Date().getMonth()+1, sub = 'diario';
 let D = null;      // datos de la versión: {pauta, subida, mix, dia, params}
 let BASE = null;   // base año anterior: {dia:{centro:{fecha:imp}}, fam:{centro:{familia:imp}}, origen}
 let RATIOS = null; // tabla presupuesto de Ratios del ejercicio (referencia)
-let dirtySet = new Set();   // 'pauta','subida','mix','dia:<centro>','params'
-let recalcCentros = new Set(); // centros cuyo pre_ingresos hay que regenerar al guardar
+let dirtySet = new Set();   // 'pauta','subida','mix','dia:<centro>','params','compras','plantilla','convenio'
+let recalcCentros = new Set(); // centros cuyo pre_ingresos y derivados (compras, personal) hay que regenerar al guardar
+let convenio = [];   // filas pre_convenio de la cuenta
+let REFG = null;     // real de compras (v_gastos_real_mes): {ejercicio, data:{centro:{familia:{ext,int}}}}
+let SEM = [];        // semanas ISO del ejercicio [{n, lunes, mes}]
+let subPer = 'plantilla';
+let delPlantilla = new Set(); // ids de empleados borrados pendientes de guardar
+const MAP_DEPTO = { 'COCINA':'COCINA','SALA':'SALA','RECEPCIÓN':'RECEPCION','RECEPCION':'RECEPCION','CAMPO':'CAMPO','BODEGA':'BODEGA','ADMINISTRACIÓN':'OFICINA','ADMINISTRACION':'OFICINA','DIRECCIÓN':'OFICINA','DIRECCION':'OFICINA','VISITAS':'RECEPCION','MANTENIMIENTO':'LOGISTICA','LOGÍSTICA':'LOGISTICA','LOGISTICA':'LOGISTICA','PICA':'PICA','OFICINA':'OFICINA' };
+const MAP_CENTRO_NOMBRE = { 'BINIFADET BODEGA':'BODEGA','BINIFADET RESTAURANTE':'BINIFADET','BINIFADET TIENDA':'TIENDA','CASA TIRANT':'TIRANT','COCINA PRODUCCION':'PRODUCCION','ESTRUCTURA':'ESTRUCTURA','TAMARINDOS BAR':'TAMARINDOS BAR','TAMARINDOS RESTAURANTE':'TAMARINDOS' };
+const SIN_COMPRAS_PCT = ['BODEGA','PRODUCCION','ESTRUCTURA']; // compras a mano (Otros gastos)
 
 const fmt = n => (n==null||isNaN(n)) ? '—' : Math.round(n).toLocaleString('es-ES');
 const fmt2 = n => (n==null||isNaN(n)) ? '' : n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -412,7 +499,10 @@ const enc = encodeURIComponent;
 function loading(on,msg){ document.getElementById('loading').classList.toggle('on',!!on); if(msg) document.getElementById('loading-msg').textContent=msg; }
 let toastT; function toast(msg,err){ const t=document.getElementById('toast'); t.textContent=msg; t.className='on'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:2600); }
 function status(kind,label){ document.getElementById('status-dot').className='status-dot '+kind; document.getElementById('status-label').textContent=label; }
-function showTab(id,btn){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById('sec-'+id).classList.add('active'); document.querySelectorAll('.side-nav .tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); if(id==='ajustes') renderAjustes(); }
+let tabActual='ingresos';
+function showTab(id,btn){ tabActual=id; document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById('sec-'+id).classList.add('active'); document.querySelectorAll('.side-nav .tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderTab(); }
+function renderTab(){ if(!D) return; if(tabActual==='ingresos') renderIngresos(); if(tabActual==='compras') renderCompras(); if(tabActual==='personal') renderPersonal(); if(tabActual==='ajustes') renderAjustes(); }
+function setSubPer(s,btn){ subPer=s; document.querySelectorAll('#seg-per button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); ['plantilla','horas','resumen'].forEach(k=>document.getElementById('per-'+k).style.display=(k===s?'':'none')); renderPersonal(); }
 function setSub(s,btn){ sub=s; document.querySelectorAll('#seg-ing button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); ['diario','pauta','param','anual'].forEach(k=>document.getElementById('sub-'+k).style.display=(k===s?'':'none')); renderIngresos(); }
 function cerrarModal(id){ document.getElementById(id).classList.remove('open'); }
 
@@ -439,7 +529,7 @@ function fillVersionSelect(){
 }
 function renderSegCentro(){ document.getElementById('seg-centro').innerHTML = CENTROS.map(c=>`<button class="${c===centro?'active':''}" onclick="setCentro('${c}')">${c}</button>`).join(''); }
 function renderSegMes(){ document.getElementById('seg-mes').innerHTML = MS.map((m,i)=>`<button class="${i+1===mes?'active':''}" onclick="mes=${i+1};renderSegMes();renderIngresos()">${m}</button>`).join(''); }
-function setCentro(c){ centro=c; renderSegCentro(); renderIngresos(); }
+function setCentro(c){ centro=c; renderSegCentro(); renderTab(); }
 
 async function cambiarVersion(id){
   if(dirty() && !confirm('Hay cambios sin guardar. ¿Cambiar de versión y perderlos?')) { fillVersionSelect(); return; }
@@ -450,14 +540,25 @@ async function cambiarVersion(id){
   try{
     loading(true,`Cargando ${V.ejercicio}…`); status('loading','cargando');
     const q = `version_id=eq.${V.id}`;
-    const [pauta, subida, mix, dia, params] = await Promise.all([
+    const [pauta, subida, mix, dia, params, compras, plantilla, horas, gastosMan, conv] = await Promise.all([
       sbAll(`pre_pauta?${q}&select=centro,fecha,abierto,hora_apertura,hora_cierre,nota`),
       sbAll(`pre_subida_mes?${q}&select=centro,mes,pct`),
       sbAll(`pre_mix_familia?${q}&select=centro,familia,pct,pct_ref`),
       sbAll(`pre_ingresos_dia?${q}&select=centro,fecha,importe,base_importe,manual`),
       sbAll(`pre_parametros?${q}&select=clave,valor`),
+      sbAll(`pre_compras_pct?${q}&select=centro,familia,pct_ext,pct_int,ref_ext,ref_int`),
+      sbAll(`pre_plantilla?${q}&select=id,centro,departamento,nombre,nivel,bruto_manual,pct_extra,fecha_fin,empleado_id,orden,notas&order=centro,orden,nombre`),
+      sbAll(`pre_plantilla_horas?select=plantilla_id,semana,horas,pre_plantilla!inner(version_id)&pre_plantilla.version_id=eq.${V.id}`),
+      sbAll(`pre_gastos?${q}&manual=eq.true&select=centro,cuenta,mes,importe`),
+      sbFetch(`pre_convenio?cuenta_id=eq.${CUENTA_ID}&select=id,vigente_desde,nivel,categorias,bruto_mensual&order=vigente_desde,nivel`),
     ]);
-    D = { pauta:{}, subida:{}, mix:{}, dia:{}, params:{} };
+    D = { pauta:{}, subida:{}, mix:{}, dia:{}, params:{}, compras:{}, plantilla:[], horas:{}, gastosManual:{} };
+    compras.forEach(r=>{ (D.compras[r.centro] ||= {})[r.familia] = { ext:+r.pct_ext, int:+r.pct_int }; });
+    D.plantilla = plantilla.map(p=>({...p, nivel:p.nivel==null?null:+p.nivel, bruto_manual:p.bruto_manual==null?null:+p.bruto_manual, pct_extra:+p.pct_extra}));
+    horas.forEach(h=>{ (D.horas[h.plantilla_id] ||= {})[h.semana] = +h.horas; });
+    gastosMan.forEach(g=>{ D.gastosManual[`${g.centro}|${g.cuenta}|${g.mes}`] = +g.importe; });
+    convenio = conv.map(r=>({...r, nivel:+r.nivel, bruto_mensual:+r.bruto_mensual}));
+    delPlantilla = new Set(); SEM = semanasISO(V.ejercicio);
     pauta.forEach(r=>{ (D.pauta[r.centro] ||= {})[r.fecha] = r; });
     subida.forEach(r=>{ (D.subida[r.centro] ||= {})[r.mes] = +r.pct; });
     mix.forEach(r=>{ (D.mix[r.centro] ||= {})[r.familia] = { pct:+r.pct, ref:r.pct_ref==null?null:+r.pct_ref }; });
@@ -466,8 +567,9 @@ async function cambiarVersion(id){
     PARAMS_DEF.forEach(([k,,d])=>{ if(D.params[k]==null) D.params[k]=d; });
     await cargarBase();
     RATIOS = null; cargarRatiosRef();   // en segundo plano
+    REFG = null; cargarRefCompras();    // en segundo plano
     if(mes<1||mes>12) mes=1;
-    renderIngresos(); status('ok',`${V.ejercicio} cargado`);
+    renderTab(); status('ok',`${V.ejercicio} cargado`);
   }catch(e){ status('err','error'); toast('Error: '+e.message,true); console.error(e); }
   finally{ loading(false); }
 }
@@ -656,6 +758,225 @@ function renderAnual(){
   document.getElementById('tbl-anual').innerHTML=h;
 }
 
+// ───────────────────────────── COMPRAS ─────────────────────────────
+// Ventas presupuestadas por familia y mes de un centro (total diario × mix anual)
+function ventasFamMes(c){
+  const mix=mixDe(c), out={}; Object.keys(mix).forEach(f=>{ out[f]=Array(13).fill(0); });
+  for(let m=1;m<=12;m++){ const t=totalMes(c,m); Object.keys(mix).forEach(f=>{ out[f][m]=r2(t*mix[f].pct/100); }); }
+  return out;
+}
+function comprasDe(c){ return D.compras[c] || {}; }
+function famInfo(f){ return familias.find(x=>x.familia===f) || {}; }
+// Compras de un centro: {fam:{ext:[13], int:[13]}} y agregado por cuenta {cuenta:[13]}
+function calcCompras(c){
+  const out={ fam:{}, cuenta:{}, totExt:Array(13).fill(0), totInt:Array(13).fill(0) };
+  if(SIN_COMPRAS_PCT.includes(c)) return out;
+  const v=ventasFamMes(c), P=comprasDe(c);
+  Object.keys(v).forEach(f=>{
+    const p=P[f]||{ext:0,int:0}, fi=famInfo(f), ext=Array(13).fill(0), int=Array(13).fill(0);
+    for(let m=1;m<=12;m++){ ext[m]=r2(v[f][m]*(p.ext||0)/100); int[m]=fi.cuenta_interna?r2(v[f][m]*(p.int||0)/100):0; out.totExt[m]+=ext[m]; out.totInt[m]+=int[m]; }
+    out.fam[f]={ext,int};
+    if(fi.cuenta_compra){ const a=(out.cuenta[fi.cuenta_compra] ||= Array(13).fill(0)); for(let m=1;m<=12;m++) a[m]=r2(a[m]+ext[m]); }
+    if(fi.cuenta_interna){ const a=(out.cuenta[fi.cuenta_interna] ||= Array(13).fill(0)); for(let m=1;m<=12;m++) a[m]=r2(a[m]+int[m]); }
+  });
+  return out;
+}
+// Ventas internas espejo: BODEGA 700000101 = Σ compras internas vino; PRODUCCION 700000201 = Σ compras internas comida
+function ventasInternas(){
+  const out={ BODEGA:{'700000101':Array(13).fill(0)}, PRODUCCION:{'700000201':Array(13).fill(0)} };
+  CENTROS.forEach(c=>{ const k=calcCompras(c); if(k.cuenta['600000101']) for(let m=1;m<=12;m++) out.BODEGA['700000101'][m]=r2(out.BODEGA['700000101'][m]+k.cuenta['600000101'][m]); if(k.cuenta['600000201']) for(let m=1;m<=12;m++) out.PRODUCCION['700000201'][m]=r2(out.PRODUCCION['700000201'][m]+k.cuenta['600000201'][m]); });
+  return out;
+}
+async function cargarRefCompras(){
+  try{
+    const y=V.base_ejercicio||(V.ejercicio-1);
+    let rows=await sbAll(`v_gastos_real_mes?ejercicio=eq.${y}&select=centro,familia,interno,importe`), ey=y;
+    let ventas=BASE.fam;
+    if(!rows.length){ rows=await sbAll(`v_gastos_real_mes?ejercicio=eq.${V.ejercicio}&select=centro,familia,interno,importe`); ey=V.ejercicio;
+      const vr=await sbAll(`v_ingresos_real_dia?fecha=gte.${V.ejercicio}-01-01&fecha=lte.${V.ejercicio}-12-31&select=centro,familia,importe`); ventas={}; vr.forEach(r=>{ const F=(ventas[r.centro] ||= {}); F[r.familia]=(F[r.familia]||0)+(+r.importe); }); }
+    const data={}; rows.forEach(r=>{ const F=((data[r.centro] ||= {})[r.familia] ||= {ext:0,int:0}); F[r.interno?'int':'ext']+=(+r.importe); });
+    REFG={ ejercicio:ey, data, ventas, aFecha: ey===V.ejercicio };
+    if(tabActual==='compras') renderCompras();
+  }catch(e){ console.warn('Sin referencia de compras',e); }
+}
+function refPct(c,f){ if(!REFG) return {ext:null,int:null}; const g=(REFG.data[c]||{})[f], v=(REFG.ventas[c]||{})[f]; if(!g||!v) return {ext:null,int:null}; return { ext:g.ext/v*100, int:g.int/v*100 }; }
+function renderCompras(){
+  document.getElementById('com-centro').textContent=centro;
+  const sin=SIN_COMPRAS_PCT.includes(centro);
+  const K=calcCompras(centro), v=ventasFamMes(centro), P=(D.compras[centro] ||= {});
+  const tv=Object.keys(v).reduce((a,f)=>a+v[f].slice(1).reduce((x,y)=>x+y,0),0);
+  const te=K.totExt.reduce((a,b)=>a+b,0), ti=K.totInt.reduce((a,b)=>a+b,0);
+  const VI=ventasInternas(); const vi=VI[centro]; const tvi=vi?Object.values(vi)[0].reduce((a,b)=>a+b,0):0;
+  document.getElementById('com-metrics').innerHTML = `
+    <div class="metric"><div class="m-label">Ventas ${V.ejercicio}</div><div class="m-value">${fmt(tv)} €</div><div class="m-delta neu">${centro}</div></div>
+    <div class="metric"><div class="m-label">Compras externas</div><div class="m-value">${fmt(te)} €</div><div class="m-delta neu">${tv?(te/tv*100).toFixed(1)+'% s/ventas':''}</div></div>
+    <div class="metric"><div class="m-label">Compras internas</div><div class="m-value">${fmt(ti)} €</div><div class="m-delta neu">${tv?(ti/tv*100).toFixed(1)+'% s/ventas':''}</div></div>
+    <div class="metric"><div class="m-label">Ratio compras total</div><div class="m-value">${tv?((te+ti)/tv*100).toFixed(1)+'%':'—'}</div><div class="m-delta neu">externo + interno</div></div>
+    <div class="metric"><div class="m-label">${vi?'Ventas internas (espejo)':'Referencia'}</div><div class="m-value">${vi?fmt(tvi)+' €':(REFG?(REFG.aFecha?`real ${REFG.ejercicio} a fecha`:`real ${REFG.ejercicio}`):'—')}</div><div class="m-delta neu">${vi?'suma de compras internas de los centros':'ratio compras/ventas real'}</div></div>`;
+  if(sin){
+    let h='<thead><tr><th>Concepto</th>'+MS.map(m=>`<th>${m}</th>`).join('')+'<th>Total</th></tr></thead><tbody>';
+    if(vi) Object.keys(vi).forEach(cta=>{ h+=`<tr><td>${cta} ${cuentas.find(x=>x.cuenta===cta)?.descripcion||''}</td>${vi[cta].slice(1).map(x=>`<td>${fmt(x)}</td>`).join('')}<td class="acc">${fmt(vi[cta].reduce((a,b)=>a+b,0))}</td></tr>`; });
+    document.getElementById('tbl-compras-pct').innerHTML = `<tbody><tr><td class="sub">${centro}: las compras se presupuestan a mano en <b>Otros gastos</b> (cuentas 600 y 602). ${vi?'Aquí se ven sus ventas internas, calculadas como espejo de las compras internas del resto de centros.':''}</td></tr></tbody>`;
+    document.getElementById('tbl-compras-mes').innerHTML = vi ? h+'</tbody>' : '';
+    return;
+  }
+  const refLbl = REFG ? (REFG.aFecha?`% real ${REFG.ejercicio} a fecha`:`% real ${REFG.ejercicio}`) : '% ref';
+  let h=`<thead><tr><th>Familia</th><th>Ventas ${V.ejercicio}</th><th>${refLbl} ext</th><th>% externo</th><th>Compras ext €</th><th>Cuenta</th><th>${refLbl} int</th><th>% interno</th><th>Compras int €</th><th>Cuenta</th></tr></thead><tbody>`;
+  Object.keys(v).forEach(f=>{
+    const fi=famInfo(f), p=(P[f] ||= {ext:0,int:0}), ref=refPct(centro,f), vt=v[f].slice(1).reduce((a,b)=>a+b,0);
+    const ke=K.fam[f]?K.fam[f].ext.reduce((a,b)=>a+b,0):0, ki=K.fam[f]?K.fam[f].int.reduce((a,b)=>a+b,0):0;
+    h+=`<tr><td><b>${f}</b></td><td>${fmt(vt)}</td><td class="sub">${ref.ext==null?'—':ref.ext.toFixed(1)+'%'}</td>
+      <td class="edit"><input type="number" step="0.5" value="${p.ext}" onchange="setCompras('${f}','ext',this.value)"></td><td>${fmt(ke)}</td><td class="sub">${fi.cuenta_compra||''}</td>
+      <td class="sub">${fi.cuenta_interna?(ref.int==null?'—':ref.int.toFixed(1)+'%'):''}</td>
+      <td class="edit">${fi.cuenta_interna?`<input type="number" step="0.5" value="${p.int}" onchange="setCompras('${f}','int',this.value)">`:''}</td><td>${fi.cuenta_interna?fmt(ki):''}</td><td class="sub">${fi.cuenta_interna||''}</td></tr>`;
+  });
+  h+=`</tbody><tfoot><tr class="r-total"><td>Total</td><td>${fmt(tv)}</td><td></td><td>${tv?(te/tv*100).toFixed(1)+'%':''}</td><td>${fmt(te)}</td><td></td><td></td><td>${tv?(ti/tv*100).toFixed(1)+'%':''}</td><td>${fmt(ti)}</td><td></td></tr></tfoot>`;
+  document.getElementById('tbl-compras-pct').innerHTML=h;
+  let m='<thead><tr><th>Cuenta</th>'+MS.map(x=>`<th>${x}</th>`).join('')+'<th>Total</th></tr></thead><tbody>';
+  Object.keys(K.cuenta).sort().forEach(cta=>{ const a=K.cuenta[cta]; if(!a.some(x=>x)) return; m+=`<tr><td>${cta} <span class="sub">${cuentas.find(x=>x.cuenta===cta)?.descripcion||''}</span></td>${a.slice(1).map(x=>`<td>${x?fmt(x):''}</td>`).join('')}<td class="acc">${fmt(a.reduce((p,q)=>p+q,0))}</td></tr>`; });
+  m+=`</tbody><tfoot><tr class="r-total"><td>Total compras</td>${MS.map((_,i)=>`<td>${fmt(K.totExt[i+1]+K.totInt[i+1])}</td>`).join('')}<td>${fmt(te+ti)}</td></tr><tr class="r-total"><td class="sub">Ventas</td>${MS.map((_,i)=>`<td class="sub">${fmt(totalMes(centro,i+1))}</td>`).join('')}<td class="sub">${fmt(tv)}</td></tr><tr class="r-total"><td class="sub">Ratio</td>${MS.map((_,i)=>{ const vv=totalMes(centro,i+1); return `<td class="sub">${vv?((K.totExt[i+1]+K.totInt[i+1])/vv*100).toFixed(1)+'%':''}</td>`; }).join('')}<td class="sub">${tv?((te+ti)/tv*100).toFixed(1)+'%':''}</td></tr></tfoot>`;
+  document.getElementById('tbl-compras-mes').innerHTML=m;
+}
+function setCompras(f,k,v){ ((D.compras[centro] ||= {})[f] ||= {ext:0,int:0})[k]=+v||0; markDirty('compras'); recalcCentros.add(centro); renderCompras(); }
+
+// ───────────────────────────── PERSONAL ─────────────────────────────
+function semanasISO(y){
+  const jan4=new Date(Date.UTC(y,0,4)); const dw=jan4.getUTCDay()||7; const d=new Date(jan4); d.setUTCDate(jan4.getUTCDate()-(dw-1));
+  const out=[]; for(let n=1;n<=53;n++){ const j=new Date(d); j.setUTCDate(d.getUTCDate()+3); if(j.getUTCFullYear()!==y && n>1) break; out.push({n, lunes:iso(d), mes:j.getUTCMonth()+1}); d.setUTCDate(d.getUTCDate()+7); }
+  return out;
+}
+function brutoConvenio(nivel,fecha){
+  if(nivel==null) return 0;
+  const rows=convenio.filter(r=>r.nivel===nivel); if(!rows.length) return 0;
+  const ok=rows.filter(r=>r.vigente_desde<=fecha); return (ok.length?ok[ok.length-1]:rows[0]).bruto_mensual;
+}
+function plantillaDe(c){ return D.plantilla.filter(p=>p.centro===c && !delPlantilla.has(p.id)); }
+function brutoEmp(p,fecha){ return p.bruto_manual!=null && p.bruto_manual>0 ? p.bruto_manual : brutoConvenio(p.nivel,fecha); }
+// Coste de personal de un centro. Bruto = bruto_mensual × 12/52 × horas/jornada × (1+extra). Finiquito = % × bruto anual del empleado, en el mes de fecha_fin.
+function calcPersonal(c){
+  const hs=D.params.horas_semana||40, ssp=(D.params.ss_pct||0)/100, fq=(D.params.finiquito_pct||0)/100;
+  const out={ emp:{}, depto:{}, salarios:Array(13).fill(0), finiq:Array(13).fill(0), ss:Array(13).fill(0), horas:Array(13).fill(0) };
+  plantillaDe(c).forEach(p=>{
+    const mes=Array(13).fill(0), H=D.horas[p.id]||{}; let horasAnio=0;
+    SEM.forEach(w=>{ if(p.fecha_fin && w.lunes>p.fecha_fin) return; const h=+H[w.n]||0; if(!h) return; const b=brutoEmp(p,w.lunes); const coste=r2(b*12/52*(h/hs)*(1+(p.pct_extra||0)/100)); mes[w.mes]+=coste; horasAnio+=h; out.horas[w.mes]+=h; });
+    const anual=mes.reduce((a,b)=>a+b,0); let fin=0, finMes=0;
+    if(p.fecha_fin && p.fecha_fin.slice(0,4)===String(V.ejercicio) && anual>0){ fin=r2(anual*fq); finMes=+p.fecha_fin.slice(5,7); out.finiq[finMes]+=fin; }
+    out.emp[p.id]={mes, anual, horas:horasAnio, fin, finMes};
+    const dep=(out.depto[p.departamento] ||= Array(13).fill(0)); for(let m=1;m<=12;m++){ dep[m]+=mes[m]; out.salarios[m]+=mes[m]; }
+    if(fin) dep[finMes]+=fin;
+  });
+  for(let m=1;m<=12;m++){ out.salarios[m]=r2(out.salarios[m]); out.finiq[m]=r2(out.finiq[m]); out.ss[m]=r2((out.salarios[m]+out.finiq[m])*ssp); }
+  return out;
+}
+function renderPersonal(){
+  ['per-centro','per-centro2','per-centro3'].forEach(id=>document.getElementById(id).textContent=centro);
+  const K=calcPersonal(centro), pl=plantillaDe(centro);
+  const ts=K.salarios.reduce((a,b)=>a+b,0), tf=K.finiq.reduce((a,b)=>a+b,0), tss=K.ss.reduce((a,b)=>a+b,0), tv=totalAnio(centro);
+  document.getElementById('per-metrics').innerHTML = `
+    <div class="metric"><div class="m-label">Plantilla</div><div class="m-value">${pl.length}</div><div class="m-delta neu">${K.horas.reduce((a,b)=>a+b,0).toLocaleString('es-ES')} h/año</div></div>
+    <div class="metric"><div class="m-label">Salarios (640)</div><div class="m-value">${fmt(ts)} €</div><div class="m-delta neu">bruto con extras</div></div>
+    <div class="metric"><div class="m-label">Finiquitos (640.1)</div><div class="m-value">${fmt(tf)} €</div><div class="m-delta neu">${D.params.finiquito_pct}% del bruto anual</div></div>
+    <div class="metric"><div class="m-label">Seguridad Social (642)</div><div class="m-value">${fmt(tss)} €</div><div class="m-delta neu">${D.params.ss_pct}% sobre bruto</div></div>
+    <div class="metric"><div class="m-label">Coste total</div><div class="m-value">${fmt(ts+tf+tss)} €</div><div class="m-delta ${tv?'neu':'neu'}">${tv?((ts+tf+tss)/tv*100).toFixed(1)+'% de las ventas':'sin ventas'}</div></div>`;
+  if(subPer==='plantilla') renderPlantilla(K,pl);
+  if(subPer==='horas') renderHoras(K,pl);
+  if(subPer==='resumen') renderPerResumen(K);
+}
+const DEPTOS=['RECEPCION','SALA','COCINA','PICA','CAMPO','BODEGA','LOGISTICA','OFICINA'];
+const NIVELES=()=>[...new Set(convenio.map(r=>r.nivel))].sort((a,b)=>a-b);
+function renderPlantilla(K,pl){
+  let h='<thead><tr><th>Depto</th><th>Nombre</th><th>Nivel</th><th>Bruto convenio</th><th>Bruto manual</th><th>% extra</th><th>Fecha fin</th><th>Horas año</th><th>Bruto año</th><th>Finiquito</th><th></th></tr></thead><tbody>';
+  pl.forEach(p=>{ const k=K.emp[p.id]||{anual:0,horas:0,fin:0};
+    h+=`<tr><td class="edit"><select class="inp" onchange="setEmp('${p.id}','departamento',this.value)">${DEPTOS.map(d=>`<option ${d===p.departamento?'selected':''}>${d}</option>`).join('')}</select></td>
+      <td class="edit"><input type="text" style="width:150px;text-align:left" value="${(p.nombre||'').replace(/"/g,'&quot;')}" onchange="setEmp('${p.id}','nombre',this.value)"></td>
+      <td class="edit"><select class="inp" onchange="setEmp('${p.id}','nivel',this.value)"><option value="">—</option>${NIVELES().map(n=>`<option value="${n}" ${n===p.nivel?'selected':''}>${n}</option>`).join('')}</select></td>
+      <td class="sub">${fmt(brutoConvenio(p.nivel,`${V.ejercicio}-06-01`))}</td>
+      <td class="edit"><input type="number" step="10" value="${p.bruto_manual??''}" placeholder="convenio" onchange="setEmp('${p.id}','bruto_manual',this.value)"></td>
+      <td class="edit"><input type="number" step="1" style="width:60px" value="${p.pct_extra}" onchange="setEmp('${p.id}','pct_extra',this.value)"></td>
+      <td class="edit"><input type="date" class="inp" style="height:26px" value="${p.fecha_fin||''}" onchange="setEmp('${p.id}','fecha_fin',this.value)"></td>
+      <td>${k.horas.toLocaleString('es-ES')}</td><td>${fmt(k.anual)}</td><td>${k.fin?fmt(k.fin):''}</td>
+      <td><span class="chip" style="cursor:pointer;color:var(--red)" onclick="delEmp('${p.id}')">quitar</span></td></tr>`; });
+  h+=`</tbody><tfoot><tr class="r-total"><td colspan="7">Total ${pl.length} personas</td><td>${K.horas.reduce((a,b)=>a+b,0).toLocaleString('es-ES')}</td><td>${fmt(K.salarios.reduce((a,b)=>a+b,0))}</td><td>${fmt(K.finiq.reduce((a,b)=>a+b,0))}</td><td></td></tr></tfoot>`;
+  document.getElementById('tbl-plantilla').innerHTML = pl.length ? h : '<tbody><tr><td class="sub">Sin plantilla en este centro. Usa <b>+ Empleado</b>, <b>Importar desde Personal</b> o <b>Pegar horas</b>.</td></tr></tbody>';
+}
+function setEmp(id,k,v){ const p=D.plantilla.find(x=>x.id===id); if(!p) return;
+  if(k==='nivel') p.nivel=v===''?null:+v; else if(k==='bruto_manual') p.bruto_manual=v===''?null:+v; else if(k==='pct_extra') p.pct_extra=+v||0; else if(k==='fecha_fin') p.fecha_fin=v||null; else p[k]=v;
+  p._dirty=true; markDirty('plantilla'); recalcCentros.add(centro); renderPersonal(); }
+function addEmpleado(){ const id=crypto.randomUUID(); D.plantilla.push({id,version_id:V.id,centro,departamento:'SALA',nombre:'Nuevo',nivel:4,bruto_manual:null,pct_extra:10,fecha_fin:null,empleado_id:null,orden:plantillaDe(centro).length+1,notas:null,_dirty:true,_nuevo:true}); D.horas[id]={}; markDirty('plantilla'); recalcCentros.add(centro); subPer='plantilla'; document.querySelectorAll('#seg-per button').forEach((b,i)=>b.classList.toggle('active',i===0)); ['plantilla','horas','resumen'].forEach(k=>document.getElementById('per-'+k).style.display=(k==='plantilla'?'':'none')); renderPersonal(); }
+function delEmp(id){ const p=D.plantilla.find(x=>x.id===id); if(!p) return; if(!confirm(`¿Quitar a ${p.nombre} de la plantilla prevista?`)) return; if(p._nuevo) D.plantilla=D.plantilla.filter(x=>x.id!==id); else delPlantilla.add(id); markDirty('plantilla'); recalcCentros.add(centro); renderPersonal(); }
+function renderHoras(K,pl){
+  const meses={}; SEM.forEach(w=>{ meses[w.mes]=(meses[w.mes]||0)+1; });
+  let h='<thead><tr><th rowspan="2">Empleado</th>'+Object.keys(meses).map(m=>`<th colspan="${meses[m]}" style="text-align:center">${MS[m-1]}</th>`).join('')+'<th rowspan="2">Horas</th><th rowspan="2">Bruto</th></tr><tr>'+SEM.map(w=>`<th title="Semana del ${w.lunes.split('-').reverse().join('/')}" style="top:24px">S${w.n}</th>`).join('')+'</tr></thead><tbody>';
+  pl.forEach(p=>{ const H=D.horas[p.id]||{}, k=K.emp[p.id]||{anual:0,horas:0};
+    h+=`<tr><td><b>${p.nombre}</b> <span class="sub">${p.departamento}</span></td>${SEM.map(w=>{ const off=p.fecha_fin&&w.lunes>p.fecha_fin; return `<td class="edit" style="padding:1px"><input type="text" inputmode="decimal" style="width:38px;padding:0 3px;text-align:center;${off?'color:#ccc':''}" value="${H[w.n]||''}" ${off?'disabled':''} onchange="setHora('${p.id}',${w.n},this.value)" onfocus="this.select()"></td>`; }).join('')}<td>${k.horas.toLocaleString('es-ES')}</td><td>${fmt(k.anual)}</td></tr>`; });
+  const tot=Array(SEM.length+1).fill(0); pl.forEach(p=>SEM.forEach(w=>{ tot[w.n]+=(+(D.horas[p.id]||{})[w.n]||0); }));
+  h+=`</tbody><tfoot><tr class="r-total"><td>Total horas</td>${SEM.map(w=>`<td>${tot[w.n]||''}</td>`).join('')}<td>${K.horas.reduce((a,b)=>a+b,0).toLocaleString('es-ES')}</td><td>${fmt(K.salarios.reduce((a,b)=>a+b,0))}</td></tr></tfoot>`;
+  document.getElementById('tbl-horas').innerHTML = pl.length ? h : '<tbody><tr><td class="sub">Sin plantilla en este centro.</td></tr></tbody>';
+  const sel=document.getElementById('fill-emp'); sel.innerHTML='<option value="*">Todos los del centro</option>'+pl.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  document.getElementById('fill-hasta').value=document.getElementById('fill-hasta').value||SEM.length; document.getElementById('fill-hasta').max=SEM.length; document.getElementById('fill-desde').max=SEM.length;
+}
+function setHora(id,n,v){ (D.horas[id] ||= {})[n]=parseNum(v); const p=D.plantilla.find(x=>x.id===id); if(p) p._horasDirty=true; markDirty('plantilla'); recalcCentros.add(centro); renderPersonal(); }
+function rellenarHoras(){
+  const who=document.getElementById('fill-emp').value, a=+document.getElementById('fill-desde').value||1, b=+document.getElementById('fill-hasta').value||SEM.length, h=parseNum(document.getElementById('fill-horas').value);
+  plantillaDe(centro).filter(p=>who==='*'||p.id===who).forEach(p=>{ for(let n=a;n<=b;n++) (D.horas[p.id] ||= {})[n]=h; p._horasDirty=true; });
+  markDirty('plantilla'); recalcCentros.add(centro); renderPersonal(); toast('Horas aplicadas');
+}
+function rellenarSegunPauta(){
+  const who=document.getElementById('fill-emp').value, h=parseNum(document.getElementById('fill-horas').value)||(D.params.horas_semana||40);
+  const abre={}; SEM.forEach(w=>{ let any=false; for(let i=0;i<7;i++){ const f=addDays(w.lunes,i); if(f.slice(0,4)===String(V.ejercicio) && abierto(centro,f) && ((D.dia[centro]||{})[f]?.importe||0)>0) any=true; } abre[w.n]=any; });
+  plantillaDe(centro).filter(p=>who==='*'||p.id===who).forEach(p=>{ SEM.forEach(w=>{ (D.horas[p.id] ||= {})[w.n]=abre[w.n]?h:0; }); p._horasDirty=true; });
+  markDirty('plantilla'); recalcCentros.add(centro); renderPersonal(); toast('Horas puestas en las semanas con venta prevista');
+}
+function renderPerResumen(K){
+  let h='<thead><tr><th>Concepto</th>'+MS.map(m=>`<th>${m}</th>`).join('')+'<th>Total</th></tr></thead><tbody>';
+  const ssp=(D.params.ss_pct||0)/100;
+  Object.keys(K.depto).sort((a,b)=>DEPTOS.indexOf(a)-DEPTOS.indexOf(b)).forEach(d=>{ const a=K.depto[d]; h+=`<tr><td>${d} <span class="sub">con SS</span></td>${a.slice(1).map(x=>`<td>${x?fmt(x*(1+ssp)):''}</td>`).join('')}<td class="acc">${fmt(a.reduce((p,q)=>p+q,0)*(1+ssp))}</td></tr>`; });
+  h+=`<tr class="r-total"><td>Horas</td>${K.horas.slice(1).map(x=>`<td>${x?x.toLocaleString('es-ES'):''}</td>`).join('')}<td>${K.horas.reduce((a,b)=>a+b,0).toLocaleString('es-ES')}</td></tr>`;
+  h+=`<tr><td>640000000 Salarios</td>${K.salarios.slice(1).map(x=>`<td>${x?fmt(x):''}</td>`).join('')}<td class="acc">${fmt(K.salarios.reduce((a,b)=>a+b,0))}</td></tr>`;
+  h+=`<tr><td>640000001 Finiquitos</td>${K.finiq.slice(1).map(x=>`<td>${x?fmt(x):''}</td>`).join('')}<td class="acc">${fmt(K.finiq.reduce((a,b)=>a+b,0))}</td></tr>`;
+  h+=`<tr><td>642000000 Seguridad Social</td>${K.ss.slice(1).map(x=>`<td>${x?fmt(x):''}</td>`).join('')}<td class="acc">${fmt(K.ss.reduce((a,b)=>a+b,0))}</td></tr>`;
+  const tot=MS.map((_,i)=>K.salarios[i+1]+K.finiq[i+1]+K.ss[i+1]);
+  h+=`</tbody><tfoot><tr class="r-total"><td>Coste total</td>${tot.map(x=>`<td>${fmt(x)}</td>`).join('')}<td>${fmt(tot.reduce((a,b)=>a+b,0))}</td></tr><tr class="r-total"><td class="sub">% s/ventas</td>${MS.map((_,i)=>{ const v=totalMes(centro,i+1); return `<td class="sub">${v?(tot[i]/v*100).toFixed(1)+'%':''}</td>`; }).join('')}<td class="sub">${totalAnio(centro)?(tot.reduce((a,b)=>a+b,0)/totalAnio(centro)*100).toFixed(1)+'%':''}</td></tr></tfoot>`;
+  document.getElementById('tbl-per-resumen').innerHTML=h;
+}
+async function importarDesdeRRHH(){
+  try{
+    loading(true,'Leyendo Personal…');
+    const [emps, cs] = await Promise.all([ sbAll(`empleados?cuenta_id=eq.${CUENTA_ID}&fecha_baja=is.null&select=id,nombre,apellidos,departamento,centro_principal_id,horas_semana`), sbFetch(`centros?cuenta_id=eq.${CUENTA_ID}&select=id,nombre`) ]);
+    const codeDe={}; cs.forEach(c=>{ codeDe[c.id]=MAP_CENTRO_NOMBRE[(c.nombre||'').toUpperCase().trim()]||null; });
+    const ya=new Set(plantillaDe(centro).map(p=>p.empleado_id).filter(Boolean));
+    const nuevos=emps.filter(e=>codeDe[e.centro_principal_id]===centro && !ya.has(e.id));
+    if(!nuevos.length){ toast('No hay empleados nuevos de este centro en Personal'); return; }
+    const abre={}; SEM.forEach(w=>{ let any=false; for(let i=0;i<7;i++){ const f=addDays(w.lunes,i); if(f.slice(0,4)===String(V.ejercicio) && abierto(centro,f) && ((D.dia[centro]||{})[f]?.importe||0)>0) any=true; } abre[w.n]=any; });
+    const hayVentas=Object.values(abre).some(Boolean);
+    nuevos.forEach((e,i)=>{ const id=crypto.randomUUID(); const dep=MAP_DEPTO[(e.departamento||'').toUpperCase().trim()]||(centro==='BODEGA'?'BODEGA':centro==='ESTRUCTURA'?'OFICINA':'SALA');
+      D.plantilla.push({id,version_id:V.id,centro,departamento:dep,nombre:[e.nombre,e.apellidos].filter(Boolean).join(' ').trim(),nivel:4,bruto_manual:null,pct_extra:10,fecha_fin:null,empleado_id:e.id,orden:plantillaDe(centro).length+1,notas:null,_dirty:true,_nuevo:true,_horasDirty:true});
+      const hs=+e.horas_semana||(D.params.horas_semana||40); D.horas[id]={}; SEM.forEach(w=>{ D.horas[id][w.n]=(hayVentas?abre[w.n]:true)?hs:0; }); });
+    markDirty('plantilla'); recalcCentros.add(centro); renderPersonal();
+    toast(`${nuevos.length} empleados importados (nivel 4 por defecto, horas según su jornada${hayVentas?' en las semanas con venta':''}). Revisa niveles y guarda.`);
+  }catch(e){ toast('Error: '+e.message,true); console.error(e); } finally{ loading(false); }
+}
+function abrirPegarHoras(){ document.getElementById('ph-depto').innerHTML=DEPTOS.map(d=>`<option>${d}</option>`).join(''); document.getElementById('ph-text').value=''; document.getElementById('modal-horas').classList.add('open'); }
+function pegarHoras(){
+  const dep=document.getElementById('ph-depto').value, lines=document.getElementById('ph-text').value.split(/\r?\n/).filter(l=>l.trim()); let n=0;
+  lines.forEach(l=>{ const c=l.split('\t'); const nombre=(c[0]||'').trim(); if(!nombre||/^(centro|empleado|nombre)$/i.test(nombre)) return;
+    let p=plantillaDe(centro).find(x=>x.nombre.toUpperCase()===nombre.toUpperCase());
+    if(!p){ p={id:crypto.randomUUID(),version_id:V.id,centro,departamento:dep,nombre,nivel:4,bruto_manual:null,pct_extra:10,fecha_fin:null,empleado_id:null,orden:plantillaDe(centro).length+1,notas:null,_dirty:true,_nuevo:true}; D.plantilla.push(p); }
+    D.horas[p.id] ||= {}; c.slice(1).forEach((v,i)=>{ if(i+1<=SEM.length) D.horas[p.id][i+1]=parseNum(v); }); p._horasDirty=true; n++; });
+  cerrarModal('modal-horas'); if(n){ markDirty('plantilla'); recalcCentros.add(centro); renderPersonal(); toast(`${n} filas aplicadas`); } else toast('No se reconoció ninguna fila',true);
+}
+
+// Filas de pre_gastos derivadas de un centro (compras, interno, personal) y pre_nominas
+function filasGastosDerivadas(c){
+  const rows=[], vid=V.id, K=calcCompras(c), P=calcPersonal(c);
+  const push=(cuenta,arr,origen)=>{ for(let m=1;m<=12;m++){ if(!arr[m]) continue; if(D.gastosManual[`${c}|${cuenta}|${m}`]!=null) continue; rows.push({version_id:vid,centro:c,cuenta,mes:m,importe:r2(arr[m]),origen,manual:false,actualizado_en:new Date().toISOString()}); } };
+  Object.keys(K.cuenta).forEach(cta=>push(cta,K.cuenta[cta],cta.startsWith('6000001')||cta.startsWith('6000002')?(cta.endsWith('01')?'interno':'compras'):'compras'));
+  const VI=ventasInternas(); if(VI[c]) Object.keys(VI[c]).forEach(cta=>push(cta,VI[c][cta],'interno'));
+  push('640000000',P.salarios,'personal'); push('640000001',P.finiq,'personal'); push('642000000',P.ss,'personal');
+  const ssp=(D.params.ss_pct||0)/100, nom=[]; Object.keys(P.depto).forEach(d=>{ for(let m=1;m<=12;m++){ if(!P.depto[d][m]) continue; nom.push({version_id:vid,centro:c,departamento:d,mes:m,importe:r2(P.depto[d][m]*(1+ssp))}); } });
+  return {rows, nom};
+}
+
 // ───────────────────────────── GUARDAR ─────────────────────────────
 async function guardar(){
   if(!V) return; if(!dirty()) return toast('Nada que guardar');
@@ -679,15 +1000,43 @@ async function guardar(){
     if(dirtySet.has('params')){
       await sbUpsert('pre_parametros',Object.keys(D.params).map(k=>({version_id:vid,clave:k,valor:D.params[k]})),'version_id,clave');
     }
-    for(const c of [...recalcCentros]){
-      loading(true,`Guardando ${c}…`);
-      const rows=D.dia[c]||{};
-      const dia=Object.keys(rows).map(f=>({version_id:vid,centro:c,fecha:f,importe:rows[f].importe,base_importe:rows[f].base,manual:rows[f].manual,actualizado_en:new Date().toISOString()}));
-      await sbUpsert('pre_ingresos_dia',dia,'version_id,centro,fecha');
-      await sbDelete('pre_ingresos',`version_id=eq.${vid}&centro=eq.${enc(c)}`);
-      const fam=filasFamilia(c); if(fam.length) await sbInsert('pre_ingresos',fam);
+    if(dirtySet.has('compras')){
+      const rows=[]; Object.keys(D.compras).forEach(c=>Object.keys(D.compras[c]).forEach(f=>rows.push({version_id:vid,centro:c,familia:f,pct_ext:D.compras[c][f].ext||0,pct_int:D.compras[c][f].int||0})));
+      if(rows.length) await sbUpsert('pre_compras_pct',rows,'version_id,centro,familia');
     }
-    clearDirty(); toast('Guardado ✓'); status('ok','guardado');
+    if(dirtySet.has('convenio')){
+      const rows=convenio.filter(r=>r._dirty).map(r=>({cuenta_id:CUENTA_ID,vigente_desde:r.vigente_desde,nivel:r.nivel,categorias:r.categorias||null,bruto_mensual:r.bruto_mensual||0}));
+      if(rows.length) await sbUpsert('pre_convenio',rows,'cuenta_id,vigente_desde,nivel');
+      convenio.forEach(r=>{ delete r._dirty; });
+    }
+    if(dirtySet.has('plantilla')){
+      for(const id of delPlantilla) await sbDelete('pre_plantilla',`id=eq.${id}`);
+      D.plantilla=D.plantilla.filter(p=>!delPlantilla.has(p.id)); delPlantilla=new Set();
+      const emp=D.plantilla.filter(p=>p._dirty).map(p=>({id:p.id,version_id:vid,centro:p.centro,departamento:p.departamento,nombre:p.nombre,nivel:p.nivel,bruto_manual:p.bruto_manual,pct_extra:p.pct_extra,fecha_fin:p.fecha_fin,empleado_id:p.empleado_id,orden:p.orden||0,notas:p.notas||null}));
+      if(emp.length) await sbUpsert('pre_plantilla',emp,'id');
+      const hs=[]; D.plantilla.filter(p=>p._horasDirty).forEach(p=>SEM.forEach(w=>hs.push({plantilla_id:p.id,semana:w.n,horas:+(D.horas[p.id]||{})[w.n]||0})));
+      if(hs.length) await sbUpsert('pre_plantilla_horas',hs,'plantilla_id,semana');
+      D.plantilla.forEach(p=>{ delete p._dirty; delete p._nuevo; delete p._horasDirty; });
+    }
+    // Regenerar derivados por centro: ingresos por familia, compras, personal, nóminas. Bodega y Producción
+    // reciben las ventas internas espejo, así que se regeneran si cambia cualquier centro.
+    const regen=new Set(recalcCentros); if(regen.size||dirtySet.has('compras')){ regen.add('BODEGA'); regen.add('PRODUCCION'); }
+    for(const c of [...regen]){
+      loading(true,`Guardando ${c}…`);
+      if(recalcCentros.has(c) && D.dia[c]){
+        const rows=D.dia[c];
+        const dia=Object.keys(rows).map(f=>({version_id:vid,centro:c,fecha:f,importe:rows[f].importe,base_importe:rows[f].base,manual:rows[f].manual,actualizado_en:new Date().toISOString()}));
+        await sbUpsert('pre_ingresos_dia',dia,'version_id,centro,fecha');
+        await sbDelete('pre_ingresos',`version_id=eq.${vid}&centro=eq.${enc(c)}`);
+        const fam=filasFamilia(c); if(fam.length) await sbInsert('pre_ingresos',fam);
+      }
+      const {rows:g, nom}=filasGastosDerivadas(c);
+      await sbDelete('pre_gastos',`version_id=eq.${vid}&centro=eq.${enc(c)}&manual=eq.false&origen=in.(compras,interno,personal)`);
+      if(g.length) await sbUpsert('pre_gastos',g,'version_id,centro,cuenta,mes');
+      await sbDelete('pre_nominas',`version_id=eq.${vid}&centro=eq.${enc(c)}`);
+      if(nom.length) await sbInsert('pre_nominas',nom);
+    }
+    clearDirty(); toast('Guardado ✓'); status('ok','guardado'); renderTab();
   }catch(e){ toast('Error al guardar: '+e.message,true); console.error(e); }
   finally{ loading(false); btn.disabled=false; }
 }
@@ -759,9 +1108,28 @@ function renderAjustes(){
   let h='<thead><tr><th>Ejercicio</th><th>Nombre</th><th>Base</th><th>Cierre base</th><th>Vigente</th><th></th></tr></thead><tbody>';
   versiones.forEach(v=>{ h+=`<tr><td><b>${v.ejercicio}</b></td><td>${v.nombre}</td><td>${v.base_ejercicio??'—'}</td><td>${v.mes_cierre_base==null?'—':MS[Math.max(0,v.mes_cierre_base-1)]}</td><td>${v.vigente?'<span class="chip ok">vigente</span>':`<span class="chip" style="cursor:pointer" onclick="marcarVigente('${v.id}')">marcar</span>`}</td><td><span class="chip" style="cursor:pointer" onclick="editarVersion('${v.id}')">editar</span> <span class="chip" style="cursor:pointer;color:var(--red)" onclick="borrarVersion('${v.id}')">borrar</span></td></tr>`; });
   document.getElementById('tbl-versiones').innerHTML=h+'</tbody>';
-  document.getElementById('params-box').innerHTML = D ? PARAMS_DEF.map(([k,l])=>`<div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><label style="font-size:11px;color:#555;width:260px">${l}</label><input class="inp num" type="number" step="0.01" value="${D.params[k]}" onchange="D.params['${k}']=+this.value||0;markDirty('params')"></div>`).join('') : '<span class="note">Sin versión.</span>';
+  document.getElementById('params-box').innerHTML = D ? PARAMS_DEF.map(([k,l])=>`<div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><label style="font-size:11px;color:#555;width:260px">${l}</label><input class="inp num" type="number" step="0.01" value="${D.params[k]}" onchange="setParam('${k}',this.value)"></div>`).join('') : '<span class="note">Sin versión.</span>';
   document.getElementById('tbl-familias').innerHTML = '<thead><tr><th>Familia</th><th>Venta</th><th>Compra</th><th>Compra interna</th></tr></thead><tbody>'+familias.map(f=>`<tr><td>${f.familia}</td><td>${f.cuenta_venta}</td><td>${f.cuenta_compra||''}</td><td>${f.cuenta_interna||''}</td></tr>`).join('')+'</tbody>';
+  renderConvenio();
 }
+function renderConvenio(){
+  const fechas=[...new Set(convenio.map(r=>r.vigente_desde))].sort();
+  document.getElementById('convenio-box').innerHTML = fechas.map(fe=>{
+    const rows=convenio.filter(r=>r.vigente_desde===fe).sort((a,b)=>a.nivel-b.nivel);
+    return `<div class="card-sub" style="margin-top:8px"><b>Vigente desde ${fe.split('-').reverse().join('/')}</b></div><div class="tbl-wrap" style="max-height:none"><table class="g"><thead><tr><th>Nivel</th><th>Categorías</th><th>Bruto mensual</th><th>Con SS (${D?D.params.ss_pct:33}%)</th></tr></thead><tbody>`+
+      rows.map(r=>`<tr><td>${r.nivel}</td><td class="edit"><input type="text" style="width:260px;text-align:left" value="${(r.categorias||'').replace(/"/g,'&quot;')}" onchange="setConv('${fe}',${r.nivel},'categorias',this.value)"></td><td class="edit"><input type="number" step="0.01" value="${r.bruto_mensual}" onchange="setConv('${fe}',${r.nivel},'bruto_mensual',this.value)"></td><td class="sub">${fmt2(r.bruto_mensual*(1+(D?D.params.ss_pct:33)/100))}</td></tr>`).join('')+'</tbody></table></div>';
+  }).join('') || '<span class="note">Sin convenio cargado.</span>';
+}
+function setConv(fe,nivel,k,v){ const r=convenio.find(x=>x.vigente_desde===fe&&x.nivel===nivel); if(!r) return; r[k]=(k==='bruto_mensual')?(+v||0):v; r._dirty=true; markDirty('convenio'); CENTROS.forEach(c=>{ if(plantillaDe(c).length) recalcCentros.add(c); }); renderConvenio(); }
+function nuevaTablaConvenio(){
+  const fe=document.getElementById('conv-nueva-fecha').value; if(!fe) return toast('Indica la fecha de vigencia',true);
+  if(convenio.some(r=>r.vigente_desde===fe)) return toast('Ya existe una tabla con esa fecha',true);
+  const ult=[...new Set(convenio.map(r=>r.vigente_desde))].sort().pop();
+  const base=ult?convenio.filter(r=>r.vigente_desde===ult):[1,2,3,4,5,6].map(n=>({nivel:n,categorias:'',bruto_mensual:0}));
+  base.forEach(r=>convenio.push({vigente_desde:fe,nivel:r.nivel,categorias:r.categorias,bruto_mensual:r.bruto_mensual,_dirty:true}));
+  markDirty('convenio'); renderConvenio(); toast(`Tabla ${fe} creada: edita los brutos y guarda`);
+}
+function setParam(k,v){ D.params[k]=+v||0; markDirty('params'); CENTROS.forEach(c=>{ if(plantillaDe(c).length) recalcCentros.add(c); }); renderConvenio(); }
 function abrirNuevaVersion(){
   const y=(versiones[0]?.ejercicio||new Date().getFullYear())+ (versiones.length?1:0);
   document.getElementById('nv-ejercicio').value=y; document.getElementById('nv-base').value=y-1; document.getElementById('nv-nombre').value='Presupuesto'; document.getElementById('nv-mes').value=versiones.length?9:12;
