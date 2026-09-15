@@ -31,6 +31,16 @@
 // la guarda del cron). Escribe en el Supabase de HOSTELERO con la service key.
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
+import { inflateRawSync } from "node:zlib";
+
+// v3 (15-09-2026) — dos fuentes de factura que antes se perdían:
+//   · ZIP adjunto (Coca-Cola CCEP manda la factura dentro de un .zip; los jpg
+//     que acompañan son la decoración del correo): se abre el zip y se sacan
+//     los PDF/imagenes de dentro como si fueran adjuntos normales.
+//   · Correos SIN adjunto con enlace de descarga (NuestraFactura: JJ Carreras,
+//     Lejías Olives, Sacatora, Mantolan…): el enlace «Ver factura» sirve el PDF
+//     sin login. Se sigue el enlace y, si responde un PDF, se guarda como
+//     adjunto. Solo se aceptan respuestas PDF: las imágenes enlazadas son logos.
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -122,10 +132,82 @@ function esAdjuntoValido(a) {
 // no adjuntan el PDF: mandan un enlace. Sin esto la factura se pierde entera.
 function enlacesDescarga(parsed) {
   const texto = `${parsed.html || ""} ${parsed.text || ""}`;
-  const urls = texto.match(/https?:\/\/[^\s"'<>)\]]+/gi) || [];
-  const interesantes = urls.filter((u) => /factur|descarg|download|invoice|documento|adjunto|\.pdf/i.test(u));
-  return [...new Set(interesantes.length ? interesantes : urls)].slice(0, 5);
+  const urls = (texto.match(/https?:\/\/[^\s"'<>)\]]+/gi) || []).map((u) => u.replace(/&amp;/g, "&"));
+  // Las imágenes nunca son la factura (logos, plantillas, píxeles de apertura).
+  const sinImagenes = urls.filter((u) => !/\.(png|jpe?g|gif|svg|webp|ico)(\?|$)/i.test(u));
+  const interesantes = sinImagenes.filter((u) => /factur|descarg|download|invoice|documento|adjunto|\.pdf/i.test(u));
+  // Primero lo que más huele a fichero (.pdf, ver_factura…), para que el tope de
+  // 5 no deje fuera el enlace bueno por culpa de los de "política de privacidad".
+  const peso = (u) => (/\.pdf(\?|$)/i.test(u) ? 0 : /ver_factura|descarg|download/i.test(u) ? 1 : 2);
+  const lista = interesantes.length ? interesantes : sinImagenes;
+  return [...new Set(lista)].sort((a, b) => peso(a) - peso(b)).slice(0, 5);
 }
+
+const MAX_BYTES_ENLACE = 15 * 1024 * 1024;
+
+// Sigue los enlaces y devuelve los que responden un PDF, como adjuntos virtuales.
+async function descargarEnlaces(enlaces, asunto) {
+  const out = [];
+  for (const [i, url] of (enlaces || []).entries()) {
+    if (!/^https?:\/\//i.test(url)) continue;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 20000);
+      const r = await fetch(url, {
+        redirect: "follow", signal: ctrl.signal,
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Hostelero-Compras/1.0)", Accept: "application/pdf,*/*" },
+      });
+      clearTimeout(t);
+      if (!r.ok) continue;
+      const tipo = (r.headers.get("content-type") || "").toLowerCase();
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (buf.length > MAX_BYTES_ENLACE) continue;
+      const esPdf = tipo.includes("pdf") || buf.subarray(0, 5).toString("latin1") === "%PDF-";
+      if (!esPdf) continue;
+      const base = String(asunto || "factura").replace(/[^\wáéíóúñÁÉÍÓÚÑ .-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60) || "factura";
+      out.push({ filename: `${base}${out.length ? " (" + (out.length + 1) + ")" : ""}.pdf`, content: buf, contentType: "application/pdf", desdeEnlace: url });
+    } catch (_) { /* enlace caído o lento: se ignora, el correo queda con sus enlaces anotados */ }
+    if (out.length >= 3 || i >= 4) break;
+  }
+  return out;
+}
+
+// Lector mínimo de ZIP (directorio central + inflateRaw). Devuelve los ficheros
+// de dentro con extensión admitida. Sin dependencias: un zip de factura es pequeño.
+function extraerZip(buffer) {
+  const out = [];
+  try {
+    let eocd = -1;
+    for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 65557); i--) {
+      if (buffer.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) return out;
+    const n = buffer.readUInt16LE(eocd + 10);
+    let p = buffer.readUInt32LE(eocd + 16);
+    for (let k = 0; k < n; k++) {
+      if (buffer.readUInt32LE(p) !== 0x02014b50) break;
+      const metodo = buffer.readUInt16LE(p + 10);
+      const tamComp = buffer.readUInt32LE(p + 20);
+      const lenNombre = buffer.readUInt16LE(p + 28), lenExtra = buffer.readUInt16LE(p + 30), lenCom = buffer.readUInt16LE(p + 32);
+      const offLocal = buffer.readUInt32LE(p + 42);
+      const nombre = buffer.subarray(p + 46, p + 46 + lenNombre).toString("utf8");
+      p += 46 + lenNombre + lenExtra + lenCom;
+      const ext = (nombre.split(".").pop() || "").toLowerCase();
+      if (nombre.endsWith("/") || !EXT_OK.includes(ext)) continue;
+      const lnLocalNombre = buffer.readUInt16LE(offLocal + 26), lnLocalExtra = buffer.readUInt16LE(offLocal + 28);
+      const ini = offLocal + 30 + lnLocalNombre + lnLocalExtra;
+      const datos = buffer.subarray(ini, ini + tamComp);
+      let contenido;
+      if (metodo === 0) contenido = Buffer.from(datos);
+      else if (metodo === 8) contenido = inflateRawSync(datos);
+      else continue;
+      const mime = ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+      out.push({ filename: nombre.split("/").pop(), content: contenido, contentType: mime });
+    }
+  } catch (_) { /* zip raro: se registra como descartado más abajo */ }
+  return out;
+}
+const esZip = (a) => /zip/i.test(a.contentType || "") || /\.zip$/i.test(String(a.filename || ""));
 
 // El separador de jerarquía cambia según el servidor: unos usan "/" y otros ".".
 // Comparamos segmento a segmento para que "INBOX.Sent" y "INBOX/Sent" se traten igual.
@@ -221,6 +303,24 @@ async function procesarCorreo(client, correo, resumen) {
   const buenos = todos.filter(esAdjuntoValido);
   const malos  = todos.filter((a) => !esAdjuntoValido(a));
 
+  // ZIP: se abre y lo de dentro pasa a ser adjunto normal (Coca-Cola CCEP).
+  const zipsAbiertos = new Map();
+  for (const z of malos.filter(esZip)) {
+    const dentro = extraerZip(z.content);
+    zipsAbiertos.set(z, dentro.length);
+    for (const d of dentro) buenos.push(d);
+  }
+  // Sin adjuntos: se siguen los enlaces del correo y se guarda lo que sea PDF
+  // (NuestraFactura y similares). Los enlaces se anotan igual en el correo.
+  let enlaces = null;
+  let desdeEnlace = 0;
+  if (!buenos.length) {
+    enlaces = enlacesDescarga(parsed);
+    const bajados = await descargarEnlaces(enlaces, parsed.subject);
+    desdeEnlace = bajados.length;
+    for (const b of bajados) buenos.push(b);
+  }
+
   // Las subidas son espera de red, no cálculo: en serie, un correo con 8 adjuntos
   // tarda 8 veces lo que uno. En paralelo tarda casi lo mismo que el más lento.
   const subidas = await Promise.all(buenos.map(async (a) => {
@@ -251,7 +351,9 @@ async function procesarCorreo(client, correo, resumen) {
       url: null,
       storage_path: null,
       estado: "DESCARTADO",
-      error: `tipo de adjunto no admitido: ${a.contentType || "desconocido"}`,
+      error: zipsAbiertos.has(a)
+        ? `zip abierto: ${zipsAbiertos.get(a)} documento(s) extraídos de dentro`
+        : `tipo de adjunto no admitido: ${a.contentType || "desconocido"}`,
     });
   }
   // OJO: en un insert por lotes PostgREST exige que TODOS los objetos tengan
@@ -263,8 +365,9 @@ async function procesarCorreo(client, correo, resumen) {
   }
   resumen.adjuntos   += buenos.length;
   resumen.rechazados += malos.length;
+  resumen.desde_enlace = (resumen.desde_enlace || 0) + desdeEnlace;
+  resumen.desde_zip = (resumen.desde_zip || 0) + [...zipsAbiertos.values()].reduce((s, n) => s + n, 0);
 
-  const enlaces = buenos.length ? null : enlacesDescarga(parsed);
   if (!buenos.length) resumen.sin_adjuntos++;
 
   // PROCESADO sólo cuando todo lo anterior ha salido bien. Si reventó a mitad,
@@ -274,7 +377,7 @@ async function procesarCorreo(client, correo, resumen) {
     body: JSON.stringify({
       estado: "PROCESADO",
       num_adjuntos: buenos.length,
-      adjuntos_detectados: todos.length,
+      adjuntos_detectados: todos.length + desdeEnlace,
       enlaces: enlaces && enlaces.length ? enlaces : null,
       procesado_at: new Date().toISOString(),
       error: null,
