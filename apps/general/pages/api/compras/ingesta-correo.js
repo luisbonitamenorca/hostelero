@@ -402,6 +402,7 @@ async function procesar(client, resumen, arranque) {
   );
   resumen.lote = pend.length;
   if (!pend.length) return;
+  const movidos = [];
 
   // Agrupar por carpeta para abrir cada buzón una sola vez.
   const porCarpeta = new Map();
@@ -436,20 +437,68 @@ async function procesar(client, resumen, arranque) {
           await procesarCorreo(client, correo, resumen);
           resumen.procesados++;
         } catch (e) {
-          await sb(`compras_correo?id=eq.${correo.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({
-              estado: "ERROR",
-              intentos: (correo.intentos || 0) + 1,
-              error: String(e.message || e).slice(0, 500),
-            }),
-          }).catch(() => {});
-          resumen.errores.push(`${correo.asunto || correo.id}: ${e.message}`.slice(0, 200));
+          // Si el mensaje ya no está en su carpeta (alguien lo movió después de
+          // inventariarlo), se busca en el resto de carpetas al final, con el
+          // buzón actual ya liberado: imapflow solo admite un bloqueo a la vez.
+          if (/no encontrado por UID ni por Message-ID/.test(String(e.message))) {
+            movidos.push({ correo, carpetaOriginal: carpeta });
+            continue;
+          }
+          await marcarError(correo, e, resumen);
         }
       }
     } finally {
       lock.release();
     }
+  }
+
+  await rescatarMovidos(client, movidos, resumen, arranque);
+}
+
+async function marcarError(correo, e, resumen) {
+  await sb(`compras_correo?id=eq.${correo.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      estado: "ERROR",
+      intentos: (correo.intentos || 0) + 1,
+      error: String(e.message || e).slice(0, 500),
+    }),
+  }).catch(() => {});
+  resumen.errores.push(`${correo.asunto || correo.id}: ${e.message}`.slice(0, 200));
+}
+
+// Busca por Message-ID en las demás carpetas del buzón. Si aparece, se procesa
+// desde allí y se actualizan carpeta y UID en compras_correo para la próxima.
+async function rescatarMovidos(client, movidos, resumen, arranque) {
+  if (!movidos.length) return;
+  const carpetas = (resumen.carpetas || []).filter(Boolean);
+  for (const { correo, carpetaOriginal } of movidos) {
+    if (Date.now() - arranque > PRESUPUESTO_MS) { resumen.corte_por_tiempo = true; break; }
+    let hecho = false;
+    for (const carpeta of carpetas) {
+      if (carpeta === carpetaOriginal || !correo.message_id) continue;
+      let lock;
+      try { lock = await client.getMailboxLock(carpeta); } catch (_) { continue; }
+      try {
+        const uids = await client.search({ header: { "message-id": correo.message_id } }, { uid: true });
+        if (!uids || !uids.length) continue;
+        await procesarCorreo(client, { ...correo, uid: uids[0], carpeta }, resumen);
+        await sb(`compras_correo?id=eq.${correo.id}`, {
+          method: "PATCH", body: JSON.stringify({ carpeta, uid: uids[0] }),
+        }).catch(() => {});
+        resumen.procesados++;
+        resumen.movidos_rescatados = (resumen.movidos_rescatados || 0) + 1;
+        hecho = true;
+        break;
+      } catch (e) {
+        await marcarError(correo, e, resumen);
+        hecho = true;
+        break;
+      } finally {
+        lock.release();
+      }
+    }
+    if (!hecho) await marcarError(correo, new Error("no está en ninguna carpeta del buzón (¿borrado?)"), resumen);
   }
 }
 
