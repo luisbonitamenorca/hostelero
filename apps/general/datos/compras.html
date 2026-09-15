@@ -5065,6 +5065,31 @@ function fusionUI(id){
 }
 // motor de fusión seguro: mueve docs y productos, resolviendo choques de referencia
 async function ejecutarFusion(idOrigen,idDestino,nombreDestino){
+  // 0) Conservar los datos: lo que la ficha destino tenga vacío se rellena con
+  //    lo de la ficha que desaparece (caso La Mirienda, 15-09-2026: la fusión
+  //    se quedó con la ficha SIN código A3 ni cuenta y el fichero de A3 salió
+  //    con huecos). El nombre antiguo pasa a alias para que siga casando.
+  {
+    const [o]=await sb(`compras_proveedor?id=eq.${idOrigen}&select=*`);
+    const [d]=await sb(`compras_proveedor?id=eq.${idDestino}&select=*`);
+    if(o&&d){
+      const cambio={};
+      for(const k of ['nif','codigo_a3','cuenta_contable','cuenta_proveedor','categoria','departamento',
+                      'pautas','pauta_factura','retencion_modelo','retencion_pct','muestra_url','muestra_factura_url']){
+        const vd=d[k],vo=o[k];
+        if((vd==null||String(vd).trim()==='')&&vo!=null&&String(vo).trim()!=='')cambio[k]=vo;
+      }
+      if(o.critico&&!d.critico)cambio.critico=true;
+      const aliasAct=String(d.alias||'').split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);
+      const aliasNuevos=[o.nombre,...String(o.alias||'').split(/[,;\n]/)].map(s=>String(s||'').trim())
+        .filter(s=>s&&s.toUpperCase()!==String(d.nombre||'').toUpperCase()&&!aliasAct.some(a=>a.toUpperCase()===s.toUpperCase()));
+      if(aliasNuevos.length)cambio.alias=[...aliasAct,...aliasNuevos].join(', ');
+      if(Object.keys(cambio).length){
+        await sb(`compras_proveedor?id=eq.${idDestino}`,{method:'PATCH',body:JSON.stringify(cambio)});
+        console.info('Fusión: datos conservados en la ficha destino →',Object.keys(cambio).join(', '));
+      }
+    }
+  }
   // 1) mover documentos
   await sb(`compras_doc?proveedor_id=eq.${idOrigen}`,{method:'PATCH',body:JSON.stringify({proveedor_id:idDestino})});
   // 2) productos: resolver uno a uno por si chocan referencias
