@@ -20,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <style>
   :root{
     /* Paleta estilo Ratios. Mantengo los nombres antiguos (--wine, etc.)
@@ -1447,6 +1448,7 @@ function renderQueue(){
     let lab={wait:'En espera',work:'Procesando…',done:'Guardado',fail:'Error'}[c.status];
     if(c.status==='done'&&c.descartado)lab='Descartado · '+c.descartado.slice(0,60);
     if(c.status==='done'&&c.duplicado)lab='Duplicado · no se ha vuelto a guardar';
+    if(c.status==='done'&&c.dividido)lab=`Dividido en ${c.dividido} documentos (siguen abajo)`;
     const errLine=(c.status==='fail'&&c.error)?`<div class="qerr">${c.error.replace(/</g,'&lt;').slice(0,200)}</div>`:'';
     // el rechazo NO es silencioso: se ve contra qué documento chocó
     const dupLine=(c.status==='done'&&c.duplicado)?`<div class="qerr">${c.duplicado.replace(/</g,'&lt;')}</div>`:'';
@@ -1477,6 +1479,9 @@ async function procesarCola(auto){
     try{
       await procesarUno(c);
       c.status='done';ok++;
+      // Un PDF con varias facturas se ha partido: sus trozos entran en la cola
+      // justo detrás y se procesan en esta misma pasada, uno por documento.
+      if(c._hijos&&c._hijos.length){pendientes.splice(i+1,0,...c._hijos);c._hijos=null;}
     }catch(err){
       const msg=err.message||String(err);
       // Proveedor borrado o fusionado mientras la pestaña llevaba rato abierta:
@@ -1938,7 +1943,82 @@ async function guardarLineasDoc(docId,dLineas,canal,proveedor_id,proveedorNombre
     cantidad:num(l.cantidad),precio_unit:num(l.precio_unit),importe:num(l.importe),canal}));
   if(lineas.length)await sb('compras_linea',{method:'POST',body:JSON.stringify(lineas)});
 }
+/* ========== PDF CON VARIAS FACTURAS ==========
+   Dismenorca (y otros grandes) mandan en UN solo PDF todas las facturas y abonos
+   del periodo, uno por página o por bloque de páginas. Leído de una vez, el OCR
+   devolvía un solo documento y se perdían los demás. Ahora, antes del OCR, un
+   PDF de más de una página pasa por una pregunta corta al modelo: cuántos
+   documentos hay y en qué páginas. Si hay más de uno, se corta con pdf-lib en
+   un PDF por documento, cada trozo se sube al bucket y entra en la cola como un
+   documento normal (mismo camino que una factura suelta). Los correos de origen
+   reciben una fila de adjunto por trozo y la original queda anotada. */
+async function bytesDe(c){
+  if(c.b64){const bin=atob(c.b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+  if(c.file&&c.file.arrayBuffer)return new Uint8Array(await c.file.arrayBuffer());
+  const r=await fetch(c.urlPublica);if(!r.ok)throw new Error('descarga '+r.status);return new Uint8Array(await r.arrayBuffer());
+}
+async function dividirPdfSiVarias(c){
+  if(c.mime!=='application/pdf'||c._hijo||typeof PDFLib==='undefined')return null;
+  let bytes,pdf;
+  try{bytes=await bytesDe(c);pdf=await PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true});}
+  catch(e){console.warn('pdf-lib no pudo abrir el PDF:',e.message);return null;}
+  const n=pdf.getPageCount();
+  if(n<2)return null;
+  const block=c.b64?{type:"document",source:{type:"base64",media_type:"application/pdf",data:c.b64}}
+                   :{type:"document",source:{type:"url",url:c.urlPublica}};
+  const pregunta=`Este PDF tiene ${n} páginas. Puede ser UN solo documento de varias páginas, o VARIOS documentos independientes pegados (facturas, abonos, albaranes), cada uno con su propio número y su propio total. Un documento nuevo empieza donde vuelve a aparecer una cabecera completa con un número de documento distinto; una página de continuación NO es un documento nuevo.
+Responde ÚNICAMENTE con JSON, sin texto alrededor:
+{"documentos":[{"desde":1,"hasta":1,"tipo":"factura|abono|albaran|otro","num_documento":"","fecha":"YYYY-MM-DD","total":0}]}
+Los rangos deben cubrir todas las páginas de la 1 a la ${n}, en orden y sin solaparse. Si todo el PDF es un único documento, devuelve un solo rango 1-${n}.`;
+  let d;
+  try{d=parseJson(await callAI([block,{type:"text",text:pregunta}]));}
+  catch(e){console.warn('no se pudo saber si el PDF trae varias facturas:',e.message);return null;}
+  const docs=Array.isArray(d&&d.documentos)?d.documentos:[];
+  if(docs.length<2)return null;
+  // validar cobertura: 1..n en orden, sin huecos ni solapes
+  let esperado=1;
+  for(const r of docs){
+    const a=Number(r.desde),b=Number(r.hasta);
+    if(!(a===esperado&&b>=a&&b<=n)){console.warn('rangos de páginas no válidos, se procesa entero:',JSON.stringify(docs));return null;}
+    esperado=b+1;
+  }
+  if(esperado!==n+1){console.warn('los rangos no cubren todas las páginas, se procesa entero');return null;}
+  const base=(c.file&&c.file.name||'documento.pdf').replace(/\.pdf$/i,'');
+  const hijos=[];
+  for(let k=0;k<docs.length;k++){
+    const r=docs[k];
+    const nuevo=await PDFLib.PDFDocument.create();
+    const idx=[];for(let p=Number(r.desde);p<=Number(r.hasta);p++)idx.push(p-1);
+    const pags=await nuevo.copyPages(pdf,idx);pags.forEach(p=>nuevo.addPage(p));
+    const out=await nuevo.save();
+    const etiqueta=String(r.num_documento||'').replace(/[^A-Za-z0-9-]+/g,'-').replace(/^-|-$/g,'')||`${k+1}`;
+    const file=new File([out],`${base}_${k+1}de${docs.length}_${etiqueta}.pdf`,{type:'application/pdf'});
+    const url=await sbUpload(file);
+    const b64=out.length<3*1024*1024?await blobB64(file):null;
+    const hijo={file,b64,mime:'application/pdf',status:'wait',urlPublica:url,_hijo:true,esMovil:c.esMovil};
+    if(c.correoAdjId){
+      // fila propia en la cola de correo, ya reclamada por esta pestaña
+      const corr=await sb(`compras_correo_adjunto?id=eq.${c.correoAdjId}&select=correo_id,cuenta_id`);
+      const filas=await sb('compras_correo_adjunto',{method:'POST',body:JSON.stringify([{
+        cuenta_id:corr[0]&&corr[0].cuenta_id,correo_id:corr[0]&&corr[0].correo_id,nombre_archivo:file.name,mime:'application/pdf',
+        url,storage_path:url.split('/public/'+BUCKET+'/')[1]||null,estado:'PROCESANDO',claimed_at:new Date().toISOString(),error:null}])});
+      if(filas&&filas[0]){hijo.correoAdjId=filas[0].id;_misClaims.add(filas[0].id);}
+    }
+    hijos.push(hijo);
+  }
+  if(c.correoAdjId){
+    await sb(`compras_correo_adjunto?id=eq.${c.correoAdjId}`,{method:'PATCH',body:JSON.stringify({estado:'DESCARTADO',error:`PDF con ${docs.length} documentos: dividido en ${docs.length} adjuntos (${docs.map(x=>x.num_documento||'?').join(', ')})`})}).catch(()=>{});
+  }
+  // se añaden a la cola visible; procesarCola los encadena detrás del original
+  const pos=cola.indexOf(c);
+  cola.splice(pos<0?cola.length:pos+1,0,...hijos);
+  return hijos;
+}
+
 async function procesarUno(c){
+  // PDF con varias facturas: se parte y se procesa por trozos (ver arriba)
+  const hijos=await dividirPdfSiVarias(c);
+  if(hijos){c._hijos=hijos;c.dividido=hijos.length;renderQueue();return;}
   // los documentos de correo se clasifican siempre en modo auto y con el filtro anti-ruido
   const tipoUsado=c.correoAdjId?'auto':tipo;
   const prompt=construirPromptOCR(tipoUsado,!!c.correoAdjId);
