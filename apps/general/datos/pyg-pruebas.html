@@ -1815,10 +1815,12 @@ function buildRatios(rows, rowsP) {
   if (P) body += fila('· presupuesto', P.ebitda, fe, 'r-det', 'ebitda');
   body += fila('EBITDA % s/ ingresos', R.ebitdaPct, fp, '', 'ratio');
   if (P) body += fila('· presupuesto', P.ebitdaPct, fp, 'r-det', 'ratio');
-  body += fila('Ratio de compras (600 + 602)', R.compras, fp, 'r-gto', 'ratio');
-  if (P) body += fila('· presupuesto', P.compras, fp, 'r-det', 'ratio');
-  body += fila('Ratio de personal (640 + 642)', R.personal, fp, 'r-gto', 'ratio');
-  if (P) body += fila('· presupuesto', P.personal, fp, 'r-det', 'ratio');
+  if (canal !== 'ESTRUCTURA') {   // Estructura no vende: sus ratios de compras y personal no tienen lectura
+    body += fila('Ratio de compras (600 + 602)', R.compras, fp, 'r-gto', 'ratio');
+    if (P) body += fila('· presupuesto', P.compras, fp, 'r-det', 'ratio');
+    body += fila('Ratio de personal (640 + 642)', R.personal, fp, 'r-gto', 'ratio');
+    if (P) body += fila('· presupuesto', P.personal, fp, 'r-det', 'ratio');
+  }
   const html = cab + '<tbody>' + body + '</tbody>';
   ['resumen','pyg','evolucion'].forEach(id => { const el = document.getElementById('tbl-ratios-' + id); if (el) el.innerHTML = html; });
 }
@@ -2704,7 +2706,7 @@ function buildNegocioTable() {
     return `<tr class="r-total"><td style="text-align:left;position:sticky;left:0;background:var(--panel);font-weight:600">${label}</td>
       <td style="font-weight:600">${f(vR)}</td><td>${f(vP)}</td>
       <td class="${dif == null ? '' : bueno ? 'dv-pos' : 'dv-neg'}">${difTxt}</td><td class="${dif == null ? '' : bueno ? 'dv-pos' : 'dv-neg'}">${key === 'ebitda' ? varTxt : ''}</td>
-      ${rC.map((r,i) => { const vr = r ? r[key] : null, vp = rCP && rCP[i] ? rCP[i][key] : null;
+      ${rC.map((r,i) => { const sinRatio = kind === 'ratio' && canales[i] === 'ESTRUCTURA'; const vr = (r && !sinRatio) ? r[key] : null, vp = (rCP && rCP[i] && !sinRatio) ? rCP[i][key] : null;
         return `<td>${f(vr)}${usePresup && vp != null ? `<div style="font-size:10px;color:var(--muted)">ppto ${f(vp)}</div>` : ''}</td>`; }).join('')}
     </tr>`;
   };
