@@ -2788,7 +2788,9 @@ function renderFac(){
   let rows=[...facturas];
   const st=sortState.facturas;
   const keymap={fecha:a=>a.fecha,cargado:a=>a.created_at,prov:a=>a.proveedor,ndoc:a=>a.num_documento,centro:a=>((centrosPorFactura[a.id]||{}).n_centros>1?'zzz varios':(a.canal||'\u0000 sin centro')),base:a=>num(a.base)||0,iva:a=>num(a.iva)||0,reten:a=>num(a.retencion)||0,total:a=>a.total,estado:a=>a.estado_detalle||'REVISAR',
-    a3:a=>a.a3_numdoc?'0 exportada':((bloqueosDe(a.id)||[]).length?'2 '+(bloqueosDe(a.id)||[]).join(' '):'1 lista')};
+    // Exportadas: por su número de A3 (relleno a 8 cifras para que el orden
+    // textual sea el numérico); después las listas y al final las bloqueadas.
+    a3:a=>a.a3_numdoc?'0 '+String(a.a3_numdoc).padStart(8,'0'):((bloqueosDe(a.id)||[]).length?'2 '+(bloqueosDe(a.id)||[]).join(' '):'1 lista')};
   const todas=rows;
   rows=aplicaColFiltros('facturas',rows,keymap);
   if(st.key&&keymap[st.key])rows=sortRows(rows,keymap[st.key],st.dir);
