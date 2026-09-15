@@ -1,6 +1,6 @@
 -- ============================================================================
--- MÓDULO PRESUPUESTO v1 (15-09-2026) — PROPUESTA (sin aplicar)
--- La aplica el chat con apply_migration; después renombrar el archivo a la versión registrada.
+-- MÓDULO PRESUPUESTO v1 (15-09-2026) — APLICADA 15-09-2026 (registrada como 20260915040825)
+-- Aplicada desde Code con el MCP de Supabase.
 -- Drivers (entradas) + tablas materializadas (salidas) + vistas puente hacia
 -- Ratios y PyG. Módulo aparte: Ratios y PyG NO leen de aquí todavía.
 -- Centro = código de texto de Ratios/PyG (BINIFADET, BODEGA, TAMARINDOS BAR…).
