@@ -11,6 +11,7 @@ const nextConfig = {
   // hay que decirle a Vercel que los empaquete junto a la función de su ruta.
   outputFileTracingIncludes: {
     "/pyg": ["./datos/pyg.html"],
+    "/pyg-pruebas": ["./datos/pyg-pruebas.html"],
     "/ratios": ["./datos/ratios.html"],
     "/agentes": ["./datos/agentes.html"],
     "/compras": ["./datos/compras.html"],

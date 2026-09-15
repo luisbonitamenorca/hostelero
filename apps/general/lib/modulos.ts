@@ -15,6 +15,8 @@ export const RUTAS_MODULO: Record<string, string> = {
   // de la casa; sus datos siguen en el proyecto Ratios de Supabase
   // (independiente, fase de pruebas — el port de datos es decisión de noviembre).
   pyg: "/pyg",
+  // PyG en sombra desde Contabilidad (15-09-2026); sustituirá a pyg a fin de año.
+  pyg_pruebas: "/pyg-pruebas",
   ratios: "/ratios",
   // Igual que los dos de arriba, pero conserva su login interno (Supabase
   // Auth propio del proyecto agentes) y proxea /api/agentes/* a su Vercel.
