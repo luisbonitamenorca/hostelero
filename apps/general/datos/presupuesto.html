@@ -183,14 +183,14 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
       <button class="tab active" onclick="showTab('ingresos',this)">💶 Ingresos</button>
       <button class="tab" onclick="showTab('compras',this)">🛒 Compras</button>
       <button class="tab" onclick="showTab('personal',this)">👥 Personal</button>
-      <button class="tab soon" title="Sesión 3">📑 Otros gastos</button>
-      <button class="tab soon" title="Sesión 3">📊 Resumen</button>
+      <button class="tab" onclick="showTab('gastos',this)">📑 Otros gastos</button>
+      <button class="tab" onclick="showTab('resumen',this)">📊 Resumen PyG</button>
       <button class="tab" onclick="showTab('ajustes',this)">⚙️ Versiones y ajustes</button>
     </nav>
     <div class="side-foot">
       <div class="side-status"><div class="status-dot ok" id="status-dot"></div><span id="status-label">—</span></div>
       <a class="btn-sm" href="/" style="text-align:center;text-decoration:none;display:block">← Inicio</a>
-      <div class="side-version">Presupuesto · v1 s2</div>
+      <div class="side-version">Presupuesto · v1</div>
     </div>
   </aside>
 
@@ -350,6 +350,37 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
     </div>
   </section>
 
+  <!-- ══ OTROS GASTOS ══ -->
+  <section class="section" id="sec-gastos">
+    <div class="toolbar">
+      <select id="sel-add-cta" class="hdr-select" style="max-width:360px"></select>
+      <button class="btn btn-sm" onclick="addCuenta()">+ Añadir cuenta</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="abrirCargaGastos()">⬇ Carga inicial desde hoja PRESUPUESTO del PyG</button>
+    </div>
+    <div class="metrics" id="gas-metrics"></div>
+    <div class="card">
+      <div class="card-title">Gastos por cuenta y mes · <span id="gas-centro"></span></div>
+      <div class="card-sub" id="gas-sub">Cada fila = base del año anterior × coeficiente. Editar una celda la marca como <span class="chip manual">manual</span> (doble clic para volver a automático). Las filas de compras y personal se calculan en sus pestañas y aquí solo se ven.</div>
+      <div class="tbl-wrap"><table class="g" id="tbl-gastos"></table></div>
+    </div>
+  </section>
+
+  <!-- ══ RESUMEN ══ -->
+  <section class="section" id="sec-resumen">
+    <div class="toolbar">
+      <div class="seg" id="seg-res"><button class="active" onclick="resCentro='TODOS';renderResumen()">TODOS</button></div>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="descargarCompleto()">⬆ Descargar Excel completo (PyG + Ratios)</button>
+    </div>
+    <div class="metrics" id="res-metrics"></div>
+    <div class="card">
+      <div class="card-title">PyG presupuestado · <span id="res-centro"></span></div>
+      <div class="card-sub">Ventas desde el detalle diario por familia; compras y personal desde sus pestañas; el resto desde Otros gastos. En TODOS se excluye el mercado interno. Clic en un grupo para ver sus cuentas. La columna "Hoja PyG" es la hoja PRESUPUESTO que usa hoy el PyG (referencia).</div>
+      <div class="tbl-wrap"><table class="g" id="tbl-resumen"></table></div>
+    </div>
+  </section>
+
   <!-- ══ AJUSTES ══ -->
   <section class="section" id="sec-ajustes">
     <div class="two">
@@ -408,6 +439,19 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
   </div>
 </div>
 
+<!-- MODAL carga inicial gastos -->
+<div class="modal-overlay" id="modal-carga-gastos">
+  <div class="modal">
+    <h3>Carga inicial de gastos desde el PyG</h3>
+    <p>Lee la hoja <b>PRESUPUESTO</b> de datos.xlsx (la que usa hoy el PyG) y vuelca aquí todas las cuentas 6 y los otros ingresos 7 (no las ventas 700, que salen del diario). Entran como <b>manual</b>: un recálculo no las pisa. Los % de compras se ponen a 0 para no duplicar las compras que ya trae la hoja. <b>Sustituye</b> los gastos manuales y de base de esta versión.</p>
+    <div id="carga-gastos-preview" class="note">Analizando…</div>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModal('modal-carga-gastos')">Cancelar</button>
+      <button class="btn btn-g" id="btn-carga-gastos" onclick="ejecutarCargaGastos()" disabled>Cargar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL carga inicial -->
 <div class="modal-overlay" id="modal-carga">
   <div class="modal">
@@ -454,6 +498,10 @@ let delPlantilla = new Set(); // ids de empleados borrados pendientes de guardar
 const MAP_DEPTO = { 'COCINA':'COCINA','SALA':'SALA','RECEPCIÓN':'RECEPCION','RECEPCION':'RECEPCION','CAMPO':'CAMPO','BODEGA':'BODEGA','ADMINISTRACIÓN':'OFICINA','ADMINISTRACION':'OFICINA','DIRECCIÓN':'OFICINA','DIRECCION':'OFICINA','VISITAS':'RECEPCION','MANTENIMIENTO':'LOGISTICA','LOGÍSTICA':'LOGISTICA','LOGISTICA':'LOGISTICA','PICA':'PICA','OFICINA':'OFICINA' };
 const MAP_CENTRO_NOMBRE = { 'BINIFADET BODEGA':'BODEGA','BINIFADET RESTAURANTE':'BINIFADET','BINIFADET TIENDA':'TIENDA','CASA TIRANT':'TIRANT','COCINA PRODUCCION':'PRODUCCION','ESTRUCTURA':'ESTRUCTURA','TAMARINDOS BAR':'TAMARINDOS BAR','TAMARINDOS RESTAURANTE':'TAMARINDOS' };
 const SIN_COMPRAS_PCT = ['BODEGA','PRODUCCION','ESTRUCTURA']; // compras a mano (Otros gastos)
+let BASEG = null;    // base de gastos del año anterior: {origen:[], data:{centro:{cuenta:[13]}}}
+let PYGHOJA = null;  // hoja PRESUPUESTO de datos.xlsx: {centro:{cuenta:[13]}} (referencia y carga inicial)
+let resCentro = 'TODOS', resExp = {};
+const CANAL_SUMAS = { 'GENERICO':'ESTRUCTURA','PRODUCCION':'PRODUCCION' }; // Genérico (sin centro) va a Estructura
 
 const fmt = n => (n==null||isNaN(n)) ? '—' : Math.round(n).toLocaleString('es-ES');
 const fmt2 = n => (n==null||isNaN(n)) ? '' : n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -501,7 +549,7 @@ let toastT; function toast(msg,err){ const t=document.getElementById('toast'); t
 function status(kind,label){ document.getElementById('status-dot').className='status-dot '+kind; document.getElementById('status-label').textContent=label; }
 let tabActual='ingresos';
 function showTab(id,btn){ tabActual=id; document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById('sec-'+id).classList.add('active'); document.querySelectorAll('.side-nav .tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderTab(); }
-function renderTab(){ if(!D) return; if(tabActual==='ingresos') renderIngresos(); if(tabActual==='compras') renderCompras(); if(tabActual==='personal') renderPersonal(); if(tabActual==='ajustes') renderAjustes(); }
+function renderTab(){ if(!D) return; if(tabActual==='ingresos') renderIngresos(); if(tabActual==='compras') renderCompras(); if(tabActual==='personal') renderPersonal(); if(tabActual==='gastos') renderGastos(); if(tabActual==='resumen') renderResumen(); if(tabActual==='ajustes') renderAjustes(); }
 function setSubPer(s,btn){ subPer=s; document.querySelectorAll('#seg-per button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); ['plantilla','horas','resumen'].forEach(k=>document.getElementById('per-'+k).style.display=(k===s?'':'none')); renderPersonal(); }
 function setSub(s,btn){ sub=s; document.querySelectorAll('#seg-ing button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); ['diario','pauta','param','anual'].forEach(k=>document.getElementById('sub-'+k).style.display=(k===s?'':'none')); renderIngresos(); }
 function cerrarModal(id){ document.getElementById(id).classList.remove('open'); }
@@ -549,14 +597,18 @@ async function cambiarVersion(id){
       sbAll(`pre_compras_pct?${q}&select=centro,familia,pct_ext,pct_int,ref_ext,ref_int`),
       sbAll(`pre_plantilla?${q}&select=id,centro,departamento,nombre,nivel,bruto_manual,pct_extra,fecha_fin,empleado_id,orden,notas&order=centro,orden,nombre`),
       sbAll(`pre_plantilla_horas?select=plantilla_id,semana,horas,pre_plantilla!inner(version_id)&pre_plantilla.version_id=eq.${V.id}`),
-      sbAll(`pre_gastos?${q}&manual=eq.true&select=centro,cuenta,mes,importe`),
+      sbAll(`pre_gastos?${q}&select=centro,cuenta,mes,importe,base_importe,origen,manual,nota`),
       sbFetch(`pre_convenio?cuenta_id=eq.${CUENTA_ID}&select=id,vigente_desde,nivel,categorias,bruto_mensual&order=vigente_desde,nivel`),
     ]);
-    D = { pauta:{}, subida:{}, mix:{}, dia:{}, params:{}, compras:{}, plantilla:[], horas:{}, gastosManual:{} };
+    D = { pauta:{}, subida:{}, mix:{}, dia:{}, params:{}, compras:{}, plantilla:[], horas:{}, gastosManual:{}, gastos:{}, coef:{} };
+    const coefRows = await sbAll(`pre_coef_cuenta?${q}&select=centro,cuenta,coef`);
+    coefRows.forEach(r=>{ (D.coef[r.centro] ||= {})[r.cuenta] = +r.coef; });
+    gastosMan.forEach(g=>{ if(g.manual || g.origen==='base' || g.origen==='manual') ((D.gastos[g.centro] ||= {})[g.cuenta] ||= {})[g.mes] = { importe:+g.importe, base:g.base_importe==null?null:+g.base_importe, manual:!!g.manual, origen:g.origen, nota:g.nota||null }; });
+    BASEG = null; PYGHOJA = null;
     compras.forEach(r=>{ (D.compras[r.centro] ||= {})[r.familia] = { ext:+r.pct_ext, int:+r.pct_int }; });
     D.plantilla = plantilla.map(p=>({...p, nivel:p.nivel==null?null:+p.nivel, bruto_manual:p.bruto_manual==null?null:+p.bruto_manual, pct_extra:+p.pct_extra}));
     horas.forEach(h=>{ (D.horas[h.plantilla_id] ||= {})[h.semana] = +h.horas; });
-    gastosMan.forEach(g=>{ D.gastosManual[`${g.centro}|${g.cuenta}|${g.mes}`] = +g.importe; });
+    gastosMan.forEach(g=>{ if(g.manual) D.gastosManual[`${g.centro}|${g.cuenta}|${g.mes}`] = +g.importe; });
     convenio = conv.map(r=>({...r, nivel:+r.nivel, bruto_mensual:+r.bruto_mensual}));
     delPlantilla = new Set(); SEM = semanasISO(V.ejercicio);
     pauta.forEach(r=>{ (D.pauta[r.centro] ||= {})[r.fecha] = r; });
@@ -621,7 +673,8 @@ function recalcularCentro(c=centro, silencioso=false){
     if(!row.manual) row.importe = abierto(c,f) ? r2((b||0)*(1+pctSubida(c,m)/100)) : 0;
   });
   markDirty('dia:'+c); recalcCentros.add(c);
-  if(!silencioso){ toast(`${c} recalculado. Guarda para aplicar.`); renderIngresos(); }
+  if(BASEG){ recalcGastos(c); markDirty('gastos:'+c); }
+  if(!silencioso){ toast(`${c} recalculado (ingresos${BASEG?', otros gastos':''}). Guarda para aplicar.`); renderTab(); }
 }
 // filas diarias por familia (materialización) para un centro
 function filasFamilia(c){
@@ -977,6 +1030,198 @@ function filasGastosDerivadas(c){
   return {rows, nom};
 }
 
+// ───────────────────────────── OTROS GASTOS ─────────────────────────────
+const normCanal = s => { const u=String(s||'').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,''); return CANAL_SUMAS[u]||u; };
+const numES = v => { if(v==null||v==='') return 0; if(typeof v==='number') return v; const n=parseFloat(String(v).replace(/\./g,'').replace(',','.')); return isNaN(n)?parseFloat(v)||0:n; };
+const cuentaInfo = c => cuentas.find(x=>x.cuenta===c) || { cuenta:c, descripcion:'', grupo:c.slice(0,4), grupo_desc:'OTROS', tipo:'NORMAL' };
+const CTAS_VENTA = () => new Set(familias.map(f=>f.cuenta_venta));
+// Cuentas que calculan otras pestañas (no se editan en Otros gastos)
+function esDerivada(c,cta){
+  if(!SIN_COMPRAS_PCT.includes(c) && familias.some(f=>f.cuenta_compra===cta||f.cuenta_interna===cta)) return 'compras';
+  if((c==='BODEGA'&&cta==='700000101')||(c==='PRODUCCION'&&cta==='700000201')) return 'interno';
+  if(['640000000','640000001','642000000'].includes(cta) && plantillaDe(c).length) return 'personal';
+  return null;
+}
+let datosXlsxWb = null;
+async function leerDatosXlsx(){
+  if(datosXlsxWb) return datosXlsxWb;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/pyg/datos.xlsx?b=${Date.now()}`, { headers: sbHeaders(), cache:'no-store' });
+  if(!res.ok) throw new Error('No se pudo leer datos.xlsx del PyG (HTTP '+res.status+')');
+  datosXlsxWb = XLSX.read(await res.arrayBuffer(), {type:'array'}); return datosXlsxWb;
+}
+// Hoja PRESUPUESTO del PyG → {centro:{cuenta:[13]}} (7xx ventas en positivo tal cual)
+function parseHojaPresupuesto(wb){
+  const ws=wb.Sheets['PRESUPUESTO']; if(!ws) return {};
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null}); const hd=rows[0].map(v=>String(v||'').toUpperCase().trim());
+  const ic=hd.indexOf('CUENTA'), ica=hd.indexOf('CANAL'), im=MESES.map(m=>hd.indexOf(m)); const out={};
+  for(let i=1;i<rows.length;i++){ const r=rows[i]; if(!r||r[ic]==null) continue; const cta=String(r[ic]).trim(), c=normCanal(r[ica]); if(!/^[67]/.test(cta)) continue;
+    const a=((out[c] ||= {})[cta] ||= Array(13).fill(0)); im.forEach((idx,k)=>{ if(idx>=0) a[k+1]=r2(a[k+1]+numES(r[idx])); }); }
+  return out;
+}
+// Hoja SUMAS Y SALDOS → real por ejercicio: {ejercicio:{centro:{cuenta:[13]}}}; signo: 6 positivo, 7 invertido
+function parseSumas(wb){
+  const ws=wb.Sheets['SUMAS Y SALDOS']; if(!ws) return {};
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null}); const hd=rows[0].map(v=>String(v||'').toUpperCase().trim());
+  const ic=hd.indexOf('CUENTA'), ie=hd.indexOf('EJERCICIO'), ica=hd.indexOf('CANAL'), im=MESES.map(m=>hd.indexOf(m)); const out={};
+  for(let i=1;i<rows.length;i++){ const r=rows[i]; if(!r||r[ic]==null) continue; const cta=String(r[ic]).trim(); if(!/^[67]/.test(cta)) continue;
+    const ej=+String(r[ie]||'').trim(), c=normCanal(r[ica]), flip=cta.startsWith('7')?-1:1;
+    const a=(((out[ej] ||= {})[c] ||= {})[cta] ||= Array(13).fill(0)); im.forEach((idx,k)=>{ if(idx>=0) a[k+1]=r2(a[k+1]+numES(r[idx])*flip); }); }
+  return out;
+}
+// Base de gastos: real del año base (SUMAS Y SALDOS) hasta mes_cierre + presupuesto del año base (módulo vigente o hoja PRESUPUESTO) el resto
+async function cargarBaseGastos(){
+  if(BASEG) return;
+  const y=V.base_ejercicio||(V.ejercicio-1), mc=V.mes_cierre_base==null?12:+V.mes_cierre_base;
+  BASEG={ origen:[], data:{} }; const add=(c,cta,m,v)=>{ const a=((BASEG.data[c] ||= {})[cta] ||= Array(13).fill(0)); a[m]=r2(a[m]+v); };
+  try{
+    const wb=await leerDatosXlsx(); const sumas=parseSumas(wb); PYGHOJA=parseHojaPresupuesto(wb);
+    const real=sumas[y]||{}; let n=0;
+    Object.keys(real).forEach(c=>Object.keys(real[c]).forEach(cta=>{ for(let m=1;m<=mc;m++){ if(real[c][cta][m]){ add(c,cta,m,real[c][cta][m]); n++; } } }));
+    if(n) BASEG.origen.push(`real ${y} hasta ${MS[Math.max(0,mc-1)]} (Sumas y Saldos)`);
+    if(mc<12){
+      const vb=versiones.find(v=>v.ejercicio===y && v.vigente); let m2=0;
+      if(vb){ const rows=await sbAll(`pre_gastos?version_id=eq.${vb.id}&mes=gt.${mc}&select=centro,cuenta,mes,importe`); rows.forEach(r=>{ add(r.centro,r.cuenta,+r.mes,+r.importe); m2++; }); if(m2) BASEG.origen.push(`presupuesto ${y} del módulo desde ${MS[mc]}`); }
+      if(!m2 && y===V.ejercicio-1){ Object.keys(PYGHOJA).forEach(c=>Object.keys(PYGHOJA[c]).forEach(cta=>{ for(let m=mc+1;m<=12;m++){ if(PYGHOJA[c][cta][m]){ add(c,cta,m,PYGHOJA[c][cta][m]); m2++; } } })); if(m2) BASEG.origen.push(`hoja PRESUPUESTO del PyG desde ${MS[mc]}`); }
+    }
+  }catch(e){ console.warn(e); BASEG.origen.push('sin datos.xlsx: '+e.message); }
+  if(!BASEG.origen.length) BASEG.origen.push(`sin real ${y} en Sumas y Saldos`);
+}
+function gastosDe(c){ return D.gastos[c] || {}; }
+function coefDe(c,cta){ const v=(D.coef[c]||{})[cta]; return v==null?1:v; }
+function baseGasto(c,cta){ return (BASEG&&BASEG.data[c]&&BASEG.data[c][cta]) || Array(13).fill(0); }
+// Recalcula las filas de base (no manuales, no derivadas) de un centro: base × coef
+function recalcGastos(c){
+  if(!BASEG) return;
+  const G=(D.gastos[c] ||= {}); const ctas=new Set([...Object.keys(BASEG.data[c]||{}),...Object.keys(G),...Object.keys(D.coef[c]||{})]);
+  ctas.forEach(cta=>{ if(esDerivada(c,cta)||CTAS_VENTA().has(cta)) return; const b=baseGasto(c,cta), k=coefDe(c,cta); const R=(G[cta] ||= {});
+    for(let m=1;m<=12;m++){ const cur=R[m]; if(cur&&cur.manual) { cur.base=b[m]; continue; } const v=r2(b[m]*k); if(v||cur) R[m]={ importe:v, base:b[m], manual:false, origen:'base', nota:cur?.nota||null }; } });
+  syncManual(c);
+}
+function syncManual(c){ Object.keys(D.gastosManual).forEach(k=>{ if(k.startsWith(c+'|')) delete D.gastosManual[k]; }); const G=gastosDe(c); Object.keys(G).forEach(cta=>Object.keys(G[cta]).forEach(m=>{ if(G[cta][m].manual) D.gastosManual[`${c}|${cta}|${m}`]=G[cta][m].importe; })); }
+async function renderGastos(){
+  document.getElementById('gas-centro').textContent=centro;
+  if(!BASEG){ loading(true,'Leyendo real del PyG…'); try{ await cargarBaseGastos(); CENTROS.forEach(c=>{ if(!Object.keys(gastosDe(c)).length && BASEG.data[c]) { recalcGastos(c); } }); } finally{ loading(false); } }
+  const G=gastosDe(centro), K=calcCompras(centro), P=calcPersonal(centro), VI=ventasInternas();
+  const derivadas={}; Object.keys(K.cuenta).forEach(cta=>derivadas[cta]={arr:K.cuenta[cta],origen:'compras'}); if(VI[centro]) Object.keys(VI[centro]).forEach(cta=>derivadas[cta]={arr:VI[centro][cta],origen:'interno'});
+  if(plantillaDe(centro).length){ derivadas['640000000']={arr:P.salarios,origen:'personal'}; derivadas['640000001']={arr:P.finiq,origen:'personal'}; derivadas['642000000']={arr:P.ss,origen:'personal'}; }
+  const ctas=[...new Set([...Object.keys(G),...Object.keys(derivadas),...Object.keys(BASEG.data[centro]||{})])].filter(cta=>!CTAS_VENTA().has(cta)).sort();
+  // métricas
+  const tot=Array(13).fill(0), totBase=Array(13).fill(0); let nMan=0;
+  ctas.forEach(cta=>{ const d=derivadas[cta]; for(let m=1;m<=12;m++){ const man=G[cta]?.[m]?.manual; const v=man?G[cta][m].importe:(d?d.arr[m]:(G[cta]?.[m]?.importe||0)); if(man) nMan++; const s=cta.startsWith('7')?-1:1; tot[m]+=s*v; totBase[m]+=s*baseGasto(centro,cta)[m]; } });
+  const T=tot.reduce((a,b)=>a+b,0), TB=totBase.reduce((a,b)=>a+b,0), tv=totalAnio(centro);
+  document.getElementById('gas-metrics').innerHTML=`
+    <div class="metric"><div class="m-label">Gastos netos ${V.ejercicio}</div><div class="m-value">${fmt(T)} €</div><div class="m-delta neu">gastos 6 menos otros ingresos 7</div></div>
+    <div class="metric"><div class="m-label">Base año anterior</div><div class="m-value">${fmt(TB)} €</div><div class="m-delta ${TB?(T>=TB?'neg':'pos'):'neu'}">${TB?((T-TB)/TB*100).toFixed(1)+'% vs base':'sin base'}</div></div>
+    <div class="metric"><div class="m-label">% sobre ventas</div><div class="m-value">${tv?(T/tv*100).toFixed(1)+'%':'—'}</div><div class="m-delta neu">ventas ${fmt(tv)} €</div></div>
+    <div class="metric"><div class="m-label">Celdas manuales</div><div class="m-value">${nMan}</div><div class="m-delta neu">no las toca el recálculo</div></div>
+    <div class="metric"><div class="m-label">Origen de la base</div><div class="m-value" style="font-size:12px;line-height:1.4">${BASEG.origen.join('<br>')}</div></div>`;
+  // tabla agrupada
+  let h=`<thead><tr><th>Cuenta</th><th>Coef</th><th>Base AA</th>${MS.map(m=>`<th>${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+  const grupos={}; ctas.forEach(cta=>{ const gi=cuentaInfo(cta); (grupos[gi.grupo+' '+gi.grupo_desc] ||= []).push(cta); });
+  Object.keys(grupos).sort().forEach(g=>{
+    const sub=Array(13).fill(0);
+    let filas=''; grupos[g].forEach(cta=>{ const gi=cuentaInfo(cta), d=derivadas[cta], b=baseGasto(centro,cta), bt=b.reduce((a,x)=>a+x,0); let t=0;
+      const cells=MS.map((_,i)=>{ const m=i+1, cell=G[cta]?.[m], man=cell?.manual; const v=man?cell.importe:(d?d.arr[m]:(cell?.importe||0)); t+=v; sub[m]+=v;
+        if(d&&!man) return `<td class="sub" title="${d.origen}" ondblclick="editGastoManual('${cta}',${m},${v})">${v?fmt(v):''}</td>`;
+        return `<td class="edit"><input type="text" inputmode="decimal" class="${man?'manual':''}" style="width:78px" value="${v?fmt2(v):''}" title="${man?'manual · doble clic: volver a automático':'base '+fmt(b[m])+' × '+coefDe(centro,cta)}" onchange="setGasto('${cta}',${m},this.value)" ondblclick="autoGasto('${cta}',${m})" onfocus="this.select()"></td>`; }).join('');
+      filas+=`<tr><td><b>${cta}</b> <span class="sub">${gi.descripcion}</span>${d?` <span class="chip">${d.origen}</span>`:''}</td><td class="edit">${d?'':`<input type="number" step="0.01" style="width:58px" value="${coefDe(centro,cta)}" onchange="setCoef('${cta}',this.value)">`}</td><td class="sub">${bt?fmt(bt):''}</td>${cells}<td class="acc">${fmt(t)}</td></tr>`; });
+    h+=`<tr class="r-total"><td colspan="3">${g}</td>${sub.slice(1).map(v=>`<td>${v?fmt(v):''}</td>`).join('')}<td>${fmt(sub.reduce((a,b)=>a+b,0))}</td></tr>`+filas;
+  });
+  h+=`</tbody><tfoot><tr class="r-total"><td colspan="2">Gastos netos</td><td>${fmt(TB)}</td>${tot.slice(1).map(v=>`<td>${fmt(v)}</td>`).join('')}<td>${fmt(T)}</td></tr></tfoot>`;
+  document.getElementById('tbl-gastos').innerHTML=h;
+  document.getElementById('sel-add-cta').innerHTML=cuentas.filter(x=>!ctas.includes(x.cuenta)&&!CTAS_VENTA().has(x.cuenta)).map(x=>`<option value="${x.cuenta}">${x.cuenta} ${x.descripcion}</option>`).join('');
+}
+function setGasto(cta,m,v){ const R=((D.gastos[centro] ||= {})[cta] ||= {}); R[m]={ importe:r2(parseNum(v)), base:baseGasto(centro,cta)[m], manual:true, origen:'manual', nota:R[m]?.nota||null }; syncManual(centro); markDirty('gastos:'+centro); recalcCentros.add(centro); renderGastos(); }
+function editGastoManual(cta,m,v){ setGasto(cta,m,String(v).replace('.',',')); }
+function autoGasto(cta,m){ const R=(D.gastos[centro]||{})[cta]; if(!R||!R[m]||!R[m].manual) return; if(esDerivada(centro,cta)) delete R[m]; else R[m]={ importe:r2(baseGasto(centro,cta)[m]*coefDe(centro,cta)), base:baseGasto(centro,cta)[m], manual:false, origen:'base', nota:null }; syncManual(centro); markDirty('gastos:'+centro); recalcCentros.add(centro); renderGastos(); }
+function setCoef(cta,v){ (D.coef[centro] ||= {})[cta]=+v||0; markDirty('coef'); recalcGastos(centro); markDirty('gastos:'+centro); recalcCentros.add(centro); renderGastos(); }
+function addCuenta(){ const cta=document.getElementById('sel-add-cta').value; if(!cta) return; ((D.gastos[centro] ||= {})[cta] ||= {}); (D.coef[centro] ||= {})[cta]=1; markDirty('gastos:'+centro); renderGastos(); }
+async function abrirCargaGastos(){
+  document.getElementById('modal-carga-gastos').classList.add('open'); const pv=document.getElementById('carga-gastos-preview'); pv.textContent='Leyendo hoja PRESUPUESTO…'; document.getElementById('btn-carga-gastos').disabled=true;
+  try{ const wb=await leerDatosXlsx(); PYGHOJA=parseHojaPresupuesto(wb); let n=0,t6=0,t7=0; Object.keys(PYGHOJA).forEach(c=>Object.keys(PYGHOJA[c]).forEach(cta=>{ if(CTAS_VENTA().has(cta)) return; const s=PYGHOJA[c][cta].reduce((a,b)=>a+b,0); n++; if(cta.startsWith('6')) t6+=s; else t7+=s; }));
+    pv.innerHTML=`${n} filas cuenta × canal · gastos 6: ${fmt(t6)} € · otros ingresos 7 (sin ventas 700): ${fmt(t7)} €<br>Canales: ${Object.keys(PYGHOJA).sort().join(', ')}`; document.getElementById('btn-carga-gastos').disabled=false;
+  }catch(e){ pv.textContent='Error: '+e.message; }
+}
+async function ejecutarCargaGastos(){
+  cerrarModal('modal-carga-gastos');
+  try{ loading(true,'Volcando gastos del PyG…'); const vid=V.id;
+    await sbDelete('pre_gastos',`version_id=eq.${vid}&origen=in.(base,manual)`);
+    const rows=[]; D.gastos={}; D.gastosManual={};
+    Object.keys(PYGHOJA).forEach(c=>Object.keys(PYGHOJA[c]).forEach(cta=>{ if(CTAS_VENTA().has(cta)||!cuentas.some(x=>x.cuenta===cta)) return; for(let m=1;m<=12;m++){ const v=PYGHOJA[c][cta][m]; if(!v) continue; rows.push({version_id:vid,centro:c,cuenta:cta,mes:m,importe:v,base_importe:null,origen:'base',manual:true,actualizado_en:new Date().toISOString()}); ((D.gastos[c] ||= {})[cta] ||= {})[m]={importe:v,base:null,manual:true,origen:'base',nota:null}; D.gastosManual[`${c}|${cta}|${m}`]=v; } }));
+    await sbUpsert('pre_gastos',rows,'version_id,centro,cuenta,mes');
+    // % de compras a 0 para no duplicar las compras de la hoja
+    CENTROS.forEach(c=>{ Object.keys(D.compras[c]||{}).forEach(f=>{ D.compras[c][f]={ext:0,int:0}; }); });
+    await sbDelete('pre_compras_pct',`version_id=eq.${vid}`); await sbDelete('pre_gastos',`version_id=eq.${vid}&manual=eq.false&origen=in.(compras,interno)`);
+    const skipped=[]; Object.keys(PYGHOJA).forEach(c=>Object.keys(PYGHOJA[c]).forEach(cta=>{ if(!CTAS_VENTA().has(cta)&&!cuentas.some(x=>x.cuenta===cta)) skipped.push(cta); }));
+    clearDirty(); toast(`Gastos cargados: ${rows.length} celdas${skipped.length?' · sin plan de cuentas: '+[...new Set(skipped)].join(', '):''}`); await cambiarVersion(vid);
+  }catch(e){ toast('Error en la carga: '+e.message,true); console.error(e); } finally{ loading(false); }
+}
+
+// ───────────────────────────── RESUMEN PyG ─────────────────────────────
+// Filas efectivas de un centro: {cuenta:[13]} con ventas (mix), derivadas y base/manual
+function pygCentro(c){
+  const out={}; const put=(cta,m,v)=>{ (out[cta] ||= Array(13).fill(0))[m]=r2(out[cta][m]+v); };
+  const v=ventasFamMes(c); Object.keys(v).forEach(f=>{ const cta=famInfo(f).cuenta_venta; if(!cta) return; for(let m=1;m<=12;m++) if(v[f][m]) put(cta,m,v[f][m]); });
+  const K=calcCompras(c), P=calcPersonal(c), VI=ventasInternas()[c]||{}, G=gastosDe(c);
+  const der={...K.cuenta,...VI}; if(plantillaDe(c).length){ der['640000000']=P.salarios; der['640000001']=P.finiq; der['642000000']=P.ss; }
+  const ctas=new Set([...Object.keys(der),...Object.keys(G)]);
+  ctas.forEach(cta=>{ for(let m=1;m<=12;m++){ const cell=G[cta]?.[m]; const val=cell?.manual?cell.importe:(der[cta]?der[cta][m]:(cell?.importe||0)); if(val) put(cta,m,val); } });
+  return out;
+}
+function pygTodos(){ const out={}; CENTROS.forEach(c=>{ const p=pygCentro(c); Object.keys(p).forEach(cta=>{ if(cuentaInfo(cta).tipo==='MERCADO INTERNO') return; const a=(out[cta] ||= Array(13).fill(0)); for(let m=1;m<=12;m++) a[m]=r2(a[m]+p[cta][m]); }); }); return out; }
+function hojaPyg(c){ if(!PYGHOJA) return null; if(c!=='TODOS') return PYGHOJA[c]||{}; const out={}; Object.keys(PYGHOJA).forEach(cc=>Object.keys(PYGHOJA[cc]).forEach(cta=>{ if(cuentaInfo(cta).tipo==='MERCADO INTERNO') return; const a=(out[cta] ||= Array(13).fill(0)); for(let m=1;m<=12;m++) a[m]=r2(a[m]+PYGHOJA[cc][cta][m]); })); return out; }
+async function renderResumen(){
+  document.getElementById('res-centro').textContent=resCentro;
+  document.getElementById('seg-res').innerHTML=['TODOS',...CENTROS].map(c=>`<button class="${c===resCentro?'active':''}" onclick="resCentro='${c}';renderResumen()">${c}</button>`).join('');
+  if(!BASEG){ loading(true,'Leyendo PyG…'); try{ await cargarBaseGastos(); CENTROS.forEach(c=>{ if(!Object.keys(gastosDe(c)).length && BASEG.data[c]) recalcGastos(c); }); } finally{ loading(false); } }
+  const P=resCentro==='TODOS'?pygTodos():pygCentro(resCentro), H=hojaPyg(resCentro);
+  const sum=a=>a.reduce((x,y)=>x+y,0);
+  const grupos={}; Object.keys(P).forEach(cta=>{ const gi=cuentaInfo(cta); (grupos[gi.grupo+'|'+gi.grupo_desc] ||= []).push(cta); });
+  const agg=ctas=>{ const a=Array(13).fill(0); ctas.forEach(cta=>{ for(let m=1;m<=12;m++) a[m]+=P[cta][m]; }); return a; };
+  const aggH=ctas=>{ if(!H) return null; let t=0; ctas.forEach(cta=>{ if(H[cta]) t+=sum(H[cta]); }); return t; };
+  const ing=Object.keys(grupos).filter(g=>g.startsWith('7')).sort(), gas=Object.keys(grupos).filter(g=>g.startsWith('6')).sort();
+  const tIng=Array(13).fill(0), tGas=Array(13).fill(0); ing.forEach(g=>{ const a=agg(grupos[g]); for(let m=1;m<=12;m++) tIng[m]+=a[m]; }); gas.forEach(g=>{ const a=agg(grupos[g]); for(let m=1;m<=12;m++) tGas[m]+=a[m]; });
+  const res=Array(13).fill(0); for(let m=1;m<=12;m++) res[m]=tIng[m]-tGas[m];
+  const ventas=agg(Object.keys(P).filter(cta=>cuentaInfo(cta).grupo==='7000')), compras=agg(Object.keys(P).filter(cta=>['6000','6001'].includes(cuentaInfo(cta).grupo))), personal=agg(Object.keys(P).filter(cta=>cuentaInfo(cta).grupo==='6400'));
+  const hIng=H?ing.reduce((a,g)=>a+aggH(grupos[g]),0):null, hGas=H?gas.reduce((a,g)=>a+aggH(grupos[g]),0):null;
+  document.getElementById('res-metrics').innerHTML=`
+    <div class="metric"><div class="m-label">Ingresos</div><div class="m-value">${fmt(sum(tIng))} €</div><div class="m-delta neu">${H?'hoja PyG '+fmt(hIng):''}</div></div>
+    <div class="metric"><div class="m-label">Gastos</div><div class="m-value">${fmt(sum(tGas))} €</div><div class="m-delta neu">${H?'hoja PyG '+fmt(hGas):''}</div></div>
+    <div class="metric"><div class="m-label">Resultado</div><div class="m-value ${sum(res)>=0?'pos':'neg'}">${fmt(sum(res))} €</div><div class="m-delta neu">${sum(ventas)?(sum(res)/sum(ventas)*100).toFixed(1)+'% s/ventas':''}${H?' · hoja '+fmt(hIng-hGas):''}</div></div>
+    <div class="metric"><div class="m-label">Ratio compras</div><div class="m-value">${sum(ventas)?(sum(compras)/sum(ventas)*100).toFixed(1)+'%':'—'}</div><div class="m-delta neu">${fmt(sum(compras))} €</div></div>
+    <div class="metric"><div class="m-label">Ratio personal</div><div class="m-value">${sum(ventas)?(sum(personal)/sum(ventas)*100).toFixed(1)+'%':'—'}</div><div class="m-delta neu">${fmt(sum(personal))} €</div></div>`;
+  const fila=(label,a,cls,extra='',hv=null)=>`<tr class="${cls}">${label}${a.slice(1).map(v=>`<td>${v?fmt(v):''}</td>`).join('')}<td class="acc">${fmt(sum(a))}</td>${H?`<td class="sub">${hv==null?'':fmt(hv)}</td><td>${hv==null?'':`<span class="${sum(a)-hv>=0?'dv-pos':'dv-neg'}">${sum(a)-hv>0?'+':''}${fmt(sum(a)-hv)}</span>`}</td>`:''}</tr>`;
+  const grupoRows=(lista)=>lista.map(g=>{ const [gid,gd]=g.split('|'), a=agg(grupos[g]), open=resExp[g]; let h=fila(`<td style="cursor:pointer" onclick="resExp['${g}']=!resExp['${g}'];renderResumen()"><span class="chip">${open?'▾':'▸'}</span> <b>${gid}</b> ${gd}</td>`,a,'r-grp','',aggH(grupos[g]));
+    if(open) grupos[g].sort().forEach(cta=>{ h+=fila(`<td class="sub">&nbsp;&nbsp;&nbsp;${cta} ${cuentaInfo(cta).descripcion}</td>`,P[cta],'',``,H?(H[cta]?sum(H[cta]):0):null); }); return h; }).join('');
+  let h=`<thead><tr><th>Concepto</th>${MS.map(m=>`<th>${m}</th>`).join('')}<th>Total</th>${H?'<th>Hoja PyG</th><th>Dif</th>':''}</tr></thead><tbody>`;
+  h+=grupoRows(ing)+fila('<td><b>TOTAL INGRESOS</b></td>',tIng,'r-total','',hIng);
+  h+=grupoRows(gas)+fila('<td><b>TOTAL GASTOS</b></td>',tGas,'r-total','',hGas);
+  h+=fila('<td><b>RESULTADO</b></td>',res,'r-total',``,H?hIng-hGas:null);
+  h+=`<tr><td class="sub">% resultado s/ventas</td>${MS.map((_,i)=>`<td class="sub">${ventas[i+1]?(res[i+1]/ventas[i+1]*100).toFixed(1)+'%':''}</td>`).join('')}<td class="sub">${sum(ventas)?(sum(res)/sum(ventas)*100).toFixed(1)+'%':''}</td>${H?'<td></td><td></td>':''}</tr>`;
+  h+=`<tr><td class="sub">% compras s/ventas</td>${MS.map((_,i)=>`<td class="sub">${ventas[i+1]?(compras[i+1]/ventas[i+1]*100).toFixed(1)+'%':''}</td>`).join('')}<td class="sub">${sum(ventas)?(sum(compras)/sum(ventas)*100).toFixed(1)+'%':''}</td>${H?'<td></td><td></td>':''}</tr>`;
+  h+=`<tr><td class="sub">% personal s/ventas</td>${MS.map((_,i)=>`<td class="sub">${ventas[i+1]?(personal[i+1]/ventas[i+1]*100).toFixed(1)+'%':''}</td>`).join('')}<td class="sub">${sum(ventas)?(sum(personal)/sum(ventas)*100).toFixed(1)+'%':''}</td>${H?'<td></td><td></td>':''}</tr>`;
+  document.getElementById('tbl-resumen').innerHTML=h+'</tbody>';
+}
+// Excel completo: PRESUPUESTO (formato PyG), PRESUPUESTO NOMINAS (formato Ratios), PRESUPUESTO INGRESOS (formato Ratios), DIARIO
+function descargarCompleto(){
+  if(!D) return;
+  const wb=XLSX.utils.book_new();
+  const pyg=[['CUENTA','DESCRIPCION','CANAL',...MESES]];
+  CENTROS.forEach(c=>{ const P=pygCentro(c); Object.keys(P).sort().forEach(cta=>{ if(!P[cta].some(x=>x)) return; pyg.push([cta,cuentaInfo(cta).descripcion,c,...P[cta].slice(1)]); }); });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pyg),'PRESUPUESTO');
+  const nom=[['CANAL','DEPARTAMENTO',1,2,3,4,5,6,7,8,9,10,11,12]]; const ssp=(D.params.ss_pct||0)/100;
+  CENTROS.forEach(c=>{ const P=calcPersonal(c); Object.keys(P.depto).forEach(d=>{ nom.push([c,d,...P.depto[d].slice(1).map(x=>r2(x*(1+ssp)))]); }); });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(nom),'PRESUPUESTO NOMINAS');
+  const cols=[]; CENTROS.forEach(c=>{ if(!totalAnio(c)) return; cols.push({c,f:'TODAS'}); Object.keys(mixDe(c)).filter(f=>mixDe(c)[f].pct>0).forEach(f=>cols.push({c,f})); });
+  const aoa=[['CANAL',...cols.map(x=>x.c)],['FAMILIA',...cols.map(x=>x.f)],['%',...cols.map(x=>x.f==='TODAS'?1:mixDe(x.c)[x.f].pct/100)],['SUMA',...cols.map(()=>null)],['FECHA',...cols.map(()=>null)]]; const sums=cols.map(()=>0);
+  fechasAnio(V.ejercicio).forEach(f=>{ const row=[new Date(f+'T00:00:00')]; cols.forEach((x,i)=>{ const t=(D.dia[x.c]||{})[f]?.importe||0; const v=x.f==='TODAS'?t:r2(t*mixDe(x.c)[x.f].pct/100); sums[i]+=v; row.push(v||0); }); aoa.push(row); });
+  aoa[3]=['SUMA',...sums.map(r2)];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa,{cellDates:true}),'PRESUPUESTO INGRESOS');
+  const plano=[['FECHA','CENTRO','FAMILIA','IMPORTE']]; CENTROS.forEach(c=>filasFamilia(c).forEach(r=>plano.push([r.fecha,r.centro,r.familia,r.importe])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(plano),'DIARIO');
+  XLSX.writeFile(wb,`PRESUPUESTO ${V.ejercicio} ${V.nombre} completo.xlsx`);
+}
+
 // ───────────────────────────── GUARDAR ─────────────────────────────
 async function guardar(){
   if(!V) return; if(!dirty()) return toast('Nada que guardar');
@@ -1017,6 +1262,17 @@ async function guardar(){
       const hs=[]; D.plantilla.filter(p=>p._horasDirty).forEach(p=>SEM.forEach(w=>hs.push({plantilla_id:p.id,semana:w.n,horas:+(D.horas[p.id]||{})[w.n]||0})));
       if(hs.length) await sbUpsert('pre_plantilla_horas',hs,'plantilla_id,semana');
       D.plantilla.forEach(p=>{ delete p._dirty; delete p._nuevo; delete p._horasDirty; });
+    }
+    if(dirtySet.has('coef')){
+      const rows=[]; Object.keys(D.coef).forEach(c=>Object.keys(D.coef[c]).forEach(cta=>rows.push({version_id:vid,centro:c,cuenta:cta,coef:D.coef[c][cta]})));
+      if(rows.length) await sbUpsert('pre_coef_cuenta',rows,'version_id,centro,cuenta');
+    }
+    for(const k of [...dirtySet].filter(k=>k.startsWith('gastos:'))){
+      const c=k.slice(7); loading(true,`Guardando gastos ${c}…`);
+      await sbDelete('pre_gastos',`version_id=eq.${vid}&centro=eq.${enc(c)}&origen=in.(base,manual)`);
+      const rows=[]; const G=gastosDe(c); Object.keys(G).forEach(cta=>Object.keys(G[cta]).forEach(m=>{ const cell=G[cta][m]; if(!cell.manual && !cell.importe) return; if(!cell.manual && esDerivada(c,cta)) return; rows.push({version_id:vid,centro:c,cuenta:cta,mes:+m,importe:cell.importe,base_importe:cell.base,origen:cell.manual?(cell.origen==='base'?'base':'manual'):'base',manual:!!cell.manual,nota:cell.nota||null,actualizado_en:new Date().toISOString()}); }));
+      if(rows.length) await sbUpsert('pre_gastos',rows,'version_id,centro,cuenta,mes');
+      syncManual(c);
     }
     // Regenerar derivados por centro: ingresos por familia, compras, personal, nóminas. Bodega y Producción
     // reciben las ventas internas espejo, así que se regeneran si cambia cualquier centro.
