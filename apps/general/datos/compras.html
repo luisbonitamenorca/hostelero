@@ -893,13 +893,20 @@ function filaFiltros(tabla, cols, rows, keymap, fnRender){
     const vals=[...new Set(rows.map(r=>{const v=keymap[k](r);return v==null?'':String(v);})
                  .filter(v=>v!==''&&v.length<=120))].sort().slice(0,2000);
     const dl=`dl_${tabla}_${k}`;
-    return `<td style="padding:4px 6px">
+    // Al pulsar sobre un filtro con valor se vacía para que el desplegable enseñe
+    // toda la lista; si se sale sin elegir, se recupera el valor. Eso dejaba sin
+    // forma de QUITAR el filtro (Borrar sobre el campo ya vacío no dispara input):
+    // ahora Borrar/Supr/Escape sobre el campo vacío lo quitan, y hay una ✕ al lado.
+    const conValor=String(f[k]||'').trim()!=='';
+    return `<td style="padding:4px 6px"><div style="display:flex;align-items:center;gap:2px">
       <input list="${dl}" data-col="${k}" value="${esc(f[k]||'')}" placeholder="—"
              onmousedown="if(this.value){this.dataset.prev=this.value;this.value='';this.dataset.touched=''}"
              oninput="this.dataset.touched='1';setColFiltro('${tabla}','${k}',this.value,'${fnRender}')"
+             onkeydown="if(!this.value&&(event.key==='Backspace'||event.key==='Delete'||event.key==='Escape')){this.dataset.touched='1';this.dataset.prev='';setColFiltro('${tabla}','${k}','','${fnRender}')}"
              onblur="if(!this.dataset.touched&&this.dataset.prev){this.value=this.dataset.prev}"
              style="width:100%;min-width:70px;font-size:11px;padding:3px 5px;border:1px solid var(--line);border-radius:5px;background:var(--paper)">
-      <datalist id="${dl}">${vals.map(v=>`<option value="${esc(v)}">`).join('')}</datalist></td>`;
+      ${conValor?`<span title="Quitar este filtro" onmousedown="event.preventDefault()" onclick="setColFiltro('${tabla}','${k}','','${fnRender}')" style="cursor:pointer;color:var(--muted);font-size:12px;padding:0 3px">✕</span>`:''}
+      </div><datalist id="${dl}">${vals.map(v=>`<option value="${esc(v)}">`).join('')}</datalist></td>`;
   }).join('');
   const limpiar=nAct?`<div style="margin:6px 0 0"><span class="link" onclick="limpiaColFiltros('${tabla}','${fnRender}')">✕ quitar los ${nAct} filtros</span></div>`:'';
   return {fila:`<tr class="fltrow">${celdas}</tr>`, limpiar, nAct};
