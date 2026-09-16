@@ -521,8 +521,10 @@ function sbHeaders(extra={}) {
 }
 
 async function downloadFromSupabase() {
-  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${FILE_NAME}`;
-  const res = await fetch(url, { headers: sbHeaders() });
+  // ?v= + no-store: el CDN de Storage cachea ~1h y, sin esto, tras subir un
+  // Excel nuevo se seguía viendo el anterior (visto el 16-09-2026).
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${FILE_NAME}?v=${Date.now()}`;
+  const res = await fetch(url, { headers: sbHeaders(), cache: 'no-store' });
   if (!res.ok) throw new Error('No hay datos subidos aún (HTTP ' + res.status + ')');
   return await res.arrayBuffer();
 }
