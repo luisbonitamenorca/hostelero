@@ -1160,6 +1160,10 @@ async function cargarLoteCorreo(){
         if(pesado&&!a.url)throw new Error('demasiado grande y sin URL de descarga');
         cola.push({file,b64:pesado?null:b64,mime:mimeFinal,status:'wait',
                    correoAdjId:a.id,urlPublica:a.url,
+                   // 'FORZAR FACTURA' en el error = reencolado a mano como factura
+                   // (el OCR lo había tomado por albarán, p.ej. Dismenorca, que
+                   // pone "Albarán" en la cabecera de sus facturas).
+                   tipoForzado:/^FORZAR FACTURA/i.test(a.error||'')?'factura':null,
                    // correo_id nulo = subida desde el front movil (/subir-facturas
                    // de hostelero-app): es una carga manual con patas, no un email.
                    esMovil:a.correo_id==null});
@@ -2024,7 +2028,7 @@ async function procesarUno(c){
   const hijos=await dividirPdfSiVarias(c);
   if(hijos){c._hijos=hijos;c.dividido=hijos.length;renderQueue();return;}
   // los documentos de correo se clasifican siempre en modo auto y con el filtro anti-ruido
-  const tipoUsado=c.correoAdjId?'auto':tipo;
+  const tipoUsado=c.tipoForzado||(c.correoAdjId?'auto':tipo);
   const prompt=construirPromptOCR(tipoUsado,!!c.correoAdjId);
   // Si no hay base64 (archivo demasiado grande para el proxy) se manda la URL
   // pública del bucket: la API la descarga por su cuenta y el cuerpo de nuestra
@@ -5664,6 +5668,15 @@ async function detalleCorreo(id){
     alert(`${c.asunto||'(sin asunto)'}\nDe: ${c.remitente||'?'}\nCarpeta: ${c.carpeta||'?'}  ·  Estado: ${c.estado}`
       +(c.error?`\nError: ${c.error} (intentos: ${c.intentos||0})`:'')
       +`\n\nAdjuntos:\n${lineas}${enl}`);
+    // Adjuntos descartados por "albarán recibido por correo" que en realidad son
+    // facturas: se devuelven a la cola forzando el tipo (16-09-2026).
+    const desc=adj.filter(a=>a.estado==='DESCARTADO'&&/albarán recibido por correo/i.test(a.error||''));
+    if(desc.length&&confirm(`${desc.length} adjunto(s) se descartaron como albarán. ¿Volver a cargarlos COMO FACTURA?\n\n${desc.map(a=>'• '+a.nombre_archivo).join('\n')}`)){
+      const adjIds=await sb(`compras_correo_adjunto?correo_id=eq.${id}&estado=eq.DESCARTADO&error=ilike.*albarán recibido por correo*&select=id`);
+      for(const a of adjIds)await sb(`compras_correo_adjunto?id=eq.${a.id}`,{method:'PATCH',body:JSON.stringify({estado:'PENDIENTE',claimed_at:null,error:'FORZAR FACTURA · reencolado a mano desde Buzón'})});
+      toast(`${adjIds.length} adjunto(s) de vuelta en la cola como factura`);
+      if(typeof sincronizarCorreo==='function')sincronizarCorreo(true);
+    }
   }catch(e){alert('No se pudo cargar el detalle: '+e.message);}
 }
 // Devuelve a la cola los adjuntos que murieron en ERROR. Se usa tras arreglar
