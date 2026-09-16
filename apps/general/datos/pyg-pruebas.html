@@ -1429,7 +1429,9 @@ function parsePorProveedor(ws) {
   const idxCuenta = H.indexOf('CUENTA');
   const idxProv   = H.findIndex(h => h.includes('NOMBRE') && h.includes('PROVEEDOR'));
   const idxCC     = H.indexOf('CENTRO_COSTE_1');
-  const idxFecha  = H.indexOf('FECHA');
+  // 16-09-2026: A3 exporta 'Fecha' (factura) y 'Fecha contable'. El reparto por mes
+  // va por la CONTABLE, que es la que cuadra con SUMAS Y SALDOS (Lucía).
+  const idxFecha  = H.indexOf('FECHA CONTABLE') >= 0 ? H.indexOf('FECHA CONTABLE') : H.indexOf('FECHA');
   const idxBase   = H.findIndex(h => h.startsWith('BASE'));
   if (idxCuenta < 0 || idxBase < 0) return null;
 
