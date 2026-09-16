@@ -322,6 +322,15 @@ select,input[type=password],input[type=text]{font-family:inherit}
         <div class="seg" id="canal-seg"></div>
       </div>
       <div class="sep" id="sep-canal"></div>
+      <div class="toolbar-group" title="Simulación: precio interno del vino Bodega → centros. Real = tarifa 2026 (−40% vs 2025). Propuesta = se deshace la mitad de la rebaja. Traspaso de margen entre Bodega y centros; en TODOS no cambia nada.">
+        <span class="toolbar-label">Tarifa interna vino</span>
+        <div class="seg">
+          <button class="active" id="btn-mi-0" onclick="setTarifaMI(0,this)">Real 2026</button>
+          <button id="btn-mi-05" onclick="setTarifaMI(0.5,this)">Propuesta (½ rebaja)</button>
+          <button id="btn-mi-1" onclick="setTarifaMI(1,this)">Tarifa 2025</button>
+        </div>
+      </div>
+      <div class="sep"></div>
       <div class="toolbar-group">
         <span class="toolbar-label">Vista PyG</span>
         <div class="seg">
@@ -642,16 +651,40 @@ function toggleConcilDetalle() {
 // consulta falla, se mantiene la hoja MERCADO INTERNO del Excel como respaldo.
 // -------------------------------------------------------------
 const MI_CUENTAS = ['600000101','600000201','700000101','700000201'];
+// -------------------------------------------------------------
+// SIMULACIÓN DE TARIFA INTERNA DE VINO (16-09-2026, pedido de Luis).
+// En 2026 la tarifa interna de Bodega bajó ~40% de media respecto a 2025 y
+// eso hunde la explotación de Bodega. tarifaMI = 0 → real (tarifa 2026);
+// 0.5 → propuesta (se deshace la mitad de la rebaja); 1 → tarifa 2025.
+// MI_T25_RATIO[canal][mes] = ventas internas a tarifa 2025 / ventas reales,
+// calculado con los albaranes internos de Ágora (Detalle de Albaranes,
+// abr–sep 2026, mix real de vinos por centro y mes). Meses sin dato → media
+// del canal. Es un traspaso de margen Bodega↔centros: en TODOS no cambia nada.
+// -------------------------------------------------------------
+let tarifaMI = 0;
+const MI_T25_RATIO = {"TAMARINDOS": {"4": 1.2796, "5": 1.6667, "6": 1.6679, "7": 1.6781, "8": 1.6656, "9": 1.652}, "TIENDA": {"4": 1.6889, "5": 1.6858, "6": 1.7778, "7": 1.6823, "8": 1.6797, "9": 1.6817}, "TAMARINDOS BAR": {"4": 1.6578, "5": 1.6688, "6": 1.6444, "7": 1.625, "8": 1.686, "9": 1.675}, "TIRANT": {"4": 1.6783, "5": 1.7082, "6": 1.6677, "7": 1.6752, "8": 1.6755, "9": 1.6981}, "BINIFADET": {"4": 1.7118, "5": 1.6788, "6": 1.6791, "7": 1.6766, "8": 1.6778, "9": 1.6752}};
+let MI_RAW = null; // gastos internos cacheados para re-simular sin volver a pedirlos
+function factorMI(canal, mes) {
+  if (!tarifaMI) return 1;
+  const t = MI_T25_RATIO[canal] || {};
+  let r = t[mes];
+  if (!r) { const vs = Object.values(t); r = vs.length ? vs.reduce((a,b)=>a+b,0)/vs.length : 1.68; }
+  return 1 + tarifaMI * (r - 1);
+}
 async function fetchMercadoInternoLive() {
-  const sel = 'select=centro,proveedor,base,mes&proveedor=ilike.*intern*';
-  let all = [], off = 0;
-  while (true) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/gastos?${sel}&limit=1000&offset=${off}`, { headers: sbHeaders() });
-    if (!r.ok) return null;
-    const d = await r.json();
-    all = all.concat(d);
-    if (d.length < 1000) break;
-    off += 1000;
+  let all = MI_RAW;
+  if (!all) {
+    const sel = 'select=centro,proveedor,base,mes&proveedor=ilike.*intern*';
+    all = []; let off = 0;
+    while (true) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/gastos?${sel}&limit=1000&offset=${off}`, { headers: sbHeaders() });
+      if (!r.ok) return null;
+      const d = await r.json();
+      all = all.concat(d);
+      if (d.length < 1000) break;
+      off += 1000;
+    }
+    MI_RAW = all;
   }
   if (!all.length) return null;
   const acc = {}; // 'cuenta|canal' -> {cuenta,canal,mensual[12]}
@@ -664,8 +697,9 @@ async function fetchMercadoInternoLive() {
     const cCompra = esVino ? '600000101' : '600000201';
     const cVenta  = esVino ? '700000101' : '700000201';
     const mi = Math.min(11, Math.max(0, (parseInt(g.mes, 10) || 1) - 1));
-    const base = parseFloat(g.base) || 0;
-    ensure(cCompra, normalizeCanal(g.centro)).mensual[mi] += base;
+    const canalG = normalizeCanal(g.centro);
+    const base = (parseFloat(g.base) || 0) * (esVino ? factorMI(canalG, mi + 1) : 1);
+    ensure(cCompra, canalG).mensual[mi] += base;
     ventas[cVenta][mi] += base;  // venta interna = espejo exacto de la compra
   });
   const descCompra = c => c === '600000101' ? 'COMPRAS INTERNAS VINO' : 'COMPRAS INTERNAS COMIDA';
@@ -1409,6 +1443,13 @@ function setCanal(c, btn) {
   document.querySelectorAll('#canal-seg button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   refresh();
+}
+
+function setTarifaMI(s, btn) {
+  tarifaMI = s;
+  document.querySelectorAll('#btn-mi-0,#btn-mi-05,#btn-mi-1').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  refreshMercadoInterno();
 }
 
 function setModoPresup(m, btn) {
