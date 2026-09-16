@@ -242,11 +242,11 @@ select,input[type=password],input[type=text]{font-family:inherit}
 <div class="modal-overlay" id="admin-modal">
   <div class="modal">
     <h3>Actualizar datos</h3>
-    <p>Sube un Excel con lo que quieras actualizar (sumas y saldos, proveedores, nóminas…). Se reconoce por su contenido y <strong>solo se actualiza eso</strong>; el resto se conserva. <strong>El presupuesto y el plan de cuentas están protegidos</strong> y no se tocan desde aquí (los mantiene el equipo aparte), aunque el Excel los incluya.</p>
+    <p>Sube uno o varios Excel con lo que quieras actualizar (sumas y saldos, proveedores, nóminas…). Puedes seleccionar los dos ficheros de A3 a la vez. Se reconocen por su contenido y <strong>solo se actualiza eso</strong>; el resto se conserva. El listado de proveedores se reparte por meses con la columna <strong>Fecha contable</strong>. <strong>El presupuesto y el plan de cuentas están protegidos</strong> y no se tocan desde aquí (los mantiene el equipo aparte), aunque el Excel los incluya.</p>
     <div class="drop-zone" id="admin-drop" onclick="document.getElementById('admin-fi').click()" style="margin-bottom:10px;padding:1rem">
       <p id="admin-drop-label"><strong>Seleccionar Excel</strong> o arrastrar aquí</p>
     </div>
-    <input type="file" id="admin-fi" accept=".xlsx,.xls">
+    <input type="file" id="admin-fi" accept=".xlsx,.xls" multiple>
     <div id="upload-status" style="font-size:12px;color:var(--muted);min-height:18px;margin-bottom:8px"></div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeAdmin()">Cancelar</button>
@@ -535,7 +535,8 @@ let charts = {};
 let expanded = {};      // grupos expandidos en vista grupo (drill-down nivel 1)
 let expandedCta = {};   // cuentas expandidas para mostrar centros de coste (drill-down nivel 2)
 let expandedCC = {};    // centros de coste expandidos para mostrar proveedores (drill-down nivel 3). Clave: 'cuenta|canal'
-let adminFile = null;
+let adminFile = null; // compat
+let adminFiles = [];
 
 // ---- SUPABASE HELPERS ----
 function sbHeaders(extra={}) {
@@ -1059,7 +1060,7 @@ function openAdmin() {
   document.getElementById('admin-drop-label').innerHTML = '<strong>Seleccionar Excel</strong> o arrastrar aquí';
   document.getElementById('upload-status').textContent = '';
   document.getElementById('btn-do-upload').disabled = true;
-  adminFile = null;
+  adminFile = null; adminFiles = [];
   document.getElementById('admin-modal').classList.add('open');
 }
 
@@ -1071,18 +1072,22 @@ const adminDrop = document.getElementById('admin-drop');
 const adminFi = document.getElementById('admin-fi');
 adminDrop.addEventListener('dragover', e=>{e.preventDefault();adminDrop.classList.add('drag')});
 adminDrop.addEventListener('dragleave', ()=>adminDrop.classList.remove('drag'));
-adminDrop.addEventListener('drop', e=>{e.preventDefault();adminDrop.classList.remove('drag');setAdminFile(e.dataTransfer.files[0])});
-adminFi.addEventListener('change', e=>setAdminFile(e.target.files[0]));
+adminDrop.addEventListener('drop', e=>{e.preventDefault();adminDrop.classList.remove('drag');setAdminFiles(e.dataTransfer.files)});
+adminFi.addEventListener('change', e=>setAdminFiles(e.target.files));
 
-function setAdminFile(file) {
-  if (!file) return;
-  adminFile = file;
-  document.getElementById('admin-drop-label').innerHTML = `<strong>${file.name}</strong> (${(file.size/1024).toFixed(0)} KB)`;
+// Varios ficheros a la vez (16-09-2026): Lucía sube el Sumas y el listado de
+// proveedores juntos y se funden en una sola pasada.
+function setAdminFiles(fileList) {
+  const files = Array.from(fileList || []).filter(f => f && /\.xlsx?$/i.test(f.name));
+  if (!files.length) return;
+  adminFiles = files; adminFile = files[0];
+  document.getElementById('admin-drop-label').innerHTML = files.map(f => `<strong>${f.name}</strong> (${(f.size/1024).toFixed(0)} KB)`).join('<br>');
   checkAdminReady();
 }
+function setAdminFile(file) { setAdminFiles(file ? [file] : []); }
 
 function checkAdminReady() {
-  document.getElementById('btn-do-upload').disabled = !adminFile;
+  document.getElementById('btn-do-upload').disabled = !adminFiles.length;
 }
 
 // Reconoce el CONCEPTO de una hoja por su contenido (no por el nombre), para
@@ -1115,14 +1120,23 @@ async function doUpload() {
   const status = document.getElementById('upload-status');
   btn.disabled = true; btn.textContent = 'Procesando…'; status.textContent = '';
   try {
-    const buffer = await adminFile.arrayBuffer();
-    const wbUp = XLSX.read(buffer, {type:'array'});
-    // 1) clasificar por contenido las hojas del fichero subido
-    const detectado = {}; // canónico -> nombre real en el subido
-    wbUp.SheetNames.forEach(n => {
-      const cls = classifySheet(wbUp.Sheets[n]);
-      if (cls && !detectado[cls]) detectado[cls] = n;
-    });
+    // 1) clasificar por contenido las hojas de TODOS los ficheros subidos
+    const detectado = {}; // canónico -> {wb, hoja, fichero}
+    const avisos = [];
+    for (const f of adminFiles) {
+      const wbUp = XLSX.read(await f.arrayBuffer(), {type:'array'});
+      wbUp.SheetNames.forEach(n => {
+        const cls = classifySheet(wbUp.Sheets[n]);
+        if (!cls) return;
+        if (detectado[cls]) { avisos.push(`${cls} venía en dos sitios; se usa ${f.name}`); }
+        detectado[cls] = { wb: wbUp, hoja: n, fichero: f.name };
+      });
+    }
+    if (detectado['POR PROVEEDOR']) {
+      const ws = detectado['POR PROVEEDOR'].wb.Sheets[detectado['POR PROVEEDOR'].hoja];
+      const H = (XLSX.utils.sheet_to_json(ws, {header:1, defval:null})[findHeaderRow(XLSX.utils.sheet_to_json(ws, {header:1, defval:null}))] || []).map(v => v ? String(v).toUpperCase().trim() : '');
+      if (!H.includes('FECHA CONTABLE')) avisos.push('el listado de proveedores no trae la columna "Fecha contable": se reparte por "Fecha"');
+    }
     // PRESUPUESTO y PLAN DE CUENTAS están BLINDADOS: los mantiene Luis/Code por
     // separado y NO se tocan desde aquí, para que una carga de datos (sumas y
     // saldos, proveedores…) no pueda revertirlos por accidente.
@@ -1137,7 +1151,7 @@ async function doUpload() {
     catch(e) { wbBase = XLSX.utils.book_new(); }
     // 3) fundir: reemplazar/añadir SOLO las hojas detectadas y NO protegidas
     conceptos.forEach(canon => {
-      wbBase.Sheets[canon] = wbUp.Sheets[detectado[canon]];
+      wbBase.Sheets[canon] = detectado[canon].wb.Sheets[detectado[canon].hoja];
       if (!wbBase.SheetNames.includes(canon)) wbBase.SheetNames.push(canon);
     });
     wbBase.SheetNames.sort((a,b) => {
@@ -1169,8 +1183,9 @@ async function doUpload() {
       }
     } catch(e) { /* la conciliación es informativa: nunca bloquea la subida */ }
     status.style.color = hayDescuadre ? 'var(--amber)' : 'var(--green)';
-    status.textContent = '✓ Actualizado: ' + conceptos.join(', ')
+    status.textContent = '✓ Actualizado: ' + conceptos.map(c => `${c} (${detectado[c].fichero})`).join(', ')
       + (ignoradas.length ? ' · ignorado (protegido): ' + ignoradas.join(', ') : '')
+      + (avisos.length ? ' · ⚠️ ' + avisos.join('; ') : '')
       + aviso;
     setTimeout(() => { closeAdmin(); processWorkbook(out, 'fusionado'); }, hayDescuadre ? 3200 : 1400);
   } catch(err) {
