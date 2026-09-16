@@ -1400,6 +1400,16 @@ function findSheet(wb, names) {
 // Normaliza el nombre del canal: mayúsculas y sin acentos.
 // SyS trae "Bodega", "Producción"... y Presupuesto trae "BODEGA", "PRODUCCION".
 // Los normalizamos para que el cruce real vs presupuesto funcione.
+// Número tal como lo exporta A3: puede venir como texto con coma decimal
+// ('9230,09') o con punto de miles ('1.234,56'). parseFloat a secas se paraba
+// en la coma y truncaba los céntimos (visto el 16-09-2026).
+function numA3(v) {
+  if (v == null || v === '') return NaN;
+  if (typeof v === 'number') return v;
+  let s = String(v).trim();
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  return parseFloat(s);
+}
 function normalizeCanal(s) {
   if (!s) return 'ESTRUCTURA';
   return String(s).trim().toUpperCase()
@@ -1582,7 +1592,7 @@ function parseSumasYSaldos(ws) {
     const mensual = MESES.map(m => {
       const idx = mesIdx[m];
       if (idx == null) return 0;
-      const v = parseFloat(row[idx]);
+      const v = numA3(row[idx]);
       return isNaN(v) ? 0 : v * flip;
     });
 
@@ -1623,7 +1633,7 @@ function parsePresupuesto(ws) {
     const mensual = MESES.map(m => {
       const idx = mesIdx[m];
       if (idx == null) return 0;
-      const v = parseFloat(row[idx]);
+      const v = numA3(row[idx]);
       return isNaN(v) ? 0 : v;
     });
     result.push({cuenta, desc, canal, mensual, total: mensual.reduce((a,b)=>a+b,0)});
