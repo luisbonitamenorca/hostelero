@@ -179,6 +179,9 @@
   .est.nocuadra{background:#FAEEDA;color:#854F0B}
   .est.revisar{background:var(--warn-soft);color:var(--warn)}
   .selcentro{font-size:12px;padding:3px 6px;border:0.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer;max-width:230px}
+  /* en el listado de facturas el centro se ve entero (16-09-2026) */
+  td.celcentro{white-space:nowrap;min-width:215px}
+  td.celcentro .selcentro{max-width:none;min-width:205px}
   .selcentro:hover{border-color:var(--wine)}
   .selcuenta{font-size:12px;padding:3px 6px;border:0.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer;max-width:240px}
   .selcuenta:hover{border-color:var(--wine)}
@@ -758,7 +761,8 @@ let tipo="auto";
 let cola=[];               // [{file, b64, mime, status}]
 let compras=[], reglas=[], albaranes=[], proveedores=[], productos=[], facturas=[];
 let revisarDoc=null, revisarLineas=[], revisarAlbaranes=[], repartoFilas=[];
-let centrosPorFactura={};   // doc_id -> {n_centros, centros}   // documento abierto en el modal de revisión
+let centrosPorFactura={};   // doc_id -> {n_centros, centros}
+let cuentasPorFactura={};   // doc_id -> [cuentas contables de gasto] (de compras_a3_lineas, lo mismo que va a A3)   // documento abierto en el modal de revisión
 
 /* ---------- ordenación genérica de tablas ---------- */
 const sortState={compras:{key:null,dir:1},albaranes:{key:null,dir:1},facturas:{key:null,dir:1},proveedores:{key:null,dir:1},productos:{key:null,dir:1},conciliacion:{key:null,dir:1}};
@@ -2679,6 +2683,7 @@ async function loadFacturas(){
       const rc=await sbAll('compras_factura_centros?select=doc_id,n_centros,centros');
       centrosPorFactura={}; rc.forEach(x=>{centrosPorFactura[x.doc_id]=x;});
     }catch(e){centrosPorFactura={};}
+    await cargarCuentasPorFactura();
     // Cruces probables dados por buenos a mano (pestaña Conciliación).
     try{concilConf=await sbAll('compras_concil_confirmada?select=id,factura_id,num_albaran,albaran_id');}
     catch(e){concilConf=[];}
@@ -2787,7 +2792,7 @@ async function limpiarLineasFacturas(){
 function renderFac(){
   let rows=[...facturas];
   const st=sortState.facturas;
-  const keymap={fecha:a=>a.fecha,cargado:a=>a.created_at,prov:a=>a.proveedor,ndoc:a=>a.num_documento,centro:a=>((centrosPorFactura[a.id]||{}).n_centros>1?'zzz varios':(a.canal||'\u0000 sin centro')),base:a=>num(a.base)||0,iva:a=>num(a.iva)||0,reten:a=>num(a.retencion)||0,total:a=>a.total,estado:a=>a.estado_detalle||'REVISAR',
+  const keymap={fecha:a=>a.fecha,cargado:a=>a.created_at,prov:a=>a.proveedor,ndoc:a=>a.num_documento,centro:a=>((centrosPorFactura[a.id]||{}).n_centros>1?'zzz varios':(a.canal||'\u0000 sin centro')),cta:a=>{const cs=cuentaDeFactura(a);return cs.length>1?'zzz varias':(cs[0]||'\u0000 sin cuenta');},base:a=>num(a.base)||0,iva:a=>num(a.iva)||0,reten:a=>num(a.retencion)||0,total:a=>a.total,estado:a=>a.estado_detalle||'REVISAR',
     // Exportadas: por su número de A3 (relleno a 8 cifras para que el orden
     // textual sea el numérico); después las listas y al final las bloqueadas.
     a3:a=>a.a3_numdoc?'0 '+String(a.a3_numdoc).padStart(8,'0'):((bloqueosDe(a.id)||[]).length?'2 '+(bloqueosDe(a.id)||[]).join(' '):'1 lista')};
@@ -2795,17 +2800,17 @@ function renderFac(){
   rows=aplicaColFiltros('facturas',rows,keymap);
   if(st.key&&keymap[st.key])rows=sortRows(rows,keymap[st.key],st.dir);
   registraVisibles('facturas',rows);
-  pintaFiltros('facturas','fltFac',['fecha','cargado','prov','ndoc','centro','base','iva','reten','total','estado','a3',null,null],todas,keymap,'renderFac');
+  pintaFiltros('facturas','fltFac',['fecha','cargado','prov','ndoc','centro','cta','base','iva','reten','total','estado','a3',null,null],todas,keymap,'renderFac');
   document.getElementById('headFac').innerHTML=
     thh('facturas','fecha','Fecha','fecha')+thh('facturas','cargado','Cargado')+thh('facturas','prov','Proveedor')+thh('facturas','ndoc','Nº factura')+
-    thh('facturas','centro','Centro')+thh('facturas','base','Base','num')+thh('facturas','iva','IVA','num')+thh('facturas','reten','Retención','num')+thh('facturas','total','Total','num')+thh('facturas','estado','Estado')+thh('facturas','a3','A3')+'<th>Revisar</th><th></th>';
+    thh('facturas','centro','Centro')+thh('facturas','cta','Cuenta')+thh('facturas','base','Base','num')+thh('facturas','iva','IVA','num')+thh('facturas','reten','Retención','num')+thh('facturas','total','Total','num')+thh('facturas','estado','Estado')+thh('facturas','a3','A3')+'<th>Revisar</th><th></th>';
   const tb=document.getElementById('facBody');
   document.getElementById('facCount').textContent=facturas.length;
   document.getElementById('facTotal').textContent=fmt(facturas.reduce((s,a)=>s+(num(a.base)||0),0));
   document.getElementById('emptyF').style.display=facturas.length?'none':'block';
   tb.innerHTML=rows.map(a=>`<tr>
     <td class="fecha">${fmtF(a.fecha)}</td><td style="white-space:nowrap">${fmtCarga(a.created_at)}</td><td>${a.origen==='correo'?'<span title="Recibido por correo">\u{1F4E7}</span> ':''}${a.proveedor||''}</td><td>${a.num_documento||''}</td>
-    <td>${celdaCentroFactura(a)}</td><td class="num">${fmt(a.base)}</td><td class="num">${fmt(a.iva)}</td><td class="num">${a.retencion?'-'+fmt(a.retencion):''}</td><td class="num">${fmt(a.total)}</td>
+    <td class="celcentro">${celdaCentroFactura(a)}</td><td>${celdaCuentaFactura(a)}</td><td class="num">${fmt(a.base)}</td><td class="num">${fmt(a.iva)}</td><td class="num">${a.retencion?'-'+fmt(a.retencion):''}</td><td class="num">${fmt(a.total)}</td>
     <td>${estBadge(a.estado_detalle)}</td>
     <td>${badgeA3(a)}</td>
     <td><span class="link" onclick="revisar('${a.id}')">ver foto + detalle</span></td>
@@ -2815,6 +2820,30 @@ function renderFac(){
 // En facturas, una repartida entre varios centros no debe verse igual que una
 // sin asignar. Antes las dos salían en blanco y no había forma de saber cuál
 // faltaba por tocar.
+// Cuenta contable de gasto de cada factura (16-09-2026, pedido de Luis): se
+// lee de compras_a3_lineas, que es exactamente lo que va al fichero de A3
+// (reparto explícito si lo hay; si no, la cuenta del proveedor).
+async function cargarCuentasPorFactura(){
+  try{
+    const ls=await sbAll('compras_a3_lineas?select=doc_id,linctacon');
+    const acc={};
+    ls.forEach(x=>{if(!x.linctacon)return;(acc[x.doc_id]=acc[x.doc_id]||new Set()).add(String(x.linctacon).trim());});
+    cuentasPorFactura={}; Object.keys(acc).forEach(k=>{cuentasPorFactura[k]=[...acc[k]].sort();});
+  }catch(e){cuentasPorFactura={};}
+}
+function nombreCuenta(c){const x=CUENTAS.find(k=>k.c===c);return x?x.n:'';}
+function cuentaDeFactura(a){
+  const cs=cuentasPorFactura[a.id];
+  if(cs&&cs.length)return cs;
+  const p=(typeof proveedores!=='undefined'&&proveedores||[]).find(x=>x.id===a.proveedor_id);
+  return p&&p.cuenta_contable?[p.cuenta_contable]:[];
+}
+function celdaCuentaFactura(a){
+  const cs=cuentaDeFactura(a);
+  if(!cs.length)return '<span style="color:var(--muted)">—</span>';
+  if(cs.length>1)return `<span class="badge" title="${esc(cs.map(c=>c+' '+nombreCuenta(c)).join(' · '))}" style="background:var(--paper);border:1px solid var(--line);padding:2px 8px;border-radius:10px;font-size:12px;white-space:nowrap">varias · ${cs.length}</span>`;
+  return `<span title="${esc(nombreCuenta(cs[0]))}" style="white-space:nowrap">${cs[0]}</span>`;
+}
 function celdaCentroFactura(a){
   const rc=centrosPorFactura[a.id];
   if(rc && rc.n_centros>1){
@@ -2855,6 +2884,7 @@ function exportFac(){
     Fecha:a.fecha||'',Cargado:a.created_at?new Date(a.created_at).toLocaleString('es-ES'):'',
     Proveedor:a.proveedor||'','Nº factura':a.num_documento||'',
     Centro:((centrosPorFactura[a.id]||{}).n_centros>1?`varios (${centrosPorFactura[a.id].n_centros})`:(a.canal||'')),
+    Cuenta:cuentaDeFactura(a).join(' · '),
     Base:a.base??'',IVA:a.iva??'','Retención':a.retencion??'',Total:a.total??'',
     Estado:estTexto(a.estado_detalle),
     'A3':a.a3_numdoc?`exportada nº ${a.a3_numdoc}`:(bl===null?'':(bl.length?'bloqueada':'lista')),
@@ -3435,6 +3465,7 @@ async function guardarReparto(){
     try{
       const rc=await sbAll('compras_factura_centros?select=doc_id,n_centros,centros');
       centrosPorFactura={}; rc.forEach(x=>{centrosPorFactura[x.doc_id]=x;});
+      await cargarCuentasPorFactura();
     }catch(e){}
     repartoFilas=await sb(`compras_doc_reparto?doc_id=eq.${a.id}&select=id,orden,base,tipo_iva,centro_coste,cuenta_gasto,descripcion,manual&order=orden.asc`);
     renderReparto();
