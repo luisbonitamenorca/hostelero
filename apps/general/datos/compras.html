@@ -5279,10 +5279,13 @@ const A3_FMT_FECHA = 'dd\\-mm\\-yy;@';   // idéntico al de la plantilla del con
 // "01:59:16" pegado a cada fecha (desfase de zona horaria) y construyéndola en
 // hora local llegaba a restar un día entero. Un entero calculado a mano no
 // tiene ese problema y da exactamente el mismo valor que la plantilla de A3.
-// Fecha de REGISTRO: el día en que se saca el listado, no la de la factura.
-// A3 usa la primera columna como fecha de registro y la tercera como contable.
-// Se calcula con los componentes locales (no con toISOString, que pasa a UTC y
-// a partir de las 22:00 de Menorca devolvería el día siguiente).
+// Fechas del fichero (cambio 16-09-2026, indicación de Esther/Microgés): la
+// primera columna (cabFecha) es la FECHA DE FACTURA y la tercera
+// (cabfechacontable) la CONTABLE. Salen las dos iguales, con la fecha de la
+// factura; si una factura es de otro trimestre y hay que contabilizarla en otra
+// fecha, lo cambia Lucía a mano en A3. Antes (03-09) cabFecha llevaba el día de
+// generación del fichero: esa era la lectura equivocada.
+// hoyA3 se conserva por si hiciera falta; ya no se usa en el fichero.
 function hoyA3(){
   const h=new Date();
   return Math.round((Date.UTC(h.getFullYear(),h.getMonth(),h.getDate())-Date.UTC(1899,11,30))/86400000);
@@ -5424,9 +5427,9 @@ async function exportarA3(){
     const lista=docs.slice(0,12).join('\n')+(docs.length>12?`\n… y ${docs.length-12} más`:'');
     if(!confirm(`Hay ${docs.length} factura(s) numeradas SIN código de proveedor A3 o SIN cuenta de gasto:\n\n${lista}\n\nRevisa la ficha del proveedor (código A3 y cuenta) antes de mandar el fichero a Lucía.\n\n¿Generar el fichero de todas formas?`))return;
   }
-  const REGISTRO_A3=hoyA3();   // el mismo valor para todas las filas del fichero
   const data=rows.map(r=>({
-    cabFecha:REGISTRO_A3, cabnumdoc:r.cabnumdoc??'', cabfechacontable:fechaA3(r.cabfechacontable),
+    // las dos fechas iguales: la de la factura (ver nota sobre hoyA3)
+    cabFecha:fechaA3(r.cabfechacontable), cabnumdoc:r.cabnumdoc??'', cabfechacontable:fechaA3(r.cabfechacontable),
     CABREFERENCIA:r.cabreferencia||'', cabcodpro:r.cabcodpro||'',
     cabregiva:r.cabregiva||'CNAC',
     // Vacías cuando no hay retención: A3 no debe ver un modelo sin importe retenido.
