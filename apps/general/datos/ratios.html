@@ -7892,10 +7892,15 @@ async function handleXlFile(file, opts) {
         await sbFetch(`gastos?origen=eq.DIJIT&fecha=gte.${FECHA_CORTE_COMPRAS}`, {method:'DELETE'});
       }
     };
+    // Se borran SOLO los días que trae la hoja, no todo el tramo entre la primera
+    // y la última fecha: el 19-09-2026 una hoja de 2026 con una fecha suelta de
+    // 2025 se llevó por delante todos los comensales de 2025.
     const borrarRango = async (table, rows) => {
-      const r = rangoFechas(rows);
-      if (!r) return;   // sin fechas válidas no borramos nada (mejor duplicar que perder)
-      await sbFetch(`${table}?fecha=gte.${r.desde}&fecha=lte.${r.hasta}`, {method:'DELETE'});
+      const fechas = [...new Set(rows.map(r => r.fecha).filter(Boolean))].sort();
+      if (!fechas.length) return;   // sin fechas válidas no borramos nada (mejor duplicar que perder)
+      for (let i = 0; i < fechas.length; i += 200) {
+        await sbFetch(`${table}?fecha=in.(${fechas.slice(i, i+200).join(',')})`, {method:'DELETE'});
+      }
     };
     await Promise.all([
       ingRows.length  > 0 ? sbFetch('rpc/truncate_table', {method:'POST', body:JSON.stringify({table_name:'ingresos'})})     : Promise.resolve(),
