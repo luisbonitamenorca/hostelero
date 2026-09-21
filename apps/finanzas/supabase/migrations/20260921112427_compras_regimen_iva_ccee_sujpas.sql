@@ -1,0 +1,17 @@
+-- APLICADA 21-09-2026 (registrada como 20260921112427)
+-- Régimen de IVA de la factura de compra: interior (CNAC), adquisición
+-- intracomunitaria (CCEE) o inversión del sujeto pasivo (SUJPAS).
+-- Indicaciones de Esther (Microgés) y documento de Lucía, 21-09-2026:
+--  · A3: CABREGIVA = CCEE / SUJPAS y LINTIPIVA con el tipo de IVA que corresponde
+--    (normalmente ORD21) aunque la factura venga sin IVA, para que A3 haga la
+--    autorrepercusión sin cambiar el total.
+--  · Asiento: gasto (debe) + IVA soportado autorrepercutido (debe) + IVA
+--    repercutido (haber) + proveedor por el total (haber). Cuentas del plan de
+--    A3: 472000800/477000800 intracomunitaria, 472000500/477000500 ISP.
+-- Columnas nuevas: compras_proveedor.regimen_iva (null = automático por NIF),
+-- compras_proveedor.tipo_iva_autorep (ORD21 por defecto), compras_doc.regimen_iva
+-- (forzar en la factura). Funciones: compras_regimen_iva(doc), compras_pct_iva(tipo).
+-- Vista compras_a3_export_preview recreada con cabregiva y los bloqueos ajustados;
+-- exportar_a3_anual usa el régimen; compras_construir_asiento hace la
+-- autorrepercusión. El SQL exacto es el aplicado por el chat el 21-09-2026
+-- (migración compras_regimen_iva_ccee_sujpas); esta copia documenta el cambio.

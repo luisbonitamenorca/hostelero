@@ -1084,7 +1084,7 @@ function estadoCorreo(txt){
 // trabajando de verdad); en forzado bastan 90 s, porque ningún documento tarda
 // tanto y quien pulsa el botón está viendo que no pasa nada.
 async function sincronizarCorreo(forzado=false){
-  console.log('Compras Bonita · v76 · export A3: columna cabregiva (régimen de cabecera) — CCEE intracomunitaria (NIF-IVA de país UE), REGESP régimen especial (el doc tiene línea con IVA REGESP), CNAC interior; el fichero excluye SIEMPRE el import de Lucía (hash a3-import, serie <2000) y solo numera desde 2000 (02-sep-2026) · v75 · los duplicados marcados quedan fuera de la pestaña Compras (líneas y ajustes) y un conciliador bajo los totales explica la diferencia con Albaranes (docs sin cuadro de totales que solo aportan líneas, y docs sin líneas leídas que solo aportan base) en vez de dejar que parezca un descuadre (01-sep-2026) · v74 · selectores rápidos en Albaranes (centro, proveedor y mes) que se combinan entre sí y con los filtros de columna; el contador y la base imponible de arriba pasan a sumar lo visible («12 de 899»), igual que el Excel (01-sep-2026) · v73 · fecha y nº de documento editables en el modal de revisión (clic sobre ellos en la cabecera): el OCR a veces baila día y mes (un 01-08 leído como 08-01) o inventa un carácter en el número, y hasta ahora solo se podía corregir tocando la base (01-sep-2026) · v72 · candado de duplicados: sobrevive siempre la copia con nº de A3 (detector + trigger en base) y el borrado avisa/bloquea documentos exportados · max_tokens del OCR a 16384 (JSON_TRUNCADO en albaranes muy largos) (31-ago-2026) · v71 ·el indicador de días hasta la carga solo cuenta albaranes desde agosto 2026 (lo anterior fueron cargas de prueba, no gestión de los centros) · la tarjeta de días hasta la carga en vertical (a dos columnas se desbordaba) y por mes solo los últimos 6 · tarjeta «Días hasta la carga» en el Resumen: media de días entre la fecha del albarán y su subida, por centro y por mes (mide lo que tardan los centros en pasar los papeles a Dakota) · botón «descartar» en las propuestas de fusión de productos: la pareja se apunta en compras_dup_descartada y no se vuelve a proponer (se limpia sola si uno de los dos desaparece) · al ordenar por centro, los que NO tienen centro salen primero (antes caían al final por la regla de vacíos y parecían no existir) · el desplegable de centro del listado arrastra también las LÍNEAS del albarán (antes solo cambiaba el documento y el coste seguía en el centro viejo en Compras/Resumen/Ratios; las líneas de un reparto multi-centro deliberado no se tocan) · la pestaña Compras añade una fila de ajuste por albarán cuando las líneas no suman la base (descuentos de pie, líneas con IVA, redondeos): su total ya cuadra con la suma de bases de Albaranes, y la vista de Ratios aplica la misma regla · fechas en dd-mm-aaaa en todas las tablas y modales (en Excel y base siguen aaaa-mm-dd, que ordenan bien) · el aviso naranja de albarán incompleto ya no salta si las líneas cuadran con la base (los "3/3" de JJ Carreras y "1/5" de Distnura son códigos de reparto/envases, no páginas; añadidas pautas de proveedor) · una fecha leída de un año anterior al actual dispara la escalada a Opus y, si persiste, deja el documento en Revisar (con margen de 60 días para no molestar en enero) · la ayuda del modal explica que Guardar cambios es el visto bueno · el reproceso re-evalúa el proveedor cuando el CIF leído casa exacto con otro del maestro · reprocesar dudosos en lote (albaranes y facturas) y detector-fusionador de productos duplicados · escalada de modelo: si la lectura no cuadra, segunda pasada con Opus (y el reproceso manual va directo a Opus) · tablas con barra de scroll siempre visible y cabecera fija (Windows) · el nombre propio ya no puede ser el proveedor (se limpia o se deja vacío para revisión) · los adjuntos del front movil (correo_id nulo) pueden ser albaranes: la regla de solo-facturas es para el correo de verdad · el enlace de linea con el catalogo lo resuelve Postgres (trigger trg_linea_enlaza_producto): por referencia del proveedor y, si el albaran no trae codigos, por nombre normalizado dentro del mismo proveedor; asi enlazan tambien Produccion, Bodega, Santo Domingo o Pain Pigalle, y las lineas creadas a mano en el modal de revision · el codigo de proveedor de A3 se escribe a mano y se guarda tal cual en codigo_a3: el maestro es solo ayuda de busqueda, ya no una lista blanca que bloqueaba las altas recientes (142, 143, 144...) · las claves normalizadas las calcula Postgres, no el navegador · seleccion multiple de productos para borrar y fusionar · las acciones y exportaciones respetan los filtros de columna · borrado de productos sin uso · frecuencia de uso por producto (albaranes en los que aparece) · nombre de proveedor unificado en Compras, Albaranes y Facturas · filtros por columna en todos los listados, fusion manual de productos y limpieza del catalogo · CIF en el listado de productos y nombre de proveedor derivado de la ficha · validacion de CIF por digito de control y comparacion visual de proveedores · código interno de la app en Compras (para Ratios) · desglose de IVA visible, bloqueos de A3 en el listado y en el Excel, matriz centro x IVA · pies de IVA con varias filas leidos y autocorregidos, precio unitario editable y aviso de linea descuadrada (13-ago-2026)');
+  console.log('Compras Bonita · v77 · régimen de IVA por proveedor (CNAC/CCEE/SUJPAS, auto por NIF) para CABREGIVA y tipo de IVA en el fichero de A3, asiento con autorrepercusión 472/477 (Esther y Lucía, 21-sep-2026) · v76 · export A3: columna cabregiva (régimen de cabecera) — CCEE intracomunitaria (NIF-IVA de país UE), REGESP régimen especial (el doc tiene línea con IVA REGESP), CNAC interior; el fichero excluye SIEMPRE el import de Lucía (hash a3-import, serie <2000) y solo numera desde 2000 (02-sep-2026) · v75 · los duplicados marcados quedan fuera de la pestaña Compras (líneas y ajustes) y un conciliador bajo los totales explica la diferencia con Albaranes (docs sin cuadro de totales que solo aportan líneas, y docs sin líneas leídas que solo aportan base) en vez de dejar que parezca un descuadre (01-sep-2026) · v74 · selectores rápidos en Albaranes (centro, proveedor y mes) que se combinan entre sí y con los filtros de columna; el contador y la base imponible de arriba pasan a sumar lo visible («12 de 899»), igual que el Excel (01-sep-2026) · v73 · fecha y nº de documento editables en el modal de revisión (clic sobre ellos en la cabecera): el OCR a veces baila día y mes (un 01-08 leído como 08-01) o inventa un carácter en el número, y hasta ahora solo se podía corregir tocando la base (01-sep-2026) · v72 · candado de duplicados: sobrevive siempre la copia con nº de A3 (detector + trigger en base) y el borrado avisa/bloquea documentos exportados · max_tokens del OCR a 16384 (JSON_TRUNCADO en albaranes muy largos) (31-ago-2026) · v71 ·el indicador de días hasta la carga solo cuenta albaranes desde agosto 2026 (lo anterior fueron cargas de prueba, no gestión de los centros) · la tarjeta de días hasta la carga en vertical (a dos columnas se desbordaba) y por mes solo los últimos 6 · tarjeta «Días hasta la carga» en el Resumen: media de días entre la fecha del albarán y su subida, por centro y por mes (mide lo que tardan los centros en pasar los papeles a Dakota) · botón «descartar» en las propuestas de fusión de productos: la pareja se apunta en compras_dup_descartada y no se vuelve a proponer (se limpia sola si uno de los dos desaparece) · al ordenar por centro, los que NO tienen centro salen primero (antes caían al final por la regla de vacíos y parecían no existir) · el desplegable de centro del listado arrastra también las LÍNEAS del albarán (antes solo cambiaba el documento y el coste seguía en el centro viejo en Compras/Resumen/Ratios; las líneas de un reparto multi-centro deliberado no se tocan) · la pestaña Compras añade una fila de ajuste por albarán cuando las líneas no suman la base (descuentos de pie, líneas con IVA, redondeos): su total ya cuadra con la suma de bases de Albaranes, y la vista de Ratios aplica la misma regla · fechas en dd-mm-aaaa en todas las tablas y modales (en Excel y base siguen aaaa-mm-dd, que ordenan bien) · el aviso naranja de albarán incompleto ya no salta si las líneas cuadran con la base (los "3/3" de JJ Carreras y "1/5" de Distnura son códigos de reparto/envases, no páginas; añadidas pautas de proveedor) · una fecha leída de un año anterior al actual dispara la escalada a Opus y, si persiste, deja el documento en Revisar (con margen de 60 días para no molestar en enero) · la ayuda del modal explica que Guardar cambios es el visto bueno · el reproceso re-evalúa el proveedor cuando el CIF leído casa exacto con otro del maestro · reprocesar dudosos en lote (albaranes y facturas) y detector-fusionador de productos duplicados · escalada de modelo: si la lectura no cuadra, segunda pasada con Opus (y el reproceso manual va directo a Opus) · tablas con barra de scroll siempre visible y cabecera fija (Windows) · el nombre propio ya no puede ser el proveedor (se limpia o se deja vacío para revisión) · los adjuntos del front movil (correo_id nulo) pueden ser albaranes: la regla de solo-facturas es para el correo de verdad · el enlace de linea con el catalogo lo resuelve Postgres (trigger trg_linea_enlaza_producto): por referencia del proveedor y, si el albaran no trae codigos, por nombre normalizado dentro del mismo proveedor; asi enlazan tambien Produccion, Bodega, Santo Domingo o Pain Pigalle, y las lineas creadas a mano en el modal de revision · el codigo de proveedor de A3 se escribe a mano y se guarda tal cual en codigo_a3: el maestro es solo ayuda de busqueda, ya no una lista blanca que bloqueaba las altas recientes (142, 143, 144...) · las claves normalizadas las calcula Postgres, no el navegador · seleccion multiple de productos para borrar y fusionar · las acciones y exportaciones respetan los filtros de columna · borrado de productos sin uso · frecuencia de uso por producto (albaranes en los que aparece) · nombre de proveedor unificado en Compras, Albaranes y Facturas · filtros por columna en todos los listados, fusion manual de productos y limpieza del catalogo · CIF en el listado de productos y nombre de proveedor derivado de la ficha · validacion de CIF por digito de control y comparacion visual de proveedores · código interno de la app en Compras (para Ratios) · desglose de IVA visible, bloqueos de A3 en el listado y en el Excel, matriz centro x IVA · pies de IVA con varias filas leidos y autocorregidos, precio unitario editable y aviso de linea descuadrada (13-ago-2026)');
   if(_sincronizando){
     if(forzado)toast('Ya hay una revisión del correo en marcha');
     return;
@@ -4528,6 +4528,37 @@ async function saveDepto(id,val){
 // Modelo de retención del proveedor. Es una propiedad suya, no de cada factura:
 // un arrendador siempre es 115 y un profesional o agricultor siempre 111. Sin
 // esto informado, la exportación a A3 bloquea sus facturas con retención.
+// Régimen de IVA del proveedor (21-09-2026, Esther/Lucía): interior (CNAC),
+// adquisición intracomunitaria (CCEE, proveedor UE con NIF-IVA) o inversión
+// del sujeto pasivo (SUJPAS, fuera de la UE: Reino Unido, EE.UU…). "Auto" lo
+// deduce del prefijo de país del NIF. En CCEE/SUJPAS el fichero de A3 lleva
+// CABREGIVA y el tipo de IVA (ORD21 normalmente) aunque la factura venga sin
+// IVA, y el asiento hace la autorrepercusión (472/477) sin cambiar el total.
+const REGIMENES=[['','Auto (por NIF)'],['CNAC','Interior'],['CCEE','Intracomunitaria UE'],['SUJPAS','Inv. sujeto pasivo']];
+const TIPOS_AUTOREP=[['ORD21','21%'],['RED10','10%'],['SRE','4%']];
+function regimenAuto(p){
+  const n=String(p.nif||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(/^(AT|BE|BG|HR|CY|CZ|DK|EE|FI|FR|DE|EL|HU|IE|IT|LV|LT|LU|MT|NL|PL|PT|RO|SK|SI|SE|XI)[0-9A-Z]{7,}/.test(n))return 'CCEE';
+  if(/^[A-Z]{2}[0-9A-Z]{5,}/.test(n)&&!/^ES/.test(n))return 'SUJPAS';
+  return 'CNAC';
+}
+function celdaRegimenProv(p){
+  const ef=p.regimen_iva||regimenAuto(p);
+  const opts=REGIMENES.map(([v,t])=>`<option value="${v}"${v===(p.regimen_iva||'')?' selected':''}>${t}${!v?' → '+ef:''}</option>`).join('');
+  const tipos=TIPOS_AUTOREP.map(([v,t])=>`<option value="${v}"${v===(p.tipo_iva_autorep||'ORD21')?' selected':''}>${t}</option>`).join('');
+  const fondo=ef!=='CNAC'?'background:#eef3fb;border-color:#b9cbe8':'';
+  return `<div style="display:inline-flex;gap:4px;align-items:center;white-space:nowrap;border:1px solid var(--line);border-radius:8px;padding:4px 8px;${fondo}">
+      <select style="font-size:12px;border:0;background:transparent" title="Régimen de IVA para A3 y Contabilidad" onchange="saveRegimenProv('${p.id}','regimen_iva',this.value)">${opts}</select>
+      ${ef!=='CNAC'?`<select style="font-size:12px;border:0;background:transparent" title="Tipo de IVA a autorrepercutir" onchange="saveRegimenProv('${p.id}','tipo_iva_autorep',this.value)">${tipos}</select>`:''}
+    </div>`;
+}
+async function saveRegimenProv(id,campo,val){
+  try{
+    await sb(`compras_proveedor?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({[campo]:val||null})});
+    const p=proveedores.find(x=>x.id===id); if(p)p[campo]=val||null;
+    toast(campo==='regimen_iva'?`Régimen IVA: ${val||'auto'}`:`Tipo autorrepercusión: ${val}`); renderProv();
+  }catch(err){toast('Error: '+err.message,true);}
+}
 function celdaIrpfProv(p){
   const m=p.retencion_modelo||'';
   const opts=[['','—'],['111','111 · profesional / agrícola'],['115','115 · alquiler']]
@@ -4950,7 +4981,7 @@ async function cargarMaestroA3(){
 async function loadProveedores(){
   try{
     await cargarMaestroA3();
-    proveedores=await sb('compras_proveedor?select=id,nombre,nif,departamento,cuenta_contable,cuenta_proveedor,codigo_a3,critico,pautas,pauta_factura,alias,autorizado,muestra_url,muestra_factura_url,retencion_modelo,retencion_pct&order=nombre.asc');
+    proveedores=await sb('compras_proveedor?select=id,nombre,nif,departamento,cuenta_contable,cuenta_proveedor,codigo_a3,critico,pautas,pauta_factura,alias,autorizado,muestra_url,muestra_factura_url,retencion_modelo,retencion_pct,regimen_iva,tipo_iva_autorep&order=nombre.asc');
     // Candidatos a duplicado. La vista propone; fusionar sigue siendo decisión
     // de una persona, porque "un nombre contiene al otro" también casaría
     // empresas legítimamente distintas.
@@ -4988,13 +5019,13 @@ function renderProv(){
   const st=sortState.proveedores;
   const keymap={nombre:p=>p.nombre,nif:p=>p.nif,depto:p=>p.departamento||'',crit:p=>p.critico?1:0,docs:p=>p._n,
                 cta:p=>p.cuenta_contable||'',cod:p=>codA3(p),
-                irpf:p=>p.retencion_modelo||'zzz',estado:p=>p.autorizado===false?0:1};
+                irpf:p=>p.retencion_modelo||'zzz',regiva:p=>(p.regimen_iva||regimenAuto(p)),estado:p=>p.autorizado===false?0:1};
   const todas=rows;
   rows=aplicaColFiltros('proveedores',rows,keymap);
   if(st.key&&keymap[st.key])rows=sortRows(rows,keymap[st.key],st.dir);
   registraVisibles('proveedores',rows);
   pintaFiltros('proveedores','fltProv',
-    ['nombre','nif',null,'depto','cta','cod','irpf','crit',null,null,null,'docs','estado'],
+    ['nombre','nif',null,'depto','cta','cod','irpf','regiva','crit',null,null,null,'docs','estado'],
     todas,keymap,'renderProv');
   // aviso de proveedores nuevos sin autorizar (estilo Ratios)
   const nuevos=proveedores.filter(p=>p.autorizado===false);
@@ -5004,7 +5035,7 @@ function renderProv(){
     av.innerHTML=`⚠️ Hay ${nuevos.length} proveedor${nuevos.length>1?'es':''} nuevo${nuevos.length>1?'s':''} sin autorizar, detectado${nuevos.length>1?'s':''} al procesar documentos. Revísalos: corrige el nombre/CIF si hace falta y autorízalos.`;
   }else av.style.display='none';
   document.getElementById('headProv').innerHTML=
-    thh('proveedores','nombre','Nombre')+thh('proveedores','nif','CIF / NIF')+'<th>Alias / logos</th>'+thh('proveedores','depto','Departamento')+thh('proveedores','cta','Cuenta gasto')+thh('proveedores','cod','Cód. A3')+thh('proveedores','irpf','IRPF')+
+    thh('proveedores','nombre','Nombre')+thh('proveedores','nif','CIF / NIF')+'<th>Alias / logos</th>'+thh('proveedores','depto','Departamento')+thh('proveedores','cta','Cuenta gasto')+thh('proveedores','cod','Cód. A3')+thh('proveedores','irpf','IRPF')+thh('proveedores','regiva','Régimen IVA')+
     thh('proveedores','crit','Crítico')+'<th>Pautas albarán</th><th>Pauta factura</th><th>Muestras</th>'+thh('proveedores','docs','Docs','num')+thh('proveedores','estado','Estado');
   const tb=document.getElementById('provBody');
   document.getElementById('provCount').textContent=(rows.length===proveedores.length)?proveedores.length:`${rows.length} / ${proveedores.length}`;
@@ -5017,6 +5048,7 @@ function renderProv(){
     <td>${selectCuenta(p.id,p.cuenta_contable)}</td>
     <td>${celdaCuentaProv(p)}</td>
     <td>${celdaIrpfProv(p)}</td>
+    <td>${celdaRegimenProv(p)}</td>
     <td><span class="swi" onclick="toggleCritico('${p.id}')" title="Marcar crítico">${p.critico?'🔴':'⚪️'}</span></td>
     <td><span class="editable" style="font-size:12.5px;color:var(--muted)" onblur="saveProv('${p.id}','pautas',this.textContent)" contenteditable>${p.pautas||'—'}</span></td>
     <td><span class="editable" style="font-size:12.5px;color:var(--muted)" onblur="saveProv('${p.id}','pauta_factura',this.textContent)" contenteditable>${p.pauta_factura||'—'}</span></td>
@@ -5359,7 +5391,7 @@ async function cargarA3(){
   // además todo lo ya numerado del año). Lee la VISTA, no numera nada:
   // numerar es exclusivo del botón de generar.
   return await sbAll(`compras_a3_export_preview?cabnumdoc=is.null`
-    +`&select=doc_id,orden,cabfecha,cabnumdoc,cabreferencia,cabcodpro,lindesclin,linprcmoneda,lintipiva,linctacon,lincentrocoste,proveedor_nombre,bloqueos,reparto_explicito,a3_exportado_at`
+    +`&select=doc_id,orden,cabfecha,cabnumdoc,cabreferencia,cabcodpro,cabregiva,lindesclin,linprcmoneda,lintipiva,linctacon,lincentrocoste,proveedor_nombre,bloqueos,reparto_explicito,a3_exportado_at`
     +`&order=cabfecha.asc,cabreferencia.asc,orden.asc`);
 }
 // Orden de la tabla A3: por documento entero (sus líneas comparten cabecera y
@@ -5428,7 +5460,7 @@ async function renderA3(){
       <td>${r.cabfecha||''}</td><td>${r.cabnumdoc??''}</td><td>${r.cabreferencia||''}</td>
       <td>${(r.proveedor_nombre||'').slice(0,34)}${r.reparto_explicito?' <span style="color:var(--muted);font-size:11px">·reparto</span>':''}</td>
       <td>${r.cabcodpro||''}</td>
-      <td class="num">${fmt(r.linprcmoneda)}</td><td>${r.lintipiva||''}</td>
+      <td class="num">${fmt(r.linprcmoneda)}</td><td>${r.lintipiva||''}${r.cabregiva&&r.cabregiva!=='CNAC'?` <span class="pill" title="Régimen de IVA de la cabecera (CABREGIVA)">${r.cabregiva}</span>`:''}</td>
       <td>${r.linctacon||''}</td><td>${r.lincentrocoste??''}</td>
       <td>${estado}</td></tr>`;}).join('');
 }
