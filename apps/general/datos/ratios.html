@@ -1470,7 +1470,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
           ondragleave="this.classList.remove('drag-over')"
           ondrop="event.preventDefault();this.classList.remove('drag-over');handleXlFiles(event.dataTransfer.files)">
           <div class="drop-icon">📊</div>
-          <div class="drop-title">Arrastra aquí uno o varios archivos, o haz clic para buscarlos</div>
+          <div class="drop-title">⏳ Cargando datos… puedes soltar el archivo, se procesará al terminar</div>
           <div class="drop-sub">Puedes soltar los <strong>exports originales tal y como salen</strong> de Ágora, la App Compras, CoverManager o Shopify: se identifican por sus columnas, sin renombrar nada. Se procesan en orden, uno detrás de otro.</div>
         </div>
 
@@ -6577,9 +6577,11 @@ async function loadFromStorage() {
     DB.gastos   = DB.gastos.map(resolveGas);
     const total = DB.ingresos.length + DB.gastos.length + DB.presupuesto.length + DB.rrhh.length + DB.nominas.length + DB.presupuesto_nominas.length + DB.visitas.length + DB.comensales.length + DB.ingresos_historico.length;
     setSyncStatus(total > 0 ? `✓ ${total} registros` : 'Sin datos', '#1D9E75');
+    marcarDatosListos();
     setTimeout(() => setSyncStatus('', '#888'), 3000);
   } catch(e) {
     setSyncStatus('⚠ ' + e.message.substring(0,50), '#A32D2D');
+    marcarDatosListos();   // no dejar la subida en cola para siempre; el guard de catálogo avisará
     console.error('Supabase load error:', e);
   }
   renderDashboard();
@@ -6767,9 +6769,26 @@ function xlDate(val) {
 // así que Dakota o Sonia sueltan los suyos de golpe. Se procesan EN SERIE — no
 // en paralelo — porque cada uno borra y reinserta sus tablas en Supabase y dos
 // cargas simultáneas podrían pisarse.
+// La carga de Excel espera a que Ratios haya descargado sus datos (catálogos
+// incluidos, ~15 s). Si se suelta antes, el archivo queda en cola y se procesa
+// solo al terminar, en vez de fallar con el aviso de catálogo vacío.
+let DATOS_LISTOS = false;
+let esperaDatos = null;
+const datosListos = new Promise(r => { esperaDatos = r; });
+function marcarDatosListos() {
+  if (DATOS_LISTOS) return;
+  DATOS_LISTOS = true; esperaDatos();
+  const t = document.querySelector('#xl-drop .drop-title');
+  if (t) t.textContent = 'Arrastra aquí uno o varios archivos, o haz clic para buscarlos';
+}
 async function handleXlFiles(fileList) {
   const files = Array.from(fileList || []);
   if (files.length === 0) return;
+  if (!DATOS_LISTOS) {
+    const msg = document.getElementById('xl-msg');
+    if (msg) { msg.textContent = '⏳ Ratios aún está descargando los datos. El archivo se cargará solo en cuanto termine, no hace falta volver a subirlo.'; msg.style.color = '#BA7517'; }
+    await datosListos;
+  }
   const input = document.getElementById('xl-input');
   if (files.length === 1) {
     await handleXlFile(files[0]);
