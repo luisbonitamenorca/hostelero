@@ -7903,7 +7903,9 @@ async function handleXlFile(file, opts) {
       }
     };
     await Promise.all([
-      ingRows.length  > 0 ? sbFetch('rpc/truncate_table', {method:'POST', body:JSON.stringify({table_name:'ingresos'})})     : Promise.resolve(),
+      // Ventas: solo se sustituyen los días que trae el Excel. Antes se vaciaba la
+      // tabla entera, y un export corto (p.ej. solo el 21-22/09) dejaba el año sin ventas.
+      ingRows.length  > 0 ? borrarRango('ingresos', ingRows) : Promise.resolve(),
       gasRows.length  > 0 ? borrarOrigen('DIJIT')   : Promise.resolve(),
       compRows.length > 0 ? borrarOrigen('COMPRAS') : Promise.resolve(),
       pptoRows.length > 0 ? sbFetch('rpc/truncate_table', {method:'POST', body:JSON.stringify({table_name:'presupuesto'})})  : Promise.resolve(),
@@ -7947,7 +7949,10 @@ async function handleXlFile(file, opts) {
 
     // Actualizar DB local SOLO con lo que se ha cargado en este Excel.
     // Lo que no viene en el Excel se mantiene tal cual estaba.
-    if (ingRows.length > 0)       DB.ingresos    = ingRows;
+    if (ingRows.length > 0) {
+      const diasCargados = new Set(ingRows.map(r => r.fecha));
+      DB.ingresos = (DB.ingresos || []).filter(r => !diasCargados.has(r.fecha)).concat(ingRows);
+    }
     // Gastos: mismo criterio que en Supabase — cada hoja reemplaza su origen y
     // el otro se conserva intacto.
     if (gasRows.length > 0 || compRows.length > 0) {
