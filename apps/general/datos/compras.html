@@ -1715,6 +1715,8 @@ Aquí RTE BINIFADET vale 139+25 = 164, y RTE TAMARINDOS vale 62+75 = 137. Sería
 Devuelve esa lectura en "reparto_centros": una entrada por marcador, con el texto del marcador TAL COMO APARECE y la SUMA de los importes de su grupo. Los importes deben sumar la base imponible. Si el documento no marca centros, devuelve [].
 No confundas estos marcadores con nombres de producto: un marcador va solo en su línea y no tiene precio ni cantidad propios.
 
+ABONOS Y FACTURAS RECTIFICATIVAS. Si el documento entero es un abono —lo dice su título o su cabecera: "Abono", "Factura de abono", "Factura rectificativa", "Rectificativa", "Nota de crédito", "Credit note", "Devolución"—, pon "es_abono":true y devuelve base, iva, total y el desglose_iva EN NEGATIVO, aunque el documento los imprima en positivo. Muchos proveedores (Dismenorca, por ejemplo) imprimen el abono con importes positivos y solo lo indica la palabra "Abono" arriba. NO es abono una factura normal que lleve alguna línea de abono o devolución dentro, ni la que habla de "abono bancario" como forma de pago: en esos casos "es_abono":false y los importes tal cual.
+
 RETENCIÓN DE IRPF. Algunos proveedores autónomos (profesionales como gestorías, abogados, arquitectos, o arrendadores de locales) aplican una retención de IRPF que se RESTA del total. Aparece al pie con textos como "Retención IRPF 15%", "IRPF -15%", "Ret. 7%" o "Retención a cuenta", y su importe suele ir con signo negativo o entre paréntesis.
 - "retencion": el IMPORTE retenido SIEMPRE EN POSITIVO, aunque en el documento figure en negativo. Si no hay retención, pon 0.
 - "retencion_pct": el porcentaje aplicado (15, 7, 19, 2...). Si no viene el porcentaje impreso, pon null; NO lo calcules dividiendo.
@@ -1723,7 +1725,7 @@ RETENCIÓN DE IRPF. Algunos proveedores autónomos (profesionales como gestoría
 - No confundas la retención con un descuento comercial ni con el IVA. Si no ves ninguna mención explícita a IRPF o retención, pon retencion:0 y retencion_pct:null.`;
 
   let prompt;
-  const formaFactura=`{"tipo":"factura","fecha":"YYYY-MM-DD","proveedor":"","proveedor_nif":"","num_documento":"","canal":null,"base":0,"iva":0,"retencion":0,"retencion_pct":null,"retencion_base":null,"total":0,"reparto_centros":[],"codigo_terminal":null,"codigo_cups":null,"descuento":0,
+  const formaFactura=`{"tipo":"factura","fecha":"YYYY-MM-DD","proveedor":"","proveedor_nif":"","num_documento":"","canal":null,"base":0,"iva":0,"retencion":0,"retencion_pct":null,"retencion_base":null,"total":0,"reparto_centros":[],"codigo_terminal":null,"codigo_cups":null,"descuento":0,"es_abono":false,
 "desglose_iva":[{"pct":0,"base":0,"cuota":0}],
 "albaranes":[{"num_albaran":"","fecha":"YYYY-MM-DD","importe":0}]}`;
   const formaAlbaran=`{"tipo":"albaran","fecha":"YYYY-MM-DD","proveedor":"","proveedor_nif":"","num_documento":"","canal":null,"base":null,"iva":null,"retencion":0,"retencion_pct":null,"retencion_base":null,"total":null,"descuento":0,
@@ -2011,7 +2013,7 @@ Los rangos deben cubrir todas las páginas de la 1 a la ${n}, en orden y sin sol
     const file=new File([out],`${base}_${k+1}de${docs.length}_${etiqueta}.pdf`,{type:'application/pdf'});
     const url=await sbUpload(file);
     const b64=out.length<3*1024*1024?await blobB64(file):null;
-    const hijo={file,b64,mime:'application/pdf',status:'wait',urlPublica:url,_hijo:true,esMovil:c.esMovil};
+    const hijo={file,b64,mime:'application/pdf',status:'wait',urlPublica:url,_hijo:true,esMovil:c.esMovil,esAbono:String(r.tipo||'').toLowerCase()==='abono'};
     if(c.correoAdjId){
       // fila propia en la cola de correo, ya reclamada por esta pestaña
       const corr=await sb(`compras_correo_adjunto?id=eq.${c.correoAdjId}&select=correo_id,cuenta_id`);
@@ -2131,6 +2133,23 @@ async function procesarUno(c){
           console.warn('Escalada: la segunda tampoco cuadra, se conserva la primera.');
         }
       }catch(e){ console.warn('Escalada fallida, se mantiene la primera lectura:', e.message); }
+    }
+  }
+
+  // ABONOS (24-09-2026): Dismenorca y otros imprimen el abono con importes en
+  // positivo y solo lo delata la palabra "Abono" del título. Entraban como
+  // facturas normales y sumaban gasto en Compras y en Contabilidad. Si el OCR lo
+  // marca como abono (o como tipo 'abono' al partir PDFs), se fuerza el signo
+  // negativo en base, IVA, total y desglose; si ya venía en negativo, no cambia.
+  {
+    const esAbono=d.es_abono===true||d.tipo==='abono'||docTipo==='abono'||c.esAbono===true;
+    if(d.tipo==='abono')d.tipo='factura';
+    if(docTipo==='abono')docTipo='factura';
+    if(esAbono&&docTipo==='factura'){
+      const neg=v=>{const n=num(v);return n==null?v:-Math.abs(n);};
+      d.base=neg(d.base); d.iva=neg(d.iva); d.total=neg(d.total);
+      (d.desglose_iva||[]).forEach(x=>{x.base=neg(x.base);x.cuota=neg(x.cuota);});
+      d.es_abono=true;
     }
   }
 
