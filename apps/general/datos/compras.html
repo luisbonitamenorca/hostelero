@@ -1776,7 +1776,7 @@ PASO 0 — FILTRO (documento recibido por correo electrónico): en este buzón S
 ${paso0}
 PASO 1 — CLASIFICA el documento:
 - Es una FACTURA si su encabezado dice "FACTURA", tiene "Nº Factura", o si su cuerpo es una lista de albaranes (filas tipo "Albarán nº: XXXX Fecha: ...").
-- Es un ALBARÁN si es una nota de entrega con detalle de productos (artículos, cantidades, precios).
+- Es un ALBARÁN si es una nota de entrega con detalle de productos (artículos, cantidades, precios). También lo es el "ALB.-POST-FAC." (albarán post-factura) de Coca-Cola, aunque lleve fecha de vencimiento.
 
 PASO 2 — EXTRAE según lo que sea:
 - Si es FACTURA: ${instrFactura}
@@ -2033,13 +2033,46 @@ Los rangos deben cubrir todas las páginas de la 1 a la ${n}, en orden y sin sol
   return hijos;
 }
 
+// ALBARÁN POST-FACTURA (Coca-Cola, 25-09-2026). Tras entregar, Coca-Cola manda
+// por correo el MISMO albarán con la devolución de cajas y envases (que el
+// repartidor apunta a boli) ya pasada a ordenador: es lo que luego factura. Lo
+// rotulan "ALB.-POST-FAC." y lleva fecha de vencimiento, así que el OCR lo tomaba
+// por factura. Se decide leyendo el texto del PDF, no la interpretación del
+// modelo: entra siempre como ALBARÁN (también por correo, que en general solo
+// admite facturas) y el albarán original que sustituye queda como DUPLICADO.
+const RE_ALB_POST_FAC=/ALB\.?\s*-?\s*POST\s*-?\s*FAC/i;
+async function textoPdf(c){
+  try{
+    if(typeof pdfjsLib==='undefined'||c.mime!=='application/pdf')return '';
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const src=c.b64?{data:Uint8Array.from(atob(c.b64),ch=>ch.charCodeAt(0))}:(c.urlPublica?{url:c.urlPublica,withCredentials:false}:null);
+    if(!src)return '';
+    const pdf=await pdfjsLib.getDocument(src).promise;
+    let t='';
+    for(let i=1;i<=Math.min(pdf.numPages,3);i++){
+      const tc=await (await pdf.getPage(i)).getTextContent();
+      t+=tc.items.map(x=>x.str).join(' ')+'\n';
+    }
+    return t;
+  }catch(e){ console.warn('No se pudo leer el texto del PDF:',e.message); return ''; }
+}
+
 async function procesarUno(c){
   // PDF con varias facturas: se parte y se procesa por trozos (ver arriba)
   const hijos=await dividirPdfSiVarias(c);
   if(hijos){c._hijos=hijos;c.dividido=hijos.length;renderQueue();return;}
+  if(c.mime==='application/pdf'&&!c.tipoForzado){
+    const tx=await textoPdf(c);
+    if(RE_ALB_POST_FAC.test(tx)){
+      c.tipoForzado='albaran'; c.albPostFac=true;
+      const m=tx.match(/Sustituye\s+al\s+doc\.?\s*n\S*\s*:?\s*(\d{6,})/i);
+      c.sustituyeA=m?m[1]:null;
+    }
+  }
   // los documentos de correo se clasifican siempre en modo auto y con el filtro anti-ruido
   const tipoUsado=c.tipoForzado||(c.correoAdjId?'auto':tipo);
-  const prompt=construirPromptOCR(tipoUsado,!!c.correoAdjId);
+  let prompt=construirPromptOCR(tipoUsado,!!c.correoAdjId);
+  if(c.albPostFac) prompt+="\n\nEste documento es un ALBARÁN POST-FACTURA (rotulado \"ALB.-POST-FAC.\"): trátalo como ALBARÁN aunque lleve fecha de vencimiento o forma de pago. Su \"num_documento\" es el NÚMERO del propio documento (el que aparece como \"Núm.Albarán\"), no el de \"Sustituye al doc.nº\". Devuelve todas las líneas tal como aparecen, incluidas las de envases (cajas, botellas) y las devoluciones de envases, que van en negativo.";
   // Si no hay base64 (archivo demasiado grande para el proxy) se manda la URL
   // pública del bucket: la API la descarga por su cuenta y el cuerpo de nuestra
   // petición pasa de megas a unos cientos de bytes.
@@ -2157,7 +2190,7 @@ async function procesarUno(c){
   // porque al buzón llegan albaranes que no son compras nuestras —los de Tenim
   // Tot per al Vi, por ejemplo— y mezclarlos ensucia el análisis de coste.
   // No se borra el adjunto: queda como DESCARTADO con el motivo, visible en Buzón.
-  if(c.correoAdjId && !c.esMovil && docTipo!=='factura'){
+  if(c.correoAdjId && !c.esMovil && docTipo!=='factura' && !c.albPostFac){
     c.descartado=`albarán recibido por correo: no se carga (los albaranes entran solo por carga manual). Proveedor: ${d.proveedor||'?'}, nº ${d.num_documento||'?'}`;
     await sb(`compras_correo_adjunto?id=eq.${c.correoAdjId}`,{method:'PATCH',
       body:JSON.stringify({estado:'DESCARTADO',error:c.descartado})}).catch(()=>{});
@@ -2366,8 +2399,17 @@ async function procesarUno(c){
     pagina:!esFactura?(num(d.pagina)||1):null,
     paginas:!esFactura?(num(d.paginas)||1):null,
     paginas_vistas:!esFactura?[num(d.pagina)||1]:null,
-    albaranes_detectados:esFactura?(d.albaranes||[]):null,raw:d})});
+    albaranes_detectados:esFactura?(d.albaranes||[]):null,
+    raw:c.albPostFac?{...d,alb_post_fac:true,sustituye_a:c.sustituyeA||null}:d})});
   const docId=doc[0].id;
+  // Albarán post-factura: el albarán de entrega original (foto) queda sustituido.
+  if(c.albPostFac&&c.sustituyeA&&proveedor_id){
+    try{
+      const viejos=await sb(`compras_doc?tipo=eq.albaran&proveedor_id=eq.${proveedor_id}&num_documento=eq.${encodeURIComponent(c.sustituyeA)}&id=neq.${docId}&select=id,estado_detalle`);
+      for(const v of (viejos||[]).filter(v=>v.estado_detalle!=='DUPLICADO'))
+        await sb(`compras_doc?id=eq.${v.id}`,{method:'PATCH',body:JSON.stringify({estado_detalle:'DUPLICADO',estado:'REVISAR'})});
+    }catch(e){ console.warn('No se pudo marcar el albarán sustituido '+c.sustituyeA+':',e.message); }
+  }
   // si el documento vino del correo, marcar su adjunto como procesado
   if(c.correoAdjId){
     // CRÍTICO: si esto falla, el adjunto se reprocesaría en cada apertura. Reintento + aviso visible.
