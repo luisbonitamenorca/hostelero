@@ -1173,7 +1173,8 @@ async function cargarLoteCorreo(){
                    // 'FORZAR FACTURA' en el error = reencolado a mano como factura
                    // (el OCR lo había tomado por albarán, p.ej. Dismenorca, que
                    // pone "Albarán" en la cabecera de sus facturas).
-                   tipoForzado:/^FORZAR FACTURA/i.test(a.error||'')?'factura':null,
+                   tipoForzado:/^FORZAR FACTURA/i.test(a.error||'')?'factura':(/^FORZAR ALBAR/i.test(a.error||'')?'albaran':null),
+                   forzadoAMano:/^FORZAR /i.test(a.error||''),
                    // correo_id nulo = subida desde el front movil (/subir-facturas
                    // de hostelero-app): es una carga manual con patas, no un email.
                    esMovil:a.correo_id==null});
@@ -2240,7 +2241,7 @@ async function procesarUno(c){
   // porque al buzón llegan albaranes que no son compras nuestras —los de Tenim
   // Tot per al Vi, por ejemplo— y mezclarlos ensucia el análisis de coste.
   // No se borra el adjunto: queda como DESCARTADO con el motivo, visible en Buzón.
-  if(c.correoAdjId && !c.esMovil && docTipo!=='factura' && !c.albPostFac){
+  if(c.correoAdjId && !c.esMovil && docTipo!=='factura' && !c.albPostFac && !c.forzadoAMano){
     c.descartado=`albarán recibido por correo: no se carga (los albaranes entran solo por carga manual). Proveedor: ${d.proveedor||'?'}, nº ${d.num_documento||'?'}`;
     await sb(`compras_correo_adjunto?id=eq.${c.correoAdjId}`,{method:'PATCH',
       body:JSON.stringify({estado:'DESCARTADO',error:c.descartado})}).catch(()=>{});
@@ -5919,27 +5920,74 @@ function renderBuzon(){
       <td><span class="link" onclick="detalleCorreo(${r.id})">ver</span></td>
     </tr>`;}).join('');
 }
+// Detalle de un correo del Buzón (28-09-2026): antes era un aviso de texto y no
+// dejaba ver el archivo. Ahora abre el mismo visor con zoom que Facturas y
+// Albaranes: a la izquierda el adjunto, a la derecha la lista de adjuntos con su
+// estado, el motivo y lo que se puede hacer con cada uno (volver a cargarlo como
+// factura o como albarán, o abrir el documento que generó).
+let buzonAdj=[], buzonCorreo=null;
 async function detalleCorreo(id){
   try{
-    const [c]=await sb(`compras_correo?id=eq.${id}&select=asunto,remitente,fecha_correo,carpeta,estado,error,enlaces,intentos`);
-    const adj=await sb(`compras_correo_adjunto?correo_id=eq.${id}&select=nombre_archivo,mime,estado,error,url,doc_id&order=id.asc`);
-    const lineas=adj.length
-      ? adj.map(a=>`• ${a.nombre_archivo} [${a.estado}]${a.error?' — '+a.error:''}`).join('\n')
-      : '(sin adjuntos registrados)';
-    const enl=(c.enlaces||[]).length?'\n\nEnlaces de descarga detectados:\n'+c.enlaces.join('\n'):'';
-    alert(`${c.asunto||'(sin asunto)'}\nDe: ${c.remitente||'?'}\nCarpeta: ${c.carpeta||'?'}  ·  Estado: ${c.estado}`
-      +(c.error?`\nError: ${c.error} (intentos: ${c.intentos||0})`:'')
-      +`\n\nAdjuntos:\n${lineas}${enl}`);
-    // Adjuntos descartados por "albarán recibido por correo" que en realidad son
-    // facturas: se devuelven a la cola forzando el tipo (16-09-2026).
-    const desc=adj.filter(a=>a.estado==='DESCARTADO'&&/albarán recibido por correo/i.test(a.error||''));
-    if(desc.length&&confirm(`${desc.length} adjunto(s) se descartaron como albarán. ¿Volver a cargarlos COMO FACTURA?\n\n${desc.map(a=>'• '+a.nombre_archivo).join('\n')}`)){
-      const adjIds=await sb(`compras_correo_adjunto?correo_id=eq.${id}&estado=eq.DESCARTADO&error=ilike.*albarán recibido por correo*&select=id`);
-      for(const a of adjIds)await sb(`compras_correo_adjunto?id=eq.${a.id}`,{method:'PATCH',body:JSON.stringify({estado:'PENDIENTE',claimed_at:null,error:'FORZAR FACTURA · reencolado a mano desde Buzón'})});
-      toast(`${adjIds.length} adjunto(s) de vuelta en la cola como factura`);
-      if(typeof sincronizarCorreo==='function')sincronizarCorreo(true);
+    const [c]=await sb(`compras_correo?id=eq.${id}&select=id,asunto,remitente,fecha_correo,carpeta,estado,error,enlaces,intentos`);
+    buzonCorreo=c;
+    buzonAdj=await sb(`compras_correo_adjunto?correo_id=eq.${id}&select=id,nombre_archivo,mime,estado,error,url,doc_id&order=id.asc`);
+    revisarDoc=null;
+    document.getElementById('mTitle').textContent=(c.asunto||'(sin asunto)');
+    const primero=buzonAdj.findIndex(x=>x.url&&esVisible(x));
+    verAdjuntoBuzon(primero<0?-1:primero);
+    document.getElementById('modal').classList.add('show');
+  }catch(e){toast('No se pudo cargar el detalle: '+e.message,true);}
+}
+function esVisible(x){
+  const n=String(x.nombre_archivo||x.url||'').toLowerCase().split('?')[0], m=String(x.mime||'').toLowerCase();
+  return m.startsWith('image/')||m==='application/pdf'||/\.(pdf|jpe?g|png|gif|webp|heic)$/.test(n);
+}
+function verAdjuntoBuzon(i){
+  const x=buzonAdj[i];
+  if(x&&x.url&&esVisible(x)){ imgsDoc=[{url:x.url,pagina:1}]; pintaImagen(0); }
+  else document.getElementById('mImg').innerHTML=`<div class="noimg">${buzonAdj.length?(x&&x.url?'Este archivo no se puede previsualizar: descárgalo desde la lista':'Elige un adjunto de la lista'):'El correo no trae adjuntos'}</div>`;
+  const c=buzonCorreo||{};
+  const col=e=>e==='PROCESADO'?'var(--muted)':(e==='ERROR'?'var(--bad,#c0392b)':'var(--warn,#b7791f)');
+  const filas=buzonAdj.map((a,k)=>{
+    const acciones=[];
+    if(a.url&&esVisible(a))acciones.push(`<span class="link" onclick="verAdjuntoBuzon(${k})">${k===i?'<b>viendo</b>':'ver'}</span>`);
+    if(a.url)acciones.push(`<a class="link" href="${a.url}${a.url.includes('?')?'&':'?'}download=${encodeURIComponent(a.nombre_archivo||'adjunto')}" style="text-decoration:none">descargar</a>`);
+    if(a.doc_id)acciones.push(`<span class="link" onclick="revisar('${a.doc_id}')">abrir documento</span>`);
+    if(a.url&&a.estado!=='PROCESADO'){
+      acciones.push(`<span class="link" onclick="recargarAdjuntoBuzon(${k},'FACTURA')">cargar como factura</span>`);
+      acciones.push(`<span class="link" onclick="recargarAdjuntoBuzon(${k},'ALBARAN')">cargar como albarán</span>`);
     }
-  }catch(e){alert('No se pudo cargar el detalle: '+e.message);}
+    if(!a.url)acciones.push('<span style="color:var(--muted)">archivo no guardado</span>');
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--line)${k===i?';background:var(--paper)':''}">
+      <div style="font-weight:600;word-break:break-all">${esc(a.nombre_archivo||'(sin nombre)')}</div>
+      <div style="font-size:12px;color:${col(a.estado)}">${esc(a.estado)}${a.error?' — '+esc(a.error):''}</div>
+      <div style="font-size:12px;display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">${acciones.join('')}</div>
+    </div>`;}).join('');
+  const enl=(c.enlaces||[]).length?`<div style="margin-top:10px;font-size:12px"><b>Enlaces de descarga detectados</b><br>${c.enlaces.map(u=>esc(u)).join('<br>')}</div>`:'';
+  document.getElementById('mDet').innerHTML=`
+    <div style="font-size:13px;line-height:1.5">
+      <div><b>De:</b> ${esc(c.remitente||'?')}</div>
+      <div><b>Fecha:</b> ${fmtCarga(c.fecha_correo)} · <b>Carpeta:</b> ${esc(c.carpeta||'?')} · <b>Estado:</b> ${esc(c.estado||'')}</div>
+      ${c.error?`<div style="color:var(--bad,#c0392b)"><b>Error:</b> ${esc(c.error)} (intentos: ${c.intentos||0})</div>`:''}
+      <div style="margin-top:12px;font-weight:600">Adjuntos (${buzonAdj.length})</div>
+      ${filas||'<div style="color:var(--muted)">(sin adjuntos registrados)</div>'}
+      ${enl}
+    </div>`;
+}
+// Devuelve un adjunto a la cola forzando el tipo. Como factura ya existía (16-09);
+// como albarán es nuevo: por correo solo entran facturas, así que el forzado a
+// mano se salta ese filtro (lo decide una persona que ha visto el archivo).
+async function recargarAdjuntoBuzon(k,tipo){
+  const a=buzonAdj[k]; if(!a)return;
+  const txt=tipo==='FACTURA'?'factura':'albarán';
+  if(!confirm(`¿Volver a cargar "${a.nombre_archivo}" como ${txt}?`))return;
+  try{
+    await sb(`compras_correo_adjunto?id=eq.${a.id}`,{method:'PATCH',body:JSON.stringify({estado:'PENDIENTE',claimed_at:null,doc_id:null,error:`FORZAR ${tipo} · reencolado a mano desde Buzón`})});
+    a.estado='PENDIENTE'; a.error=`FORZAR ${tipo} · reencolado a mano desde Buzón`;
+    toast(`"${a.nombre_archivo}" de vuelta en la cola como ${txt}`);
+    verAdjuntoBuzon(k);
+    if(typeof sincronizarCorreo==='function')sincronizarCorreo(true);
+  }catch(e){toast('No se pudo reencolar: '+e.message,true);}
 }
 // Devuelve a la cola los adjuntos que murieron en ERROR. Se usa tras arreglar
 // la causa: sin esto, ERROR es un pozo del que nada vuelve.
