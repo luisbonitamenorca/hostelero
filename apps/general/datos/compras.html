@@ -1264,7 +1264,7 @@ async function sbAll(path,tam=1000,maxPaginas=200){
   return filas;
 }
 // Maestros para los desplegables del reparto. Se cargan una vez por sesión.
-let mCentros=[], mTiposIva=[];
+let mCentros=[], mTiposIva=[], mContratos={};
 let bloqueosPorFactura={};
 let dupProv=[];
 let dupProd=[];
@@ -1281,6 +1281,9 @@ async function cargarMaestrosReparto(){
   try{
     mCentros=await sb('compras_centro_coste?select=codigo,canal&order=codigo.asc');
     mTiposIva=await sb('compras_tipo_iva?select=codigo,descripcion&order=codigo.asc');
+    const contr=await sb('compras_contrato_centro?activo=is.true&select=contrato,centro_coste,cuenta_alquiler,cuenta_seguro').catch(()=>[]);
+    mContratos={};
+    (contr||[]).forEach(x=>{ mContratos[String(x.contrato).replace(/\D/g,'')]={cc:x.centro_coste,alq:x.cuenta_alquiler,seg:x.cuenta_seguro}; });
     const term=await sb('compras_terminal?select=codigo,canal');
     mTerminales={};
     term.forEach(t=>{
@@ -1715,6 +1718,8 @@ Aquí RTE BINIFADET vale 139+25 = 164, y RTE TAMARINDOS vale 62+75 = 137. Sería
 Devuelve esa lectura en "reparto_centros": una entrada por marcador, con el texto del marcador TAL COMO APARECE y la SUMA de los importes de su grupo. Los importes deben sumar la base imponible. Si el documento no marca centros, devuelve [].
 No confundas estos marcadores con nombres de producto: un marcador va solo en su línea y no tiene precio ni cantidad propios.
 
+CONTRATOS DE RENTING. Las facturas de arrendamiento (CaixaBank Equipment Finance y similares) traen una cuota por CONTRATO, cada una con su número de contrato (por ejemplo "Cuota: 052/060 del contrato 6800-72-0107200-33") y sus importes de ALQUILER Y SERVICIOS y de SEGURO. Si la factura trae ese desglose (a veces en una página de "DESGLOSE POR UNIDAD" aparte del resumen), devuelve en "contratos" una entrada por contrato: {"contrato":"6800-72-0107200-33","alquiler":1087.67,"seguro":27.30}. Toma el detalle por contrato, no la línea resumen de "N contratos". Si la factura no tiene contratos, devuelve [].
+
 ABONOS Y FACTURAS RECTIFICATIVAS. Si el documento entero es un abono —lo dice su título o su cabecera: "Abono", "Factura de abono", "Factura rectificativa", "Rectificativa", "Nota de crédito", "Credit note", "Devolución"—, pon "es_abono":true y devuelve base, iva, total y el desglose_iva EN NEGATIVO, aunque el documento los imprima en positivo. Muchos proveedores (Dismenorca, por ejemplo) imprimen el abono con importes positivos y solo lo indica la palabra "Abono" arriba. NO es abono una factura normal que lleve alguna línea de abono o devolución dentro, ni la que habla de "abono bancario" como forma de pago: en esos casos "es_abono":false y los importes tal cual.
 
 RETENCIÓN DE IRPF. Algunos proveedores autónomos (profesionales como gestorías, abogados, arquitectos, o arrendadores de locales) aplican una retención de IRPF que se RESTA del total. Aparece al pie con textos como "Retención IRPF 15%", "IRPF -15%", "Ret. 7%" o "Retención a cuenta", y su importe suele ir con signo negativo o entre paréntesis.
@@ -1725,7 +1730,7 @@ RETENCIÓN DE IRPF. Algunos proveedores autónomos (profesionales como gestoría
 - No confundas la retención con un descuento comercial ni con el IVA. Si no ves ninguna mención explícita a IRPF o retención, pon retencion:0 y retencion_pct:null.`;
 
   let prompt;
-  const formaFactura=`{"tipo":"factura","fecha":"YYYY-MM-DD","proveedor":"","proveedor_nif":"","num_documento":"","canal":null,"base":0,"iva":0,"retencion":0,"retencion_pct":null,"retencion_base":null,"total":0,"reparto_centros":[],"codigo_terminal":null,"codigo_cups":null,"descuento":0,"es_abono":false,
+  const formaFactura=`{"tipo":"factura","fecha":"YYYY-MM-DD","proveedor":"","proveedor_nif":"","num_documento":"","canal":null,"base":0,"iva":0,"retencion":0,"retencion_pct":null,"retencion_base":null,"total":0,"reparto_centros":[],"codigo_terminal":null,"codigo_cups":null,"descuento":0,"es_abono":false,"contratos":[],
 "desglose_iva":[{"pct":0,"base":0,"cuota":0}],
 "albaranes":[{"num_albaran":"","fecha":"YYYY-MM-DD","importe":0}]}`;
   const formaAlbaran=`{"tipo":"albaran","fecha":"YYYY-MM-DD","proveedor":"","proveedor_nif":"","num_documento":"","canal":null,"base":null,"iva":null,"retencion":0,"retencion_pct":null,"retencion_base":null,"total":null,"descuento":0,
@@ -1870,6 +1875,49 @@ function lineasDescuadradas(lineas){
     if(c==null||p==null||im==null||c===0||p===0)return false;
     return Math.abs(c*p-im)>0.02;
   });
+}
+
+// RENTING (28-09-2026): una factura de CaixaBank Equipment trae una cuota por
+// contrato y cada contrato es un equipo de un centro (tabla compras_contrato_centro).
+// Se reparte por centro: alquiler a la cuenta de renting y seguro a la de seguros,
+// como lo contabiliza Lucía en A3. Si falta algún contrato en la tabla, o no
+// cuadra con la base, no se inventa nada: la factura queda sin reparto y avisa.
+function repartoPorContratos(d){
+  const cs=Array.isArray(d.contratos)?d.contratos:[];
+  if(!cs.length)return null;
+  const sin=[], acc=new Map();
+  for(const x of cs){
+    const m=mContratos[String(x.contrato||'').replace(/\D/g,'')];
+    if(!m){sin.push(x.contrato||'?');continue;}
+    const add=(cta,imp)=>{const v=num(imp)||0; if(!v)return; const k=m.cc+'|'+cta; acc.set(k,(acc.get(k)||0)+v);};
+    add(m.alq,x.alquiler); add(m.seg,x.seguro);
+  }
+  if(sin.length)return {aviso:'contrato sin centro asignado: '+sin.join(', ')};
+  const filas=[...acc.entries()].map(([k,b])=>{const [cc,cta]=k.split('|');return {centro_coste:+cc,cuenta_gasto:cta,base:Math.round(b*100)/100};});
+  if(!filas.length)return null;
+  const base=num(d.base), suma=filas.reduce((a,f)=>a+f.base,0);
+  if(base==null||Math.abs(suma-base)>0.05)return {aviso:`los contratos suman ${suma.toFixed(2)} y la base es ${base}`};
+  const dg=(d.desglose_iva||[]).filter(x=>num(x.base));
+  if(dg.length>1)return {aviso:'varios tipos de IVA: hay que repartirla a mano'};
+  const pct=dg.length?num(dg[0].pct):(base?Math.round((num(d.iva)||0)/base*1000)/10:null);
+  const cod=codIvaDePct(pct);
+  if(!cod)return {aviso:'no se reconoce el tipo de IVA'};
+  const mayor=filas.reduce((a,f)=>Math.abs(f.base)>Math.abs(a.base)?f:a,filas[0]);
+  mayor.base=Math.round((mayor.base+(base-suma))*100)/100;
+  let sc=0; filas.forEach(f=>{f.tipo_iva=cod; f.cuota=Math.round(f.base*pct)/100; sc+=f.cuota;});
+  mayor.cuota=Math.round((mayor.cuota+((num(d.iva)||0)-sc))*100)/100;
+  const porCentro={}; filas.forEach(f=>{porCentro[f.centro_coste]=(porCentro[f.centro_coste]||0)+Math.abs(f.base);});
+  const ccMayor=+Object.entries(porCentro).sort((a,b)=>b[1]-a[1])[0][0];
+  const cm=mCentros.find(c=>c.codigo===ccMayor);
+  return {filas,canal:cm?cm.canal:null};
+}
+async function guardarRepartoContratos(docId,rc){
+  try{
+    await sb('compras_doc_reparto',{method:'POST',body:JSON.stringify(rc.filas.map((f,i)=>({
+      doc_id:docId,orden:i+1,base:f.base,cuota:f.cuota,tipo_iva:f.tipo_iva,
+      centro_coste:f.centro_coste,cuenta_gasto:f.cuenta_gasto,descripcion:'renting por contrato',manual:false})))});
+    return true;
+  }catch(e){console.warn('No pude guardar el reparto por contratos:',e.message);return false;}
 }
 
 async function guardarRepartoIva(docId,desglose,baseFactura){
@@ -2373,6 +2421,9 @@ async function procesarUno(c){
       }
     }
   }
+  const rc=esFactura?repartoPorContratos(d):null;
+  if(rc&&rc.filas){ if(!canal)canal=rc.canal; }
+  else if(rc&&rc.aviso){ toast(`⚠️ ${d.proveedor||'Factura'} ${d.num_documento||''}: ${rc.aviso}`,true); }
   const estadoSimple=(estadoDet==='CORRECTO')?(canal?'OK':'REVISAR'):'REVISAR';
 
   // 4) documento
@@ -2429,7 +2480,8 @@ async function procesarUno(c){
   if(!esFactura){
     await guardarLineasDoc(docId,d.lineas,canal,proveedor_id,d.proveedor);
   }else{
-    // 5b) factura con varios tipos de IVA: guardar el reparto contable para A3
+    // 5b) renting: reparto por contrato; si no, factura con varios tipos de IVA
+    if(rc&&rc.filas){ await guardarRepartoContratos(docId,rc); return; }
     const r=await guardarRepartoIva(docId,d.desglose_iva,num(d.base));
     if(r==='descuadre')toast(`⚠️ ${d.proveedor||'Factura'} ${d.num_documento||''}: el desglose de IVA no cuadra con la base, hay que repartirlo a mano`,true);
   }
@@ -4354,6 +4406,9 @@ async function reprocesarDoc(doc){
   // se asigna desde el maestro. Nunca pisa un centro puesto a mano.
   const canalTerm=canalDeTerminal(d.codigo_terminal);
   if(canalTerm && !doc.canal) parche.canal=canalTerm;
+  await cargarMaestrosReparto();
+  const rc=esFactura?repartoPorContratos(d):null;
+  if(rc&&rc.filas&&!doc.canal&&rc.canal){ parche.canal=rc.canal; if(estadoDet==='CORRECTO')parche.estado='OK'; }
   // el reproceso debe guardar TAMBIÉN lo que guarda el alta, o los campos nuevos
   // se quedan a null y la fusión de páginas se queda sin datos con los que trabajar
   if(!esFactura){
@@ -4380,7 +4435,8 @@ async function reprocesarDoc(doc){
     const hayManual=await tieneRepartoManual(doc.id);
     if(!hayManual){
       await sb(`compras_doc_reparto?doc_id=eq.${doc.id}&manual=is.false`,{method:'DELETE'}).catch(()=>{});
-      await guardarRepartoIva(doc.id,d.desglose_iva,num(base));
+      if(rc&&rc.filas) await guardarRepartoContratos(doc.id,rc);
+      else await guardarRepartoIva(doc.id,d.desglose_iva,num(base));
     }
   }
   return {ok:true,estado:estadoDet};
