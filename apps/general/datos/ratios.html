@@ -572,11 +572,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
         <button class="fbtn" onclick="descargarIngresosExcel(this)" style="font-weight:600;background:#1D9E75;color:#fff;border-color:#1D9E75">⬇ Descargar Excel de ingresos</button>
       </div>
       <div class="card" style="margin-bottom:12px">
-        <div class="card-t">Ingresos totales vs presupuesto — por mes</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="card-t" id="ivp-titulo" style="margin-bottom:0">Ingresos totales vs presupuesto — por mes</div>
+          <div id="ing-gran" style="display:flex;gap:4px">
+            <button class="fbtn active" onclick="setIngGran('mes',this)">Mes</button><button class="fbtn" onclick="setIngGran('semana',this)">Semana</button><button class="fbtn" onclick="setIngGran('dia',this)">Día</button>
+          </div>
+        </div>
+        <div id="ivp-nota" style="font-size:11px;color:#888;margin:4px 0 6px"></div>
         <div class="chart-wrap" style="height:220px"><canvas id="ch-ing-vs-ppto"></canvas></div>
         <div class="tbl-wrap" style="margin-top:12px"><table>
           <thead><tr>
-            <th>Mes</th>
+            <th id="ivp-th-periodo">Mes</th>
             <th class="tr">Ingresos 26</th><th class="tr">Presupuesto</th><th class="tr">Desv.</th><th class="tr">%</th>
             <th class="tr">Ingresos 25</th><th class="tr">Desv.</th><th class="tr">%</th>
           </tr></thead>
@@ -3099,9 +3105,49 @@ function ratioPresupuestoPersonal(ct, meses) {
   return pi > 0 ? pn/pi : null;
 }
 
+// Pantalla Ingresos: agrupación del gráfico y la tabla por mes, semana ISO o día.
+// El año anterior se compara por la misma semana ISO, y en días por el mismo día
+// de la semana (364 días antes), que es la comparación útil en hostelería.
+let ingGran = 'mes';
+function setIngGran(g, btn) {
+  ingGran = g;
+  document.querySelectorAll('#ing-gran .fbtn').forEach(b => b.classList.toggle('active', b === btn));
+  renderDashboard();
+}
+const addDiasISO = (f, n) => { const d = new Date(f + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+function lunesSemanaISO(y, w) {
+  const e = new Date(Date.UTC(y, 0, 4));
+  e.setUTCDate(e.getUTCDate() - ((e.getUTCDay() + 6) % 7) + (w - 1) * 7);
+  return e.toISOString().slice(0, 10);
+}
+
 function renderDashboard() {
   pintaFrescura();
-  const c = gc(), m = gm();
+  const c = gc();
+  let m = gm();
+  const gran = ingGran;
+  // En días, sin mes ni fechas elegidos, se muestra el último mes con ventas:
+  // el año entero serían más de 250 barras.
+  let mAuto = false;
+  if (gran === 'dia' && !m && !gd().desde && !gd().hasta) {
+    const ult = (DB.ingresos || []).reduce((mx, r) => (r.fecha > mx ? r.fecha : mx), '');
+    if (ult) { m = +ult.slice(5, 7); mAuto = true; }
+  }
+  const k26 = r => gran === 'mes' ? r.mes
+    : gran === 'semana' ? (r.semana || isoWeek(r.fecha))
+    : String(r.fecha || '').slice(0, 10);
+  const kLbl = k => {
+    if (gran === 'mes') return MESES[+k] || k;
+    if (gran === 'semana') { const l = lunesSemanaISO(2026, +k); return 'S' + k + ' · ' + l.slice(8, 10) + '/' + l.slice(5, 7); }
+    const d = new Date(k + 'T12:00:00Z');
+    return ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sá'][d.getUTCDay()] + ' ' + k.slice(8, 10) + '/' + k.slice(5, 7);
+  };
+  document.getElementById('ivp-titulo').textContent = 'Ingresos totales vs presupuesto — por ' + (gran === 'mes' ? 'mes' : gran === 'semana' ? 'semana' : 'día');
+  document.getElementById('ivp-th-periodo').textContent = gran === 'mes' ? 'Mes' : gran === 'semana' ? 'Semana' : 'Día';
+  document.getElementById('ivp-nota').textContent =
+    gran === 'semana' ? 'Años anteriores: misma semana del año (ISO).'
+    : gran === 'dia' ? (mAuto ? MESES[m] + ' (último mes con ventas; elige mes o fechas arriba para ver otro periodo). ' : '') + 'Años anteriores: mismo día de la semana (364 días antes).'
+    : '';
   const ing  = getIng(c, m);
   const gas  = getGas(c, m);
   const ppto = getPpto(c, m);
@@ -3110,18 +3156,19 @@ function renderDashboard() {
   // ── Gráfico + tabla ingresos vs presupuesto por mes ──
   // Datos del año actual (filtrados por centro/mes/rango como el resto)
   const mesMap = {};
-  ing.forEach(r=>{ if(!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,pn:0}; mesMap[r.mes].i+=r.base; });
-  ppto.forEach(r=>{ if(!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,pn:0}; mesMap[r.mes].p+=r.importe; });
-  gas.forEach(r=>{ if(!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,pn:0}; mesMap[r.mes].g+=r.base; });
-  // Personal real (NOMINAS) — respeta filtro de centro y mes
-  nominasEfectivas().forEach(r=>{
+  const slot = k => (mesMap[k] || (mesMap[k] = {i:0,p:0,g:0,n:0,i25:0,i24:0,pn:0}));
+  ing.forEach(r=>{ slot(k26(r)).i+=r.base; });
+  ppto.forEach(r=>{ slot(k26(r)).p+=r.importe; });
+  gas.forEach(r=>{ slot(k26(r)).g+=r.base; });
+  // Personal real (NOMINAS) — respeta filtro de centro y mes (solo por mes: la tabla no lo muestra)
+  if (gran === 'mes') nominasEfectivas().forEach(r=>{
     if (c && c!=='ALL' && r.canal!==c) return;
     if (m && r.mes!==m) return;
     if (!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,pn:0};
     mesMap[r.mes].n += (r.coste_total||0);
   });
   // Presupuesto personal (PRESUPUESTO NOMINAS) — respeta filtro de centro y mes
-  (DB.presupuesto_nominas||[]).forEach(r=>{
+  if (gran === 'mes') (DB.presupuesto_nominas||[]).forEach(r=>{
     if (c && c!=='ALL' && r.canal!==c) return;
     if (m && r.mes!==m) return;
     if (!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,pn:0};
@@ -3137,11 +3184,18 @@ function renderDashboard() {
     const yr = r.fecha ? +(''+r.fecha).slice(0,4) : (r.año || r.anio);
     if (yr !== 2025) return;
     if (c && c!=='ALL' && r.centro!==c) return;
+    if (gran === 'dia') {
+      const sf = addDiasISO(String(r.fecha).slice(0,10), 364);
+      if (m && +sf.slice(5,7)!==m) return;
+      if (desde && sf < desde) return;
+      if (hasta && sf > hasta) return;
+      slot(sf).i25 += (r.base||0);
+      return;
+    }
     if (m && r.mes!==m) return;
     if (desde25 && r.fecha < desde25) return;
     if (hasta25 && r.fecha > hasta25) return;
-    if (!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,pn:0};
-    mesMap[r.mes].i25 += (r.base||0);
+    slot(gran === 'semana' ? isoWeek(String(r.fecha).slice(0,10)) : r.mes).i25 += (r.base||0);
   });
   // Ingresos 2024 — mismo tratamiento que 2025 (histórico, mismos filtros reinterpretados).
   // Solo alimenta el gráfico de barras; la tabla inferior se deja como está.
@@ -3151,20 +3205,29 @@ function renderDashboard() {
     const yr = r.fecha ? +(''+r.fecha).slice(0,4) : (r.año || r.anio);
     if (yr !== 2024) return;
     if (c && c!=='ALL' && r.centro!==c) return;
+    if (gran === 'dia') {
+      const sf = addDiasISO(String(r.fecha).slice(0,10), 728);
+      if (m && +sf.slice(5,7)!==m) return;
+      if (desde && sf < desde) return;
+      if (hasta && sf > hasta) return;
+      slot(sf).i24 += (r.base||0);
+      return;
+    }
     if (m && r.mes!==m) return;
     if (desde24 && r.fecha < desde24) return;
     if (hasta24 && r.fecha > hasta24) return;
-    if (!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,i24:0,pn:0};
-    mesMap[r.mes].i24 = (mesMap[r.mes].i24||0) + (r.base||0);
+    slot(gran === 'semana' ? isoWeek(String(r.fecha).slice(0,10)) : r.mes).i24 += (r.base||0);
   });
-  const mkeys = Object.keys(mesMap).filter(k=>+k>0).sort((a,b)=>+a-+b);
+  const mkeys = gran === 'dia'
+    ? Object.keys(mesMap).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort()
+    : Object.keys(mesMap).filter(k=>+k>0).sort((a,b)=>+a-+b);
 
   destroyChart('ingVsPpto');
   if (mkeys.length > 0) {
     charts.ingVsPpto = new Chart(document.getElementById('ch-ing-vs-ppto'), {
       type: 'bar',
       data: {
-        labels: mkeys.map(k=>MESES[+k]||k),
+        labels: mkeys.map(kLbl),
         datasets: [
           { label:'Ingresos 2024', data:mkeys.map(k=>+(mesMap[k].i24||0).toFixed(2)), backgroundColor:'rgba(120,120,120,.28)', borderRadius:3 },
           { label:'Ingresos 2025', data:mkeys.map(k=>+mesMap[k].i25.toFixed(2)), backgroundColor:'rgba(120,120,120,.55)', borderRadius:3 },
@@ -3180,7 +3243,7 @@ function renderDashboard() {
         },
         scales:{
           y:{beginAtZero:true,ticks:{callback:v=>fmtK(v)},grid:{color:'rgba(128,128,128,.08)'}},
-          x:{grid:{display:false},ticks:{autoSkip:false}}
+          x:{grid:{display:false},ticks:{autoSkip:gran!=='mes',maxRotation:gran==='mes'?0:60}}
         }
       }
     });
@@ -3209,7 +3272,7 @@ function renderDashboard() {
     document.getElementById('tb-ing-vs-ppto').innerHTML = mkeys.map(k=>{
       const i=mesMap[k].i, i25=mesMap[k].i25, p=mesMap[k].p, n=mesMap[k].n, pn=mesMap[k].pn;
       return `<tr>
-        <td>${MESES[+k]||k}</td>
+        <td>${kLbl(k)}</td>
         <td class="tr">${i>0?'€'+fmt(i):'—'}</td>
         <td class="tr">${p>0?'€'+fmt(p):'—'}</td>
         ${devPos(i,p)}${pctPos(i,p)}
