@@ -189,6 +189,8 @@
   /* en el listado de facturas el centro se ve entero (16-09-2026) */
   td.celcentro{white-space:nowrap}
   td.celcentro .selcentro{max-width:none;width:auto;font-size:11px;padding:3px 2px}
+  .infecha{font:inherit;font-size:11px;padding:2px 3px;border:0.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:112px}
+  .infecha.difiere{border-color:#BA7517;background:#FFF7E8}
   .selcta{min-width:96px;max-width:118px;font-size:11px;padding:3px 2px}
   .selcentro:hover{border-color:var(--wine)}
   .selcuenta{font-size:12px;padding:3px 6px;border:0.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer;max-width:240px}
@@ -2794,7 +2796,7 @@ function exportAlb(){
   XLSX.writeFile(wb,`albaranes_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 async function loadFacturas(){
-  try{facturas=await sbAll("compras_doc?tipo=eq.factura&select=id,fecha,proveedor,proveedor_id,num_documento,canal,base,iva,retencion,retencion_pct,total,estado,estado_detalle,imagen_url,albaranes_detectados,origen,created_at,a3_numdoc&order=created_at.desc");
+  try{facturas=await sbAll("compras_doc?tipo=eq.factura&select=id,fecha,fecha_contable,proveedor,proveedor_id,num_documento,canal,base,iva,retencion,retencion_pct,total,estado,estado_detalle,imagen_url,albaranes_detectados,origen,created_at,a3_numdoc&order=created_at.desc");
     // Bloqueos reales de A3, calculados por Postgres. Sin esto la lista solo
     // enseñaba la mitad del juicio sobre cada factura.
     try{
@@ -2918,7 +2920,7 @@ async function limpiarLineasFacturas(){
 function renderFac(){
   let rows=[...facturas];
   const st=sortState.facturas;
-  const keymap={fecha:a=>a.fecha,cargado:a=>a.created_at,prov:a=>a.proveedor,ndoc:a=>a.num_documento,centro:a=>((centrosPorFactura[a.id]||{}).n_centros>1?'zzz varios':(a.canal||'\u0000 sin centro')),cta:a=>{const cs=cuentaDeFactura(a);return cs.length>1?'zzz varias':(cs[0]||'\u0000 sin cuenta');},base:a=>num(a.base)||0,iva:a=>num(a.iva)||0,reten:a=>num(a.retencion)||0,total:a=>a.total,estado:a=>a.estado_detalle||'REVISAR',
+  const keymap={fecha:a=>a.fecha,fcont:a=>a.fecha_contable||a.fecha,cargado:a=>a.created_at,prov:a=>a.proveedor,ndoc:a=>a.num_documento,centro:a=>((centrosPorFactura[a.id]||{}).n_centros>1?'zzz varios':(a.canal||'\u0000 sin centro')),cta:a=>{const cs=cuentaDeFactura(a);return cs.length>1?'zzz varias':(cs[0]||'\u0000 sin cuenta');},base:a=>num(a.base)||0,iva:a=>num(a.iva)||0,reten:a=>num(a.retencion)||0,total:a=>a.total,estado:a=>a.estado_detalle||'REVISAR',
     // Exportadas: por su número de A3 (relleno a 8 cifras para que el orden
     // textual sea el numérico); después las listas y al final las bloqueadas.
     a3:a=>a.a3_numdoc?'0 '+String(a.a3_numdoc).padStart(8,'0'):((bloqueosDe(a.id)||[]).length?'2 '+(bloqueosDe(a.id)||[]).join(' '):'1 lista')};
@@ -2928,21 +2930,51 @@ function renderFac(){
   registraVisibles('facturas',rows);
   // La columna de retención solo aparece si alguna fila visible la tiene (18-09-2026: sitio)
   const hayRet=rows.some(a=>num(a.retencion));
-  pintaFiltros('facturas','fltFac',['fecha','cargado','prov','ndoc','centro','cta','base','iva'].concat(hayRet?['reten']:[]).concat(['total','estado','a3',null,null]),todas,keymap,'renderFac');
+  pintaFiltros('facturas','fltFac',['fecha','fcont','cargado','prov','ndoc','centro','cta','base','iva'].concat(hayRet?['reten']:[]).concat(['total','estado','a3',null,null]),todas,keymap,'renderFac');
   document.getElementById('headFac').innerHTML=
-    thh('facturas','fecha','Fecha','fecha')+thh('facturas','cargado','Cargado')+thh('facturas','prov','Proveedor')+thh('facturas','ndoc','Nº factura')+
+    thh('facturas','fecha','F. factura','fecha')+thh('facturas','fcont','F. contable','fecha')+thh('facturas','cargado','Registro')+thh('facturas','prov','Proveedor')+thh('facturas','ndoc','Nº factura')+
     thh('facturas','centro','Centro')+thh('facturas','cta','Cuenta')+thh('facturas','base','Base','num')+thh('facturas','iva','IVA','num')+(hayRet?thh('facturas','reten','Ret.','num'):'')+thh('facturas','total','Total','num')+thh('facturas','estado','Estado')+thh('facturas','a3','A3')+'<th>Ver</th><th></th>';
   const tb=document.getElementById('facBody');
   document.getElementById('facCount').textContent=facturas.length;
   document.getElementById('facTotal').textContent=fmt(facturas.reduce((s,a)=>s+(num(a.base)||0),0));
   document.getElementById('emptyF').style.display=facturas.length?'none':'block';
   tb.innerHTML=rows.map(a=>`<tr>
-    <td class="fecha">${fmtF(a.fecha)}</td><td style="white-space:nowrap">${fmtCarga(a.created_at)}</td><td class="prov">${a.origen==='correo'?'<span title="Recibido por correo">\u{1F4E7}</span> ':''}${a.proveedor||''}</td><td class="ndoc">${a.num_documento||''}</td>
+    <td>${inputFechaFac(a,'fecha')}</td><td>${inputFechaFac(a,'fecha_contable')}</td><td style="white-space:nowrap">${fmtCarga(a.created_at)}</td><td class="prov">${a.origen==='correo'?'<span title="Recibido por correo">\u{1F4E7}</span> ':''}${a.proveedor||''}</td><td class="ndoc">${a.num_documento||''}</td>
     <td class="celcentro">${celdaCentroFactura(a)}</td><td>${celdaCuentaFactura(a)}</td><td class="num">${fmt(a.base)}</td><td class="num">${fmt(a.iva)}</td>${hayRet?`<td class="num">${a.retencion?'-'+fmt(a.retencion):''}</td>`:''}<td class="num">${fmt(a.total)}</td>
     <td>${estBadge(a.estado_detalle)}</td>
     <td>${badgeA3(a)}</td>
     <td class="revisar"><span class="link" onclick="revisar('${a.id}')" title="Ver foto y detalle">🔍 ver</span></td>
     <td><span class="del" onclick="borrarDoc('${a.id}','${(a.proveedor||'').replace(/'/g,'')} ${a.num_documento||''}','${a.imagen_url||''}')" title="Borrar">🗑</span></td></tr>`).join('');
+}
+// FECHAS DE LA FACTURA (28-09-2026): fecha factura (la del documento), fecha
+// contable (mes y trimestre del gasto; por defecto la de factura, o la de
+// registro si la factura entra con su trimestre ya cerrado — lo decide la base)
+// y registro (created_at, informativa). Las dos primeras se editan aquí. Si la
+// contable cambia en una factura ya contabilizada, se rehace el asiento.
+function inputFechaFac(a,campo){
+  const v=String((campo==='fecha_contable'?(a.fecha_contable||a.fecha):a.fecha)||'').slice(0,10);
+  const dif=campo==='fecha_contable'&&a.fecha_contable&&a.fecha&&String(a.fecha_contable).slice(0,10)!==String(a.fecha).slice(0,10);
+  const tit=campo==='fecha'?'Fecha de la factura (la del documento del proveedor)':'Fecha contable: mes y trimestre en que entra el gasto'+(dif?' — distinta de la fecha factura':'');
+  return `<input type="date" class="infecha${dif?' difiere':''}" value="${v}" title="${tit}" onchange="saveFechaFactura('${a.id}','${campo}',this.value,this)">`;
+}
+async function saveFechaFactura(docId,campo,val,el){
+  const a=facturas.find(x=>x.id===docId); if(!a)return;
+  if(!val){toast('La fecha no puede quedar vacía',true);renderFac();return;}
+  const fcAntes=String(a.fecha_contable||a.fecha||'').slice(0,10);
+  if(el)el.disabled=true;
+  try{
+    const r=await sb(`compras_doc?id=eq.${docId}&select=fecha,fecha_contable`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({[campo]:val})});
+    const nuevo=(r&&r[0])||{};
+    a.fecha=nuevo.fecha||a.fecha; a.fecha_contable=nuevo.fecha_contable||a.fecha_contable;
+    const fcDespues=String(a.fecha_contable||'').slice(0,10);
+    let nota='';
+    if(fcDespues!==fcAntes&&a.a3_numdoc){
+      try{ await sb('rpc/compras_asiento_rehacer',{method:'POST',body:JSON.stringify({p_doc:docId,p_motivo:`fecha contable ${fcAntes} → ${fcDespues} desde el listado`})}); nota=' · asiento rehecho · ya exportada a A3 (nº '+a.a3_numdoc+'): cámbiala también en A3'; }
+      catch(e){ nota=' · ⚠️ el asiento no se pudo rehacer: '+e.message; }
+    }
+    toast(`${campo==='fecha'?'Fecha factura':'Fecha contable'}: ${fmtF(val)}${campo==='fecha'&&fcDespues!==fcAntes?' · contable → '+fmtF(fcDespues):''}${nota}`,nota.includes('⚠️'));
+    renderFac();
+  }catch(err){toast('Error: '+err.message,true); if(el)el.disabled=false;}
 }
 // desplegable de centro reutilizable para los listados
 // En facturas, una repartida entre varios centros no debe verse igual que una
@@ -3044,7 +3076,7 @@ function exportFac(){
   // El Excel enseñaba menos columnas que la pantalla y con otras palabras.
   // Ahora lleva lo mismo, incluidos los bloqueos de A3.
   const data=rows.map(a=>{const bl=bloqueosDe(a.id);return{
-    Fecha:a.fecha||'',Cargado:a.created_at?new Date(a.created_at).toLocaleString('es-ES'):'',
+    'Fecha factura':a.fecha||'','Fecha contable':a.fecha_contable||a.fecha||'','Registro':a.created_at?new Date(a.created_at).toLocaleString('es-ES'):'',
     Proveedor:a.proveedor||'','Nº factura':a.num_documento||'',
     Centro:((centrosPorFactura[a.id]||{}).n_centros>1?`varios (${centrosPorFactura[a.id].n_centros})`:(a.canal||'')),
     Cuenta:cuentaDeFactura(a).join(' · '),
