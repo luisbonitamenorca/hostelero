@@ -3,6 +3,7 @@ import { exigirModulo } from "@/lib/supabase/server";
 import { clasificar, NOMBRE_MASA } from "@/lib/contabilidad";
 import Buscador from "../clientes/buscador";
 import NuevaCuenta from "./nueva-cuenta";
+import { HABITUALES } from "./habituales";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +30,17 @@ export default async function PlanCuentas({
   // Sin buscador, 658 cuentas cortadas a 200 escondían justo las del final.
   if (q) consulta = consulta.or(`codigo.ilike.%${q}%,nombre.ilike.%${q}%`);
 
-  const { data, error, count } = await consulta;
+  // Para no ofrecer como «habitual» una cuenta que ya existe. Solo se pregunta
+  // por esas diez: antes se traía el plan entero, que además se cortaba a
+  // 1.000 filas (db-max-rows) y daba por «ausentes» cuentas que sí estaban.
+  const [{ data, error, count }, { data: codigos }] = await Promise.all([
+    consulta,
+    supabase
+      .from("fin_plan_cuentas")
+      .select("codigo")
+      .in("codigo", HABITUALES.map((h) => h.codigo)),
+  ]);
   const filas = data ?? [];
-
-  // Para no ofrecer como «habitual» una cuenta que ya existe.
-  const { data: codigos } = await supabase.from("fin_plan_cuentas").select("codigo");
 
   const total = count ?? 0;
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
+import { paginar, paginarEnParalelo } from "@/lib/paginar";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -45,9 +46,15 @@ export default async function Mayor({
   const pestana = PESTANAS.find((p) => p.id === sp.pestana) ?? PESTANAS[0];
   const q = (sp.q ?? "").trim();
 
-  const rpc = supabase as unknown as {
-    rpc: (fn: "fin_mayor_saldos", args: { p_prefijos: string[] }) => PromiseLike<{ data: Saldo[] | null; error: { message: string } | null }>;
-  };
+  // La RPC también sufre el tope de 1.000 filas («Todas las cuentas» lo pasa):
+  // se pagina con range, y las páginas van en paralelo sabiendo el total.
+  const saldos = (prefijos: string[]) =>
+    paginarEnParalelo<Saldo>((d, h, contar) =>
+      supabase
+        .rpc("fin_mayor_saldos", { p_prefijos: prefijos }, contar ? { count: "exact" } : undefined)
+        .order("codigo")
+        .range(d, h),
+    );
 
   // Con búsqueda no hay pestaña que valga: se busca en TODO el plan, y solo
   // salen las cuentas con movimiento (las demás no tienen mayor que enseñar).
@@ -61,13 +68,13 @@ export default async function Mayor({
       .limit(400);
     const codigos = (encontradas ?? []).map((c) => c.codigo);
     if (codigos.length) {
-      const r = await rpc.rpc("fin_mayor_saldos", { p_prefijos: codigos });
-      filas = r.data ?? [];
+      const r = await saldos(codigos);
+      filas = r.filas;
       error = r.error;
     }
   } else {
-    const r = await rpc.rpc("fin_mayor_saldos", { p_prefijos: [...pestana.prefijos] });
-    filas = r.data ?? [];
+    const r = await saldos([...pestana.prefijos]);
+    filas = r.filas;
     error = r.error;
   }
 
@@ -204,15 +211,24 @@ async function MayorDeCuenta({
   // TODOS los apuntes confirmados de la cuenta, en orden contable. El saldo
   // corrido exige la serie completa desde el origen: el filtro de fechas
   // decide qué se PINTA, no qué se suma (lo anterior queda como apertura).
-  const { data, error } = await supabase
-    .from("fin_apuntes")
-    .select("debe, haber, fin_asientos!inner(id, numero, fecha, descripcion, estado)")
-    .eq("cuenta_plan_id", cuenta.id)
-    .eq("fin_asientos.estado", "confirmado")
-    .order("fecha", { referencedTable: "fin_asientos", ascending: true })
-    .limit(10000);
+  // Paginado: el antiguo .limit(10000) se cortaba en silencio a 1.000 filas
+  // (db-max-rows) y el saldo corrido salía mal en cuentas grandes. Se ordena
+  // por id del apunte para que las páginas no se pisen ni dejen huecos; el
+  // orden contable se hace aquí debajo.
+  let error = null as { message: string } | null;
+  const data = await paginar<ApunteMayor>(async (d, h) => {
+    const r = await supabase
+      .from("fin_apuntes")
+      .select("debe, haber, fin_asientos!inner(id, numero, fecha, descripcion, estado)")
+      .eq("cuenta_plan_id", cuenta.id)
+      .eq("fin_asientos.estado", "confirmado")
+      .order("id")
+      .range(d, h);
+    if (r.error) error = r.error;
+    return { data: r.data as unknown as ApunteMayor[] | null };
+  });
 
-  const apuntes = ((data ?? []) as unknown as ApunteMayor[])
+  const apuntes = data
     .slice()
     .sort((x, y) => x.fin_asientos.fecha.localeCompare(y.fin_asientos.fecha) || (x.fin_asientos.numero ?? 0) - (y.fin_asientos.numero ?? 0));
 

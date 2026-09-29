@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import type { Database } from "@hostelero/db";
 import { ruta } from "@/lib/rutas";
@@ -32,8 +33,14 @@ export async function crearClienteServidor() {
 /**
  * Exige sesión de usuario de cuenta (perfil). Redirige a /login sin sesión
  * y a /no-autorizado si el usuario no está vinculado a ninguna cuenta.
+ *
+ * Los tres guards van envueltos en cache() de React: el layout y la página se
+ * pintan en la misma petición y ambos llaman al guard. Sin la caché eran ~9
+ * idas a Supabase en serie por pantalla; con ella, cada comprobación se hace
+ * una sola vez por petición (la caché muere con la petición, así que no se
+ * arrastra nada entre usuarios ni entre visitas).
  */
-export async function exigirPerfil() {
+export const exigirPerfil = cache(async function exigirPerfil() {
   const supabase = await crearClienteServidor();
 
   const {
@@ -51,7 +58,7 @@ export async function exigirPerfil() {
   if (!perfil || !perfil.cuentas) redirect(ruta("/no-autorizado"));
 
   return { supabase, perfil, cuenta: perfil.cuentas };
-}
+});
 
 /**
  * Quién entra a las finanzas. Mismo criterio que apps/general, con los módulos
@@ -70,7 +77,7 @@ export const ACCESO_POR_ROL: Record<string, string[] | null> = {
  * Exige sesión + módulo contratado y activo para la cuenta + permitido por rol.
  * Devuelve además la sociedad sobre la que se factura.
  */
-export async function exigirModulo(moduloId: string) {
+export const exigirModulo = cache(async function exigirModulo(moduloId: string) {
   const { supabase, perfil, cuenta } = await exigirPerfil();
 
   const [{ data: contratacion }, { data: veto }, { data: concesion }] = await Promise.all([
@@ -108,23 +115,28 @@ export async function exigirModulo(moduloId: string) {
   if (!conAcceso) notFound();
 
   return { supabase, perfil, cuenta };
-}
+});
 
 /**
  * Contexto de facturación: módulo + sociedad emisora. Hoy Bonita tiene una sola
  * sociedad; cuando haya varias, esto pasará a ser una elección del usuario.
  */
-export async function exigirFacturacion() {
-  // Desde el 25-08-2026 facturación vive dentro del módulo contabilidad.
-  const ctx = await exigirModulo("contabilidad");
+export const exigirFacturacion = cache(async function exigirFacturacion() {
+  // La sociedad solo depende de la cuenta: se pide a la vez que se comprueba
+  // el módulo (exigirPerfil ya está en caché, no repite la ida).
+  const { supabase, cuenta } = await exigirPerfil();
 
-  const { data: sociedad } = await ctx.supabase
-    .from("sociedades")
-    .select("id, nombre, cif")
-    .eq("cuenta_id", ctx.cuenta.id)
-    .order("nombre")
-    .limit(1)
-    .maybeSingle();
+  // Desde el 25-08-2026 facturación vive dentro del módulo contabilidad.
+  const [ctx, { data: sociedad }] = await Promise.all([
+    exigirModulo("contabilidad"),
+    supabase
+      .from("sociedades")
+      .select("id, nombre, cif")
+      .eq("cuenta_id", cuenta.id)
+      .order("nombre")
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   return { ...ctx, sociedad };
-}
+});

@@ -32,10 +32,14 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // No usar getSession() aquí: getUser() revalida el token contra Supabase.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // No usar getSession() aquí: no verifica nada. getClaims() refresca la sesión
+  // si hace falta y VERIFICA la firma del JWT: en local con la clave pública
+  // del proyecto (claves asimétricas, sin ida a Supabase en cada petición ni en
+  // cada prefetch) o, si el proyecto aún firma con secreto simétrico, cayendo
+  // a getUser() contra Supabase. En ningún caso se fía de un token sin validar.
+  // El guard fino (perfil, módulo, rol) sigue en exigirPerfil() con getUser().
+  const { data: datosClaims } = await supabase.auth.getClaims();
+  const user = datosClaims?.claims?.sub ? datosClaims.claims : null;
 
   const esLogin = request.nextUrl.pathname.startsWith("/login");
 

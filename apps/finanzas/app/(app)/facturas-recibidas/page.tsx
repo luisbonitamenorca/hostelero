@@ -1,6 +1,6 @@
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
-import { paginar } from "@/lib/paginar";
+import { paginarEnParalelo, trocear } from "@/lib/paginar";
 import { ruta } from "@/lib/rutas";
 import Buscador from "../clientes/buscador";
 import BotonVencimiento from "./boton-vencimiento";
@@ -51,23 +51,60 @@ export default async function FacturasRecibidas({
     .order("fecha", { ascending: false })
     .range((pag - 1) * LIMITE, pag * LIMITE - 1);
 
-  const [{ data, error }, { count: totalFiltrado }, { count: enRevision }, { count: sinNumerar }] = await Promise.all([
+  // Todo lo que no depende de la página visible sale a la vez. El sumatorio
+  // GLOBAL del listado (no solo la página) no tiene RPC: se traen solo los
+  // totales de las facturas filtradas, páginas en paralelo, y se suman aquí.
+  const [
+    { data, error },
+    { count: totalFiltrado },
+    { count: enRevision },
+    { count: sinNumerar },
+    { filas: totalesFiltrados },
+  ] = await Promise.all([
     consulta,
     filtrar(supabase.from("compras_doc").select("id", { count: "exact", head: true })),
     supabase.from("compras_doc").select("id", { count: "exact", head: true }).eq("tipo", "factura").eq("estado", "REVISAR"),
     supabase.from("compras_doc").select("id", { count: "exact", head: true }).eq("tipo", "factura").eq("estado", "OK").is("a3_numdoc", null),
+    paginarEnParalelo<{ total: number | null }>((d, h, contar) =>
+      filtrar(supabase.from("compras_doc").select("total", contar ? { count: "exact" } : undefined))
+        .order("id")
+        .range(d, h),
+    ),
   ]);
+  const sumaGlobal = totalesFiltrados.reduce((s, f) => s + Number(f.total ?? 0), 0);
 
-  // Cuáles ya están en cartera. Si la migración F2a aún no está aplicada, la
-  // tabla no existe: se sigue adelante sin la columna en vez de romper la
-  // pantalla entera.
-  const enCartera = await paginar((d, h) =>
-    supabase
-      .from("fin_vencimientos")
-      .select("compra_doc_id, estado, importe, importe_liquidado")
-      .eq("sentido", "pago")
-      .range(d, h),
-  );
+  // Vencimiento y asiento SOLO de las facturas de esta página: antes se traían
+  // todos los de la base (miles, en serie) para mirar 200. Troceado por si la
+  // lista de uuid alarga demasiado la URL.
+  const idsPagina = (data ?? []).map((f) => f.id);
+  const lotes = trocear(idsPagina, 100);
+  const [vencimientosLotes, asientosLotes] = await Promise.all([
+    // Si la migración F2a aún no está aplicada, la tabla no existe: se sigue
+    // adelante sin la columna en vez de romper la pantalla entera.
+    Promise.all(
+      lotes.map((ids) =>
+        supabase
+          .from("fin_vencimientos")
+          .select("compra_doc_id, estado, importe, importe_liquidado")
+          .eq("sentido", "pago")
+          .in("compra_doc_id", ids),
+      ),
+    ),
+    // El asiento que generó cada factura en el diario (origen_tipo 'compra'
+    // apunta al doc de Compras). Si no hay, la factura aún no está contabilizada.
+    Promise.all(
+      lotes.map((ids) =>
+        supabase
+          .from("fin_asientos")
+          .select("id, numero, origen_id")
+          .eq("origen_tipo", "compra")
+          .eq("estado", "confirmado")
+          .in("origen_id", ids),
+      ),
+    ),
+  ]);
+  const enCartera = vencimientosLotes.flatMap((r) => r.data ?? []);
+  const asientosCompra = asientosLotes.flatMap((r) => r.data ?? []);
 
   const conVencimiento = new Set(enCartera.map((v) => v.compra_doc_id).filter(Boolean));
   // Estado de pago desde la cartera: la conciliación bancaria va liquidando
@@ -77,28 +114,7 @@ export default async function FacturasRecibidas({
       .filter((v) => v.compra_doc_id)
       .map((v) => [v.compra_doc_id as string, { estado: v.estado, importe: Number(v.importe), liquidado: Number(v.importe_liquidado) }]),
   );
-
-  // El asiento que generó cada factura en el diario (origen_tipo 'compra'
-  // apunta al doc de Compras). Si no hay, la factura aún no está contabilizada.
-  const asientosCompra = await paginar((d, h) =>
-    supabase
-      .from("fin_asientos")
-      .select("id, numero, origen_id")
-      .eq("origen_tipo", "compra")
-      .eq("estado", "confirmado")
-      .range(d, h),
-  );
   const asientoDoc = new Map(asientosCompra.map((a) => [a.origen_id, a]));
-
-  // Sumatorio GLOBAL del listado (no solo la página): se traen solo los totales
-  // de todas las facturas filtradas y se suman, para el indicador de cabecera.
-  const totalesFiltrados = await paginar((d, h) =>
-    filtrar(supabase.from("compras_doc").select("total")).range(d, h),
-  );
-  const sumaGlobal = totalesFiltrados.reduce(
-    (s, f) => s + Number((f as { total: number | null }).total ?? 0),
-    0,
-  );
 
   const filas = data ?? [];
   const suma = filas.reduce((s, f) => s + Number(f.total ?? 0), 0);

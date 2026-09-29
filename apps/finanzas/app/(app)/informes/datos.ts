@@ -1,4 +1,5 @@
 import { exigirModulo } from "@/lib/supabase/server";
+import { paginarEnParalelo } from "@/lib/paginar";
 import {
   calcularPeriodo,
   sumasYSaldos,
@@ -53,42 +54,30 @@ type FilaMensual = {
  * está aplicada): el que llama cae al camino lento con el detalle.
  */
 async function traerMensual(supabase: Cliente, anio: number): Promise<Fuente | null> {
-  const PASO = 1000;
-  const apuntes: ApunteConCentro[] = [];
+  // La primera página trae el total y las demás van en paralelo (de 3 en 3):
+  // antes iban en serie, una ida por cada 1.000 filas. Cada página vuelve a
+  // calcular la función entera en la base: la mejora de verdad es que la RPC
+  // devuelva menos filas (ver informe de rendimiento, mejora SQL).
+  const { filas, error } = await paginarEnParalelo<FilaMensual>((d, h, contar) =>
+    supabase
+      .rpc("fin_informe_mensual", { p_anio: anio }, contar ? { count: "exact" } : undefined)
+      // La función ordena por (cuenta, mes) pero no por centro: sin este
+      // desempate, dos páginas podían repetir o saltarse una fila.
+      .order("codigo")
+      .order("fecha")
+      .order("centro_id")
+      .range(d, h),
+  );
+  if (error) return null;
 
-  // El cliente tipado no conoce la función hasta regenerar packages/db/types;
-  // este molde local dice solo lo que se usa.
-  const rpc = supabase as unknown as {
-    rpc: (
-      fn: "fin_informe_mensual",
-      args: { p_anio: number },
-    ) => {
-      range: (
-        a: number,
-        b: number,
-      ) => PromiseLike<{ data: FilaMensual[] | null; error: { message: string } | null }>;
-    };
-  };
-
-  for (let desde = 0; ; desde += PASO) {
-    const { data, error } = await rpc
-      .rpc("fin_informe_mensual", { p_anio: anio })
-      .range(desde, desde + PASO - 1);
-    if (error) return null;
-
-    const pagina = data ?? [];
-    for (const f of pagina) {
-      apuntes.push({
-        codigo: f.codigo,
-        nombre: f.nombre,
-        fecha: f.fecha,
-        debe: Number(f.debe),
-        haber: Number(f.haber),
-        centroId: f.centro_id,
-      });
-    }
-    if (pagina.length < PASO) break;
-  }
+  const apuntes: ApunteConCentro[] = filas.map((f) => ({
+    codigo: f.codigo,
+    nombre: f.nombre,
+    fecha: f.fecha,
+    debe: Number(f.debe),
+    haber: Number(f.haber),
+    centroId: f.centro_id,
+  }));
 
   return { apuntes, error: null };
 }

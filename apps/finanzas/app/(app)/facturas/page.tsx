@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { euros, fecha } from "@/lib/importes";
-import { paginar } from "@/lib/paginar";
+import { paginarEnParalelo } from "@/lib/paginar";
 
 export const dynamic = "force-dynamic";
 
@@ -27,19 +27,19 @@ export default async function Facturas({
   const { supabase } = await exigirFacturacion();
 
   type Ingreso = { asiento_id: string; numero: number; fecha: string; tipo: string; descripcion: string; total: number; cobro: string; pareja: string | null };
-  // La RPC también sufre el tope de 1.000 filas: se pagina con range.
-  const rpc = supabase as unknown as {
-    rpc: (fn: "fin_facturas_ingreso", args: Record<string, never>) => {
-      range: (d: number, h: number) => PromiseLike<{ data: Ingreso[] | null }>;
-    };
-  };
-  const [{ data: propias, error }, ingresos] = await Promise.all([
+  // La RPC también sufre el tope de 1.000 filas: se pagina con range, la
+  // primera página con el total y las demás en paralelo.
+  const [{ data: propias, error }, { filas: ingresos }] = await Promise.all([
     supabase
       .from("fin_facturas")
       .select("id, numero_completo, tipo, estado, fecha_expedicion, fecha_operacion, total, fin_clientes(nombre_fiscal)")
       .order("creado_en", { ascending: false })
       .limit(500),
-    paginar<Ingreso>((d, h) => rpc.rpc("fin_facturas_ingreso", {}).range(d, h)),
+    paginarEnParalelo<Ingreso>((d, h, contar) =>
+      supabase
+        .rpc("fin_facturas_ingreso", undefined, contar ? { count: "exact" } : undefined)
+        .range(d, h),
+    ),
   ]);
 
   // Fila unificada: da igual si nació en el TPV o en Ágora. `cobro` dice si el

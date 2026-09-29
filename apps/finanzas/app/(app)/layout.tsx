@@ -1,4 +1,4 @@
-import { exigirFacturacion } from "@/lib/supabase/server";
+import { exigirFacturacion, exigirPerfil } from "@/lib/supabase/server";
 import BotonSalir from "./boton-salir";
 import Navegacion from "./navegacion";
 
@@ -62,13 +62,17 @@ const enCamino = [
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Guard del servidor: sesión + módulo contratado + rol. Nada se pinta antes.
-  const { supabase, perfil, cuenta } = await exigirFacturacion();
-
-  const { data: contratados } = await supabase
-    .from("modulos_contratados")
-    .select("modulo_id")
-    .eq("cuenta_id", cuenta.id)
-    .eq("activo", true);
+  // La lista de módulos solo depende de la cuenta: se pide a la vez que el
+  // guard termina sus comprobaciones (exigirPerfil va en caché por petición).
+  const { supabase, cuenta } = await exigirPerfil();
+  const [{ perfil }, { data: contratados }] = await Promise.all([
+    exigirFacturacion(),
+    supabase
+      .from("modulos_contratados")
+      .select("modulo_id")
+      .eq("cuenta_id", cuenta.id)
+      .eq("activo", true),
+  ]);
 
   const activos = new Set((contratados ?? []).map((m) => m.modulo_id));
 

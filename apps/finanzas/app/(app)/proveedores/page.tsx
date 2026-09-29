@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigirModulo } from "@/lib/supabase/server";
 import { euros } from "@/lib/importes";
+import { paginarEnParalelo } from "@/lib/paginar";
 import Buscador from "../clientes/buscador";
 import Condiciones from "./condiciones";
 
@@ -33,9 +34,18 @@ export default async function Proveedores({
     consulta = consulta.or(`nombre.ilike.%${termino}%,nif.ilike.%${termino}%,categoria.ilike.%${termino}%`);
   }
 
-  const [{ data, error }, { data: docs }, { data: condiciones }] = await Promise.all([
+  // compras_doc pasa de las 1.000 filas (db-max-rows): sin paginar, los totales
+  // por proveedor salían cojos. Solo las dos columnas que se suman.
+  const [{ data, error }, { filas: docs }, { data: condiciones }] = await Promise.all([
     consulta,
-    supabase.from("compras_doc").select("proveedor_id, total").eq("tipo", "factura"),
+    paginarEnParalelo((d, h, contar) =>
+      supabase
+        .from("compras_doc")
+        .select("proveedor_id, total", contar ? { count: "exact" } : undefined)
+        .eq("tipo", "factura")
+        .order("id")
+        .range(d, h),
+    ),
     supabase.from("fin_proveedor_condiciones").select("proveedor_id, dias_pago, forma_pago"),
   ]);
 

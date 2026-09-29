@@ -2,7 +2,7 @@ import Link from "next/link";
 import { exigirFacturacion } from "@/lib/supabase/server";
 import { euros, fecha as formatoFecha } from "@/lib/importes";
 import { diasHasta, tramo, NOMBRE_TRAMO, type Vencimiento } from "@/lib/cartera";
-import { paginar } from "@/lib/paginar";
+import { paginarEnParalelo, pedirEnLotes } from "@/lib/paginar";
 import FilaVencimiento from "./fila-vencimiento";
 
 export const dynamic = "force-dynamic";
@@ -19,48 +19,56 @@ export default async function Cartera({
   const { supabase } = await exigirFacturacion();
   const db = supabase;
 
-  const vencimientos = (await paginar((d, h) => {
+  // Páginas en paralelo sabiendo el total; `id` desempata el orden para que
+  // dos vencimientos del mismo día no se repitan ni se pierdan entre páginas.
+  const { filas: vencimientosCrudos } = await paginarEnParalelo((d, h, contar) => {
     let c = db
       .from("fin_vencimientos")
-      .select("id, sentido, factura_id, compra_doc_id, asiento_id, fecha_vencimiento, importe, importe_liquidado, estado, forma_pago, notas")
+      .select(
+        "id, sentido, factura_id, compra_doc_id, asiento_id, fecha_vencimiento, importe, importe_liquidado, estado, forma_pago, notas",
+        contar ? { count: "exact" } : undefined,
+      )
       .order("fecha_vencimiento")
+      .order("id")
       .range(d, h);
     if (ver === "pendientes") c = c.in("estado", ["pendiente", "parcial"]);
     return c;
-  })) as Vencimiento[];
+  });
+  const vencimientos = vencimientosCrudos as Vencimiento[];
   const error = null;
 
-  // Nombres para que la lista se lea: de quién es cada cobro y cada pago.
+  // Nombres para que la lista se lea: de quién es cada cobro y cada pago. Con
+  // miles de ids, un solo .in() revienta la URL: van en lotes y en paralelo.
   const idsFactura = vencimientos.map((v) => v.factura_id).filter(Boolean) as string[];
   const idsCompra = vencimientos.map((v) => v.compra_doc_id).filter(Boolean) as string[];
   const idsAsiento = vencimientos.map((v) => v.asiento_id).filter(Boolean) as string[];
 
-  const [{ data: facturas }, { data: compras }, { data: asientosIngreso }] = await Promise.all([
-    idsFactura.length
-      ? supabase.from("fin_facturas").select("id, numero_completo, cliente_id").in("id", idsFactura)
-      : Promise.resolve({ data: [] }),
-    idsCompra.length
-      ? db.from("compras_doc").select("id, proveedor, num_documento").in("id", idsCompra)
-      : Promise.resolve({ data: [] }),
-    idsAsiento.length
-      ? supabase.from("fin_asientos").select("id, descripcion").in("id", idsAsiento)
-      : Promise.resolve({ data: [] }),
+  const [facturasConCliente, compras, asientosIngreso] = await Promise.all([
+    // El cliente viene incrustado: antes era otra consulta en serie detrás.
+    pedirEnLotes(idsFactura, (lote) =>
+      supabase.from("fin_facturas").select("id, numero_completo, cliente_id, fin_clientes(nombre_fiscal)").in("id", lote),
+    ),
+    pedirEnLotes(idsCompra, (lote) =>
+      db.from("compras_doc").select("id, proveedor, num_documento").in("id", lote),
+    ),
+    pedirEnLotes(idsAsiento, (lote) =>
+      supabase.from("fin_asientos").select("id, descripcion").in("id", lote),
+    ),
   ]);
 
-  const idsCliente = (facturas ?? []).map((f) => f.cliente_id).filter(Boolean) as string[];
-  const { data: clientes } = idsCliente.length
-    ? await supabase.from("fin_clientes").select("id, nombre_fiscal").in("id", idsCliente)
-    : { data: [] };
+  const facturas = facturasConCliente.map((f) => {
+    const c = Array.isArray(f.fin_clientes) ? f.fin_clientes[0] : f.fin_clientes;
+    return { ...f, nombreCliente: c?.nombre_fiscal ?? null };
+  });
 
-  const nombreCliente = new Map((clientes ?? []).map((c) => [c.id, c.nombre_fiscal]));
   const infoFactura = new Map(
-    (facturas ?? []).map((f) => [
+    facturas.map((f) => [
       f.id,
-      { numero: f.numero_completo, quien: f.cliente_id ? (nombreCliente.get(f.cliente_id) ?? "—") : "—" },
+      { numero: f.numero_completo, quien: f.cliente_id ? (f.nombreCliente ?? "—") : "—" },
     ]),
   );
   const infoCompra = new Map(
-    (compras ?? []).map((c: { id: string; proveedor: string | null; num_documento: string | null }) => [
+    compras.map((c: { id: string; proveedor: string | null; num_documento: string | null }) => [
       c.id,
       { numero: c.num_documento, quien: c.proveedor ?? "—" },
     ]),
@@ -68,7 +76,7 @@ export default async function Cartera({
   // Facturas de ingreso (Ágora): número y cliente salen de la descripción del
   // asiento: «Fra. FV-X (Cliente)».
   const infoAsiento = new Map(
-    (asientosIngreso ?? []).map((a: { id: string; descripcion: string | null }) => {
+    asientosIngreso.map((a: { id: string; descripcion: string | null }) => {
       const m = (a.descripcion ?? "").match(/^Fra\. (\S+) \((.+)\)$/);
       return [a.id, { numero: m ? m[1] : "asiento", quien: m ? m[2] : (a.descripcion ?? "—") }];
     }),
