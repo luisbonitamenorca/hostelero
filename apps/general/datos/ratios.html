@@ -1081,7 +1081,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
               <option value="__SIN__">Sin clasificar</option>
             </select>
             <span class="fbar-label">Buscar</span>
-            <input type="text" id="pa-search" placeholder="ID o producto..." oninput="renderProdAgora()" style="font-size:12px;padding:4px 8px;width:200px">
+            <input type="text" id="pa-search" placeholder="ID o producto..." oninput="debounceBusqueda('pa', renderProdAgora)" style="font-size:12px;padding:4px 8px;width:200px">
           </div>
           <div class="tbl-wrap" style="max-height:600px;overflow-y:auto"><table>
             <thead style="position:sticky;top:0;background:#fff;z-index:2">
@@ -1121,7 +1121,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
               <option value="__SIN__">Sin clasificar</option>
             </select>
             <span class="fbar-label">Buscar</span>
-            <input type="text" id="pd-search" placeholder="ID o descripción..." oninput="renderProdDijit()" style="font-size:12px;padding:4px 8px;width:200px">
+            <input type="text" id="pd-search" placeholder="ID o descripción..." oninput="debounceBusqueda('pd', renderProdDijit)" style="font-size:12px;padding:4px 8px;width:200px">
           </div>
           <div class="tbl-wrap" style="max-height:600px;overflow-y:auto"><table>
             <thead style="position:sticky;top:0;background:#fff;z-index:2">
@@ -1199,7 +1199,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
             <button class="fbtn" onclick="fset(this,'pc-estado','NO',renderProdControlados)">Sin controlar</button>
 
             <span class="fbar-label" style="margin-left:16px">Buscar</span>
-            <input type="text" id="pc-search" placeholder="ID o descripción..." oninput="renderProdControlados()" style="font-size:12px;padding:4px 8px;width:200px">
+            <input type="text" id="pc-search" placeholder="ID o descripción..." oninput="debounceBusqueda('pc', renderProdControlados)" style="font-size:12px;padding:4px 8px;width:200px">
           </div>
 
           <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
@@ -1516,7 +1516,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
       <div class="card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div class="card-t" style="margin:0">📁 Documentos</div>
-          <input type="text" id="doc-buscar" placeholder="Buscar documento..." oninput="docSetBusqueda(this.value)" style="height:28px;padding:0 10px;border:1px solid #ddd;border-radius:4px;font-size:12px;min-width:200px">
+          <input type="text" id="doc-buscar" placeholder="Buscar documento..." oninput="debounceBusqueda('doc', () => docSetBusqueda(this.value))" style="height:28px;padding:0 10px;border:1px solid #ddd;border-radius:4px;font-size:12px;min-width:200px">
           <select id="doc-filtro-centro" onchange="docSetCentro(this.value)" style="height:28px;padding:0 6px;border:1px solid #ddd;border-radius:4px;font-size:12px">
             <option value="">Todos los centros</option>
           </select>
@@ -1663,7 +1663,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-08-31.1'; // columna Proveedor en Clasificación (cruzada del catálogo de Compras por P-xxx)
+const APP_VERSION = '2026-09-29.1'; // rendimiento: guardado incremental (sin truncate), índices y cachés tras la carga
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -1750,6 +1750,14 @@ function nextId() { return ++_idSeq; }
 
 function extractMes(fecha) { return extractMesFromFecha(fecha); }
 
+// Buscadores: esperan 200 ms sin teclear antes de repintar (antes, cada tecla
+// repintaba la tabla entera). Un temporizador por buscador.
+const _debTimers = {};
+function debounceBusqueda(clave, fn, ms = 200) {
+  clearTimeout(_debTimers[clave]);
+  _debTimers[clave] = setTimeout(fn, ms);
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 const _nf2 = new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2, useGrouping:'always'});
 const _nf0 = new Intl.NumberFormat('es-ES', {minimumFractionDigits:0,  maximumFractionDigits:2, useGrouping:'always'});
@@ -1784,7 +1792,11 @@ function inRango(fecha) {
 // Si el producto no está en el catálogo, se cae a la familia/subfamilia originales del Excel.
 let _idxAgora = new Map();  // articulo (id) → {familia, subfamilia}
 let _idxDijit = new Map();  // id_interno    → {familia, subfamilia}
+// Versión del catálogo: sube cada vez que cambian los índices de resolución.
+// getIng/getGas la usan para saber si su caché de filas resueltas sigue valiendo.
+let _catVer = 0;
 function rebuildProductIndex() {
+  _catVer++;
   _idxAgora = new Map();
   _idxDijit = new Map();
   (DB.productos_agora||[]).forEach(p => {
@@ -1830,14 +1842,28 @@ function buildDijitNameIndex() {
       subfamilia: (p.subfamilia||'').trim()
     });
   });
+  // Si el índice pasa a tener datos, las resoluciones pueden cambiar: invalida cachés
+  if (_idxDijitByName.size) _catVer++;
 }
 
-function getIng(c,m)  { return DB.ingresos   .filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||r.mes===m)&&inRango(r.fecha)).map(resolveIng); }
+// Caché de filas resueltas contra el catálogo: se rehace solo si cambia el array
+// (identidad o longitud: carga, push, borrado) o el catálogo (_catVer). resolveIng/
+// resolveGas no tocan centro/mes/fecha, así que filtrar antes o después da lo mismo.
+const _resCache = { ingresos: null, gastos: null };
+function _resueltas(tabla, resolver) {
+  const arr = DB[tabla], c = _resCache[tabla];
+  if (c && c.arr === arr && c.len === arr.length && c.ver === _catVer) return c.filas;
+  // resolveGas puede construir el índice por nombre (sube _catVer): la versión se lee después
+  const filas = arr.map(resolver);
+  _resCache[tabla] = { arr, len: arr.length, ver: _catVer, filas };
+  return filas;
+}
+function getIng(c,m)  { return _resueltas('ingresos', resolveIng).filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||r.mes===m)&&inRango(r.fecha)); }
 // El histórico Dijit guarda compras desde 2008: al filtrar por MES, el año se
 // ciñe a la temporada actual (si no, "Ago" mezclaba agostos de 2024 y 2025 con
 // el de 2026). El histórico completo sigue accesible con el rango Desde/Hasta.
 function getGas(c,m)  { const anioTemporada=String(new Date().getFullYear());
-  return DB.gastos     .filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||(r.mes===m&&String(r.fecha||'').slice(0,4)===anioTemporada))&&inRango(r.fecha)).map(resolveGas); }
+  return _resueltas('gastos', resolveGas).filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||(r.mes===m&&String(r.fecha||'').slice(0,4)===anioTemporada))&&inRango(r.fecha)); }
 function getPpto(c,m) { return DB.presupuesto.filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||r.mes===m)&&inRango(r.fecha)); }
 
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); charts[id] = null; } }
@@ -3354,6 +3380,58 @@ function setSemCentro(c, btn) {
   renderSemanal();
 }
 
+// ── Sumas por rango de fechas para renderSemanal (29-09-2026) ──
+// renderSemanal recorría todas las ventas y compras por cada fila de la tabla y
+// por cada familia (coste cuadrático). Ahora cada grupo de filas se indexa una vez
+// por render y las sumas de un rango [desde, hasta] se resuelven así:
+//   - si las fechas del grupo vienen ya en orden, por búsqueda binaria sobre sumas
+//     acumuladas que arrancan en el mismo punto que el bucle original;
+//   - si no, recorriendo solo las filas del grupo (no las tablas enteras).
+// En ambos casos se suma en el MISMO orden que el código original, así que el
+// resultado es idéntico bit a bit (importa: en empates de medio céntimo el orden
+// de la suma decide el redondeo que se ve). Además se memoriza cada rango pedido.
+// Las fechas se comparan como texto, igual que el filtro original.
+function _acumIdx(rows) {
+  const fechas = [], bases = [];
+  for (const r of rows) {
+    if (typeof r.fecha !== 'string') continue;   // null/undefined nunca pasaban el filtro de rango
+    fechas.push(r.fecha);
+    bases.push(r.base || 0);
+  }
+  let ordenado = true;
+  for (let i = 1; i < fechas.length; i++) if (fechas[i] < fechas[i - 1]) { ordenado = false; break; }
+  return { fechas, bases, ordenado, runs: new Map(), memo: new Map() };
+}
+// Suma de r.base con desdeISO <= fecha <= hastaISO (mismo orden de suma que el bucle original)
+function _acumSuma(idx, desdeISO, hastaISO) {
+  const clave = desdeISO + '|' + hastaISO;
+  const hecho = idx.memo.get(clave);
+  if (hecho !== undefined) return hecho;
+  const fs = idx.fechas, bs = idx.bases;
+  let s = 0;
+  if (idx.ordenado) {
+    let lo = 0, hi = fs.length;             // primer índice con fecha >= desdeISO
+    while (lo < hi) { const m = (lo + hi) >> 1; if (fs[m] < desdeISO) lo = m + 1; else hi = m; }
+    const ini = lo;
+    hi = fs.length;                         // primer índice con fecha > hastaISO
+    while (lo < hi) { const m = (lo + hi) >> 1; if (fs[m] <= hastaISO) lo = m + 1; else hi = m; }
+    if (lo > ini) {
+      // Sumas acumuladas desde 'ini' empezando en 0, como el bucle original
+      let run = idx.runs.get(ini);
+      if (!run) {
+        run = [0];
+        for (let i = ini; i < fs.length; i++) run.push(run[run.length - 1] + bs[i]);
+        idx.runs.set(ini, run);
+      }
+      s = run[lo - ini];
+    }
+  } else {
+    for (let i = 0; i < fs.length; i++) { const f = fs[i]; if (f >= desdeISO && f <= hastaISO) s += bs[i]; }
+  }
+  idx.memo.set(clave, s);
+  return s;
+}
+
 function renderSemanal() {
   const c     = semCentro;
   const fam   = fget('sem-familia');
@@ -3455,16 +3533,12 @@ function renderSemanal() {
   //   - semanal: último día con dato de la semana
   //   - diaria: la propia fecha
   // El "punto inicial" del acumulado = `desde` global (o 1 de enero del año si no hay desde).
+  const idxGasShow = _acumIdx(gasShow), idxIngShow = _acumIdx(ingShow);
   function fcAcumuladoEn(fechaHasta) {
     if (!fechaHasta) return null;
     const inicioISO = desde || (fechaHasta.substring(0,4) + '-01-01');
-    let compras = 0, ingresos = 0;
-    for (const r of gasShow) {
-      if (r.fecha >= inicioISO && r.fecha <= fechaHasta) compras += (r.base||0);
-    }
-    for (const r of ingShow) {
-      if (r.fecha >= inicioISO && r.fecha <= fechaHasta) ingresos += (r.base||0);
-    }
+    const compras  = _acumSuma(idxGasShow, inicioISO, fechaHasta);
+    const ingresos = _acumSuma(idxIngShow, inicioISO, fechaHasta);
     return ingresos > 0 ? compras / ingresos : null;
   }
 
@@ -3474,6 +3548,31 @@ function renderSemanal() {
   (DB.ratios_objetivo||[]).forEach(r => {
     if (r.familia) RATIOS[r.familia] = Number(r.ratio) || 0;
   });
+  // Filas de DB.gastos / DB.ingresos agrupadas por centro+familia (y total por familia)
+  // en una sola pasada; el índice acumulado de cada grupo se construye al pedirlo.
+  const agruparStock = (rows) => {
+    const porCentro = new Map(), total = new Map();
+    for (const r of rows) {
+      if (!FAMS_STOCK.includes(r.familia)) continue;
+      const kc = r.centro + '|' + r.familia;
+      if (!porCentro.has(kc)) porCentro.set(kc, []);
+      porCentro.get(kc).push(r);
+      if (!total.has(r.familia)) total.set(r.familia, []);
+      total.get(r.familia).push(r);
+    }
+    return { porCentro, total, idx: new Map() };
+  };
+  const gruposStock = { gastos: agruparStock(DB.gastos||[]), ingresos: agruparStock(DB.ingresos||[]) };
+  const sumaStock = (tabla, centro, famN, desdeISO, hastaISO) => {
+    const g = gruposStock[tabla];
+    const kIdx = centro === 'ALL' ? 'T|' + famN : 'C|' + centro + '|' + famN;
+    let ix = g.idx.get(kIdx);
+    if (!ix) {
+      ix = _acumIdx((centro === 'ALL' ? g.total.get(famN) : g.porCentro.get(centro + '|' + famN)) || []);
+      g.idx.set(kIdx, ix);
+    }
+    return _acumSuma(ix, desdeISO, hastaISO);
+  };
   function stockAtCentroFecha(centro, fechaISO) {
     if (!fechaISO) return null;
     const anio = fechaISO.substring(0,4);
@@ -3484,16 +3583,8 @@ function renderSemanal() {
       const ratio = RATIOS[famN];
       if (!ratio) continue;
       algunaFamConRatio = true;
-      const compras = (DB.gastos||[]).filter(r =>
-        r.familia === famN &&
-        r.fecha >= enero1 && r.fecha <= fechaISO &&
-        (centro === 'ALL' || r.centro === centro)
-      ).reduce((s,r)=>s+(r.base||0), 0);
-      const ingresos = (DB.ingresos||[]).filter(r =>
-        r.familia === famN &&
-        r.fecha >= enero1 && r.fecha <= fechaISO &&
-        (centro === 'ALL' || r.centro === centro)
-      ).reduce((s,r)=>s+(r.base||0), 0);
+      const compras  = sumaStock('gastos',   centro, famN, enero1, fechaISO);
+      const ingresos = sumaStock('ingresos', centro, famN, enero1, fechaISO);
       stockTotal += compras - ingresos * ratio;
     }
     return algunaFamConRatio ? stockTotal : null;
@@ -4320,7 +4411,7 @@ function loadPaste(type) {
   const errMsg = errs>0 ? ` · ${errs} líneas con error (${errLines.join(',')})` : '';
   showMsg(type, `✓ ${count} filas cargadas${errMsg}`, errs>0?'err':'ok');
   const tableKey = type==='ing'?'ingresos':type==='gas'?'gastos':'presupuesto';
-  saveToStorage(tableKey);
+  saveToStorage(tableKey, { nuevas: newRows });   // solo las filas pegadas, nunca la tabla entera
   if(type==='ing')       { renderTblIng(); renderDashboard(); }
   else if(type==='gas')  { renderTblGas(); renderDashboard(); }
   else if(type==='ppto') { renderTblPpto(); }
@@ -4330,6 +4421,8 @@ async function clearTable(type) {
   if (!confirm('¿Borrar toda la tabla? Esta acción no se puede deshacer.')) return;
   setSyncStatus('Borrando...', '#BA7517');
   const table = type==='ing'?'ingresos':type==='gas'?'gastos':'presupuesto';
+  // 'gastos' es una vista SQL del módulo Compras: nunca se escribe sobre ella
+  if (table === 'gastos') { showMsg(type, 'Las compras vienen del módulo Compras: no se pueden borrar desde aquí', 'err'); setSyncStatus('', '#888'); return; }
   try {
     await sbFetch('rpc/truncate_table', { method:'POST', body: JSON.stringify({table_name: table}) });
     if(type==='ing')       DB.ingresos=[];
@@ -4356,12 +4449,22 @@ function showMsg(type, msg, status) {
   setTimeout(() => { el.textContent=''; el.className='paste-msg'; }, 5000);
 }
 
+// Repinta el dashboard solo si está a la vista; al abrir la pestaña, showTab lo repinta.
+function renderDashboardSiVisible() {
+  const tab = document.getElementById('tab-dash');
+  if (tab && tab.classList.contains('active')) renderDashboard();
+  else pintaFrescura();
+}
+
 async function delRow(table, id) {
   DB[table] = DB[table].filter(r => r.id !== id);
-  try { await sbFetch(table + '?id=eq.' + id, { method: 'DELETE' }); }
-  catch(e) { console.error('Delete row error:', e); }
-  if(table==='ingresos')         { renderTblIng(); renderDashboard(); }
-  else if(table==='gastos')      { renderTblGas(); renderDashboard(); }
+  // 'gastos' es una vista SQL (módulo Compras): se quita de pantalla pero no se escribe en Supabase
+  if (table !== 'gastos') {
+    try { await sbFetch(table + '?id=eq.' + id, { method: 'DELETE' }); }
+    catch(e) { console.error('Delete row error:', e); }
+  }
+  if(table==='ingresos')         { renderTblIng(); renderDashboardSiVisible(); }
+  else if(table==='gastos')      { renderTblGas(); renderDashboardSiVisible(); }
   else if(table==='presupuesto') renderTblPpto();
 }
 
@@ -4370,24 +4473,27 @@ function saveIng() {
   const fecha=document.getElementById('ni-fecha').value, pvp=parseFloat(document.getElementById('ni-pvp').value)||0;
   if (!fecha||!pvp) { alert('Fecha y PVP son obligatorios'); return; }
   const mes=extractMes(fecha);
-  DB.ingresos.push({ id:nextId(), fecha, centro:document.getElementById('ni-centro').value, canal:document.getElementById('ni-canal').value||'—', articulo:document.getElementById('ni-art').value||'—', descripcion:document.getElementById('ni-desc').value||'—', familia:document.getElementById('ni-fam').value, subfamilia:document.getElementById('ni-sf').value||'VARIOS', uds:parseFloat(document.getElementById('ni-uds').value)||1, base:parseFloat(document.getElementById('ni-base').value)||0, pvp, semana:Math.ceil(mes*4.3), mes });
-  closeM('m-ing'); saveToStorage('ingresos'); renderTblIng(); renderDashboard();
+  const nueva = { id:nextId(), fecha, centro:document.getElementById('ni-centro').value, canal:document.getElementById('ni-canal').value||'—', articulo:document.getElementById('ni-art').value||'—', descripcion:document.getElementById('ni-desc').value||'—', familia:document.getElementById('ni-fam').value, subfamilia:document.getElementById('ni-sf').value||'VARIOS', uds:parseFloat(document.getElementById('ni-uds').value)||1, base:parseFloat(document.getElementById('ni-base').value)||0, pvp, semana:Math.ceil(mes*4.3), mes };
+  DB.ingresos.push(nueva);
+  closeM('m-ing'); saveToStorage('ingresos', { nuevas: [nueva] }); renderTblIng(); renderDashboard();
 }
 
 function saveGas() {
   const fecha=document.getElementById('ng-fecha').value, total=parseFloat(document.getElementById('ng-total').value)||0;
   if (!fecha||!total) { alert('Fecha y total son obligatorios'); return; }
   const mes=extractMes(fecha);
-  DB.gastos.push({ id:nextId(), fecha, centro:document.getElementById('ng-centro').value, proveedor:document.getElementById('ng-prov').value||'—', producto:document.getElementById('ng-prod').value||'—', familia:document.getElementById('ng-fam').value, subfamilia:document.getElementById('ng-sf').value||'VARIOS', cant:parseFloat(document.getElementById('ng-cant').value)||1, unidad:document.getElementById('ng-unidad').value||'UND', total, semana:Math.ceil(mes*4.3), mes });
-  closeM('m-gas'); saveToStorage('gastos'); renderTblGas(); renderDashboard();
+  const nueva = { id:nextId(), fecha, centro:document.getElementById('ng-centro').value, proveedor:document.getElementById('ng-prov').value||'—', producto:document.getElementById('ng-prod').value||'—', familia:document.getElementById('ng-fam').value, subfamilia:document.getElementById('ng-sf').value||'VARIOS', cant:parseFloat(document.getElementById('ng-cant').value)||1, unidad:document.getElementById('ng-unidad').value||'UND', total, semana:Math.ceil(mes*4.3), mes };
+  DB.gastos.push(nueva);
+  closeM('m-gas'); saveToStorage('gastos', { nuevas: [nueva] }); renderTblGas(); renderDashboard();
 }
 
 function savePpto() {
   const fecha=document.getElementById('np-fecha').value, imp=parseFloat(document.getElementById('np-imp').value)||0;
   if (!fecha||!imp) { alert('Fecha e importe son obligatorios'); return; }
   const mes=extractMes(fecha);
-  DB.presupuesto.push({ id:nextId(), fecha, centro:document.getElementById('np-centro').value, familia:'VARIOS', importe:imp, semana:isoWeek(fecha), mes });
-  closeM('m-ppto'); saveToStorage('presupuesto'); renderTblPpto();
+  const nueva = { id:nextId(), fecha, centro:document.getElementById('np-centro').value, familia:'VARIOS', importe:imp, semana:isoWeek(fecha), mes };
+  DB.presupuesto.push(nueva);
+  closeM('m-ppto'); saveToStorage('presupuesto', { nuevas: [nueva] }); renderTblPpto();
 }
 
 // La sesión la valida Hostelero en el servidor antes de entregar este HTML.
@@ -4430,16 +4536,36 @@ async function sbFetch(path, options={}) {
   return JSON.parse(text);
 }
 
-async function saveToStorage(table) {
+// Guardado INCREMENTAL (29-09-2026). Antes se vaciaba la tabla entera con
+// truncate_table y se re-subían todas las filas (66.000 ventas en ~133 POST) al
+// añadir o pegar una sola: si algo fallaba a mitad, la tabla quedaba incompleta.
+// Ahora cada llamador dice qué cambió y solo eso viaja a Supabase:
+//   nuevas    → POST (en lotes de 500)
+//   borradas  → DELETE por id
+//   editadas  → PATCH por id
+// 'gastos' es una vista SQL del módulo Compras: nunca se escribe sobre ella.
+async function saveToStorage(table, cambios = {}) {
+  if (table === 'gastos') {
+    setSyncStatus('⚠ Compras viene del módulo Compras: no se guarda aquí', '#A32D2D');
+    console.warn('[guardar] gastos es una vista (módulo Compras): cambio solo local, no se escribe en Supabase');
+    return;
+  }
+  const nuevas   = cambios.nuevas   || [];
+  const borradas = cambios.borradas || [];   // ids
+  const editadas = cambios.editadas || [];   // filas completas con id
+  if (!nuevas.length && !borradas.length && !editadas.length) return;
   setSyncStatus('Guardando...', '#BA7517');
   try {
-    await sbFetch('rpc/truncate_table', { method:'POST', body: JSON.stringify({table_name: table}) });
-    const rows = DB[table];
-    if (rows.length > 0) {
-      const BATCH = 500;
-      for (let i = 0; i < rows.length; i += BATCH) {
-        await sbFetch(table, { method:'POST', body: JSON.stringify(rows.slice(i, i+BATCH)) });
-      }
+    const BATCH = 500;
+    for (let i = 0; i < nuevas.length; i += BATCH) {
+      await sbFetch(table, { method:'POST', body: JSON.stringify(nuevas.slice(i, i+BATCH)) });
+    }
+    for (let i = 0; i < borradas.length; i += 200) {
+      await sbFetch(`${table}?id=in.(${borradas.slice(i, i+200).join(',')})`, { method:'DELETE' });
+    }
+    for (const r of editadas) {
+      const { id, ...campos } = r;
+      await sbFetch(`${table}?id=eq.${id}`, { method:'PATCH', body: JSON.stringify(campos) });
     }
     setSyncStatus('✓ ' + new Date().toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}), '#1D9E75');
     setTimeout(() => setSyncStatus('', '#888'), 3000);
@@ -4842,11 +4968,50 @@ function imMap(fecha, centro) {
   return m;
 }
 
+// Catálogo indexado por id (texto recortado) → PRIMER producto con ese id, igual
+// que el .find() lineal que se hacía por cada fila del Excel. Se usa el objeto
+// completo (factor, familia y subfamilia crudos), por eso no vale _idxAgora/_idxDijit,
+// que guardan la familia ya normalizada y se quedan con el último duplicado.
+// Se cachea por array y longitud: el catálogo no cambia durante una importación.
+const _catPorIdCache = new Map();
+function _catPrimeroPorId(lista, campo) {
+  const arr = lista || [];
+  const c = _catPorIdCache.get(campo);
+  if (c && c.arr === arr && c.len === arr.length) return c.mapa;
+  const mapa = new Map();
+  for (const p of arr) {
+    const k = String(p[campo]||'').trim();
+    if (!mapa.has(k)) mapa.set(k, p);
+  }
+  _catPorIdCache.set(campo, { arr, len: arr.length, mapa });
+  return mapa;
+}
+
+// Índices Map sobre tablas de DB (29-09-2026): agrupan las filas por una clave
+// conservando su orden original (las sumas salen idénticas a recorrer la tabla
+// entera). Se reconstruyen solo si cambia el array (identidad o longitud).
+const _idxTablas = new Map();
+function _idxPorClave(nombre, arr, claveFn) {
+  const c = _idxTablas.get(nombre);
+  if (c && c.arr === arr && c.len === arr.length) return c.mapa;
+  const mapa = new Map();
+  for (const r of arr) {
+    const k = claveFn(r);
+    let l = mapa.get(k);
+    if (!l) { l = []; mapa.set(k, l); }
+    l.push(r);
+  }
+  _idxTablas.set(nombre, { arr, len: arr.length, mapa });
+  return mapa;
+}
+
 // Coste unitario medio de un producto: suma(base) / suma(unidades) en compras YTD hasta la fecha de cierre
 function costeMedio(id_prod, fechaCierreISO) {
   const año = parseInt(fechaCierreISO.substring(0,4), 10);
   let sumBase = 0, sumUds = 0, n = 0;
-  (DB.gastos||[]).forEach(r => {
+  // Solo las compras de ese producto (índice por String(id_prod), mismo criterio que el filtro)
+  const delProd = _idxPorClave('gastos_por_prod', DB.gastos||[], r => String(r.id_prod)).get(String(id_prod)) || [];
+  delProd.forEach(r => {
     if (String(r.id_prod) !== String(id_prod)) return;
     const f = String(r.fecha||'').substring(0,10);
     if (!f) return;
@@ -5419,7 +5584,8 @@ function _stockFisicoMap(centro, fechaISO) {
 // Compras / ingresos entre dos fechas (inclusive desde, inclusive hasta) para un centro/familia/subfamilia
 function _comprasEntre(centro, desdeISO, hastaISO, filtroFam, filtroSub) {
   let total = 0;
-  (DB.gastos||[]).forEach(r => {
+  // Solo las filas del centro (índice por centro, orden original conservado)
+  (_idxPorClave('gastos_por_centro', DB.gastos||[], r => r.centro).get(centro) || []).forEach(r => {
     if (r.centro !== centro) return;
     const f = String(r.fecha||'').substring(0,10);
     if (!f || f < desdeISO || f > hastaISO) return;
@@ -5431,7 +5597,7 @@ function _comprasEntre(centro, desdeISO, hastaISO, filtroFam, filtroSub) {
 }
 function _ingresosEntre(centro, desdeISO, hastaISO, filtroFam, filtroSub) {
   let total = 0;
-  (DB.ingresos||[]).forEach(r => {
+  (_idxPorClave('ingresos_por_centro', DB.ingresos||[], r => r.centro).get(centro) || []).forEach(r => {
     if (r.centro !== centro) return;
     const f = String(r.fecha||'').substring(0,10);
     if (!f || f < desdeISO || f > hastaISO) return;
@@ -6535,6 +6701,13 @@ async function loadFromStorage() {
       'doc_subcategorias': 'id',
       'doc_documentos': 'id',
     };
+    // Columnas a descargar cuando no hacen falta todas (29-09-2026). En 'ingresos'
+    // (~66.000 filas, se baja entera en cada arranque) pvp y factor no se leen en
+    // ningún sitio de la app: se omiten. Si se empieza a usar otra columna, añadirla aquí.
+    // Seguro porque ya nada re-sube filas cargadas (saveToStorage es incremental).
+    const SELECT_BY_TABLE = {
+      'ingresos': 'id,fecha,centro,canal,articulo,descripcion,familia,subfamilia,cantidad,base,unidades,semana,mes,created_at',
+    };
     async function loadAll(table) {
       const rows = [];
       // 10000 por página requiere "Max rows" >= 10000 en Supabase
@@ -6547,9 +6720,10 @@ async function loadFromStorage() {
       let from = 0;
       let maxBatch = 0;
       const orderCol = PK_BY_TABLE[table] || 'id';
+      const cols = SELECT_BY_TABLE[table] || '*';
       while (true) {
         const to = from + LIMIT - 1;
-        const batch = await sbFetch(`${table}?select=*&order=${orderCol}.asc`, {
+        const batch = await sbFetch(`${table}?select=${cols}&order=${orderCol}.asc`, {
           headers: { 'Range': `${from}-${to}`, 'Range-Unit': 'items' }
         });
         if (!batch || batch.length === 0) break;
@@ -7066,6 +7240,7 @@ async function handleXlFile(file, opts) {
   // Unidades = CANTIDAD × FACTOR (calculadas aquí, ya no vienen en el Excel).
   function parseIngSheet(ws, filaCabecera) {
     const result = [];
+    const agoraPorId = _catPrimeroPorId(DB.productos_agora, 'id_prod');
     const data = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:""});
     for (let i = (filaCabecera||0) + 1; i < data.length; i++) {
       const cols = data[i];
@@ -7076,7 +7251,7 @@ async function handleXlFile(file, opts) {
       const sfloat = v => { const n = parseFloat(String(v||0)); return isNaN(n)?0:n; };
       const idProd = String(articulo||'').trim();
       // Buscar en catálogo para obtener factor, familia, subfamilia
-      const cat = idProd ? (DB.productos_agora||[]).find(p => String(p.id_prod||'').trim() === idProd) : null;
+      const cat = idProd ? (agoraPorId.get(idProd) || null) : null;
       const factor = cat ? (parseFloat(cat.factor)||1) : 1;
       const cant = sfloat(cantidad);
       result.push({
@@ -7306,7 +7481,7 @@ async function handleXlFile(file, opts) {
       const cant_g = cols[cIdx.cantidad];
       const total_g= cols[cIdx.monto];
       // Lookup en catálogo Dijit (por id_interno = idProd) → familia, subfamilia, factor
-      const cat = idP ? (DB.productos_dijit||[]).find(p => String(p.id_interno||'').trim() === idP) : null;
+      const cat = idP ? (_catPrimeroPorId(DB.productos_dijit, 'id_interno').get(idP) || null) : null;
       const factor = cat ? (parseFloat(cat.factor)||1) : 1;
       const cant = sfloat(cant_g);
       gasRows.push({
@@ -7400,7 +7575,7 @@ async function handleXlFile(file, opts) {
       const idP = String(cols[cIdx.codApp]||'').trim();
       if (!idP) compSinCodigo++;                  // entra, pero saldrá sin clasificar
       const prod = cols[cIdx.prod] || (idxProdCrudo !== -1 ? cols[idxProdCrudo] : '');
-      const cat = idP ? (DB.productos_dijit||[]).find(p => String(p.id_interno||'').trim() === idP) : null;
+      const cat = idP ? (_catPrimeroPorId(DB.productos_dijit, 'id_interno').get(idP) || null) : null;
       const factor = cat ? (parseFloat(cat.factor)||1) : 1;
       const cant = sfloat(cols[cIdx.cantidad]);
       const imp  = sfloat(cols[cIdx.importe]);
@@ -8142,15 +8317,25 @@ function fget(key) { return FVAL[key] || ''; }
 // Orden preferido de visualización
 const FAM_ORDER = ['COMIDA','BEBIDAS','VINO','VINO EXT','ALCOHOLES','VISITAS','ENVIOS','VARIOS'];
 
+// Caché de la lista de familias: recorrer ~87k filas en cada renderDashboard era
+// caro. Se rehace solo si cambian los arrays de ingresos/gastos (identidad o longitud).
+let _famsCache = null;
 function populateFamiliaSelects() {
+  const fc = _famsCache;
+  let fams;
+  if (fc && fc.ing === DB.ingresos && fc.nIng === DB.ingresos.length && fc.gas === DB.gastos && fc.nGas === DB.gastos.length) {
+    fams = fc.fams;
+  } else {
   const famSet = new Set();
   DB.ingresos.forEach(r => { if(r.familia) famSet.add(r.familia); });
   DB.gastos.forEach(r => { if(r.familia) famSet.add(r.familia); });
 
-  const fams = [
+  fams = [
     ...FAM_ORDER.filter(f => famSet.has(f)),
     ...[...famSet].filter(f => !FAM_ORDER.includes(f)).sort()
   ];
+  _famsCache = { ing: DB.ingresos, nIng: DB.ingresos.length, gas: DB.gastos, nGas: DB.gastos.length, fams };
+  }
 
   const LABELS = {
     'COMIDA':'Comida','BEBIDAS':'Bebidas','VINO':'Vino','VINO EXT':'Vino ext.',
