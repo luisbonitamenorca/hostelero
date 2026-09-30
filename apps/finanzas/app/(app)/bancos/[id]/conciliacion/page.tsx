@@ -76,16 +76,13 @@ export default async function Conciliacion({
   // columna de banco y los indicadores sumados. Cada acción usa el banco del
   // propio movimiento, así que todo lo demás funciona igual.
   const esTodos = id === "todos";
-  const { data: bancosData } = await supabase
-    .from("fin_bancos_cuentas")
-    .select("id, nombre, iban")
-    .order("nombre");
-  const bancos = (bancosData ?? []) as { id: string; nombre: string; iban: string | null }[];
-  const banco = esTodos
-    ? { id: "todos", nombre: "Todos los bancos", iban: `${bancos.length} cuentas · visión única del extracto` }
-    : bancos.find((b) => b.id === id) ?? null;
-  if (!banco) notFound();
-  const nombreBanco = new Map(bancos.map((b) => [b.id, b.nombre]));
+  // Se lanza ya y se espera más abajo: con un banco concreto no hace falta
+  // para nada de lo que se pide, así que va en paralelo con todo lo demás.
+  // Promise.resolve lo convierte en promesa de verdad (un builder de
+  // supabase-js repetiría la petición cada vez que se le hace await).
+  const bancosP = Promise.resolve(
+    supabase.from("fin_bancos_cuentas").select("id, nombre, iban").order("nombre"),
+  );
 
   const estadoFiltro = ["pendiente", "conciliado", "ignorado", "todos"].includes(sp.estado ?? "")
     ? sp.estado!
@@ -131,8 +128,9 @@ export default async function Conciliacion({
     .order("fecha", { ascending: false })
     .range((pag - 1) * LIMITE, pag * LIMITE - 1);
 
-  const { count: totalFiltrado } = await filtrar(
-    supabase.from("fin_banco_movimientos").select("id", { count: "exact", head: true }),
+  // El recuento va en el Promise.all grande de abajo, no en serie delante.
+  const cuentaP = Promise.resolve(
+    filtrar(supabase.from("fin_banco_movimientos").select("id", { count: "exact", head: true })),
   );
 
   const rpc = supabase as unknown as {
@@ -161,14 +159,28 @@ export default async function Conciliacion({
     const { data } = await supabase.from("fin_banco_movimientos").select("banco_cuenta_id").eq("id", movId).maybeSingle();
     return (data?.banco_cuenta_id as string | undefined) ?? id;
   };
-  const [bGrupo, bLiq] = await Promise.all([
+  // Única espera previa, y solo en «todos» (hace falta la lista de bancos
+  // para pedir los RPC de cada uno); con un banco concreto se resuelve al acto.
+  const [{ data: bancosData }, bGrupo, bLiq] = await Promise.all([
+    esTodos ? bancosP : Promise.resolve({ data: null }),
     grupoAbierto ? bancoDeAbierto(grupoAbierto) : Promise.resolve(id),
     liqAbierto ? bancoDeAbierto(liqAbierto) : Promise.resolve(id),
   ]);
   // Los RPC de resumen/sugerencias/grupos van por banco: en «todos» se piden
   // para cada cuenta y se agregan.
-  const idsBancos = esTodos ? bancos.map((b) => b.id) : [id];
-  const [{ data: movsData, error }, resumenResps, sugResps, gruposResps, candResp, cartResp, { data: centrosData }] = await Promise.all([
+  const idsBancosTodos = ((bancosData ?? []) as { id: string }[]).map((b) => b.id);
+  const idsBancos = esTodos ? idsBancosTodos : [id];
+  const [
+    { data: movsData, error },
+    resumenResps,
+    sugResps,
+    gruposResps,
+    candResp,
+    cartResp,
+    { data: centrosData },
+    { data: bancosTodos },
+    { count: totalFiltrado },
+  ] = await Promise.all([
     consulta,
     Promise.all(idsBancos.map((b) => rpc.rpc("fin_conciliacion_resumen", { p_banco: b, ...rango }))),
     Promise.all(idsBancos.map((b) => rpc.rpc("fin_conciliacion_sugerencias", { p_banco: b }))),
@@ -176,7 +188,17 @@ export default async function Conciliacion({
     grupoAbierto ? rpcCand.rpc("fin_conciliacion_candidatos", { p_banco: bGrupo, p_mov: grupoAbierto }) : Promise.resolve({ data: null }),
     liqAbierto ? rpcCand.rpc("fin_cartera_candidatos", { p_banco: bLiq, p_mov: liqAbierto }) : Promise.resolve({ data: null }),
     supabase.from("centros").select("id, nombre").order("nombre"),
+    bancosP,
+    cuentaP,
   ]);
+  const bancos = (bancosTodos ?? []) as { id: string; nombre: string; iban: string | null }[];
+  const banco = esTodos
+    ? { id: "todos", nombre: "Todos los bancos", iban: `${bancos.length} cuentas · visión única del extracto` }
+    : bancos.find((b) => b.id === id) ?? null;
+  // Banco inexistente o ajeno (RLS): lo pedido con su id no devuelve nada y
+  // se descarta aquí, antes de pintar.
+  if (!banco) notFound();
+  const nombreBanco = new Map(bancos.map((b) => [b.id, b.nombre]));
   const centros = (centrosData ?? []) as { id: string; nombre: string }[];
 
   const movs = (movsData ?? []) as Mov[];

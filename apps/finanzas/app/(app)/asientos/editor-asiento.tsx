@@ -49,6 +49,67 @@ function hoy(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+const LISTA_CUENTAS = "cuentas-del-plan";
+
+function etiquetaCuenta(c: CuentaPlan): string {
+  return `${c.codigo} · ${c.nombre}`;
+}
+
+/**
+ * Cuenta de una línea: se escribe el código o parte del nombre y el navegador
+ * sugiere desde la lista común. Vale con teclear el código completo (9
+ * dígitos) o elegir la sugerencia; lo que se guarda sigue siendo el id de la
+ * cuenta, igual que con el desplegable de antes. Un texto que no corresponde a
+ * ninguna cuenta deja la línea SIN cuenta y se marca en rojo.
+ */
+function CampoCuenta({
+  cuentaPlanId,
+  porId,
+  porCodigo,
+  onElegir,
+}: {
+  cuentaPlanId: string;
+  porId: Map<string, CuentaPlan>;
+  porCodigo: Map<string, CuentaPlan>;
+  onElegir: (id: string) => void;
+}) {
+  const actual = porId.get(cuentaPlanId);
+  const [texto, setTexto] = useState(actual ? etiquetaCuenta(actual) : "");
+
+  function resolver(valor: string): CuentaPlan | undefined {
+    // «572000001 · CaixaBank» o solo «572000001»: manda el código.
+    const codigo = valor.split("·")[0].trim();
+    return porCodigo.get(codigo);
+  }
+
+  const invalido = texto.trim() !== "" && !resolver(texto);
+
+  return (
+    <input
+      type="text"
+      list={LISTA_CUENTAS}
+      value={texto}
+      placeholder="Código o nombre de la cuenta…"
+      aria-label="Cuenta"
+      aria-invalid={invalido || undefined}
+      title={invalido ? "No hay ninguna cuenta con ese código" : undefined}
+      style={invalido ? { borderColor: "var(--error)" } : undefined}
+      onChange={(e) => {
+        const valor = e.target.value;
+        setTexto(valor);
+        const c = resolver(valor);
+        const id = c?.id ?? "";
+        if (id !== cuentaPlanId) onElegir(id);
+      }}
+      onBlur={() => {
+        // Al salir se deja la etiqueta completa, para que se lea qué cuenta es.
+        const c = resolver(texto);
+        if (c) setTexto(etiquetaCuenta(c));
+      }}
+    />
+  );
+}
+
 export default function EditorAsiento({
   cuentas,
   centros,
@@ -90,11 +151,9 @@ export default function EditorAsiento({
 
   const cuadra = totales.diferencia === 0 && totales.debe > 0;
 
-  const codigoPorId = useMemo(
-    () => new Map(cuentas.map((c) => [c.id, c.codigo])),
-    [cuentas],
-  );
-  const codigoDe = (id: string) => codigoPorId.get(id);
+  const porId = useMemo(() => new Map(cuentas.map((c) => [c.id, c])), [cuentas]);
+  const porCodigo = useMemo(() => new Map(cuentas.map((c) => [c.codigo, c])), [cuentas]);
+  const codigoDe = (id: string) => porId.get(id)?.codigo;
 
   // Solo se avisa, no se bloquea: hay asientos de resultado sin centro legítimos
   // (los de estructura), y quien contabiliza sabe mejor que el formulario.
@@ -255,6 +314,14 @@ export default function EditorAsiento({
           </label>
         </div>
 
+        {/* UNA sola lista para todo el editor: con 6.400 cuentas, un <select>
+            por línea multiplicaba las opciones en el DOM y no se podía buscar. */}
+        <datalist id={LISTA_CUENTAS}>
+          {cuentas.map((c) => (
+            <option key={c.id} value={etiquetaCuenta(c)} />
+          ))}
+        </datalist>
+
         <div className="tabla-envoltura">
           <table className="tabla tabla-lineas">
             <thead>
@@ -271,17 +338,12 @@ export default function EditorAsiento({
               {lineas.map((l) => (
                 <tr key={l.clave}>
                   <td>
-                    <select
-                      value={l.cuentaPlanId}
-                      onChange={(e) => cambiar(l.clave, "cuentaPlanId", e.target.value)}
-                    >
-                      <option value="">— elegir cuenta —</option>
-                      {cuentas.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.codigo} · {c.nombre}
-                        </option>
-                      ))}
-                    </select>
+                    <CampoCuenta
+                      cuentaPlanId={l.cuentaPlanId}
+                      porId={porId}
+                      porCodigo={porCodigo}
+                      onElegir={(id) => cambiar(l.clave, "cuentaPlanId", id)}
+                    />
                   </td>
                   <td>
                     {llevaCentro(codigoDe(l.cuentaPlanId)) ? (
