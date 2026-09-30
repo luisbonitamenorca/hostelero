@@ -6721,10 +6721,44 @@ async function loadFromStorage() {
       let maxBatch = 0;
       const orderCol = PK_BY_TABLE[table] || 'id';
       const cols = SELECT_BY_TABLE[table] || '*';
-      while (true) {
-        const to = from + LIMIT - 1;
-        const batch = await sbFetch(`${table}?select=${cols}&order=${orderCol}.asc`, {
-          headers: { 'Range': `${from}-${to}`, 'Range-Unit': 'items' }
+      const url = `${table}?select=${cols}&order=${orderCol}.asc`;
+      // RENDIMIENTO (30-09-2026): el servidor corta en 1.000 filas, así que
+      // ingresos eran ~67 peticiones UNA DETRÁS DE OTRA (unos 10 s de carga).
+      // La 1ª página pide además el total (count=exact); sabiendo el total y
+      // el tamaño real de página, las demás salen a la vez, de 8 en 8, y se
+      // juntan en su orden. Sin total, se sigue en serie como siempre.
+      const primera = await fetch(SB_URL + '/rest/v1/' + url, {
+        cache: 'no-store',
+        headers: { ...sbHeaders, 'Range': `0-${LIMIT - 1}`, 'Range-Unit': 'items', 'Prefer': 'count=exact' }
+      });
+      if (!primera.ok) throw new Error(await primera.text());
+      const txt0 = await primera.text();
+      const batch0 = txt0 && txt0.trim() ? JSON.parse(txt0) : [];
+      const mTotal = (primera.headers.get('content-range') || '').match(/\/(\d+)\s*$/);
+      const total = mTotal ? +mTotal[1] : null;
+      rows.push(...batch0);
+      from = batch0.length;
+      maxBatch = batch0.length;
+      if (total != null && batch0.length > 0 && from < total) {
+        const paso = batch0.length;   // tamaño real de página que da el servidor
+        const inicios = [];
+        for (let d = from; d < total; d += paso) inicios.push(d);
+        for (let i = 0; i < inicios.length; i += 8) {
+          const lotes = await Promise.all(inicios.slice(i, i + 8).map(d =>
+            sbFetch(url, { headers: { 'Range': `${d}-${d + paso - 1}`, 'Range-Unit': 'items' } })));
+          for (const b of lotes) {
+            if (!b || !b.length) continue;
+            rows.push(...b);
+            maxBatch = Math.max(maxBatch, b.length);
+          }
+        }
+        from = rows.length;
+      }
+      // Sin total (o si mientras tanto entraron filas nuevas): en serie hasta
+      // una página corta, con la misma guarda anti-truncado de siempre.
+      while (total == null ? (maxBatch === LIMIT || maxBatch === 1000) && from > 0 : from < total) {
+        const batch = await sbFetch(url, {
+          headers: { 'Range': `${from}-${from + LIMIT - 1}`, 'Range-Unit': 'items' }
         });
         if (!batch || batch.length === 0) break;
         rows.push(...batch);
@@ -6740,6 +6774,8 @@ async function loadFromStorage() {
       console.warn(`[carga] Falló ${table}:`, e.message);
       return [];
     });
+    // compras_producto no depende de nada: sale YA, a la vez que el resto (30-09-2026)
+    const comprasCatProm = safeLoad('compras_producto');
     const [ingresos, gastos, presupuesto, rrhh, nominas, presupuesto_nominas, nominas_reparto, nominas_reparto_horas, visitas, comensales, ingresos_historico, productos_agora, productos_dijit, familias, subfamilias, ratios_objetivo, productos_controlados, inventarios, rrhh_excepciones, rrhh_puestos, ecommerce, ecommerce_historico, doc_departamentos, doc_subcategorias, doc_documentos] = await Promise.all([
       loadAll('ingresos'),
       loadAll('gastos'),
@@ -6769,7 +6805,7 @@ async function loadFromStorage() {
     ]);
     // Proveedor de cada producto de la app de Compras (P-xxx → proveedor); el
     // catálogo de Ratios no lo guarda, se cruza en memoria para la clasificación
-    const compras_cat = await safeLoad('compras_producto');
+    const compras_cat = await comprasCatProm;
     DB.ingresos             = ingresos             || [];
     DB.gastos               = gastos               || [];
     DB.presupuesto          = presupuesto          || [];
