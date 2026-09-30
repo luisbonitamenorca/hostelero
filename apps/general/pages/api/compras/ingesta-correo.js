@@ -207,6 +207,18 @@ function extraerZip(buffer) {
   } catch (_) { /* zip raro: se registra como descartado más abajo */ }
   return out;
 }
+// Algunos emisores (Holded, el laboratorio de Controles Analíticos…) mandan
+// PDF con basura delante de "%PDF-": cabeceras HTTP pegadas o una marca BOM.
+// Los visores lo toleran, pero la API de lectura los rechaza ("The PDF specified
+// was not valid") y el adjunto moría en ERROR para siempre (reenviarlo no
+// servía). Se corta todo lo anterior a "%PDF-" si aparece en los primeros 4 KB.
+function limpiarPdf(a) {
+  const esPdf = /pdf/i.test(a.contentType || "") || /\.pdf$/i.test(String(a.filename || ""));
+  if (!esPdf || !Buffer.isBuffer(a.content)) return a;
+  const i = a.content.subarray(0, 4096).indexOf("%PDF-");
+  if (i > 0) a.content = a.content.subarray(i);
+  return a;
+}
 const esZip = (a) => /zip/i.test(a.contentType || "") || /\.zip$/i.test(String(a.filename || ""));
 
 // El separador de jerarquía cambia según el servidor: unos usan "/" y otros ".".
@@ -323,6 +335,7 @@ async function procesarCorreo(client, correo, resumen) {
 
   // Las subidas son espera de red, no cálculo: en serie, un correo con 8 adjuntos
   // tarda 8 veces lo que uno. En paralelo tarda casi lo mismo que el más lento.
+  buenos.forEach(limpiarPdf);
   const subidas = await Promise.all(buenos.map(async (a) => {
     const nombre = a.filename || "documento.pdf";
     const subida = await sbUploadBuffer(a.content, nombre, a.contentType);

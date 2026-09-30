@@ -567,6 +567,7 @@
             <option value="">Todas</option>
             <option value="listas">Solo listas</option>
             <option value="bloqueadas">Solo bloqueadas</option>
+            <option value="numeradas_bloq">Ya numeradas con bloqueos</option>
           </select></div>
           <div><label class="fld">Buscar</label><input type="search" id="a3Busca" placeholder="proveedor, referencia, nº…" oninput="enDiferido('renderA3',renderA3)" style="min-width:190px"></div>
           <div style="flex:1 1 auto;text-align:right;align-self:flex-end;display:flex;gap:10px;justify-content:flex-end">
@@ -1017,7 +1018,9 @@ function normNif(s){return s?String(s).toUpperCase().replace(/[^A-Z0-9]/g,''):''
 // huella de duplicado: nº documento (solo letras/números) + fecha (YYYY-MM-DD) + importe (2 decimales).
 // Devuelve null si falta el nº o el importe (sin ellos no podemos afirmar que sea duplicado).
 function firmaDup(numDoc,fecha,total){
-  const n=String(numDoc||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  // Sin ceros a la izquierda (30-09-2026): el correo trae «0073613» y la carga
+  // de A3 «73613» (Gelmarfred, Grenke «0000384837/2026»…) y la huella no casaba.
+  const n=String(numDoc||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^0+(?=.)/,'');
   const t=(total!=null&&!isNaN(num(total)))?num(total).toFixed(2):'';
   const f=(fecha||'').slice(0,10);
   if(!n||!t)return null;
@@ -1210,8 +1213,9 @@ async function cargarLoteCorreo(){
       try{
         const r=await fetch(a.url);
         if(!r.ok)throw new Error('descarga '+r.status);
-        const blob=await r.blob();
+        let blob=await r.blob();
         const mime=a.mime||blob.type||'application/pdf';
+        if(!mime.startsWith('image/'))blob=await limpiarPdfBlob(blob);
         let file=new File([blob],a.nombre_archivo||'documento.pdf',{type:mime});
         let b64,mimeFinal=mime;
         if(mime.startsWith('image/')){
@@ -1252,6 +1256,19 @@ async function cargarLoteCorreo(){
       }
     }
     return n;
+}
+// PDF con basura delante de "%PDF-" (cabeceras HTTP de Holded, marca BOM…):
+// la API de lectura los rechaza ("The PDF specified was not valid") y el
+// adjunto se quedaba en ERROR para siempre. Se corta lo anterior a "%PDF-"
+// si aparece en los primeros 4 KB (30-09-2026).
+async function limpiarPdfBlob(blob){
+  const cab=new Uint8Array(await blob.slice(0,4096).arrayBuffer());
+  for(let i=1;i<=cab.length-5;i++){
+    if(cab[i]===0x25&&cab[i+1]===0x50&&cab[i+2]===0x44&&cab[i+3]===0x46&&cab[i+4]===0x2D)
+      return blob.slice(i,blob.size,'application/pdf');
+    if(i===1&&cab[0]===0x25&&cab[1]===0x50)break;   // ya empieza por %PDF
+  }
+  return blob;
 }
 function blobB64(blob){return new Promise((res,rej)=>{const rd=new FileReader();rd.onload=()=>res(rd.result.split(',')[1]);rd.onerror=()=>rej(new Error('lectura'));rd.readAsDataURL(blob);});}
 // ¿el fallo es culpa del documento o del entorno? Un error de saldo, un límite de
@@ -2939,16 +2956,22 @@ async function detectarDuplicados(tipo){
   if(!confirm(`Voy a revisar todos los ${etq} y marcar como DUPLICADO los que repitan nº + fecha + importe.\n\nSobrevive siempre la copia con nº de A3 (o la más antigua); los repetidos se marcan (NO se borran).\n\n¿Continuar?`))return;
   toast('Buscando duplicados…');
   try{
-    const docs=await sb(`compras_doc?tipo=eq.${tipo}&select=id,num_documento,fecha,total,estado,estado_detalle,canal,hash_doc,created_at,a3_numdoc&order=created_at.asc`);
+    const docs=await sbAll(`compras_doc?tipo=eq.${tipo}&select=id,num_documento,fecha,total,estado,estado_detalle,canal,hash_doc,created_at,a3_numdoc,proveedor_id,proveedor&order=created_at.asc`);
     const grupos={};
     docs.forEach(d=>{
       const f=firmaDup(d.num_documento,d.fecha,d.total);
       if(!f)return;
-      (grupos[f]=grupos[f]||[]).push(d);
+      // El proveedor también cuenta (30-09-2026): «005» del 25-06 por 70 € lo
+      // tenían a la vez Patrick de la Chesnais y Carles Mayans, y se habría
+      // marcado uno de los dos como duplicado del otro.
+      const prov=d.proveedor_id||String(d.proveedor||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+      const k=f+'#'+prov;
+      (grupos[k]=grupos[k]||[]).push(d);
     });
     let nDup=0,nGrupos=0,patches=0;const avisos=[];
-    for(const f in grupos){
-      const g=grupos[f];
+    for(const k in grupos){
+      const g=grupos[k];
+      const f=k.split('#')[0];
       // superviviente: la copia con nº de A3 si la hay; a igualdad, la más antigua.
       // Con DOS numeradas no se toca nada: eso es un problema de contabilidad, no de app.
       const numerados=g.filter(x=>x.a3_numdoc);
@@ -2958,7 +2981,11 @@ async function detectarDuplicados(tipo){
       const sup=(numerados.length===1)?numerados[0]:g[0];
       for(const d of g){
         const cambios={};
-        if(d.hash_doc!==f)cambios.hash_doc=f;
+        // Las huellas con prefijo (a3-import-…, dijit-…) marcan cargas históricas
+        // y el Excel de A3 se apoya en ellas para excluir el import de Lucía:
+        // agrupan igual (por la firma calculada), pero NO se reescriben.
+        const hashConPrefijo=/^[a-z0-9]+-/.test(d.hash_doc||'')&&!/\|/.test(d.hash_doc||'');
+        if(d.hash_doc!==f&&!hashConPrefijo)cambios.hash_doc=f;
         if(g.length>=2&&numerados.length<2){
           if(d===sup){
             // el superviviente se queda; si estaba mal marcado como DUPLICADO, lo soltamos
@@ -3247,10 +3274,41 @@ function fotosDe(a){
   if(Array.isArray(a.imagenes)&&a.imagenes.length) return a.imagenes.filter(f=>f&&f.url);
   return a.imagen_url?[{url:a.imagen_url,pagina:a.pagina||1}]:[];
 }
+// Sube una foto o PDF y la engancha al documento abierto en el modal. Solo
+// añade la imagen: no relee nada ni toca importes (para eso está Reprocesar).
+function adjuntarImagenDoc(){
+  const doc=revisarDoc; if(!doc)return;
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*,application/pdf';
+  inp.onchange=async()=>{
+    let f=inp.files&&inp.files[0]; if(!f)return;
+    try{
+      toast('Subiendo…');
+      if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){
+        const limpio=await limpiarPdfBlob(f);
+        if(limpio!==f)f=new File([limpio],f.name,{type:'application/pdf'});
+      }
+      const url=await sbUpload(f);
+      await sb(`compras_doc?id=eq.${doc.id}`,{method:'PATCH',body:JSON.stringify({imagen_url:url})});
+      doc.imagen_url=url;
+      for(const lista of [facturas,albaranes]){const x=(lista||[]).find(d=>d.id===doc.id);if(x)x.imagen_url=url;}
+      if(revisarDoc&&revisarDoc.id===doc.id){imgsDoc=fotosDe(doc);pintaImagen(0);}
+      toast('Imagen adjuntada');
+    }catch(err){toast('No pude adjuntar la imagen: '+err.message,true);}
+  };
+  inp.click();
+}
 function pintaImagen(i){
   const ic=document.getElementById('mImg');
   if(!ic)return;
-  if(!imgsDoc.length){ic.innerHTML='<div class="noimg">sin imagen guardada</div>';return;}
+  if(!imgsDoc.length){
+    // Adjuntar a posteriori (30-09-2026, Lucía): facturas que entraron sin foto
+    // (cargadas desde A3, recreadas…) pueden recibir su PDF o foto desde aquí.
+    ic.innerHTML='<div class="noimg">sin imagen guardada'
+      +(revisarDoc?'<div style="margin-top:12px"><button class="btn ghost" onclick="adjuntarImagenDoc()">📎 Adjuntar foto o PDF</button></div>':'')
+      +'</div>';
+    return;
+  }
   const idx=Math.max(0,Math.min(i,imgsDoc.length-1));
   const url=imgsDoc[idx].url;
   // Descarga: el bucket es publico y Storage acepta ?download=nombre para que el
@@ -5797,13 +5855,27 @@ const A3_COLS=['cabFecha','cabnumdoc','cabfechacontable','CABREFERENCIA','cabcod
                'linunidades','lincodart',
                'lindesclin','linprcmoneda','lintipiva','linctacon','lincentrocoste'];
 let a3Rows=[];
+const SEL_A3_PREVIEW='doc_id,orden,cabfecha,cabnumdoc,cabreferencia,cabcodpro,cabregiva,lindesclin,linprcmoneda,lintipiva,linctacon,lincentrocoste,proveedor_nombre,bloqueos,reparto_explicito,a3_exportado_at';
 async function cargarA3(){
   // La previsualización enseña lo PENDIENTE de numerar (el fichero lleva
   // además todo lo ya numerado del año). Lee la VISTA, no numera nada:
   // numerar es exclusivo del botón de generar.
-  return await sbAll(`compras_a3_export_preview?cabnumdoc=is.null`
-    +`&select=doc_id,orden,cabfecha,cabnumdoc,cabreferencia,cabcodpro,cabregiva,lindesclin,linprcmoneda,lintipiva,linctacon,lincentrocoste,proveedor_nombre,bloqueos,reparto_explicito,a3_exportado_at`
+  const rows=await sbAll(`compras_a3_export_preview?cabnumdoc=is.null`
+    +`&select=${SEL_A3_PREVIEW}`
     +`&order=cabfecha.asc,cabreferencia.asc,orden.asc`);
+  // exportar_a3_anual solo numera las facturas en estado OK. Una sin bloqueos
+  // pero en REVISAR salía «Lista» y nunca recibía número (Ahorreluz 26/233786,
+  // 30-09-2026): se le añade el motivo aquí para que se vea y cuente como bloqueada.
+  try{
+    const ids=[...new Set(rows.map(r=>r.doc_id))];
+    const noOk=new Set();
+    for(let i=0;i<ids.length;i+=150){
+      const est=await sb(`compras_doc?id=in.(${ids.slice(i,i+150).join(',')})&estado=neq.OK&select=id`);
+      est.forEach(x=>noOk.add(x.id));
+    }
+    rows.forEach(r=>{if(noOk.has(r.doc_id))r.bloqueos=[...(r.bloqueos||[]),'pendiente de revisar: ábrela y pulsa Guardar cambios'];});
+  }catch(e){console.warn('No pude comprobar el estado de las facturas pendientes:',e.message);}
+  return rows;
 }
 // Orden de la tabla A3: por documento entero (sus líneas comparten cabecera y
 // nunca deben separarse). Clic en la cabecera cambia el campo; segundo clic
@@ -5822,6 +5894,12 @@ async function renderA3(){
   let rows=a3Rows;
   if(f==='listas')rows=rows.filter(r=>!bloqueada(r));
   if(f==='bloqueadas')rows=rows.filter(bloqueada);
+  // Ya numeradas que después cogieron incidencias (30-09-2026): no están en la
+  // tabla de pendientes, así que se piden aparte.
+  if(f==='numeradas_bloq'){
+    try{rows=await sbAll(`compras_a3_export_preview?cabnumdoc=not.is.null&bloqueos=neq.{}&select=${SEL_A3_PREVIEW}&order=cabnumdoc.asc,orden.asc`);}
+    catch(err){toast('No pude cargar las numeradas con bloqueos: '+err.message,true);rows=[];}
+  }
   if(q){
     // Se busca a nivel de DOCUMENTO: si cualquier línea casa, salen todas las
     // del documento (una factura a medias en pantalla despistaría).
@@ -6347,8 +6425,20 @@ function estBadge(ed){
 function bloqueosDe(id){return bloqueosPorFactura[id]||null;}
 function badgeA3(a){
   const bl=bloqueosDe(a.id);
-  if(a.a3_numdoc)return `<span class="est correcto" title="Ya exportada a A3">✓ nº ${a.a3_numdoc}</span>`;
+  // Numerada que después cogió incidencias (30-09-2026): antes solo salía
+  // «✓ nº» y el problema quedaba escondido.
+  if(a.a3_numdoc){
+    if(bl&&bl.length){
+      const t=('Ya numerada, pero con incidencias: '+bl.join(' · ')).replace(/"/g,'&quot;');
+      return `<span class="est nocuadra" title="${t}">✓ nº ${a.a3_numdoc} · ⚠ ${bl.length}</span>`;
+    }
+    return `<span class="est correcto" title="Ya exportada a A3">✓ nº ${a.a3_numdoc}</span>`;
+  }
   if(bl===null)return '<span class="hint">—</span>';
+  // Sin bloqueos pero sin validar (estado REVISAR): el Excel NO le da número
+  // (solo numera las que están en OK). Antes salía «✓ Lista» y engañaba.
+  if(!bl.length&&a.estado&&a.estado!=='OK')
+    return '<span class="est nocuadra" title="Está pendiente de revisar: ábrela y pulsa Guardar cambios para validarla. Hasta entonces el Excel de A3 no le da número.">🟠 Pendiente de revisar</span>';
   if(!bl.length)return '<span class="est correcto" title="Sin bloqueos: entra en el proximo Excel de A3">✓ Lista</span>';
   const t=bl.join(' · ').replace(/"/g,'&quot;');
   return `<span class="est nocuadra" title="${t}">🟠 ${bl.length===1?'1 bloqueo':bl.length+' bloqueos'}</span>`;
