@@ -6706,13 +6706,52 @@ async function sbTodas(url, etiqueta) {
 // desde la última vez (~0,2 s) y luego se lee ya hecha (~10 ms por página).
 // Si la migración 20260930120000 no está aplicada, cae a la vista de siempre.
 async function loadGastosRapido(loadAllFn) {
+  let refrescado;
   try {
-    await sbFetch('rpc/gastos_cache_asegurar', { method: 'POST', body: '{}' });
-    return await sbTodas('gastos_cache?select=*&order=id.asc', 'gastos_cache');
+    refrescado = await sbFetch('rpc/gastos_cache_asegurar', { method: 'POST', body: '{}' });
   } catch (e) {
     console.warn('[carga] gastos_cache no disponible (' + String(e.message).slice(0, 80) + ') — vista gastos');
     return loadAllFn('gastos');
   }
+  // gastos_cache_asegurar devuelve cuándo se rehízo la caché del servidor: es
+  // el sello. Si coincide con el de la copia del navegador, no viaja nada.
+  const CLAVE = 'gastos_v1';
+  let rec = null;
+  try { rec = await cacheGet(CLAVE); } catch (e) { rec = null; }
+  if (refrescado && rec && rec.sello === refrescado && Array.isArray(rec.filas)) {
+    console.log(`[caché] gastos: sin cambios en Compras — ${rec.filas.length} filas desde disco local`);
+    return rec.filas;
+  }
+  // Hubo cambios: todas las páginas a la vez (sin esperar al recuento), una de
+  // más por si creció; si la última llega llena, se sigue en serie.
+  let filas;
+  try {
+    const PASO = 10000;
+    const nPag = Math.ceil(((rec && rec.filas ? rec.filas.length : 20000) + 1) / PASO) + 1;
+    const url = 'gastos_cache?select=*&order=id.asc';
+    const pags = await Promise.all(Array.from({ length: nPag }, (_, i) =>
+      sbFetch(url, { headers: { 'Range': `${i * PASO}-${(i + 1) * PASO - 1}`, 'Range-Unit': 'items' } })));
+    filas = [];
+    let corta = false;
+    for (const pg of pags) {
+      const lote = pg || [];
+      filas.push(...lote);
+      if (lote.length < PASO) { corta = true; break; }
+    }
+    // Si el servidor da páginas menores que PASO (max rows bajado), mejor el
+    // camino general, que se adapta al tamaño real de página.
+    if (pags[0] && pags[0].length && pags[0].length < PASO && pags[0].length % 1000 === 0) corta = false;
+    if (!corta) filas = await sbTodas(url, 'gastos_cache');
+  } catch (e) {
+    console.warn('[carga] gastos_cache: fallo al leer (' + e.message + ') — vista gastos');
+    return loadAllFn('gastos');
+  }
+  try {
+    if (refrescado) await cachePut({ tabla: CLAVE, sello: refrescado, filas, guardado: new Date().toISOString() });
+  } catch (e) {
+    console.warn('[caché] gastos: escritura falló (' + e.message + ')');
+  }
+  return filas;
 }
 
 // VENTAS con caché en el navegador y descarga solo de lo cambiado (30-09-2026).
