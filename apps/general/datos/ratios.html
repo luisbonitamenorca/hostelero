@@ -6649,6 +6649,133 @@ async function sbStamp(table) {
 }
 const mismoSello = (a, b) => !!a && !!b && a.v === b.v && a.n === b.n && a.maxId === b.maxId && a.maxCreated === b.maxCreated;
 
+// Descarga TODAS las filas de una consulta REST (30-09-2026). El servidor
+// corta cada respuesta en "Max rows" (10.000 desde el 30-09; antes 1.000).
+// La 1ª página pide además el total (count=exact); sabiendo el total y el
+// tamaño real de página, las demás salen a la vez, de 8 en 8, y se juntan en
+// su orden. Sin total, se sigue en serie con la guarda anti-truncado: una
+// página de exactamente 1.000 o 10.000 filas nunca se da por la última.
+async function sbTodas(url, etiqueta) {
+  const LIMIT = 10000;
+  const rows = [];
+  const primera = await fetch(SB_URL + '/rest/v1/' + url, {
+    cache: 'no-store',
+    headers: { ...sbHeaders, 'Range': `0-${LIMIT - 1}`, 'Range-Unit': 'items', 'Prefer': 'count=exact' }
+  });
+  if (!primera.ok) throw new Error(await primera.text());
+  const txt0 = await primera.text();
+  const batch0 = txt0 && txt0.trim() ? JSON.parse(txt0) : [];
+  const mTotal = (primera.headers.get('content-range') || '').match(/\/(\d+)\s*$/);
+  const total = mTotal ? +mTotal[1] : null;
+  rows.push(...batch0);
+  let from = batch0.length;
+  let maxBatch = batch0.length;
+  if (total != null && batch0.length > 0 && from < total) {
+    const paso = batch0.length;   // tamaño real de página que da el servidor
+    const inicios = [];
+    for (let d = from; d < total; d += paso) inicios.push(d);
+    for (let i = 0; i < inicios.length; i += 8) {
+      const lotes = await Promise.all(inicios.slice(i, i + 8).map(d =>
+        sbFetch(url, { headers: { 'Range': `${d}-${d + paso - 1}`, 'Range-Unit': 'items' } })));
+      for (const b of lotes) {
+        if (!b || !b.length) continue;
+        rows.push(...b);
+        maxBatch = Math.max(maxBatch, b.length);
+      }
+    }
+    from = rows.length;
+  }
+  while (total == null ? (maxBatch === LIMIT || maxBatch === 1000) && from > 0 : from < total) {
+    const batch = await sbFetch(url, {
+      headers: { 'Range': `${from}-${from + LIMIT - 1}`, 'Range-Unit': 'items' }
+    });
+    if (!batch || batch.length === 0) break;
+    rows.push(...batch);
+    from += batch.length;
+    maxBatch = Math.max(maxBatch, batch.length);
+    if (batch.length < LIMIT && batch.length !== 1000) break;
+  }
+  if (rows.length > 1000 && maxBatch === 1000)
+    console.warn(`[carga] ${etiqueta || url}: el servidor limita a 1000 filas/petición — revisa "Max rows"`);
+  return rows;
+}
+
+// COMPRAS desde la caché del servidor (30-09-2026). La vista 'gastos' se
+// recalculaba entera en cada página (~1,9 s cada una). gastos_cache es su copia
+// materializada: gastos_cache_asegurar() la refresca SOLO si Compras cambió
+// desde la última vez (~0,2 s) y luego se lee ya hecha (~10 ms por página).
+// Si la migración 20260930120000 no está aplicada, cae a la vista de siempre.
+async function loadGastosRapido(loadAllFn) {
+  try {
+    await sbFetch('rpc/gastos_cache_asegurar', { method: 'POST', body: '{}' });
+    return await sbTodas('gastos_cache?select=*&order=id.asc', 'gastos_cache');
+  } catch (e) {
+    console.warn('[carga] gastos_cache no disponible (' + String(e.message).slice(0, 80) + ') — vista gastos');
+    return loadAllFn('gastos');
+  }
+}
+
+// VENTAS con caché en el navegador y descarga solo de lo cambiado (30-09-2026).
+// Antes viajaban enteras (~20 MB) en cada apertura. Ahora:
+//   · sello del servidor: nº de filas + último modificado_at (lo mantiene la
+//     base: default now() al insertar y trigger al actualizar)
+//   · sello igual al guardado      → las ventas salen del disco local
+//   · distinto                     → se piden solo las filas cambiadas desde el
+//     sello anterior (con 10 min de margen) y se mezclan por id; si faltan o
+//     sobran filas (hubo borrados), se contrastan los ids vivos
+//   · cualquier duda o fallo       → descarga completa, como siempre
+// Nunca se guarda un sello que no cuadre con las filas guardadas.
+const COLS_INGRESOS = 'id,fecha,centro,canal,articulo,descripcion,familia,subfamilia,cantidad,base,unidades,semana,mes,created_at,modificado_at';
+async function loadIngresosRapido(loadAllFn) {
+  let sello;
+  try {
+    sello = await sbFetch('rpc/ratios_sello_ingresos', { method: 'POST', body: '{}' });
+  } catch (e) {
+    return loadAllFn('ingresos');   // migración sin aplicar: camino de siempre
+  }
+  if (!sello || typeof sello.n !== 'number' || !sello.max_mod) return loadAllFn('ingresos');
+  const CLAVE = 'ingresos_v2:' + (typeof CUENTA_ID !== 'undefined' ? CUENTA_ID : '');
+  let rec = null;
+  try { rec = await cacheGet(CLAVE); } catch (e) { rec = null; }
+  let filas = null;
+  try {
+    if (rec && Array.isArray(rec.filas) && rec.maxMod) {
+      if (rec.n === sello.n && rec.maxMod === sello.max_mod) {
+        console.log(`[caché] ingresos: sin cambios — ${rec.filas.length} filas desde disco local`);
+        return rec.filas;
+      }
+      const desde = new Date(new Date(rec.maxMod).getTime() - 10 * 60 * 1000).toISOString();
+      const delta = await sbTodas(`ingresos?select=${COLS_INGRESOS}&modificado_at=gte.${encodeURIComponent(desde)}&order=id.asc`, 'ingresos Δ');
+      const porId = new Map(rec.filas.map(r => [r.id, r]));
+      for (const r of delta) porId.set(r.id, r);
+      if (porId.size !== sello.n) {
+        const vivos = new Set((await sbTodas('ingresos?select=id&order=id.asc', 'ingresos ids')).map(x => x.id));
+        for (const id of [...porId.keys()]) if (!vivos.has(id)) porId.delete(id);
+      }
+      if (porId.size === sello.n) {
+        filas = [...porId.values()].sort((a, b) => a.id - b.id);
+        console.log(`[caché] ingresos: ${delta.length} filas cambiadas descargadas, ${filas.length} en total`);
+      } else {
+        console.warn(`[caché] ingresos: no cuadra (${porId.size} vs ${sello.n}) — descarga completa`);
+      }
+    }
+  } catch (e) {
+    console.warn('[caché] ingresos: fallo en la actualización parcial (' + e.message + ') — descarga completa');
+    filas = null;
+  }
+  if (!filas) filas = await sbTodas(`ingresos?select=${COLS_INGRESOS}&order=id.asc`, 'ingresos');
+  try {
+    if (filas.length === sello.n) {
+      await cachePut({ tabla: CLAVE, n: sello.n, maxMod: sello.max_mod, filas, guardado: new Date().toISOString() });
+    } else {
+      console.warn(`[caché] ingresos: cambió durante la carga (${filas.length} vs ${sello.n}) — no se guarda`);
+    }
+  } catch (e) {
+    console.warn('[caché] ingresos: escritura falló (' + e.message + ')');
+  }
+  return filas;
+}
+
 // Carga de tabla con caché local. loadAllFn se recibe como parámetro
 // porque loadAll vive dentro de loadFromStorage.
 async function loadCached(table, loadAllFn) {
@@ -6709,66 +6836,9 @@ async function loadFromStorage() {
       'ingresos': 'id,fecha,centro,canal,articulo,descripcion,familia,subfamilia,cantidad,base,unidades,semana,mes,created_at',
     };
     async function loadAll(table) {
-      const rows = [];
-      // 10000 por página requiere "Max rows" >= 10000 en Supabase
-      // (Dashboard → Integrations → Data API → Settings → Max rows).
-      // Guarda anti-truncado: si el servidor sigue con el tope por defecto
-      // (1000), cada lote llega con exactamente 1000 filas; en ese caso NO
-      // damos la tabla por terminada y seguimos paginando como antes.
-      // Así el orden deploy/ajuste da igual y nunca se pierden datos en silencio.
-      const LIMIT = 10000;
-      let from = 0;
-      let maxBatch = 0;
       const orderCol = PK_BY_TABLE[table] || 'id';
       const cols = SELECT_BY_TABLE[table] || '*';
-      const url = `${table}?select=${cols}&order=${orderCol}.asc`;
-      // RENDIMIENTO (30-09-2026): el servidor corta en 1.000 filas, así que
-      // ingresos eran ~67 peticiones UNA DETRÁS DE OTRA (unos 10 s de carga).
-      // La 1ª página pide además el total (count=exact); sabiendo el total y
-      // el tamaño real de página, las demás salen a la vez, de 8 en 8, y se
-      // juntan en su orden. Sin total, se sigue en serie como siempre.
-      const primera = await fetch(SB_URL + '/rest/v1/' + url, {
-        cache: 'no-store',
-        headers: { ...sbHeaders, 'Range': `0-${LIMIT - 1}`, 'Range-Unit': 'items', 'Prefer': 'count=exact' }
-      });
-      if (!primera.ok) throw new Error(await primera.text());
-      const txt0 = await primera.text();
-      const batch0 = txt0 && txt0.trim() ? JSON.parse(txt0) : [];
-      const mTotal = (primera.headers.get('content-range') || '').match(/\/(\d+)\s*$/);
-      const total = mTotal ? +mTotal[1] : null;
-      rows.push(...batch0);
-      from = batch0.length;
-      maxBatch = batch0.length;
-      if (total != null && batch0.length > 0 && from < total) {
-        const paso = batch0.length;   // tamaño real de página que da el servidor
-        const inicios = [];
-        for (let d = from; d < total; d += paso) inicios.push(d);
-        for (let i = 0; i < inicios.length; i += 8) {
-          const lotes = await Promise.all(inicios.slice(i, i + 8).map(d =>
-            sbFetch(url, { headers: { 'Range': `${d}-${d + paso - 1}`, 'Range-Unit': 'items' } })));
-          for (const b of lotes) {
-            if (!b || !b.length) continue;
-            rows.push(...b);
-            maxBatch = Math.max(maxBatch, b.length);
-          }
-        }
-        from = rows.length;
-      }
-      // Sin total (o si mientras tanto entraron filas nuevas): en serie hasta
-      // una página corta, con la misma guarda anti-truncado de siempre.
-      while (total == null ? (maxBatch === LIMIT || maxBatch === 1000) && from > 0 : from < total) {
-        const batch = await sbFetch(url, {
-          headers: { 'Range': `${from}-${from + LIMIT - 1}`, 'Range-Unit': 'items' }
-        });
-        if (!batch || batch.length === 0) break;
-        rows.push(...batch);
-        from += batch.length;
-        maxBatch = Math.max(maxBatch, batch.length);
-        if (batch.length < LIMIT && batch.length !== 1000) break;
-      }
-      if (LIMIT > 1000 && rows.length > 1000 && maxBatch === 1000)
-        console.warn(`[carga] ${table}: el servidor sigue limitando a 1000 filas/petición — revisa "Max rows" en Supabase (Integrations → Data API → Settings)`);
-      return rows;
+      return sbTodas(`${table}?select=${cols}&order=${orderCol}.asc`, table);
     }
     const safeLoad = (table) => loadAll(table).catch(e => {
       console.warn(`[carga] Falló ${table}:`, e.message);
@@ -6777,8 +6847,8 @@ async function loadFromStorage() {
     // compras_producto no depende de nada: sale YA, a la vez que el resto (30-09-2026)
     const comprasCatProm = safeLoad('compras_producto');
     const [ingresos, gastos, presupuesto, rrhh, nominas, presupuesto_nominas, nominas_reparto, nominas_reparto_horas, visitas, comensales, ingresos_historico, productos_agora, productos_dijit, familias, subfamilias, ratios_objetivo, productos_controlados, inventarios, rrhh_excepciones, rrhh_puestos, ecommerce, ecommerce_historico, doc_departamentos, doc_subcategorias, doc_documentos] = await Promise.all([
-      loadAll('ingresos'),
-      loadAll('gastos'),
+      loadIngresosRapido(loadAll),
+      loadGastosRapido(loadAll),
       loadAll('presupuesto'),
       loadAll('rrhh'),
       safeLoad('nominas'),
