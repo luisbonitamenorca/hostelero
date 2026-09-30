@@ -1984,7 +1984,17 @@ function lineasDescuadradas(lineas){
 // como lo contabiliza Lucía en A3. Si falta algún contrato en la tabla, o no
 // cuadra con la base, no se inventa nada: la factura queda sin reparto y avisa.
 function repartoPorContratos(d){
-  const cs=Array.isArray(d.contratos)?d.contratos:[];
+  let cs=Array.isArray(d.contratos)?d.contratos:[];
+  // Contrato único que la lectura apunta en otro sitio (30-09-2026): Grenke pone
+  // el nº de contrato (186019828) y el OCR lo devuelve como nº de albarán. Si
+  // alguno de esos números es un contrato dado de alta, la factura entera es de
+  // ese contrato (una cuota, sin seguro aparte).
+  if(!cs.length){
+    const cand=new Set();
+    (Array.isArray(d.albaranes)?d.albaranes:[]).forEach(a=>cand.add(String(a&&a.num_albaran||'').replace(/\D/g,'')));
+    const hits=[...cand].filter(k=>k&&mContratos[k]);
+    if(hits.length===1)cs=[{contrato:hits[0],alquiler:num(d.base),seguro:0}];
+  }
   if(!cs.length)return null;
   const sin=[], acc=new Map();
   for(const x of cs){
