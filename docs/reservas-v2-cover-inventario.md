@@ -1,0 +1,91 @@
+# CoverManager — investigación a fondo (01-10-2026)
+
+Fuentes clave: página oficial de precios (ES/EN), fichero de traducciones de la interfaz (`covermanager.com/view/load/translations/` — 1.222 cadenas literales del panel), colección Postman pública de la API (doc-api.covermanager.com), widget público de reserva, centro de ayuda (usetiful), páginas de soluciones/integraciones, Capterra/App Store/GetApp, comparativas de competidores.
+
+## 1. Planes y precios
+
+**Planes oficiales vigentes (covermanager.com/es/precios): Standard · Premium · Performance.** Suscripción mensual fija **por local**, **sin comisión por reserva directa**, sin permanencia, datos exportables. Precio no publicado ("propuesta en <48 h tras demo"). El JSON-LD oculto de la página EN aún lleva nombres antiguos: **Essential 89 €/mes, Premium 189 €/mes, Enterprise (a medida)** — coincide con lo que publican terceros (Bouzon Digital 2026). Las cifras "CoverBooking Basic 79 € / Premium 169 € + 1,50 €/reserva" (ChefBusiness) no se corroboran y contradicen el "0 comisiones" oficial: descartar. Un PDF oficial 2025 (ya 404) indexaba "BookingsMap: solo grupos ≥5 restaurantes, 39 €/mes + 0,15 €/SMS; pasarela 2,7 %+0,25 € tarjetas no europeas, 2,9 %+0,25 € AMEX".
+
+**Tabla comparativa oficial (S / P / Perf):**
+- Call Assist (atención de llamadas): ✓ / ✓ / ✓
+- SMS automático tras llamada perdida: Add-on / Add-on / ✓
+- Lista de espera: — / ✓ / ✓
+- Tarjetas regalo: Comisión +++ / ++ / +
+- Experiencias (p. ej. menú 5 platos): ✓ / ✓ / ✓
+- Puntuación de riesgo no-show: — / ✓ / ✓
+- Reconfirmaciones por SMS o email: Add-on en los tres
+- Solicitud de tarjeta y prepago: Comisión +++ / ++ / +
+- Retención de tarjeta (coste adicional solo si cobras): Add-on / ✓ / ✓
+- Notificaciones por WhatsApp: ✓ / ✓ / ✓
+- Asignación inteligente de mesas y plano de sala, Centro de mensajes, Gestión de usuarios y permisos, Integraciones (TPV, pagos): ✓ en los tres
+- Integraciones avanzadas vía API: Add-on / Add-on / ✓
+- Marketing Suite (CRM) básica: Add-on / ✓ / ✓ · avanzada ("próximamente"): Add-on / Add-on / ✓
+- Publicación automática de reseñas y distribución inteligente: ✓ / Distribución / Distribución · Respuestas con ayuda de IA (próximamente): — / ✓ / ✓
+- Dashboards: Básicos / Avanzados / Avanzados · Informes detallados: — / — / ✓
+- Hora de fin del servicio, Selección de zona, App móvil, Ficha de cliente, SMS y emails personalizados: ✓ en los tres · Experiencias destacadas y Squeeze: — / ✓ / ✓
+
+**Add-ons modulares (precio no público):** AI Concierge – Phone; AI Concierge – Phone + WhatsApp; AI WhatsApp Assistant; Takeaway; Website; Pay at table. Costes variables: SMS (configurable por restaurante; mínimo 8 cts, 4 cts en packs), WhatsApp con límite diario renovable cada 24 h, comisión de pasarela sobre cobros.
+
+## 2. Inventario de funcionalidades
+
+**Libro de reservas / agenda.** Vistas: listado del día ordenable, plano de sala, timeline (tablet, app 3.5), calendario mensual con apertura/cierre web por día. Servicios "Comida"/"Cena" (luner 1/2) con nombres personalizables de turno; "Horario base" con reglas por día (TODOS LOS DÍAS / TODOS LOS LUNES), copia de reglas, apertura 07:00–06:45; "Hora de fin del servicio"; duración por reserva (`duration`); capacidad por intervalo ("Nº reservas 1º/2º Intervalo", personas por intervalo); aforo por zona y temporada. Estados (código API → literal UI): −5 **No completada por no introducir tarjeta**, −4 **A revisar**, −3 **No show**, −2 **Cancelada cliente**, −1 **Cancelada restaurante**, 0 **Pendiente de confirmación**, 1 **Confirmada**, 2 **Reconfirmada** (+ "Segunda Reconfirmación"), 3 **Sentada**, 4 **Llegado**, 5 **Liberada**, 6 **Cuenta solicitada**, 7 **Postre**, 8 Llegada barra, 9 A limpiar, 'SIN' sin mesa; "Cancelada restaurante por no introducir tarjeta"; **estados personalizados** (al borrarlos las reservas pasan a A REVISAR). Sentar/llegar parcial ("SENTAR P." / "LLEGAR P.": seleccionar cuántas personas). Walk In con un clic; Lista de espera (pax, nombre, fecha, hora, "Zona Preferida", convertir en reserva indicando hora; si se elimina sin hora → reserva cancelada). Overbooking: aviso "Solapamiento de reservas", "Esta mesa tiene una reserva ya y está creando un conflicto. ¿Desea asignar igualmente?"; mesas "Bloqueadas TOTAL"; "Reserva Force" vía API. Campo "Anotado por" obligatorio, "Prescriptor"/Empresa (unificar empresas), "Fuente"/canal, invitados a la reserva, "Ref" externa. Cambios de horario o plano reubican automáticamente y lo que no cabe pasa a "A revisar". Detección de "reservas fantasma" (mismo cliente duplicado en varios restaurantes). Historial de cambios + "Ver tracking de las notificaciones" (estado "Correo abierto").
+
+**Plano de sala.** Jerarquía **Plano → Planta → Zona → Mesa**; mesa con ID numérico, nombre opcional, min/max pax, forma, "Tipo de mesa", coordenadas x/y, "hilo" (combinación); **Combinación de mesas** (≥2 mesas, min/max pax); mesas por día (añadir/eliminar para hoy); importar plano; zoom (mover reservas solo con zoom 1); "Desplazar" arrastrando; "Liberar" mesa; bloqueos; asignación automática por tamaño, zona y reglas; límite de mesas por reserva; gestión de camareros (nombre, color, activo) asignables a mesas; alertas si pax no encaja en la mesa.
+
+**Widget (motor web).** 4 pasos: **1 Encontrar · 2 Información · 3 Adicional · 4 Confirmación**. Paso 1: personas, calendario (Disponible / Día seleccionado / Cerrado / Completo), Comida/Cena, hora, "Seleccione una zona". Sin disponibilidad: lista de espera para esa hora, "mismo día en otras semanas", "Ver días +", "Le sugerimos otros restaurantes" (cross-selling del grupo). Paso 2: Nombre, Apellidos, Email + Repetir email, Prefijo+Teléfono + Repetir, País, Código postal, Fecha de nacimiento, comentario, "¿Tiene algún comensal alguna intolerancia/alergia?" + Alérgenos, 3 checks RGPD (condiciones, tratamiento, comunicaciones comerciales), "¿Tiene algún código para canjear?". Paso 3: preguntas personalizadas (Si/No, Texto libre, Desplegable único, Checkbox multiple), "Selección de menú" por persona, productos/experiencias, temporizador ("dispones de X para finalizar"), datos de facturación (Persona/Empresa, NIF/Pasaporte…). Paso 4: "Reserva confirmada / Lista de espera confirmada / Solicitud confirmada (grupos) / Solicitud recibida", "Invitar a tus acompañantes" (emails + mensaje), "¿Cómo llegar?". 13 idiomas en panel; widget multiestablecimiento; botones Facebook/Instagram "Reservar / Reservar ya / Reservar mesa / Pedir cita"; configuración legal por motor; grupos grandes → "Pendiente de confirmación" (petición manual; no se puede combinar Garantía de retención con Política de cancelación en grupos).
+
+**Garantía y prepago — 5 tipos de reserva:** "Reserva gratis"; "Reserva con política de cancelación" (token de tarjeta, cargo X €/persona si no-show o cancelación a menos de N h; variante "variable" por pax, p. ej. "En caso de X Pax o más"); "Reserva prepago" (tipo **ticket**, X €/persona IVA incl., se descuenta de la cuenta); "Reserva con garantía de retención" (hold card: retiene importe, "Fecha retención", "Importe retención/cobrado"); "Pendiente de confirmación". Pasarelas: **Stripe (Connect), Adyen, Redsys, PaynoPain/Paylands, Google Pay, Apple Pay**. Panel "Facturación": Estado cobro, Devolver (total/parcial), Descargar comprobante, Código de ticket, disputas (Abierta/Ganada/Perdida/En revisión…), "Pago externo"/"Cobro a cuenta", envío de anticipo a SAP, "Enviar factura nominal", límites efectivo (1.000 €/10.000 €). Códigos promocionales y descuentos. Tarjetas regalo (valor fijo o experiencia).
+
+**Confirmaciones y recordatorios.** Email de confirmación (plantillas HTML por idioma, personalizables, restaurables), SMS y WhatsApp (plantillas Meta "Aprobada/Pendiente", estado de conexión "Conectado/Pendiente de verificación/Rechazado"). Reconfirmación interactiva por SMS/email con enlaces reconfirmar/cancelar → estado "Reconfirmada", segunda vuelta "Segunda Reconfirmación"; horarios de envío ("Ir a reconfirmaciones"); envío manual de SMS/email desde la reserva; "Validar" vs "Validar y notificar al cliente" en cada cambio; notificación de mesa lista en lista de espera; SMS de rescate tras llamada perdida; "Centro de mensajes".
+
+**CRM.** Ficha: nombre, apellidos, teléfono (+adicional), email, empresa, nº socio, fecha de nacimiento, "Notas del cliente" (y notas en otros locales del grupo), alergias/preferencias alimentarias, newsletter, datos de facturación; métricas "Última visita, Gasto total, Gasto por visita, Gasto por persona, Visitas, Canceladas, Media de valoraciones". **Gestor de etiquetas** (CRM → Gestor de etiquetas): categorías, color hex, por restaurante, límite según licencia, unificar; ejemplos "VIP", "No paga". **Autotags** (automatizaciones: condición "Asistir / No asistir (No show) / Cancelar" × operador × periodo). Unificar/eliminar clientes (RGPD). Filtros: "Nuevos desde", "Vinieron alguna vez", "Cancelaron", "No se presentaron (No Show)", "Más de X reservas", etiqueta, prefijo telefónico. Encuestas post-visita (Comida, Atención, Entorno, Llamada; 1–5 estrellas, NPS "Nada probable/Muy probable", preguntas propias). Reseñas: distribución a Google/TripAdvisor, respuestas con IA. Campañas SMS (coste total) y Email Marketing (editor, audiencia, prueba, programación, métricas entregados/aperturas/clics/rebotes/conversión a reservas; 500 envíos gratis). Automatización: cumpleaños, inactivos, reactivación tras cancelación. AI Tag Assistant (detecta alergias/ocasiones/VIP).
+
+**Informes.** "Informes" planificados por email (máx. 3 meses), resumen por servicio (confirmadas/canceladas/no completadas, pax), ocupación por intervalo, canal/"Fuente", no-shows, cobros/devoluciones, satisfacción, campañas; CoverAnalytics en app; "Descargar reservas" (export). +100 informes según web.
+
+**Multi-restaurante.** Cambio de restaurante en cabecera, búsqueda de cliente "en el resto del grupo", notas compartidas, cross-selling en widget y asistente (máx. 2 locales), etiquetas por local, usuarios en varios locales, API "Multilicenses", redirección entre locales. Ojo: la integración Square exige una cuenta por local.
+
+**Usuarios y permisos.** Roles por restaurante ("El campo Rol es obligatorio"), ≥1 "dueño", contraseña con reglas, 2FA por email ("Login multifactor"), IPs seguras, "No tienes permisos" granular (mover mesa, cambiar estado, cobrar).
+
+**Integraciones.** Canales: Google (Reservar con Google, con política de cancelación), Google Maps, Instagram, Facebook, OpenTable, Resy, Amadeus, American Express, Simple Night, PetalMaps, TripAdvisor y Guía MICHELIN (vía Mozrest); **no TheFork** (competidor). TPV (~30): Revo, Ágora, ICG, Lightspeed, Oracle Simphony, Square, Last.app, Glop, Hosteltáctil, Numier, Cuiner, Storyous, SumUp, Sighore, Camarero10… (abre mesa al sentar, devuelve ticket/consumo, aplica depósito, "Total TPV"). Pagos: ver arriba. Marketing: Mailchimp, Mailjet, Brevo, Salesforce, HubSpot. Centralitas: Jusan, Gamma (identificación de llamada entrante → ficha). Analítica: GA4/GTM. Reseñas: ReviewPro, Gastroranking. API REST (token `apikey`, Postman): disponibilidad (calendario, horas×pax, zonas, 90 días), reserv/update/cancel/walk_in/waiting_list/force, estados (sit, confirm, revert), tickets/tarjeta/pagos externos, clientes, etiquetas, informes, OnTheGo, códigos promo, pedidos CoverAtHome, **webhooks** (reservas, canal, TPV). Acceso API avanzado solo Performance (add-on en el resto). Sin Zapier nativo.
+
+**App móvil** (iOS/Android, "CoverBookings"): listado, plano, timeline, walk-ins, lista de espera, lector QR de llegada, impresora Star, push, 2FA, CoverAnalytics; 7 idiomas.
+
+**Otros módulos.** CoverExperiences (entradas white-label, zonas VIP, listas de invitados, cashless NFC, promotores, check-in QR); CoverOnTheGo (lista de espera virtual por QR, posición y tiempo estimado, SMS de mesa lista, enlace de confirmación); CoverAtTable (QR en mesa: pedido, propina, valoración); CoverAtHome/Takeaway (cartas, modificadores, stock, pedidos); CoverAssistant / AI Concierge (voz multilingüe, transcripciones, historial de llamadas, redirección); Website; QR de reserva; Pedir cita.
+
+## 3. Lo que NO hace o hace mal
+- Precios opacos; funciones clave (lista de espera, scoring no-show, retención de tarjeta, API, Marketing Suite, informes detallados) solo en planes altos o add-ons; reconfirmación SMS siempre add-on + coste por SMS. Capterra 4,5/5 (26): quejas 2024-26 "obsoleto y caro", "apps muy buggy", "funcionalidad prometida no funciona", "falta de transparencia en precios", soporte que "se pasa la responsabilidad", 2 semanas sin respuesta, intento de cobro indebido.
+- UI anticuada (AngularJS), "panel poco intuitivo", iPad lento; app móvil ≠ web (operaciones solo en escritorio, sin configurar push).
+- Reservas confirmadas por email al cliente que no aparecen en el panel (App Store).
+- Informes poco visuales; dashboards básicos en Standard.
+- No es TPV, ni comandas, ni carta QR, ni cocina; el CRM no cruza con la venta real salvo integración TPV; conciliación manual.
+- Plano separado del TPV; nombres de mesa deben coincidir; Square: una cuenta por local.
+- Sin prueba gratuita; curva de aprendizaje "pensado para salas con maître".
+- Sin IA predictiva de ocupación, sin benchmarking de competidores, sin ads multicanal, sin identificación automática de llamadas en plan base (según TheFork).
+- Garantía de tarjeta percibida como cara/"agresiva" por clientes; comisiones de pasarela sobre depósitos.
+- Límites de licencia en etiquetas/categorías; búsqueda de clientes sin paginación en grupos grandes.
+- API "confidencial", requiere certificación/partner; disponibilidad solo 90 días vista.
+
+## 4. Terminología exacta (ES)
+Menú/secciones: Reservas (listado, Plano, Calendario), Lista de espera, Walk In, Clientes, CRM → Gestor de etiquetas, Automatizaciones (Autotags), Campañas (SMS / Email Marketing), Informes, Facturación, Configuración (Horario base, Plano de sala, Motor web, Plantillas, Usuarios, Integraciones, Channel Manager), Centro de mensajes, Reconfirmaciones.
+Reserva: Día reserva, Hora, Nombre, Pax, Teléfono, Email, Mesa(s), Notas de la reserva, Etiquetas, Anotado por, Prescriptor, Fuente/Canal, Estado, Duración, Camarero. Botones: **Reservar ahora, Editar reserva, Validar, Validar y notificar al cliente, Desplazar, Liberar, Cancelar, Sentar / Llegada, SENTAR P., LLEGAR P., Introducir tarjeta, Solicitar tarjeta, Cobrar, Devolver, Descargar comprobante, Ver tracking de las notificaciones, Descargar reservas, Añadir nuevo cliente, Unificar Clientes, Eliminar Clientes, Añadir etiqueta, Añadir camarero, Nueva campaña, Nueva lista, Actualizar Datos, Previsualizar email, Duplicar campaña, Suspender envío.**
+Estados: Pendiente de confirmación · Confirmada · Reconfirmada · Segunda Reconfirmación · Sentada · Llegado · Liberada · Cuenta solicitada · Postre · No show · Cancelada cliente · Cancelada restaurante · A revisar · No completada por no introducir tarjeta · Cancelada restaurante por no introducir tarjeta.
+Tipos: Reserva gratis · Reserva con política de cancelación (variable) · Reserva prepago (ticket) · Reserva con garantía de retención.
+Plano: Plano, Planta, Zona, Mesa (pax), Tipo de mesa, Combinación de mesas, Bloqueada TOTAL, Solapamiento de reservas, Horario base, Comida / Cena, 1º/2º Intervalo.
+Widget: Encontrar · Información · Adicional · Confirmación; Disponible / Cerrado / Completo; Seleccione una zona; ¿Tiene algún comensal alguna intolerancia/alergia?; Alérgenos; Invitar a tus acompañantes; Reserva confirmada / Lista de espera confirmada / Solicitud confirmada.
+CRM: Ficha de cliente, Datos del cliente, Notas del cliente, Etiquetas del cliente, Gestor de etiquetas, Última visita, Gasto total, Gasto por visita, Media de valoraciones, No suscritos, Clientes que no se presentaron alguna vez (No Show).
+
+## 5. URLs
+- https://www.covermanager.com/es/precios/ · https://www.covermanager.com/en/pricing/
+- http://www.covermanager.com/view/load/translations/ (cadenas UI)
+- https://doc-api.covermanager.com/ (Postman) · https://www.covermanager.com/api.php
+- https://www.covermanager.com/reserve/module_restaurant/restaurante-estero/spanish (widget)
+- https://betacovermanager.usetiful.help/ (+ artículos: Modificar y Cancelar Reservas, Cambios y Notificaciones, ¿Qué datos tengo?, Añadir etiquetas, Clone – login app)
+- https://www.covermanager.com/es/solucion/sistema-de-reservas · /gestion-de-pagos · /fidelizacion · /reservas-multicanal · /ia · /experiencias-y-eventos · /lista-de-espera-virtual
+- https://www.covermanager.com/es/integraciones · /es/integraciones/google · https://www.covermanager.com/solutions/integrations
+- https://www.covermanager.com/soluciones/reservas-sin-comisiones · /soluciones/pagomesa · /soluciones/asistente-virtual · /en/solution
+- https://squareup.com/help/es/es/article/8572-integrate-covermanager-with-square
+- https://www.capterra.com/p/229015/CoverManager/reviews/ · https://www.capterra.es/reviews/1012086/covermanager · https://apps.apple.com/es/app/covermanager/id1289393829 · https://www.getapp.com/retail-consumer-services-software/a/covermanager/
+- https://www.theforkmanager.com/es/landing-page/theforkmanager-vs-covermanager · https://www.bouzondigital.com/es/blog/covermanager-vs-thefork-restaurantes/ · https://www.bouzondigital.com/en/covermanager-alternatives/ · https://qamarero.com/blog/covermanager-alternativas/ · https://quicksit.io/blog/covermanager-vs-quicksit.html · https://mesabot.es/covermanager-precios · https://chefbusiness.co/covermanager-opiniones-resena-software-reservas-restaurantes/ · https://mozrest.com/en-gb/reservation-management-system/covermanager/
+- PDF precios 2025 (404, solo snippet indexado): https://www.covermanager.com/wp-content/uploads/sites/2/2025/06/CoverManager_Pricing_2025.pdf
+
+Archivos locales útiles para el diseño: `/private/tmp/claude-501/-Users-luisangles/6419d700-9d1b-4f11-a007-44320627afc8/scratchpad/translations.js` (cadenas UI), `api.json` (colección API), `widget.html`, `precios_es.html`.

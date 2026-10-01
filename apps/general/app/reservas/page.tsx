@@ -1,11 +1,11 @@
-import { crearClienteServidor } from "@/lib/supabase/server";
+import { exigirModulo } from "@/lib/supabase/server";
 import PanelReservas from "./PanelReservas";
 import type { Restaurante } from "./tipos";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReservasPage() {
-  const sb = await crearClienteServidor();
+  const { supabase: sb, perfil } = await exigirModulo("reservas");
   const { data } = await sb.from("reservas_restaurantes").select("*").order("orden");
   const restaurantes = (data ?? []) as Restaurante[];
 
@@ -19,5 +19,5 @@ export default async function ReservasPage() {
     );
   }
 
-  return <PanelReservas restaurantes={restaurantes} />;
+  return <PanelReservas restaurantes={restaurantes} userId={perfil.id} esDireccion={perfil.rol === "direccion"} />;
 }

@@ -6900,7 +6900,15 @@ async function loadFromStorage() {
       safeLoad('nominas_reparto'),
       safeLoad('nominas_reparto_horas'),
       safeLoad('visitas'),
-      safeLoad('comensales'),
+      // Comensales en vivo desde el módulo Reservas (vista comensales_desde_reservas, 01-10-2026).
+      // Mismo formato que la tabla `comensales`. La vista cubre desde la primera reserva cargada
+      // en el módulo (temporada 2026, informe de Cover); los días anteriores a esa fecha siguen
+      // saliendo de la tabla `comensales` (histórico 2025 y el export COVERMANAGER de respaldo).
+      Promise.all([safeLoad('comensales'), safeLoad('comensales_desde_reservas')]).then(([tabla, vista]) => {
+        if (!vista || !vista.length) return tabla || [];
+        const desde = vista.reduce((m, r) => (r.fecha < m ? r.fecha : m), vista[0].fecha);
+        return (tabla || []).filter(r => r.fecha < desde).concat(vista);
+      }),
       loadCached('ingresos_historico', loadAll),
       safeLoad('productos_agora'),
       safeLoad('productos_dijit'),

@@ -1,0 +1,138 @@
+/* Tema oscuro del panel de Reservas (por defecto, como Cover en el iPad de sala).
+   Se aplica con data-tema="oscuro" en el contenedor .rv (que es el mismo .rsp).
+   reservas.css no se toca: aquí solo se redefinen variables y los fondos blancos fijos. */
+
+.rv[data-tema="oscuro"] {
+  --fondo: #1f2227;
+  --panel: #2a2e33;
+  --panel-2: #33383e;
+  --acento: #0F6E56;          /* verde de la casa */
+  --acento-claro: #2FA886;    /* verde legible sobre fondo oscuro */
+
+  --calc: var(--fondo);
+  --mar: var(--acento-claro);
+  --mar-osc: var(--acento);
+  --mar-claro: #1e3a33;
+  --vi: #D98B9C;
+  --arena: #3d3a32;
+  --tinta: #e6e6e6;
+  --gris: #a3aab3;
+  --borde: #3b4047;
+  --e-pendiente: #D99A1E;
+  --e-confirmada: #2E9E5B;
+  --e-sentada: #16A34A;
+  --e-terminada: #8A9199;
+  --e-noshow: #E5484D;
+  --e-cancelada: #6b7178;
+
+  background: var(--fondo);
+  color: var(--tinta);
+  color-scheme: dark;
+}
+
+/* ---- barra superior y pestañas ---- */
+.rv[data-tema="oscuro"] .barra,
+.rv[data-tema="oscuro"] .tabsbar { background: var(--panel); border-bottom-color: var(--borde); }
+.rv[data-tema="oscuro"] .barra select.rest,
+.rv[data-tema="oscuro"] .barra button.nav,
+.rv[data-tema="oscuro"] .barra input[type=date] { background: var(--panel-2); border-color: var(--borde); color: var(--tinta); }
+.rv[data-tema="oscuro"] .barra select.rest { color: var(--mar); }
+.rv[data-tema="oscuro"] .barra .hoy { background: var(--mar-claro); color: var(--mar); }
+.rv[data-tema="oscuro"] .tabsbar button { color: var(--gris); }
+.rv[data-tema="oscuro"] .tabsbar button.activo { color: var(--mar); border-bottom-color: var(--mar); }
+
+/* ---- superficies ---- */
+.rv[data-tema="oscuro"] .tarjeta,
+.rv[data-tema="oscuro"] .kpi,
+.rv[data-tema="oscuro"] .grafica,
+.rv[data-tema="oscuro"] .mes-celda,
+.rv[data-tema="oscuro"] .aj-front,
+.rv[data-tema="oscuro"] .stats span { background: var(--panel); border-color: var(--borde); color: var(--tinta); }
+.rv[data-tema="oscuro"] .mes-celda.vacia { background: transparent; }
+.rv[data-tema="oscuro"] .mes-celda:hover { border-color: var(--mar); }
+.rv[data-tema="oscuro"] .mes-cab .mes-nav { background: var(--panel-2); border-color: var(--borde); color: var(--mar); }
+.rv[data-tema="oscuro"] .mes-turno.lleno .pct { background: rgba(229, 72, 77, .18); }
+.rv[data-tema="oscuro"] .fila-bar .pista { background: var(--panel-2); }
+.rv[data-tema="oscuro"] .lista-simple .item { border-bottom-color: var(--borde); }
+.rv[data-tema="oscuro"] h3.seccion { color: var(--vi); }
+.rv[data-tema="oscuro"] .vacio { color: var(--gris); }
+
+/* ---- botones y chips ---- */
+.rv[data-tema="oscuro"] .turnos-bar button,
+.rv[data-tema="oscuro"] .acciones button,
+.rv[data-tema="oscuro"] .acciones a,
+.rv[data-tema="oscuro"] .plano-controles select { background: var(--panel-2); border-color: var(--borde); color: var(--tinta); }
+.rv[data-tema="oscuro"] .turnos-bar button.activo,
+.rv[data-tema="oscuro"] .acciones .primaria { background: var(--acento); border-color: var(--acento); color: #fff; }
+.rv[data-tema="oscuro"] .acciones .wa { border-color: #25D366; color: #5BE38A; }
+.rv[data-tema="oscuro"] .acciones .peligro { color: var(--e-noshow); }
+.rv[data-tema="oscuro"] .btn { background: var(--acento); color: #fff; }
+.rv[data-tema="oscuro"] .btn:disabled { background: #4b5057; color: #9aa0a6; }
+.rv[data-tema="oscuro"] .btn.sec { background: transparent; color: var(--mar); border-color: var(--mar); }
+.rv[data-tema="oscuro"] .chip.nota { background: var(--arena); color: var(--tinta); }
+.rv[data-tema="oscuro"] .chip.alerg,
+.rv[data-tema="oscuro"] .chip.noshows { background: rgba(229, 72, 77, .18); color: #F28B8E; }
+.rv[data-tema="oscuro"] .chip.vip { background: rgba(243, 232, 207, .18); color: #E6C97A; }
+.rv[data-tema="oscuro"] .chip.sinmesa { background: rgba(217, 154, 30, .18); color: #F0B64C; }
+.rv[data-tema="oscuro"] .fab { background: var(--acento); box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
+
+/* ---- avisos ---- */
+.rv[data-tema="oscuro"] .aviso.info { background: var(--mar-claro); color: #9FE1C7; }
+.rv[data-tema="oscuro"] .aviso.ok { background: rgba(22, 163, 74, .18); color: #7EE2A4; }
+.rv[data-tema="oscuro"] .aviso.err { background: rgba(229, 72, 77, .18); color: #F28B8E; }
+.rv[data-tema="oscuro"] .modo-edicion { background: rgba(217, 154, 30, .16); border-color: rgba(217, 154, 30, .4); color: #F0C56A; }
+
+/* ---- plano: suelo oscuro con rejilla sutil ---- */
+.rv[data-tema="oscuro"] svg.plano {
+  border-color: var(--borde);
+  background:
+    repeating-linear-gradient(0deg, #24282d, #24282d 24px, #2a2e33 24px, #2a2e33 25px),
+    repeating-linear-gradient(90deg, #24282d, #24282d 24px, #2a2e33 24px, #2a2e33 25px);
+}
+.rv[data-tema="oscuro"] .leyenda { color: var(--gris); }
+
+/* ---- formularios ---- */
+.rv[data-tema="oscuro"] input,
+.rv[data-tema="oscuro"] select,
+.rv[data-tema="oscuro"] textarea,
+.rv[data-tema="oscuro"] .rsp-modal input,
+.rv[data-tema="oscuro"] .rsp-modal select,
+.rv[data-tema="oscuro"] .rsp-modal textarea { background: var(--panel-2); border-color: var(--borde); color: var(--tinta); }
+.rv[data-tema="oscuro"] input::placeholder,
+.rv[data-tema="oscuro"] textarea::placeholder { color: #7f868e; }
+.rv[data-tema="oscuro"] input:focus,
+.rv[data-tema="oscuro"] select:focus,
+.rv[data-tema="oscuro"] textarea:focus { outline-color: var(--mar); border-color: var(--mar); }
+.rv[data-tema="oscuro"] label,
+.rv[data-tema="oscuro"] .rsp-modal label { color: var(--tinta); }
+.rv[data-tema="oscuro"] .sugerencias,
+.rv[data-tema="oscuro"] .rsp-modal .sugerencias { background: var(--panel-2); border-color: var(--borde); }
+.rv[data-tema="oscuro"] .sugerencias div,
+.rv[data-tema="oscuro"] .rsp-modal .sugerencias div { border-bottom-color: var(--borde); color: var(--tinta); }
+.rv[data-tema="oscuro"] .sugerencias div:hover,
+.rv[data-tema="oscuro"] .rsp-modal .sugerencias div:hover { background: var(--mar-claro); }
+.rv[data-tema="oscuro"] .dias label,
+.rv[data-tema="oscuro"] .rsp-modal .dias label { background: var(--panel-2); border-color: var(--borde); color: var(--tinta); }
+.rv[data-tema="oscuro"] .spinner { border-color: rgba(47, 168, 134, .25); border-top-color: var(--mar); }
+
+/* ---- modales ---- */
+.rv[data-tema="oscuro"] .rsp-modal { background: rgba(0, 0, 0, .62); color: var(--tinta); }
+.rv[data-tema="oscuro"] .rsp-modal .modal { background: var(--panel); }
+.rv[data-tema="oscuro"] .rsp-modal h2 { color: var(--mar); }
+.rv[data-tema="oscuro"] .rsp-modal .cerrar { background: var(--panel-2); border-color: var(--borde); color: var(--gris); }
+.rv[data-tema="oscuro"] .rsp-modal .acciones button { background: var(--panel-2); border-color: var(--borde); color: var(--tinta); }
+.rv[data-tema="oscuro"] .rsp-modal .acciones .primaria { background: var(--acento); border-color: var(--acento); color: #fff; }
+.rv[data-tema="oscuro"] .rsp-modal .chip.nota { background: var(--arena); color: var(--tinta); }
+.rv[data-tema="oscuro"] .rsp-modal .chip.vip { background: rgba(243, 232, 207, .18); color: #E6C97A; }
+.rv[data-tema="oscuro"] .rsp-modal .chip.noshows { background: rgba(229, 72, 77, .18); color: #F28B8E; }
+
+/* ---- barra de tema (toggle) ---- */
+.rsp .barra .tema-toggle { margin-left: auto; border: 1px solid var(--borde); background: #fff; color: var(--gris); border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.rv[data-tema="oscuro"] .barra .tema-toggle { background: var(--panel-2); color: var(--tinta); }
+.rsp .barra .nueva { border: none; background: var(--vi); color: #fff; border-radius: 9px; padding: 9px 14px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.rv[data-tema="oscuro"] .barra .nueva { background: var(--acento); }
+.rsp .barra .buscador { flex: 1 1 180px; min-width: 140px; max-width: 320px; }
+.rsp .barra .buscador input { width: 100%; padding: 8px 10px; font-size: 13.5px; border: 1px solid var(--borde); border-radius: 9px; background: #fff; color: var(--tinta); font-family: inherit; }
+.rv[data-tema="oscuro"] .barra .buscador input { background: var(--panel-2); border-color: var(--borde); color: var(--tinta); }
+.rsp .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; background: #1A2226; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: 0 6px 20px rgba(0, 0, 0, .3); max-width: 90vw; }
+.rv[data-tema="oscuro"] .toast { background: var(--acento); }

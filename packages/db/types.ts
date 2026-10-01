@@ -7292,6 +7292,176 @@ export type Database = {
         }
         Relationships: []
       }
+      reservas_autotags: {
+        Row: {
+          activa: boolean
+          condicion: string
+          creado_en: string
+          cuenta_id: string
+          etiqueta_id: string
+          id: string
+          n: number
+          operador: string
+          periodo_dias: number
+        }
+        Insert: {
+          activa?: boolean
+          condicion: string
+          creado_en?: string
+          cuenta_id?: string
+          etiqueta_id: string
+          id?: string
+          n?: number
+          operador?: string
+          periodo_dias?: number
+        }
+        Update: {
+          activa?: boolean
+          condicion?: string
+          creado_en?: string
+          cuenta_id?: string
+          etiqueta_id?: string
+          id?: string
+          n?: number
+          operador?: string
+          periodo_dias?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_autotags_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_autotags_etiqueta_id_fkey"
+            columns: ["etiqueta_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_etiquetas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_bloqueos: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          fecha: string
+          hora_fin: string
+          hora_inicio: string
+          id: string
+          mesa_id: string | null
+          motivo: string | null
+          restaurante_id: string
+          sala_id: string | null
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          fecha: string
+          hora_fin?: string
+          hora_inicio?: string
+          id?: string
+          mesa_id?: string | null
+          motivo?: string | null
+          restaurante_id: string
+          sala_id?: string | null
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          fecha?: string
+          hora_fin?: string
+          hora_inicio?: string
+          id?: string
+          mesa_id?: string | null
+          motivo?: string | null
+          restaurante_id?: string
+          sala_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_bloqueos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_bloqueos_mesa_id_fkey"
+            columns: ["mesa_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_mesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_bloqueos_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_bloqueos_sala_id_fkey"
+            columns: ["sala_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_salas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_camareros: {
+        Row: {
+          activo: boolean
+          color: string
+          creado_en: string
+          cuenta_id: string
+          empleado_id: string | null
+          id: string
+          nombre: string
+          restaurante_id: string
+        }
+        Insert: {
+          activo?: boolean
+          color?: string
+          creado_en?: string
+          cuenta_id?: string
+          empleado_id?: string | null
+          id?: string
+          nombre: string
+          restaurante_id: string
+        }
+        Update: {
+          activo?: boolean
+          color?: string
+          creado_en?: string
+          cuenta_id?: string
+          empleado_id?: string | null
+          id?: string
+          nombre?: string
+          restaurante_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_camareros_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_camareros_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reservas_cierres: {
         Row: {
           cuenta_id: string
@@ -7343,39 +7513,96 @@ export type Database = {
       }
       reservas_clientes: {
         Row: {
+          actualizado_en: string
+          alergenos: string[]
           alergias: string | null
+          apellidos: string | null
           cliente_id: string | null
+          codigo_postal: string | null
+          consentimiento_en: string | null
+          consentimiento_marketing: boolean
+          cover_id: string | null
+          cover_meta: Json | null
           creado_en: string
           cuenta_id: string
           email: string | null
+          email_norm: string | null
+          empresa: string | null
+          etiquetas: string[]
+          fecha_nacimiento: string | null
           id: string
+          idioma: string
+          lista_negra: boolean
           nombre: string | null
           notas: string | null
+          numero_socio: string | null
+          pais: string
+          prescriptor_id: string | null
           telefono: string | null
+          telefono_adicional: string | null
+          telefono_norm: string | null
           vip: boolean
         }
         Insert: {
+          actualizado_en?: string
+          alergenos?: string[]
           alergias?: string | null
+          apellidos?: string | null
           cliente_id?: string | null
+          codigo_postal?: string | null
+          consentimiento_en?: string | null
+          consentimiento_marketing?: boolean
+          cover_id?: string | null
+          cover_meta?: Json | null
           creado_en?: string
           cuenta_id?: string
           email?: string | null
+          email_norm?: string | null
+          empresa?: string | null
+          etiquetas?: string[]
+          fecha_nacimiento?: string | null
           id?: string
+          idioma?: string
+          lista_negra?: boolean
           nombre?: string | null
           notas?: string | null
+          numero_socio?: string | null
+          pais?: string
+          prescriptor_id?: string | null
           telefono?: string | null
+          telefono_adicional?: string | null
+          telefono_norm?: string | null
           vip?: boolean
         }
         Update: {
+          actualizado_en?: string
+          alergenos?: string[]
           alergias?: string | null
+          apellidos?: string | null
           cliente_id?: string | null
+          codigo_postal?: string | null
+          consentimiento_en?: string | null
+          consentimiento_marketing?: boolean
+          cover_id?: string | null
+          cover_meta?: Json | null
           creado_en?: string
           cuenta_id?: string
           email?: string | null
+          email_norm?: string | null
+          empresa?: string | null
+          etiquetas?: string[]
+          fecha_nacimiento?: string | null
           id?: string
+          idioma?: string
+          lista_negra?: boolean
           nombre?: string | null
           notas?: string | null
+          numero_socio?: string | null
+          pais?: string
+          prescriptor_id?: string | null
           telefono?: string | null
+          telefono_adicional?: string | null
+          telefono_norm?: string | null
           vip?: boolean
         }
         Relationships: [
@@ -7398,6 +7625,150 @@ export type Database = {
             columns: ["cuenta_id"]
             isOneToOne: false
             referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_clientes_prescriptor_id_fkey"
+            columns: ["prescriptor_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_prescriptores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_codigos: {
+        Row: {
+          activo: boolean
+          codigo: string
+          creado_en: string
+          cuenta_id: string
+          descripcion: string | null
+          descuento_importe: number | null
+          descuento_pct: number | null
+          experiencia_id: string | null
+          id: string
+          restaurante_id: string | null
+          usos: number
+          usos_max: number | null
+          valido_desde: string | null
+          valido_hasta: string | null
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          descuento_importe?: number | null
+          descuento_pct?: number | null
+          experiencia_id?: string | null
+          id?: string
+          restaurante_id?: string | null
+          usos?: number
+          usos_max?: number | null
+          valido_desde?: string | null
+          valido_hasta?: string | null
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          descuento_importe?: number | null
+          descuento_pct?: number | null
+          experiencia_id?: string | null
+          id?: string
+          restaurante_id?: string | null
+          usos?: number
+          usos_max?: number | null
+          valido_desde?: string | null
+          valido_hasta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_codigos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_codigos_experiencia_id_fkey"
+            columns: ["experiencia_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_experiencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_codigos_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_cupos: {
+        Row: {
+          actualizado_en: string
+          cerrado: boolean
+          creado_en: string
+          cuenta_id: string
+          fecha: string
+          id: string
+          max_pax_online: number | null
+          max_pax_total: number | null
+          nota: string | null
+          restaurante_id: string
+          turno_id: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          cerrado?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          fecha: string
+          id?: string
+          max_pax_online?: number | null
+          max_pax_total?: number | null
+          nota?: string | null
+          restaurante_id: string
+          turno_id?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          cerrado?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          fecha?: string
+          id?: string
+          max_pax_online?: number | null
+          max_pax_total?: number | null
+          nota?: string | null
+          restaurante_id?: string
+          turno_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_cupos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_cupos_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_cupos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_turnos"
             referencedColumns: ["id"]
           },
         ]
@@ -7460,44 +7831,201 @@ export type Database = {
           },
         ]
       }
-      reservas_lista_espera: {
+      reservas_etiquetas: {
         Row: {
+          activa: boolean
+          ambito: string
+          color: string
           creado_en: string
           cuenta_id: string
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activa?: boolean
+          ambito: string
+          color?: string
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activa?: boolean
+          ambito?: string
+          color?: string
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_etiquetas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_experiencias: {
+        Row: {
+          activa: boolean
+          creado_en: string
+          cuenta_id: string
+          descripcion: string | null
+          dias_semana: number[] | null
+          fecha_desde: string | null
+          fecha_hasta: string | null
+          id: string
+          imagen_url: string | null
+          nombre: string
+          orden: number
+          pax_max: number | null
+          pax_min: number
+          precio_pax: number | null
+          requiere_prepago: boolean
+          restaurante_id: string
+          turnos: string[] | null
+        }
+        Insert: {
+          activa?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          dias_semana?: number[] | null
+          fecha_desde?: string | null
+          fecha_hasta?: string | null
+          id?: string
+          imagen_url?: string | null
+          nombre: string
+          orden?: number
+          pax_max?: number | null
+          pax_min?: number
+          precio_pax?: number | null
+          requiere_prepago?: boolean
+          restaurante_id: string
+          turnos?: string[] | null
+        }
+        Update: {
+          activa?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          dias_semana?: number[] | null
+          fecha_desde?: string | null
+          fecha_hasta?: string | null
+          id?: string
+          imagen_url?: string | null
+          nombre?: string
+          orden?: number
+          pax_max?: number | null
+          pax_min?: number
+          precio_pax?: number | null
+          requiere_prepago?: boolean
+          restaurante_id?: string
+          turnos?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_experiencias_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_experiencias_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_lista_espera: {
+        Row: {
+          avisado_en: string | null
+          cliente_id: string | null
+          creado_en: string
+          cuenta_id: string
+          email: string | null
           estado: string
           fecha: string
+          hora_preferida: string | null
           id: string
+          idioma: string
           nombre: string
           notas: string | null
           pax: number
+          reserva_id: string | null
           restaurante_id: string
           telefono: string
+          token: string | null
+          turno_id: string | null
+          zona_id: string | null
         }
         Insert: {
+          avisado_en?: string | null
+          cliente_id?: string | null
           creado_en?: string
           cuenta_id?: string
+          email?: string | null
           estado?: string
           fecha: string
+          hora_preferida?: string | null
           id?: string
+          idioma?: string
           nombre: string
           notas?: string | null
           pax: number
+          reserva_id?: string | null
           restaurante_id: string
           telefono: string
+          token?: string | null
+          turno_id?: string | null
+          zona_id?: string | null
         }
         Update: {
+          avisado_en?: string | null
+          cliente_id?: string | null
           creado_en?: string
           cuenta_id?: string
+          email?: string | null
           estado?: string
           fecha?: string
+          hora_preferida?: string | null
           id?: string
+          idioma?: string
           nombre?: string
           notas?: string | null
           pax?: number
+          reserva_id?: string | null
           restaurante_id?: string
           telefono?: string
+          token?: string | null
+          turno_id?: string | null
+          zona_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "reservas_lista_espera_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_lista_espera_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_clientes_stats"
+            referencedColumns: ["cliente_id"]
+          },
           {
             foreignKeyName: "reservas_lista_espera_cuenta_id_fkey"
             columns: ["cuenta_id"]
@@ -7506,7 +8034,140 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reservas_lista_espera_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_reservas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "reservas_lista_espera_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_lista_espera_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_turnos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_lista_espera_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_salas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_mensajes: {
+        Row: {
+          asunto: string | null
+          canal: string
+          cliente_id: string | null
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          cuerpo: string
+          destinatario: string
+          enviado_en: string | null
+          error: string | null
+          estado: string
+          id: string
+          intentos: number
+          lista_espera_id: string | null
+          programado_para: string
+          proveedor: string | null
+          proveedor_id: string | null
+          reserva_id: string | null
+          restaurante_id: string | null
+          tipo: string
+        }
+        Insert: {
+          asunto?: string | null
+          canal: string
+          cliente_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          cuerpo: string
+          destinatario: string
+          enviado_en?: string | null
+          error?: string | null
+          estado?: string
+          id?: string
+          intentos?: number
+          lista_espera_id?: string | null
+          programado_para?: string
+          proveedor?: string | null
+          proveedor_id?: string | null
+          reserva_id?: string | null
+          restaurante_id?: string | null
+          tipo: string
+        }
+        Update: {
+          asunto?: string | null
+          canal?: string
+          cliente_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          cuerpo?: string
+          destinatario?: string
+          enviado_en?: string | null
+          error?: string | null
+          estado?: string
+          id?: string
+          intentos?: number
+          lista_espera_id?: string | null
+          programado_para?: string
+          proveedor?: string | null
+          proveedor_id?: string | null
+          reserva_id?: string | null
+          restaurante_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_mensajes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_mensajes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_clientes_stats"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "reservas_mensajes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_mensajes_lista_espera_id_fkey"
+            columns: ["lista_espera_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_lista_espera"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_mensajes_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_reservas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_mensajes_restaurante_id_fkey"
             columns: ["restaurante_id"]
             isOneToOne: false
             referencedRelation: "reservas_restaurantes"
@@ -7517,42 +8178,66 @@ export type Database = {
       reservas_mesas: {
         Row: {
           activa: boolean
+          alto: number | null
+          ancho: number | null
           cap_max: number
           cap_min: number
+          color: string | null
           cuenta_id: string
+          etiqueta: string | null
           forma: string
           id: string
           nombre: string
           pos_x: number
           pos_y: number
+          prioridad: number
           reservable_online: boolean
+          rotacion: number
           sala_id: string
+          tipo: string
+          unible: boolean
         }
         Insert: {
           activa?: boolean
+          alto?: number | null
+          ancho?: number | null
           cap_max?: number
           cap_min?: number
+          color?: string | null
           cuenta_id?: string
+          etiqueta?: string | null
           forma?: string
           id?: string
           nombre: string
           pos_x?: number
           pos_y?: number
+          prioridad?: number
           reservable_online?: boolean
+          rotacion?: number
           sala_id: string
+          tipo?: string
+          unible?: boolean
         }
         Update: {
           activa?: boolean
+          alto?: number | null
+          ancho?: number | null
           cap_max?: number
           cap_min?: number
+          color?: string | null
           cuenta_id?: string
+          etiqueta?: string | null
           forma?: string
           id?: string
           nombre?: string
           pos_x?: number
           pos_y?: number
+          prioridad?: number
           reservable_online?: boolean
+          rotacion?: number
           sala_id?: string
+          tipo?: string
+          unible?: boolean
         }
         Relationships: [
           {
@@ -7567,6 +8252,540 @@ export type Database = {
             columns: ["sala_id"]
             isOneToOne: false
             referencedRelation: "reservas_salas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_mesas_camarero_dia: {
+        Row: {
+          camarero_id: string
+          creado_en: string
+          cuenta_id: string
+          fecha: string
+          id: string
+          mesa_id: string
+          turno_id: string | null
+        }
+        Insert: {
+          camarero_id: string
+          creado_en?: string
+          cuenta_id?: string
+          fecha: string
+          id?: string
+          mesa_id: string
+          turno_id?: string | null
+        }
+        Update: {
+          camarero_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          fecha?: string
+          id?: string
+          mesa_id?: string
+          turno_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_mesas_camarero_dia_camarero_id_fkey"
+            columns: ["camarero_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_camareros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_mesas_camarero_dia_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_mesas_camarero_dia_mesa_id_fkey"
+            columns: ["mesa_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_mesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_mesas_camarero_dia_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_turnos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_mesas_combinaciones: {
+        Row: {
+          activa: boolean
+          creado_en: string
+          cuenta_id: string
+          id: string
+          mesas: string[]
+          nombre: string
+          pax_max: number
+          pax_min: number
+          prioridad: number
+          restaurante_id: string
+        }
+        Insert: {
+          activa?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          mesas: string[]
+          nombre: string
+          pax_max?: number
+          pax_min?: number
+          prioridad?: number
+          restaurante_id: string
+        }
+        Update: {
+          activa?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          mesas?: string[]
+          nombre?: string
+          pax_max?: number
+          pax_min?: number
+          prioridad?: number
+          restaurante_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_mesas_combinaciones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_mesas_combinaciones_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_notas_dia: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          fecha: string
+          id: string
+          restaurante_id: string
+          texto: string
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          fecha: string
+          id?: string
+          restaurante_id: string
+          texto: string
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          fecha?: string
+          id?: string
+          restaurante_id?: string
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_notas_dia_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_notas_dia_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_pagos: {
+        Row: {
+          actualizado_en: string
+          autorizacion: string | null
+          cof_txnid: string | null
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          ds_order: string | null
+          estado: string
+          id: string
+          identificador_cof: string | null
+          importe: number
+          moneda: string
+          pago_origen_id: string | null
+          reserva_id: string
+          respuesta: Json | null
+          restaurante_id: string
+          tarjeta_caducidad: string | null
+          tarjeta_mascara: string | null
+          tipo: string
+        }
+        Insert: {
+          actualizado_en?: string
+          autorizacion?: string | null
+          cof_txnid?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          ds_order?: string | null
+          estado?: string
+          id?: string
+          identificador_cof?: string | null
+          importe?: number
+          moneda?: string
+          pago_origen_id?: string | null
+          reserva_id: string
+          respuesta?: Json | null
+          restaurante_id: string
+          tarjeta_caducidad?: string | null
+          tarjeta_mascara?: string | null
+          tipo: string
+        }
+        Update: {
+          actualizado_en?: string
+          autorizacion?: string | null
+          cof_txnid?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          ds_order?: string | null
+          estado?: string
+          id?: string
+          identificador_cof?: string | null
+          importe?: number
+          moneda?: string
+          pago_origen_id?: string | null
+          reserva_id?: string
+          respuesta?: Json | null
+          restaurante_id?: string
+          tarjeta_caducidad?: string | null
+          tarjeta_mascara?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_pagos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_pagos_pago_origen_id_fkey"
+            columns: ["pago_origen_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_pagos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_pagos_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_reservas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_pagos_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_permisos_perfil: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          cuenta_id: string
+          id: string
+          perfil_id: string
+          puede_ajustes: boolean
+          puede_cambiar_estado: boolean
+          puede_cobrar: boolean
+          puede_editar_plano: boolean
+          puede_mover: boolean
+          restaurantes: string[] | null
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          perfil_id: string
+          puede_ajustes?: boolean
+          puede_cambiar_estado?: boolean
+          puede_cobrar?: boolean
+          puede_editar_plano?: boolean
+          puede_mover?: boolean
+          restaurantes?: string[] | null
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          perfil_id?: string
+          puede_ajustes?: boolean
+          puede_cambiar_estado?: boolean
+          puede_cobrar?: boolean
+          puede_editar_plano?: boolean
+          puede_mover?: boolean
+          restaurantes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_permisos_perfil_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_permisos_perfil_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_plano_objetos: {
+        Row: {
+          alto: number
+          ancho: number
+          color: string | null
+          creado_en: string
+          cuenta_id: string
+          id: string
+          pos_x: number
+          pos_y: number
+          rotacion: number
+          sala_id: string
+          texto: string | null
+          tipo: string
+        }
+        Insert: {
+          alto?: number
+          ancho?: number
+          color?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          pos_x?: number
+          pos_y?: number
+          rotacion?: number
+          sala_id: string
+          texto?: string | null
+          tipo: string
+        }
+        Update: {
+          alto?: number
+          ancho?: number
+          color?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          pos_x?: number
+          pos_y?: number
+          rotacion?: number
+          sala_id?: string
+          texto?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_plano_objetos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_plano_objetos_sala_id_fkey"
+            columns: ["sala_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_salas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_plantillas: {
+        Row: {
+          activa: boolean
+          actualizado_en: string
+          asunto: string | null
+          canal: string
+          creado_en: string
+          cuenta_id: string
+          cuerpo: string
+          id: string
+          idioma: string
+          restaurante_id: string | null
+          tipo: string
+        }
+        Insert: {
+          activa?: boolean
+          actualizado_en?: string
+          asunto?: string | null
+          canal: string
+          creado_en?: string
+          cuenta_id?: string
+          cuerpo: string
+          id?: string
+          idioma?: string
+          restaurante_id?: string | null
+          tipo: string
+        }
+        Update: {
+          activa?: boolean
+          actualizado_en?: string
+          asunto?: string | null
+          canal?: string
+          creado_en?: string
+          cuenta_id?: string
+          cuerpo?: string
+          id?: string
+          idioma?: string
+          restaurante_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_plantillas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_plantillas_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_preguntas: {
+        Row: {
+          activa: boolean
+          creado_en: string
+          cuenta_id: string
+          id: string
+          obligatoria: boolean
+          opciones: string[] | null
+          orden: number
+          restaurante_id: string
+          texto: string
+          texto_en: string | null
+          tipo: string
+        }
+        Insert: {
+          activa?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          obligatoria?: boolean
+          opciones?: string[] | null
+          orden?: number
+          restaurante_id: string
+          texto: string
+          texto_en?: string | null
+          tipo?: string
+        }
+        Update: {
+          activa?: boolean
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          obligatoria?: boolean
+          opciones?: string[] | null
+          orden?: number
+          restaurante_id?: string
+          texto?: string
+          texto_en?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_preguntas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_preguntas_restaurante_id_fkey"
+            columns: ["restaurante_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_restaurantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_prescriptores: {
+        Row: {
+          activo: boolean
+          comision_pct: number | null
+          creado_en: string
+          cuenta_id: string
+          email: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          slug: string | null
+          telefono: string | null
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          comision_pct?: number | null
+          creado_en?: string
+          cuenta_id?: string
+          email?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          slug?: string | null
+          telefono?: string | null
+          tipo?: string
+        }
+        Update: {
+          activo?: boolean
+          comision_pct?: number | null
+          creado_en?: string
+          cuenta_id?: string
+          email?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          slug?: string | null
+          telefono?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_prescriptores_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
             referencedColumns: ["id"]
           },
         ]
@@ -7614,71 +8833,199 @@ export type Database = {
       reservas_reservas: {
         Row: {
           actualizado_en: string
+          adjuntos: Json
+          alergias: string | null
+          anotado_por: string | null
+          camarero_id: string | null
           canal: string | null
+          cancelada_en: string | null
+          cancelada_por: string | null
           cliente_id: string | null
+          codigo_promo: string | null
+          consentimiento_marketing: boolean | null
+          cover_id: string | null
+          cover_meta: Json | null
           creado_en: string
+          creado_por: string | null
           cuenta_id: string
           duracion_min: number
+          empresa: string | null
           estado: string
+          estado_pago: string
+          etiquetas: string[]
+          experiencia_id: string | null
           fecha: string
           hora: string
           id: string
+          idioma: string
+          importe_garantia: number | null
+          importe_prepago: number | null
+          llegada_en: string | null
           localizador: string
           mesa_id: string | null
+          motivo_cancelacion: string | null
           notas_cliente: string | null
           notas_internas: string | null
+          notificar: boolean
           origen: string
+          pais: string | null
           pax: number
+          pax_llegados: number | null
+          prescriptor_id: string | null
+          reconfirmada_en: string | null
+          recordatorio_enviado_en: string | null
+          referencia: string | null
+          respuestas: Json
           restaurante_id: string
+          salida_en: string | null
+          sentada_en: string | null
+          tarjeta_solicitada_en: string | null
+          tipo: string
+          token: string | null
           turno_id: string | null
+          valoracion: number | null
+          valoracion_comentario: string | null
+          valoracion_detalle: Json | null
+          valoracion_en: string | null
+          zona_id: string | null
         }
         Insert: {
           actualizado_en?: string
+          adjuntos?: Json
+          alergias?: string | null
+          anotado_por?: string | null
+          camarero_id?: string | null
           canal?: string | null
+          cancelada_en?: string | null
+          cancelada_por?: string | null
           cliente_id?: string | null
+          codigo_promo?: string | null
+          consentimiento_marketing?: boolean | null
+          cover_id?: string | null
+          cover_meta?: Json | null
           creado_en?: string
+          creado_por?: string | null
           cuenta_id?: string
           duracion_min?: number
+          empresa?: string | null
           estado?: string
+          estado_pago?: string
+          etiquetas?: string[]
+          experiencia_id?: string | null
           fecha: string
           hora: string
           id?: string
+          idioma?: string
+          importe_garantia?: number | null
+          importe_prepago?: number | null
+          llegada_en?: string | null
           localizador?: string
           mesa_id?: string | null
+          motivo_cancelacion?: string | null
           notas_cliente?: string | null
           notas_internas?: string | null
+          notificar?: boolean
           origen?: string
+          pais?: string | null
           pax: number
+          pax_llegados?: number | null
+          prescriptor_id?: string | null
+          reconfirmada_en?: string | null
+          recordatorio_enviado_en?: string | null
+          referencia?: string | null
+          respuestas?: Json
           restaurante_id: string
+          salida_en?: string | null
+          sentada_en?: string | null
+          tarjeta_solicitada_en?: string | null
+          tipo?: string
+          token?: string | null
           turno_id?: string | null
+          valoracion?: number | null
+          valoracion_comentario?: string | null
+          valoracion_detalle?: Json | null
+          valoracion_en?: string | null
+          zona_id?: string | null
         }
         Update: {
           actualizado_en?: string
+          adjuntos?: Json
+          alergias?: string | null
+          anotado_por?: string | null
+          camarero_id?: string | null
           canal?: string | null
+          cancelada_en?: string | null
+          cancelada_por?: string | null
           cliente_id?: string | null
+          codigo_promo?: string | null
+          consentimiento_marketing?: boolean | null
+          cover_id?: string | null
+          cover_meta?: Json | null
           creado_en?: string
+          creado_por?: string | null
           cuenta_id?: string
           duracion_min?: number
+          empresa?: string | null
           estado?: string
+          estado_pago?: string
+          etiquetas?: string[]
+          experiencia_id?: string | null
           fecha?: string
           hora?: string
           id?: string
+          idioma?: string
+          importe_garantia?: number | null
+          importe_prepago?: number | null
+          llegada_en?: string | null
           localizador?: string
           mesa_id?: string | null
+          motivo_cancelacion?: string | null
           notas_cliente?: string | null
           notas_internas?: string | null
+          notificar?: boolean
           origen?: string
+          pais?: string | null
           pax?: number
+          pax_llegados?: number | null
+          prescriptor_id?: string | null
+          reconfirmada_en?: string | null
+          recordatorio_enviado_en?: string | null
+          referencia?: string | null
+          respuestas?: Json
           restaurante_id?: string
+          salida_en?: string | null
+          sentada_en?: string | null
+          tarjeta_solicitada_en?: string | null
+          tipo?: string
+          token?: string | null
           turno_id?: string | null
+          valoracion?: number | null
+          valoracion_comentario?: string | null
+          valoracion_detalle?: Json | null
+          valoracion_en?: string | null
+          zona_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "reservas_reservas_camarero_id_fkey"
+            columns: ["camarero_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_camareros"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reservas_reservas_cliente_id_fkey"
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "reservas_clientes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_reservas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_clientes_stats"
+            referencedColumns: ["cliente_id"]
           },
           {
             foreignKeyName: "reservas_reservas_cuenta_id_fkey"
@@ -7688,10 +9035,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reservas_reservas_experiencia_id_fkey"
+            columns: ["experiencia_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_experiencias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "reservas_reservas_mesa_id_fkey"
             columns: ["mesa_id"]
             isOneToOne: false
             referencedRelation: "reservas_mesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_reservas_prescriptor_id_fkey"
+            columns: ["prescriptor_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_prescriptores"
             referencedColumns: ["id"]
           },
           {
@@ -7708,7 +9069,53 @@ export type Database = {
             referencedRelation: "reservas_turnos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reservas_reservas_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_salas"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      reservas_reservas_historial: {
+        Row: {
+          accion: string
+          antes: Json | null
+          campos: string[] | null
+          cuenta_id: string
+          despues: Json | null
+          id: string
+          reserva_id: string
+          restaurante_id: string | null
+          ts: string
+          user_id: string | null
+        }
+        Insert: {
+          accion: string
+          antes?: Json | null
+          campos?: string[] | null
+          cuenta_id: string
+          despues?: Json | null
+          id?: string
+          reserva_id: string
+          restaurante_id?: string | null
+          ts?: string
+          user_id?: string | null
+        }
+        Update: {
+          accion?: string
+          antes?: Json | null
+          campos?: string[] | null
+          cuenta_id?: string
+          despues?: Json | null
+          id?: string
+          reserva_id?: string
+          restaurante_id?: string | null
+          ts?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       reservas_restaurantes: {
         Row: {
@@ -7716,54 +9123,144 @@ export type Database = {
           antelacion_max_dias: number
           antelacion_min_horas: number
           centro_id: string | null
+          cobro_noshow_automatico: boolean
+          color_marca: string | null
+          confirmar_online_auto: boolean
           creado_en: string
           cuenta_id: string
           descripcion: string | null
+          direccion: string | null
+          duracion_por_pax: Json | null
           email: string | null
           email_reservas: string | null
+          envio_email: boolean
+          envio_noshow: boolean
+          envio_sms: boolean
+          envio_whatsapp: boolean
+          garantia_importe_pax: number | null
+          grupos_telefono: string | null
           id: string
+          idiomas: string[]
+          liberar_tras_min: number
+          logo_url: string | null
+          max_pax_online: number
+          mensaje_widget: string | null
           nombre: string
+          noshow_automatico: boolean
           online_activo: boolean
           orden: number
+          politica_cancelacion_horas: number
+          prefijo_localizador: string | null
+          prepago_importe_pax: number | null
+          reconfirmacion_horas: number
+          recordatorio_horas: number
           slug: string
+          tarjeta_caduca_min: number
+          tarjeta_desde_pax: number | null
           telefono: string | null
+          telefono_whatsapp: string | null
           ubicacion: string | null
+          url_base: string | null
+          url_condiciones: string | null
+          url_resena_google: string | null
+          valoracion_horas: number
+          zona_horaria: string
         }
         Insert: {
           activo?: boolean
           antelacion_max_dias?: number
           antelacion_min_horas?: number
           centro_id?: string | null
+          cobro_noshow_automatico?: boolean
+          color_marca?: string | null
+          confirmar_online_auto?: boolean
           creado_en?: string
           cuenta_id?: string
           descripcion?: string | null
+          direccion?: string | null
+          duracion_por_pax?: Json | null
           email?: string | null
           email_reservas?: string | null
+          envio_email?: boolean
+          envio_noshow?: boolean
+          envio_sms?: boolean
+          envio_whatsapp?: boolean
+          garantia_importe_pax?: number | null
+          grupos_telefono?: string | null
           id?: string
+          idiomas?: string[]
+          liberar_tras_min?: number
+          logo_url?: string | null
+          max_pax_online?: number
+          mensaje_widget?: string | null
           nombre: string
+          noshow_automatico?: boolean
           online_activo?: boolean
           orden?: number
+          politica_cancelacion_horas?: number
+          prefijo_localizador?: string | null
+          prepago_importe_pax?: number | null
+          reconfirmacion_horas?: number
+          recordatorio_horas?: number
           slug: string
+          tarjeta_caduca_min?: number
+          tarjeta_desde_pax?: number | null
           telefono?: string | null
+          telefono_whatsapp?: string | null
           ubicacion?: string | null
+          url_base?: string | null
+          url_condiciones?: string | null
+          url_resena_google?: string | null
+          valoracion_horas?: number
+          zona_horaria?: string
         }
         Update: {
           activo?: boolean
           antelacion_max_dias?: number
           antelacion_min_horas?: number
           centro_id?: string | null
+          cobro_noshow_automatico?: boolean
+          color_marca?: string | null
+          confirmar_online_auto?: boolean
           creado_en?: string
           cuenta_id?: string
           descripcion?: string | null
+          direccion?: string | null
+          duracion_por_pax?: Json | null
           email?: string | null
           email_reservas?: string | null
+          envio_email?: boolean
+          envio_noshow?: boolean
+          envio_sms?: boolean
+          envio_whatsapp?: boolean
+          garantia_importe_pax?: number | null
+          grupos_telefono?: string | null
           id?: string
+          idiomas?: string[]
+          liberar_tras_min?: number
+          logo_url?: string | null
+          max_pax_online?: number
+          mensaje_widget?: string | null
           nombre?: string
+          noshow_automatico?: boolean
           online_activo?: boolean
           orden?: number
+          politica_cancelacion_horas?: number
+          prefijo_localizador?: string | null
+          prepago_importe_pax?: number | null
+          reconfirmacion_horas?: number
+          recordatorio_horas?: number
           slug?: string
+          tarjeta_caduca_min?: number
+          tarjeta_desde_pax?: number | null
           telefono?: string | null
+          telefono_whatsapp?: string | null
           ubicacion?: string | null
+          url_base?: string | null
+          url_condiciones?: string | null
+          url_resena_google?: string | null
+          valoracion_horas?: number
+          zona_horaria?: string
         }
         Relationships: [
           {
@@ -7785,26 +9282,44 @@ export type Database = {
       reservas_salas: {
         Row: {
           activa: boolean
+          alto: number
+          ancho: number
+          color: string | null
           cuenta_id: string
+          fondo: string
           id: string
           nombre: string
           orden: number
+          prioridad: number
+          reservable_online: boolean
           restaurante_id: string
         }
         Insert: {
           activa?: boolean
+          alto?: number
+          ancho?: number
+          color?: string | null
           cuenta_id?: string
+          fondo?: string
           id?: string
           nombre: string
           orden?: number
+          prioridad?: number
+          reservable_online?: boolean
           restaurante_id: string
         }
         Update: {
           activa?: boolean
+          alto?: number
+          ancho?: number
+          color?: string | null
           cuenta_id?: string
+          fondo?: string
           id?: string
           nombre?: string
           orden?: number
+          prioridad?: number
+          reservable_online?: boolean
           restaurante_id?: string
         }
         Relationships: [
@@ -7827,40 +9342,52 @@ export type Database = {
       reservas_turnos: {
         Row: {
           activo: boolean
+          color: string | null
           cuenta_id: string
           dias_semana: number[]
           duracion_min: number
+          fin_servicio: string | null
           hora_fin: string
           hora_inicio: string
           id: string
           intervalo_min: number
           max_pax_online: number
+          max_pax_total: number | null
+          max_reservas_intervalo: number | null
           nombre: string
           restaurante_id: string
         }
         Insert: {
           activo?: boolean
+          color?: string | null
           cuenta_id?: string
           dias_semana?: number[]
           duracion_min?: number
+          fin_servicio?: string | null
           hora_fin: string
           hora_inicio: string
           id?: string
           intervalo_min?: number
           max_pax_online?: number
+          max_pax_total?: number | null
+          max_reservas_intervalo?: number | null
           nombre: string
           restaurante_id: string
         }
         Update: {
           activo?: boolean
+          color?: string | null
           cuenta_id?: string
           dias_semana?: number[]
           duracion_min?: number
+          fin_servicio?: string | null
           hora_fin?: string
           hora_inicio?: string
           id?: string
           intervalo_min?: number
           max_pax_online?: number
+          max_pax_total?: number | null
+          max_reservas_intervalo?: number | null
           nombre?: string
           restaurante_id?: string
         }
@@ -10146,6 +11673,22 @@ export type Database = {
           },
         ]
       }
+      comensales_desde_reservas: {
+        Row: {
+          anio: number | null
+          capacidad: number | null
+          centro: string | null
+          comensales: number | null
+          created_at: string | null
+          dia_semana: number | null
+          fecha: string | null
+          id: number | null
+          mes: number | null
+          semana: number | null
+          servicio: string | null
+        }
+        Relationships: []
+      }
       compras_a3_cabecera: {
         Row: {
           a3_exportado_at: string | null
@@ -10430,6 +11973,35 @@ export type Database = {
           ts: string | null
         }
         Relationships: []
+      }
+      reservas_clientes_stats: {
+        Row: {
+          canceladas: number | null
+          canceladas_tardias: number | null
+          cliente_id: string | null
+          cuenta_id: string | null
+          no_shows: number | null
+          no_shows_12m: number | null
+          pax_medio: number | null
+          primera_visita: string | null
+          proxima_reserva: string | null
+          reservas_total: number | null
+          restaurantes: string[] | null
+          riesgo_no_show: number | null
+          ultima_visita: string | null
+          valoracion_media: number | null
+          visitas: number | null
+          visitas_presuntas: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_clientes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rrhh_desde_personal: {
         Row: {
@@ -10990,6 +12562,7 @@ export type Database = {
           num_documento: string
         }[]
       }
+      reservas_aplicar_autotags: { Args: never; Returns: number }
       reservas_apuntar_lista_espera: {
         Args: {
           p_fecha: string
@@ -11001,6 +12574,22 @@ export type Database = {
         }
         Returns: Json
       }
+      reservas_apuntar_lista_espera_v2: {
+        Args: {
+          p_email?: string
+          p_fecha: string
+          p_hora?: string
+          p_idioma?: string
+          p_nombre: string
+          p_notas?: string
+          p_pax: number
+          p_slug: string
+          p_telefono: string
+          p_zona_id?: string
+        }
+        Returns: Json
+      }
+      reservas_caducar_tarjeta_pendiente: { Args: never; Returns: number }
       reservas_cancelar: {
         Args: { p_localizador: string; p_telefono: string }
         Returns: Json
@@ -11022,10 +12611,106 @@ export type Database = {
         }
         Returns: Json
       }
+      reservas_crear_online_v2: {
+        Args: {
+          p_alergias?: string
+          p_apellidos?: string
+          p_canal?: string
+          p_codigo_promo?: string
+          p_consentimiento_marketing?: boolean
+          p_email?: string
+          p_etiquetas?: string[]
+          p_experiencia_id?: string
+          p_fecha: string
+          p_hora: string
+          p_idioma?: string
+          p_lista_espera_token?: string
+          p_nombre: string
+          p_notas?: string
+          p_pais?: string
+          p_pax: number
+          p_prescriptor?: string
+          p_respuestas?: Json
+          p_slug: string
+          p_solicitud?: boolean
+          p_telefono: string
+          p_zona_id?: string
+        }
+        Returns: Json
+      }
+      reservas_cupo_motivo: {
+        Args: {
+          p_excluir?: string
+          p_fecha: string
+          p_hora?: string
+          p_online?: boolean
+          p_pax: number
+          p_restaurante: string
+          p_turno: string
+        }
+        Returns: string
+      }
       reservas_disponibilidad: {
         Args: { p_fecha: string; p_pax: number; p_slug: string }
         Returns: Json
       }
+      reservas_disponibilidad_v2: {
+        Args: {
+          p_experiencia_id?: string
+          p_fecha: string
+          p_pax: number
+          p_slug: string
+          p_zona_id?: string
+        }
+        Returns: Json
+      }
+      reservas_duracion_pax: {
+        Args: { p_defecto?: number; p_pax: number; p_restaurante: string }
+        Returns: number
+      }
+      reservas_estadisticas: {
+        Args: { p_desde: string; p_hasta: string; p_restaurante: string }
+        Returns: Json
+      }
+      reservas_estado_desde_cover: {
+        Args: { p_codigo: number }
+        Returns: string
+      }
+      reservas_estados_activos: { Args: never; Returns: string[] }
+      reservas_estados_visita: { Args: never; Returns: string[] }
+      reservas_fusionar_clientes: {
+        Args: { p_destino: string; p_origen: string }
+        Returns: Json
+      }
+      reservas_gestion: { Args: { p_token: string }; Returns: Json }
+      reservas_gestion_cancelar: {
+        Args: { p_motivo?: string; p_token: string }
+        Returns: Json
+      }
+      reservas_gestion_confirmar: { Args: { p_token: string }; Returns: Json }
+      reservas_gestion_modificar: {
+        Args: {
+          p_fecha: string
+          p_hora: string
+          p_pax: number
+          p_token: string
+        }
+        Returns: Json
+      }
+      reservas_gestion_valorar: {
+        Args: {
+          p_comentario?: string
+          p_detalle?: Json
+          p_token: string
+          p_valoracion: number
+        }
+        Returns: Json
+      }
+      reservas_lista_espera_avisar: {
+        Args: { p_hora: string; p_id: string }
+        Returns: Json
+      }
+      reservas_marcar_a_revisar: { Args: never; Returns: number }
       reservas_mejor_mesa: {
         Args: {
           p_duracion: number
@@ -11037,6 +12722,40 @@ export type Database = {
         }
         Returns: string
       }
+      reservas_mejor_mesa_v2: {
+        Args: {
+          p_duracion: number
+          p_excluir?: string
+          p_fecha: string
+          p_hora: string
+          p_pax: number
+          p_permitir_union?: boolean
+          p_restaurante: string
+          p_solo_online?: boolean
+          p_zona?: string
+        }
+        Returns: string[]
+      }
+      reservas_mensaje_encolar: {
+        Args: {
+          p_destinatario_email?: string
+          p_mensaje_extra?: string
+          p_programado?: string
+          p_reserva_id: string
+          p_tipo: string
+        }
+        Returns: number
+      }
+      reservas_mesa_ocupada: {
+        Args: {
+          p_duracion: number
+          p_excluir?: string
+          p_fecha: string
+          p_hora: string
+          p_mesa: string
+        }
+        Returns: boolean
+      }
       reservas_mesas_libres: {
         Args: {
           p_duracion: number
@@ -11047,7 +12766,57 @@ export type Database = {
         }
         Returns: number
       }
+      reservas_mesas_libres_v2: {
+        Args: {
+          p_duracion: number
+          p_excluir?: string
+          p_fecha: string
+          p_hora: string
+          p_pax: number
+          p_restaurante: string
+          p_solo_online?: boolean
+          p_zona?: string
+        }
+        Returns: number
+      }
+      reservas_norm_email: { Args: { t: string }; Returns: string }
       reservas_norm_tel: { Args: { t: string }; Returns: string }
+      reservas_noshow_automatico: {
+        Args: never
+        Returns: {
+          cobrar: boolean
+          cuenta_id: string
+          estado_pago: string
+          importe: number
+          reserva_id: string
+          restaurante_id: string
+          tipo: string
+        }[]
+      }
+      reservas_ocupacion_mes: {
+        Args: { p_desde: string; p_hasta: string; p_restaurante: string }
+        Returns: {
+          aforo: number
+          cerrado: boolean
+          fecha: string
+          max_pax_online: number
+          mesas_ocupadas: number
+          mesas_total: number
+          nota: string
+          pax: number
+          reservas: number
+          turno: string
+          turno_id: string
+        }[]
+      }
+      reservas_programar_mensajes: {
+        Args: { p_evento?: string; p_reserva_id: string }
+        Returns: Json
+      }
+      reservas_renderizar: {
+        Args: { p_texto: string; p_vars: Json }
+        Returns: string
+      }
       reservas_sin_mesa_solapadas: {
         Args: {
           p_duracion: number
@@ -11057,6 +12826,69 @@ export type Database = {
         }
         Returns: number
       }
+      reservas_slug: { Args: { p: string }; Returns: string }
+      reservas_token_valido: { Args: { p: string }; Returns: boolean }
+      reservas_tracking: {
+        Args: { p_desde: string; p_hasta: string; p_restaurante: string }
+        Returns: {
+          actualizado_en: string
+          alergias: string
+          anotado_por: string
+          camarero: string
+          canal: string
+          cancelada_en: string
+          cancelada_por: string
+          cliente_apellidos: string
+          cliente_id: string
+          cliente_nombre: string
+          codigo_promo: string
+          consentimiento_marketing: boolean
+          cover_id: string
+          creado_en: string
+          duracion_min: number
+          email: string
+          empresa: string
+          estado: string
+          estado_pago: string
+          etiquetas: string
+          experiencia: string
+          fecha: string
+          hora: string
+          idioma: string
+          importe_garantia: number
+          importe_prepago: number
+          llegada_en: string
+          localizador: string
+          mensajes_enviados: number
+          mesas: string
+          motivo_cancelacion: string
+          notas_cliente: string
+          notas_internas: string
+          origen: string
+          pais: string
+          pax: number
+          pax_llegados: number
+          prescriptor: string
+          reconfirmada_en: string
+          recordatorio_enviado_en: string
+          referencia: string
+          reserva_id: string
+          restaurante: string
+          riesgo_no_show: number
+          salida_en: string
+          sentada_en: string
+          telefono: string
+          tipo: string
+          valoracion: number
+          valoracion_comentario: string
+          zona: string
+        }[]
+      }
+      reservas_ts: {
+        Args: { p_fecha: string; p_hora: string; p_tz?: string }
+        Returns: string
+      }
+      reservas_url_base: { Args: { p_restaurante: string }; Returns: string }
       rrhh_centros_gestionados: { Args: never; Returns: string[] }
       rrhh_codigo_centro_ratios: { Args: { p_nombre: string }; Returns: string }
       rrhh_color_departamento: {

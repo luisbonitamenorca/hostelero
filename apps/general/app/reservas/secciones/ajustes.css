@@ -1,0 +1,3 @@
+/* Estilos propios de la sección ajustes del panel de Reservas. Los comunes están en ../reservas.css. */
+
+.rsp .aj-front{background:#fff;border:1px solid var(--borde);border-radius:12px;overflow:hidden;margin-top:10px}
