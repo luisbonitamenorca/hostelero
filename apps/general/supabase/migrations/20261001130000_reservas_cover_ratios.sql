@@ -34,8 +34,10 @@ where r.slug = v.slug and t.restaurante_id = r.id and t.max_pax_total is null;
 -- Reglas (calcadas del informe de Cover «Número de personas por turno y por día»):
 --   * Un día cuenta para un restaurante/turno desde su primera reserva de la temporada hasta la
 --     última (así no salen «días a cero» fuera de temporada); solo hasta hoy.
---   * comensales = pax de las reservas que estuvieron (llegada/sentada/postre/cuenta/terminada);
---     para hoy y días futuros se cuentan también las vivas (pendiente/confirmada/reconfirmada).
+--   * comensales = pax de las reservas que estuvieron (llegada/sentada/postre/cuenta/terminada)
+--     más las que se quedaron en pendiente/confirmada/reconfirmada («asistencia presunta»: El Bar
+--     de Tamarindos no marca llegadas y Cover las cuenta igual; para hoy y futuro son las vivas).
+--     Comprobado contra el informe de Cover: 15-08 y 20-09-2026 cuadran centro a centro.
 --   * capacidad = cupo del día (reservas_cupos.max_pax_total) o aforo del turno
 --     (reservas_turnos.max_pax_total); 0 si el día/turno está cerrado (cupo o cierre).
 --   * El turno de una reserva: su turno_id; si no lo tiene, por la hora (< 17:00 Comida).
@@ -86,8 +88,8 @@ dias as (
 ),
 suma as (
   select restaurante_id, servicio, fecha,
-         sum(pax) filter (where estado in ('llegada', 'sentada', 'postre', 'cuenta', 'terminada')
-                             or (fecha >= current_date and estado in ('pendiente', 'confirmada', 'reconfirmada'))) as comensales,
+         sum(pax) filter (where estado in ('llegada', 'sentada', 'postre', 'cuenta', 'terminada',
+                                           'pendiente', 'confirmada', 'reconfirmada')) as comensales,
          max(actualizado_en) as actualizado_en
   from res
   group by restaurante_id, servicio, fecha

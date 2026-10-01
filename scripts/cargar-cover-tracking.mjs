@@ -187,7 +187,7 @@ async function insertarLotes(tabla, filas, select) {
   const out = [];
   for (let i = 0; i < filas.length; i += LOTE) {
     const lote = filas.slice(i, i + LOTE);
-    let q = sb.from(tabla).insert(lote);
+    let q = sb.from(tabla).insert(lote, { defaultToNull: false });
     if (select) q = q.select(select);
     const { data, error } = await q;
     if (error) throw new Error(`insert ${tabla}: ${error.message}`);
@@ -231,6 +231,12 @@ const mesaKey = (salaId, nombre) => `${salaId}|${nombre.toLowerCase()}`;
 const mesasPorKey = new Map(mesas.map((m) => [mesaKey(m.sala_id, m.nombre), m]));
 const mesasNuevas = new Map(); // key → fila a crear
 
+// Mesas que Cover nombra y nosotros no tenemos: solo se crean si aparecen en ≥ MIN_RESERVAS_MESA
+// reservas (las erratas tipo «2003» o «1161» con una o dos reservas se quedan sin mesa, con el
+// nombre de Cover en cover_meta.mesa).
+const MIN_RESERVAS_MESA = 5;
+const usoMesaCover = new Map(); // `${rest}|${nombre}` → nº de reservas en el fichero
+
 /** Nombre de mesa de Cover → mesa nuestra (crea las que faltan en la sala de la zona). */
 function resolverMesa(rest, zona, nombreCover, pax) {
   const n = String(nombreCover || "").trim();
@@ -251,6 +257,7 @@ function resolverMesa(rest, zona, nombreCover, pax) {
     }
   }
   if (!salaZona) return null;
+  if ((usoMesaCover.get(`${rest.slug}|${n}`) || 0) < MIN_RESERVAS_MESA) return null;
   const nombre = candidatos[0];
   const i = mesasNuevas.size;
   const nueva = {
@@ -306,18 +313,25 @@ function resolverPrescriptor(nombre) {
 
 const clientesBD = await todas("reservas_clientes", "id,nombre,apellidos,telefono,email,telefono_norm,email_norm,etiquetas,vip,lista_negra,cover_id,pais,codigo_postal,empresa,idioma,consentimiento_marketing,fecha_nacimiento,telefono_adicional,numero_socio,alergias,notas");
 const porTel = new Map(), porEmail = new Map(), porCover = new Map();
+// Clientes sin teléfono ni email (walk-ins con solo nombre): se casan por nombre para no
+// duplicarlos en cada pasada.
+const clientesPorNombre = new Map(); // nombre|apellidos (minúsculas) → cliente
+const nombreKey = (n, a) => `${String(n || "").trim().toLowerCase()}|${String(a || "").trim().toLowerCase()}`;
 for (const c of clientesBD) {
   const t = c.telefono_norm || normTel("", c.telefono);
   const e = c.email_norm || normEmail(c.email);
   if (t && !porTel.has(t)) porTel.set(t, c);
   if (e && !porEmail.has(e)) porEmail.set(e, c);
   if (c.cover_id) porCover.set(c.cover_id, c);
+  if (!t && !e && !c.cover_id) {
+    const k = nombreKey(c.nombre, c.apellidos);
+    if (!clientesPorNombre.has(k)) clientesPorNombre.set(k, c);
+  }
 }
 console.log(`Base: ${restaurantes.length} restaurantes, ${salas.length} salas, ${mesas.length} mesas, ${clientesBD.length} clientes, ${etiquetas.length} etiquetas, ${prescriptores.length} prescriptores`);
 
 const clientesNuevos = []; // filas a insertar
 const clientesCambios = new Map(); // id → campos a actualizar
-const clientesPorNombre = new Map(); // sin contacto: rest|nombre → cliente (nuevo)
 
 function separarNombre(nombre, apellidos) {
   let n = String(nombre || "").trim(), a = String(apellidos || "").trim();
@@ -333,8 +347,7 @@ function resolverCliente(d) {
   const [nombre, apellidos] = separarNombre(d.nombre, d.apellidos);
   if (!c && !tel && !email) {
     if (!nombre && !apellidos) return null;
-    const k = `${d.rest || ""}|${nombre.toLowerCase()}|${apellidos.toLowerCase()}`;
-    c = clientesPorNombre.get(k);
+    c = clientesPorNombre.get(nombreKey(nombre, apellidos));
     if (c) return c;
   }
   if (!c) {
@@ -366,7 +379,7 @@ function resolverCliente(d) {
     if (tel) porTel.set(tel, c);
     if (email) porEmail.set(email, c);
     if (d.cover_id) porCover.set(d.cover_id, c);
-    if (!tel && !email) clientesPorNombre.set(`${d.rest || ""}|${nombre.toLowerCase()}|${apellidos.toLowerCase()}`, c);
+    if (!tel && !email && !d.cover_id) clientesPorNombre.set(nombreKey(nombre, apellidos), c);
   } else {
     // completar huecos del existente (sin pisar lo que ya hay)
     const cambios = clientesCambios.get(c.id) || {};
@@ -378,7 +391,7 @@ function resolverCliente(d) {
       }
       cambios.apellidos = apellidos; c.apellidos = apellidos;
     }
-    pon("telefono", tel);
+    if (tel && vacio(c.telefono) && (!porTel.has(tel) || porTel.get(tel) === c)) { pon("telefono", tel); porTel.set(tel, c); }
     pon("email", email);
     if (d.pais && (vacio(c.pais) || c.pais === "ES") && d.pais !== c.pais) { cambios.pais = d.pais; c.pais = d.pais; }
     pon("codigo_postal", d.cp);
@@ -396,8 +409,8 @@ function resolverCliente(d) {
   }
   // etiquetas, VIP, lista negra (unión)
   if (d.etiquetas && d.etiquetas.length) c._etq = [...(c._etq || []), ...d.etiquetas];
-  if (d.etiquetas?.some((e) => /^vip$/i.test(e.nombre))) c._vip = true;
-  if (d.etiquetas?.some((e) => /black ?list/i.test(e.nombre))) c._negra = true;
+  if (d.etiquetas?.some((e) => /\bvip\b/i.test(e.nombre))) c._vip = true;
+  if (d.etiquetas?.some((e) => /black[\s-]?list/i.test(e.nombre))) c._negra = true;
   return c;
 }
 
@@ -452,6 +465,16 @@ if (FICHERO && !SOLO_CLIENTES) {
   reservasBD = await todas("reservas_reservas", "id,localizador,cliente_id,restaurante_id,turno_id,mesa_id,zona_id,fecha,hora,pax,estado,origen,canal,notas_cliente,notas_internas,creado_en,tipo,estado_pago,cancelada_por,cancelada_en,llegada_en,sentada_en,salida_en,reconfirmada_en,pais,empresa,prescriptor_id,etiquetas,cover_id,cover_meta,notificar,consentimiento_marketing");
   const porLoc = new Map(reservasBD.map((r) => [String(r.localizador || "").toUpperCase(), r]));
   console.log(`  en la base: ${reservasBD.length} reservas`);
+
+  // Primera pasada: cuántas reservas usan cada nombre de mesa de Cover (para no crear erratas).
+  for (const f of t.datos) {
+    const slug = RESTAURANTES[t.get(f, "Restaurante")];
+    if (!slug) continue;
+    for (const n of t.get(f, "Mesa").split("-").map((x) => x.trim()).filter(Boolean)) {
+      const k = `${slug}|${n}`;
+      usoMesaCover.set(k, (usoMesaCover.get(k) || 0) + 1);
+    }
+  }
 
   for (const f of t.datos) {
     const g = (c) => t.get(f, c);
@@ -605,7 +628,29 @@ if (clientesNuevos.length) {
     if (creado_en) fila.creado_en = creado_en;
     return fila;
   });
-  const ins = await insertarLotes("reservas_clientes", filas, "id,telefono_norm,email_norm,cover_id");
+  // Inserción por lotes; si un lote choca con el índice único de teléfono (cuenta_id, telefono)
+  // —teléfonos que ya estaban en la base con otro formato—, ese lote va fila a fila y la fila
+  // que choca se casa con el cliente existente en vez de crear uno nuevo.
+  const ins = [];
+  let casados = 0;
+  for (let i = 0; i < filas.length; i += LOTE) {
+    const lote = filas.slice(i, i + LOTE);
+    const { data, error } = await sb.from("reservas_clientes").insert(lote, { defaultToNull: false }).select("id,telefono_norm,email_norm,cover_id");
+    if (!error) { ins.push(...(data || [])); }
+    else if (/tel_unico|duplicate key/i.test(error.message)) {
+      for (const fila of lote) {
+        const r1 = await sb.from("reservas_clientes").insert(fila, { defaultToNull: false }).select("id,telefono_norm,email_norm,cover_id").single();
+        if (!r1.error) { ins.push(r1.data); continue; }
+        const r2 = await sb.from("reservas_clientes").select("id,telefono_norm,email_norm,cover_id")
+          .eq("cuenta_id", CUENTA_ID).eq("telefono", fila.telefono).limit(1).maybeSingle();
+        if (r2.error || !r2.data) throw new Error(`insert reservas_clientes: ${r1.error.message}`);
+        ins.push({ ...r2.data, telefono_norm: fila.telefono, cover_id: fila.cover_id || r2.data.cover_id });
+        casados++;
+      }
+    } else throw new Error(`insert reservas_clientes: ${error.message}`);
+    process.stdout.write(`\r  reservas_clientes: insertadas ${Math.min(i + LOTE, filas.length)}/${filas.length}   `);
+  }
+  console.log(casados ? `\n  (${casados} teléfonos ya existían con otro formato: casados con el cliente existente)` : "");
   // casar ids devueltos con los objetos en memoria (mismo orden de inserción)
   if (ins.length === clientesNuevos.length) clientesNuevos.forEach((c, i) => { c.id = ins[i].id; });
   else {
@@ -664,7 +709,9 @@ if (reservasNuevas.length) {
       if ((k === "cancelada_en" || k === "llegada_en" || k === "sentada_en" || k === "salida_en") && nuevo && viejo && Math.abs(new Date(nuevo) - new Date(viejo)) < 1000) continue;
       if (!igualJson(nuevo, viejo)) cambios[k] = nuevo;
     }
-    if (Object.keys(cambios).length) { filas.push({ id: f._id, cuenta_id: CUENTA_ID, ...cambios }); stats.cambiadas++; } else stats.iguales++;
+    // El upsert por id necesita la fila completa (las columnas not null sin default se evalúan en el
+    // INSERT aunque luego gane el ON CONFLICT): fila existente + cambios.
+    if (Object.keys(cambios).length) { filas.push({ ...e, ...cambios, cuenta_id: CUENTA_ID }); stats.cambiadas++; } else stats.iguales++;
     for (const m of f._mesas.slice(1)) if (m.id) mesasExtra.push({ cuenta_id: CUENTA_ID, reserva_id: f._id, mesa_id: m.id });
   }
   if (filas.length) await upsertLotes("reservas_reservas", filas, "id");
