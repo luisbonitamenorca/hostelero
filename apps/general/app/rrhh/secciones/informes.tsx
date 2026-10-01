@@ -174,8 +174,16 @@ function SubNomina({ ctx, avisar }: SecProps) {
   const etiquetaMes = `${MESES[mes - 1]} ${anio}`;
   const claveMes = `${anio}-${String(mes).padStart(2, "0")}`;
   const centroFichero = centroId ? (CENTRO_SKELLO[centroNombre(centroId)] ?? slug(centroNombre(centroId))) : "todos";
+  // Coste estimado: solo llega si el servidor lo ha calculado (dirección). Al resto no se le pinta nada.
+  const coste = datos?.coste ?? null;
+  const totalCoste = useMemo(() => {
+    if (!coste || !datos) return null;
+    let s = 0, n = 0, sin = 0;
+    for (const f of datos.filas) { const c = coste[f.empleado_id]; if (c == null) sin++; else { s += c; n++; } }
+    return { suma: s, con: n, sin };
+  }, [coste, datos]);
 
-  /** Hoja Resumen (y CSV): una fila por empleado. */
+  /** Hoja Resumen (y CSV): una fila por empleado. La columna «Coste estimado» solo si dirección (coste ≠ null). */
   function filasResumen(): Celda[][] {
     if (!datos) return [];
     const cab: Celda[] = [
@@ -183,6 +191,7 @@ function SubNomina({ ctx, avisar }: SecProps) {
       "H retenidas", "H ausencia (contador)", "H extra", "H nocturnas", "H domingo", "H festivo",
       ...codigosAus.flatMap((c) => [`${c} días`, `${c} horas`]),
       "Variables total", ...conceptos, "Comentario",
+      ...(coste ? ["Coste estimado €"] : []),
     ];
     const out: Celda[][] = [cab];
     for (const f of datos.filas) {
@@ -192,6 +201,7 @@ function SubNomina({ ctx, avisar }: SecProps) {
         f.horas_retenidas, f.horas_ausencia_contador, f.horas_extra, f.horas_nocturnas, f.horas_domingo, f.horas_festivo,
         ...codigosAus.flatMap((c) => [f.ausencias[c]?.dias ?? 0, f.ausencias[c]?.horas ?? 0]),
         Object.values(f.variables).reduce((s, v) => s + v, 0), ...conceptos.map((c) => f.variables[c] ?? 0), f.comentario,
+        ...(coste ? [coste[f.empleado_id] ?? null] : []),
       ]);
     }
     return out;
@@ -273,6 +283,13 @@ function SubNomina({ ctx, avisar }: SecProps) {
             <span><b>{n2(datos.filas.reduce((s, f) => s + f.horas_retenidas, 0))}</b> h retenidas</span>
             <span><b>{n2(datos.filas.reduce((s, f) => s + f.horas_extra, 0))}</b> h extra</span>
             <span><b>{eur(datos.variables.reduce((s, v) => s + Number(v.importe), 0))}</b> en variables</span>
+            {totalCoste ? (
+              <span className={totalCoste.sin ? "inf-alerta" : ""} title="Solo dirección: (h retenidas + ausencias del contador) × coste/hora vigente el día 1 × (1 + coste de empresa del convenio)">
+                <b>{eur(totalCoste.suma)}</b> coste estimado{totalCoste.sin ? ` (${totalCoste.sin} sin coste/hora)` : ""}
+              </span>
+            ) : datos.costeError ? (
+              <span className="inf-alerta" title={datos.costeError}><b>—</b> coste estimado no disponible</span>
+            ) : null}
             {cargando ? <span className="inf-cargando">Actualizando…</span> : null}
           </div>
           <div className="inf-scroll">
@@ -281,7 +298,9 @@ function SubNomina({ ctx, avisar }: SecProps) {
                 <tr>
                   <th>Empleado</th><th>Código</th><th>Contrato</th><th>h/sem</th><th>h contrato mes</th><th>Días trab.</th>
                   <th>h retenidas</th><th>h extra</th><th>Nocturnas</th><th>Domingos</th><th>Festivos</th>
-                  <th className="izq">Ausencias</th><th>Variables</th><th className="izq">Comentario</th>
+                  <th className="izq">Ausencias</th><th>Variables</th>
+                  {coste ? <th title="Solo dirección: (h retenidas + ausencias del contador) × coste/hora × (1 + coste de empresa)">Coste est.</th> : null}
+                  <th className="izq">Comentario</th>
                 </tr>
               </thead>
               <tbody>
@@ -315,6 +334,11 @@ function SubNomina({ ctx, avisar }: SecProps) {
                         })}
                       </td>
                       <td>{nVar ? <>{eur(totalVar)}<div className="inf-sub">{nVar} {nVar === 1 ? "concepto" : "conceptos"}</div></> : <span className="inf-falta">—</span>}</td>
+                      {coste ? (
+                        <td title={coste[f.empleado_id] == null ? "Sin coste/hora en la ficha del empleado" : undefined}>
+                          {coste[f.empleado_id] == null ? <span className="inf-falta">—</span> : eur(coste[f.empleado_id]!)}
+                        </td>
+                      ) : null}
                       <td className="izq inf-coment">{f.comentario || <span className="inf-falta">—</span>}</td>
                     </tr>
                   );
@@ -325,6 +349,7 @@ function SubNomina({ ctx, avisar }: SecProps) {
           <div className="nota-inf">
             h retenidas = horas validadas en Fichajes o, si no hay, las planificadas. h extra = retenidas + ausencias que computan − contrato del mes.
             Ausencias en días naturales, a horas semanales / 7 por día (como Skello).{ctx.esGestor ? " Clic en un empleado para añadir primas, anticipos o un comentario para la gestoría." : ""}
+            {coste ? " Coste estimado (solo dirección, orientativo): (h retenidas + ausencias del contador) × coste/hora vigente el día 1 del mes × (1 + coste de empresa del convenio del centro principal). «—» = sin coste/hora en la ficha." : ""}
           </div>
         </>
       )}

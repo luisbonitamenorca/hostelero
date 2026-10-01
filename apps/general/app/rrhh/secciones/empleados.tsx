@@ -20,6 +20,8 @@ const ESTADO_TXT: Record<api.EstadoEmp, string> = { activo: "Activo", inactivo: 
 const MOTIVOS_BAJA = ["Fin de temporada (fijo-discontinuo)", "Fin de contrato", "Baja voluntaria", "Despido", "No supera el periodo de prueba", "Jubilación", "Otro"];
 
 const fmtNum = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",");
+/** 12.5 → "12,50 €" */
+const fmtEur = (n: number) => (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace(".", ",") + " €";
 /** dd/mm si es del año en curso; dd/mm/aa si no (en enero, «desde 31/10» sería ambiguo). */
 const fmtDdMm = (iso: string) => (iso.slice(0, 4) === hoyIso().slice(0, 4) ? fmtFecha(iso).slice(0, 5) : fmtFecha(iso).slice(0, 6) + iso.slice(2, 4));
 const edadDe = (iso: string | null) => {
@@ -44,6 +46,8 @@ export default function SecEmpleados({ ctx, avisar }: SecProps) {
   const [fDepto, setFDepto] = useState("");
   const [fEstado, setFEstado] = useState<FiltroEstado>("activo");
   const [modalAlta, setModalAlta] = useState(false);
+  // Coste por hora: solo dirección lo ve (la RLS lo esconde al resto; aquí ni se pinta el panel).
+  const [esDireccion, setEsDireccion] = useState(false);
 
   const cargar = useCallback(() => { api.cargarEmpleadosV2().then(setDatos); }, []);
   useEffect(() => {
@@ -52,6 +56,7 @@ export default function SecEmpleados({ ctx, avisar }: SecProps) {
       // Si el centro recordado ya no existe (o no es de esta cuenta), el select y el filtro no deben quedar desacoplados
       setFCentro((v) => (v && !m.centros.some((c) => c.id === v) ? "" : v));
     });
+    api.soyDireccion().then(setEsDireccion).catch(() => setEsDireccion(false));
     cargar();
   }, [cargar]);
 
@@ -135,6 +140,7 @@ export default function SecEmpleados({ ctx, avisar }: SecProps) {
               empleado={empleadoSel}
               maestros={maestros}
               esGestor={ctx.esGestor}
+              esDireccion={esDireccion}
               avisar={avisar}
               recargar={cargar}
               onEstadoCambiado={(estado) => setFEstado(estado)}
@@ -335,10 +341,12 @@ function ModalAlta({ maestros, centroInicial, onCerrar, onCreado, avisar }: {
 
 /* ==================== Ficha ==================== */
 
-function FichaEmpleado({ empleado: e, maestros, esGestor, avisar, recargar, onEstadoCambiado }: {
+function FichaEmpleado({ empleado: e, maestros, esGestor, esDireccion, avisar, recargar, onEstadoCambiado }: {
   empleado: api.EmpleadoLista;
   maestros: Maestros;
   esGestor: boolean;
+  /** Solo dirección ve y edita el coste por hora. */
+  esDireccion: boolean;
   avisar: (m: string) => void;
   recargar: () => void;
   /** Tras baja/reactivar: para que la lista cambie de pestaña y la persona no «desaparezca». */
@@ -376,6 +384,10 @@ function FichaEmpleado({ empleado: e, maestros, esGestor, avisar, recargar, onEs
   const [modalBaja, setModalBaja] = useState(false);
   const [modalReactivar, setModalReactivar] = useState(false);
   const [confirmPin, setConfirmPin] = useState(false);
+
+  // Coste por hora (solo dirección): alta inline + modal de edición + confirmación de borrado
+  const [modalCoste, setModalCoste] = useState<api.CosteHora | null>(null);
+  const [borrarCoste, setBorrarCoste] = useState<api.CosteHora | null>(null);
 
   const cargarFicha = useCallback(() => { api.cargarFicha(e.id).then(setFicha); }, [e.id]);
   useEffect(() => { cargarFicha(); }, [cargarFicha]);
@@ -432,6 +444,9 @@ function FichaEmpleado({ empleado: e, maestros, esGestor, avisar, recargar, onEs
 
   const saldoH = ficha?.saldoHoras ?? null;
   const saldoV = ficha?.saldoVacaciones ?? null;
+  // Coste/hora vigente hoy: el tramo con «desde» más reciente que no sea futuro (vienen ordenados desc).
+  const costes = esDireccion ? ficha?.costeHora ?? null : null;
+  const costeVigente = costes?.find((c) => c.desde <= hoy) ?? null;
   const tituloSaldoH = e.contador_inicial_fecha
     ? `Contador desde el saldo inicial de ${fmtHoras(e.contador_inicial_h)} a cierre del ${fmtFecha(e.contador_inicial_fecha)} hasta hoy (semanas completas)`
     : `Contador desde el 1 de enero hasta hoy (semanas completas)${e.contador_inicial_h ? `, con saldo inicial de ${fmtHoras(e.contador_inicial_h)}` : ""}`;
@@ -480,6 +495,11 @@ function FichaEmpleado({ empleado: e, maestros, esGestor, avisar, recargar, onEs
           </>
         )}
         {edad != null && edad < 18 ? <span className="emp-chip menor">Menor de edad · {edad} años</span> : null}
+        {costeVigente ? (
+          <span className="emp-chip" title={`Coste por hora vigente desde el ${fmtFecha(costeVigente.desde)} (solo lo ve dirección)`}>
+            <small>coste</small> {fmtEur(costeVigente.coste_hora)}/h
+          </span>
+        ) : null}
         {e.fichaje_movil ? <span className="emp-chip">Fichaje móvil</span> : null}
         {!e.tiene_pin ? <span className="emp-chip"><small>sin PIN</small></span> : null}
       </div>
@@ -640,6 +660,51 @@ function FichaEmpleado({ empleado: e, maestros, esGestor, avisar, recargar, onEs
         {esGestor ? <button className="btn btn-fantasma btn-peque" onClick={() => setModalPeriodo({ periodo: null })}>+ Añadir periodo</button> : null}
       </div>
 
+      {/* ---------- Coste por hora (solo dirección) ---------- */}
+      {esDireccion ? (
+        <div className="panel">
+          <h3>Coste por hora</h3>
+          <div className="nota" style={{ marginBottom: 10 }}>
+            Precio por hora medio del contrato (como en Skello). Contadores e Informes multiplican las horas por este precio y por el coste de empresa del convenio.
+            Solo lo ve dirección.
+          </div>
+          {ficha === null ? (
+            <div className="nota">Cargando…</div>
+          ) : !costes?.length ? (
+            <div className="nota">Sin coste por hora: en Contadores e Informes saldrá «—» hasta que lo pongas.</div>
+          ) : (
+            <table className="emp-tabla" style={{ marginBottom: 12 }}>
+              <thead><tr><th>Desde</th><th>€/hora</th><th>Nota</th><th /></tr></thead>
+              <tbody>
+                {costes.map((c) => (
+                  <tr key={c.id}>
+                    <td>{fmtFecha(c.desde)}{costeVigente?.id === c.id ? <span className="emp-badge ok" style={{ marginLeft: 6 }}>vigente</span> : c.desde > hoy ? <span className="emp-badge prox" style={{ marginLeft: 6 }}>próximo</span> : null}</td>
+                    <td style={{ fontWeight: 600 }}>{fmtEur(c.coste_hora)}</td>
+                    <td><div className="emp-nota-periodo" title={c.nota ?? ""}>{c.nota || ""}</div></td>
+                    <td className="r">
+                      <button className="link-btn2" onClick={() => setModalCoste(c)}>Editar</button>
+                      <button className="link-btn2" style={{ color: "var(--red)" }} onClick={() => setBorrarCoste(c)}>Borrar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {ficha ? (
+            <AltaCosteHora
+              hoy={hoy}
+              onGuardar={async (fila) => {
+                const r = await api.guardarCosteHora(null, e.id, fila);
+                if (!r.ok) { avisar("No se pudo guardar: " + r.error); return false; }
+                avisar(`Coste por hora de ${fmtEur(fila.coste_hora)} desde el ${fmtFecha(fila.desde)}`);
+                cargarFicha();
+                return true;
+              }}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
       {/* ---------- PIN ---------- */}
       <div className="panel">
         <h3>PIN de fichaje</h3>
@@ -711,6 +776,35 @@ function FichaEmpleado({ empleado: e, maestros, esGestor, avisar, recargar, onEs
             const r = await base.borrarPeriodo(borrarPer.id, e.id);
             if (!r.ok) { avisar("No se pudo borrar: " + r.error); return; }
             avisar("Periodo borrado"); setBorrarPer(null); refrescar();
+          }}
+        />
+      ) : null}
+
+      {modalCoste ? (
+        <ModalCosteHora
+          coste={modalCoste}
+          onCerrar={() => setModalCoste(null)}
+          onGuardar={async (fila) => {
+            const r = await api.guardarCosteHora(modalCoste.id, e.id, fila);
+            if (!r.ok) { avisar("No se pudo guardar: " + r.error); return false; }
+            avisar("Coste por hora actualizado");
+            setModalCoste(null); cargarFicha();
+            return true;
+          }}
+        />
+      ) : null}
+
+      {borrarCoste ? (
+        <ModalConfirmar
+          titulo="Borrar coste por hora"
+          texto={<>¿Borrar el coste de {fmtEur(borrarCoste.coste_hora)}/h desde el {fmtFecha(borrarCoste.desde)}? Las semanas a partir de esa fecha pasarán a usar el tramo anterior (o quedarán sin coste).</>}
+          boton="Borrar"
+          peligro
+          onCerrar={() => setBorrarCoste(null)}
+          onOk={async () => {
+            const r = await api.borrarCosteHora(borrarCoste.id);
+            if (!r.ok) { avisar("No se pudo borrar: " + r.error); return; }
+            avisar("Coste borrado"); setBorrarCoste(null); cargarFicha();
           }}
         />
       ) : null}
@@ -819,6 +913,70 @@ function ModalPeriodo({ periodo, horasDefecto, onCerrar, onGuardar }: {
         <div className="modal-acciones">
           <button type="button" className="btn btn-fantasma" onClick={onCerrar} disabled={ocupado}>Cancelar</button>
           <button type="submit" className="btn btn-primario" disabled={ocupado || !alta}>{ocupado ? "Guardando…" : "Guardar"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ==================== Coste por hora (solo dirección) ==================== */
+
+type FilaCoste = { desde: string; coste_hora: number; nota: string | null };
+
+/** Convierte «12,5» o «12.5» en número; null si no es un importe válido. */
+function parseEur(s: string): number | null {
+  const v = Number(s.trim().replace(/\s|€/g, "").replace(",", "."));
+  return s.trim() === "" || !Number.isFinite(v) || v < 0 ? null : v;
+}
+
+function AltaCosteHora({ hoy, onGuardar }: { hoy: string; onGuardar: (fila: FilaCoste) => Promise<boolean> }) {
+  const [desde, setDesde] = useState(hoy);
+  const [coste, setCoste] = useState("");
+  const [nota, setNota] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const valor = parseEur(coste);
+  return (
+    <form className="emp-fila-add" onSubmit={async (ev) => {
+      ev.preventDefault();
+      if (valor == null || !desde) return;
+      setOcupado(true);
+      try {
+        const ok = await onGuardar({ desde, coste_hora: valor, nota: nota.trim() || null });
+        if (ok) { setCoste(""); setNota(""); }
+      } finally { setOcupado(false); }
+    }}>
+      <div><label>Nuevo coste desde</label><input type="date" value={desde} onChange={(ev) => setDesde(ev.target.value)} required /></div>
+      <div><label>€/hora</label><input inputMode="decimal" value={coste} onChange={(ev) => setCoste(ev.target.value)} placeholder="12,50" style={{ width: 110 }} /></div>
+      <div style={{ flex: 1, minWidth: 160 }}><label>Nota</label><input value={nota} onChange={(ev) => setNota(ev.target.value)} placeholder="Subida de convenio, cambio de categoría…" style={{ width: "100%" }} /></div>
+      <button type="submit" className="btn btn-fantasma btn-peque" disabled={ocupado || valor == null || !desde}>{ocupado ? "Guardando…" : "Añadir"}</button>
+    </form>
+  );
+}
+
+function ModalCosteHora({ coste, onCerrar, onGuardar }: { coste: api.CosteHora; onCerrar: () => void; onGuardar: (fila: FilaCoste) => Promise<boolean> }) {
+  const [desde, setDesde] = useState(coste.desde);
+  const [valor, setValor] = useState(String(coste.coste_hora).replace(".", ","));
+  const [nota, setNota] = useState(coste.nota ?? "");
+  const [ocupado, setOcupado] = useState(false);
+  const n = parseEur(valor);
+  return (
+    <Modal titulo="Editar coste por hora" sub="Cambia el precio o la fecha desde la que aplica. Para una subida, mejor añade un tramo nuevo y conserva el histórico." bloqueado={ocupado} onCerrar={onCerrar}>
+      <form onSubmit={async (ev) => {
+        ev.preventDefault();
+        if (n == null || !desde) return;
+        setOcupado(true);
+        const ok = await onGuardar({ desde, coste_hora: n, nota: nota.trim() || null });
+        if (!ok) setOcupado(false);
+      }}>
+        <div className="fila-2">
+          <div><label>Desde *</label><input type="date" value={desde} onChange={(ev) => setDesde(ev.target.value)} required autoFocus /></div>
+          <div><label>€/hora *</label><input inputMode="decimal" value={valor} onChange={(ev) => setValor(ev.target.value)} placeholder="12,50" /></div>
+        </div>
+        <label>Nota</label>
+        <input value={nota} onChange={(ev) => setNota(ev.target.value)} placeholder="Opcional" />
+        <div className="modal-acciones">
+          <button type="button" className="btn btn-fantasma" onClick={onCerrar} disabled={ocupado}>Cancelar</button>
+          <button type="submit" className="btn btn-primario" disabled={ocupado || n == null || !desde}>{ocupado ? "Guardando…" : "Guardar"}</button>
         </div>
       </form>
     </Modal>

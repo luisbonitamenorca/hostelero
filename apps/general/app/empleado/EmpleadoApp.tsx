@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./acciones";
-import type { Ausencia, Cambio, Companero, Disponibilidad, Fichaje, Turno } from "./acciones";
+import type { ArchivoTurno, Ausencia, Cambio, Companero, Disponibilidad, Fichaje, JornadaConfirmada, TareaTurno, Turno } from "./acciones";
 import { cerrarSesion } from "../acciones";
-import { calcularDia, efectivosDe, horasNetas, hoyIso, lunesDe, sumaDia } from "../rrhh/tipos";
+import { calcularDia, efectivosDe, finAbsoluto, horasNetas, hoyIso, lunesDe, minutos, sumaDia } from "../rrhh/tipos";
 import { colorTexto, fmtHoras, guardarPref, leerPref } from "../rrhh/lib-rrhh";
 
 type Tab = "turnos" | "fichar" | "ausencias" | "horas" | "dias";
@@ -29,6 +29,12 @@ const diaLargo = (iso: string) => new Date(iso + "T12:00").toLocaleDateString("e
 const hh = (t: { hora_inicio: string; hora_fin: string }) => `${t.hora_inicio.slice(0, 5)}–${t.hora_fin.slice(0, 5)}`;
 const nombreDe = (p?: { nombre: string; apellidos: string | null } | null) => (p ? [p.nombre, p.apellidos].filter(Boolean).join(" ") : "");
 const r1 = (n: number) => Math.round(n * 10) / 10;
+/** 1234567 → "1,2 MB"; 34000 → "34 KB". */
+const fmtTamano = (b: number | null) => {
+  if (b == null) return "";
+  if (b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB`;
+  return `${(Math.round((b / 1024 / 1024) * 10) / 10).toString().replace(".", ",")} MB`;
+};
 
 /** Horas del tramo abierto (desde la última entrada hasta ahora, o hasta el inicio de la pausa en curso).
  *  calcularDia ya ha restado las pausas cerradas de ese tramo, así que aquí solo va el bruto. */
@@ -110,6 +116,51 @@ function ChipPuesto({ t }: { t: Turno }) {
     <span className="puesto" style={{ background: bg, color: colorTexto(bg) }}>
       {nombre}
     </span>
+  );
+}
+
+/* ---------- Tareas y archivos del turno (los pone el encargado en el cuadrante) ---------- */
+function ExtrasTurno({ tareas, archivos, onMarcar, avisar }: { tareas: TareaTurno[]; archivos: ArchivoTurno[]; onMarcar: (t: TareaTurno, hecha: boolean) => void; avisar: Avisar }) {
+  const [abriendo, setAbriendo] = useState<string | null>(null);
+  if (!tareas.length && !archivos.length) return null;
+  const hechas = tareas.filter((t) => t.hecha).length;
+
+  /** La URL firmada llega tras un await: se abre la pestaña antes para que el móvil no la bloquee. */
+  async function abrir(a: ArchivoTurno) {
+    if (abriendo) return;
+    setAbriendo(a.id);
+    const w = window.open("about:blank", "_blank");
+    const r = await api.urlArchivoTurno(a.id);
+    setAbriendo(null);
+    if (!r.ok || !r.data) { w?.close(); avisar(r.error || "No se pudo abrir el archivo"); return; }
+    if (w) w.location.href = r.data.url; else window.location.href = r.data.url;
+  }
+
+  return (
+    <>
+      {tareas.length ? (
+        <div className="tareas">
+          <div className="tareas-cab">Tareas <span>{hechas}/{tareas.length}</span></div>
+          {tareas.map((t) => (
+            <label key={t.id} className={`tarea ${t.hecha ? "hecha" : ""}`}>
+              <input type="checkbox" checked={t.hecha} onChange={(e) => onMarcar(t, e.target.checked)} />
+              <span>{t.texto}</span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+      {archivos.length ? (
+        <div className="archivos">
+          {archivos.map((a) => (
+            <button key={a.id} type="button" className="archivo" disabled={abriendo === a.id} onClick={() => abrir(a)}>
+              <span className="archivo-ico">{a.tipo_mime?.startsWith("image/") ? "🖼" : "📄"}</span>
+              <span className="archivo-nombre">{a.nombre}</span>
+              <span className="archivo-tam">{abriendo === a.id ? "…" : fmtTamano(a.tamano)}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -210,11 +261,146 @@ export default function EmpleadoApp({ empleado, centros }: {
   );
 }
 
+/* ==================== Confirmación de jornada (como en Skello) ==================== */
+
+type DatosJornada = {
+  fecha: string;
+  turnos: Turno[];
+  fichajes: Fichaje[];
+  horas: number;
+  enCurso: boolean;
+  conf: JornadaConfirmada | null;
+};
+
+/**
+ * Lo que hace falta para «Mi jornada» de hoy y de ayer: turnos publicados, fichajes (desde la víspera
+ * de ayer, por si una jornada cruzaba medianoche) y mis confirmaciones. `recargar` se llama tras fichar
+ * o confirmar. Si falla, se devuelve null y la tarjeta no se enseña: no es crítico.
+ */
+function useMiJornada(): { hoy: DatosJornada | null; ayer: DatosJornada | null; recargar: () => void } {
+  const [datos, setDatos] = useState<{ hoy: DatosJornada; ayer: DatosJornada } | null>(null);
+  const [n, setN] = useState(0);
+  const hoy = hoyIso();
+  const ayer = sumaDia(hoy, -1);
+  useEffect(() => {
+    let vivo = true;
+    const desdeTs = new Date(sumaDia(ayer, -1) + "T00:00").toISOString();
+    Promise.all([api.misTurnos(ayer, hoy), api.misFichajes(desdeTs), api.misJornadasConfirmadas(ayer, hoy)])
+      .then(([t, f, c]) => {
+        if (!vivo) return;
+        const res = resumenFichajes(f, hoy, ayer);
+        const de = (fecha: string, d: DiaFichado | undefined): DatosJornada => ({
+          fecha,
+          turnos: t.turnos.filter((x) => x.fecha === fecha),
+          fichajes: d?.fichajes ?? [],
+          horas: d?.horas ?? 0,
+          enCurso: d?.enCurso ?? false,
+          conf: c.find((x) => x.fecha === fecha) ?? null,
+        });
+        setDatos({ hoy: de(hoy, res.hoy), ayer: de(ayer, res.porDia.get(ayer)) });
+      })
+      .catch(() => { if (vivo) setDatos(null); });
+    return () => { vivo = false; };
+  }, [hoy, ayer, n]);
+  const recargar = useCallback(() => setN((x) => x + 1), []);
+  return { hoy: datos?.hoy ?? null, ayer: datos?.ayer ?? null, recargar };
+}
+
+/** Tarjeta «Mi jornada»: turno, fichajes, horas y el botón «Confirmo mi jornada». Nada que enseñar → null. */
+function TarjetaJornada({ d, esHoy, avisar, onCambio }: { d: DatosJornada | null; esHoy: boolean; avisar: Avisar; onCambio: () => void }) {
+  const [nota, setNota] = useState("");
+  const [conNota, setConNota] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  if (!d || (!d.turnos.length && !d.fichajes.length && !d.conf)) return null;
+
+  const ahoraMin = minutos(new Date().toTimeString().slice(0, 5));
+  const turnoAcabado = d.turnos.length > 0 && d.turnos.every((t) => finAbsoluto(t) <= ahoraMin);
+  const salioYa = d.fichajes.length > 0 && !d.enCurso && d.fichajes[d.fichajes.length - 1].tipo === "salida";
+  const puede = !d.conf && (esHoy ? salioYa || turnoAcabado : true);
+  const hoy = hoyIso();
+  const confHoy = !!d.conf && fechaLocal(d.conf.confirmada_en) === hoy;
+  const centroId = d.turnos[0]?.centro_id ?? d.fichajes[d.fichajes.length - 1]?.centro_id ?? null;
+
+  async function confirmar() {
+    if (ocupado) return;
+    setOcupado(true);
+    const r = await api.confirmarMiJornada({ fecha: d!.fecha, centroId, horasVistas: d!.horas, nota: conNota ? nota : "" });
+    setOcupado(false);
+    if (!r.ok) { avisar("No se pudo confirmar: " + r.error); onCambio(); return; }
+    avisar(`Jornada del ${ddmm(d!.fecha)} confirmada`);
+    setNota(""); setConNota(false);
+    onCambio();
+  }
+
+  async function deshacer() {
+    if (ocupado) return;
+    setOcupado(true);
+    const r = await api.deshacerConfirmacion(d!.fecha);
+    setOcupado(false);
+    if (!r.ok) { avisar(r.error || "No se pudo deshacer"); onCambio(); return; }
+    avisar("Confirmación deshecha");
+    onCambio();
+  }
+
+  return (
+    <div className={`tarjeta jornada-conf ${d.conf ? "ok" : ""}`}>
+      <h3>Mi jornada de {esHoy ? "hoy" : "ayer"} · {ddmm(d.fecha)}</h3>
+      <div className="jc-linea">
+        <span className="jc-et">Turno</span>
+        <span>{d.turnos.length ? d.turnos.map((t) => `${hh(t)}${t.centros?.nombre ? ` · ${t.centros.nombre}` : ""}`).join(" / ") : "sin turno planificado"}</span>
+      </div>
+      <div className="jc-linea">
+        <span className="jc-et">Fichajes</span>
+        <span>
+          {d.fichajes.length
+            ? d.fichajes.map((f) => (
+                <span key={f.id} className={`chipf ${f.metodo === "correccion" ? "correccion" : f.tipo}`}>
+                  {NT[f.tipo]} {hora(f.ts)}{fechaLocal(f.ts) !== d.fecha ? ` (${ddmm(fechaLocal(f.ts))})` : ""}
+                </span>
+              ))
+            : "sin fichajes"}
+        </span>
+      </div>
+      <div className="jc-linea">
+        <span className="jc-et">Horas</span>
+        <span><b>{fmtHoras(r1(d.horas))}</b>{d.enCurso ? " (en curso)" : ""}</span>
+      </div>
+
+      {d.conf ? (
+        <>
+          <div className="jc-ok">
+            Jornada confirmada ✓ a las {hora(d.conf.confirmada_en)}{fechaLocal(d.conf.confirmada_en) !== d.fecha ? ` del ${ddmm(fechaLocal(d.conf.confirmada_en))}` : ""}
+            {d.conf.horas_vistas != null ? ` · ${fmtHoras(Number(d.conf.horas_vistas))}` : ""}
+          </div>
+          {d.conf.nota ? <div className="nota">Tu nota: «{d.conf.nota}»</div> : null}
+          {confHoy ? <button className="enlace" disabled={ocupado} onClick={deshacer}>Deshacer</button> : null}
+        </>
+      ) : puede ? (
+        <>
+          {conNota ? (
+            <>
+              <label>¿Qué no cuadra?</label>
+              <textarea rows={2} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej.: olvidé fichar la salida, salí a las 23:30" maxLength={300} />
+            </>
+          ) : null}
+          <button className="btn btn-confirmar" disabled={ocupado} onClick={confirmar}>Confirmo mi jornada</button>
+          <button className="enlace" onClick={() => setConNota((v) => !v)}>{conNota ? "Mejor sin nota" : "Algo no cuadra…"}</button>
+        </>
+      ) : (
+        <div className="geo-nota" style={{ marginTop: 8 }}>
+          {d.enCurso ? "Podrás confirmar cuando fiches la salida." : "Podrás confirmar cuando acabe tu turno o fiches la salida."}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ==================== Mis turnos ==================== */
 function TabTurnos({ empleadoId, centros, avisar }: { empleadoId: string; centros: Centro[]; avisar: Avisar }) {
   const [datos, setDatos] = useState<Awaited<ReturnType<typeof api.misTurnos>> | null>(null);
   const [huecos, setHuecos] = useState<Turno[]>([]);
   const [cambios, setCambios] = useState<Cambio[]>([]);
+  const [extras, setExtras] = useState<{ tareas: TareaTurno[]; archivos: ArchivoTurno[] }>({ tareas: [], archivos: [] });
   const [fallo, setFallo] = useState(false);
   const [offset, setOffset] = useState(0);
   const [pedir, setPedir] = useState<Turno | null>(null);
@@ -222,16 +408,21 @@ function TabTurnos({ empleadoId, centros, avisar }: { empleadoId: string; centro
   const [anular, setAnular] = useState<Cambio | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const hoy = hoyIso();
+  const ayer = sumaDia(hoy, -1);
   const lunes = sumaDia(lunesDe(hoy), offset * 7);
   const misCentros = useMemo(() => new Set(centros.map((c) => c.id)), [centros]);
+  const mj = useMiJornada();
 
   const cargar = useCallback(() => {
     setFallo(false);
     Promise.all([api.misTurnos(lunes, sumaDia(lunes, 13)), api.huecos(), api.misCambios()])
-      .then(([d, h, c]) => {
+      .then(async ([d, h, c]) => {
+        // Tareas y archivos de esos turnos: si fallan no se bloquea la pestaña, solo no se enseñan.
+        const ex = await api.extrasTurnos(d.turnos.map((t) => t.id)).catch(() => ({ tareas: [], archivos: [] }));
         setDatos(d);
         setHuecos(h);
         setCambios(c);
+        setExtras(ex);
       })
       .catch(() => { setFallo(true); avisar(MSG_CARGA); });
   }, [lunes, avisar]);
@@ -259,6 +450,13 @@ function TabTurnos({ empleadoId, centros, avisar }: { empleadoId: string; centro
     if (!r.ok) { avisar("No se pudo: " + r.error); cargar(); return; }
     avisar(estado === "aceptado_companero" ? "Aceptado. Ahora lo revisa el encargado" : estado === "rechazado" ? "Petición rechazada" : "Petición anulada");
     cargar();
+  }
+
+  async function marcarTarea(tarea: TareaTurno, hecha: boolean) {
+    const antes = extras;
+    setExtras((e) => ({ ...e, tareas: e.tareas.map((x) => (x.id === tarea.id ? { ...x, hecha } : x)) }));
+    const r = await api.marcarTareaTurno(tarea.id, hecha);
+    if (!r.ok) { setExtras(antes); avisar("No se pudo guardar: " + r.error); }
   }
 
   async function apuntarme(t: Turno) {
@@ -310,6 +508,7 @@ function TabTurnos({ empleadoId, centros, avisar }: { empleadoId: string; centro
             </div>
           </div>
           {t.nota ? <div className="nota">{t.nota}</div> : null}
+          <ExtrasTurno tareas={extras.tareas.filter((x) => x.turno_id === t.id)} archivos={extras.archivos.filter((x) => x.turno_id === t.id)} onMarcar={marcarTarea} avisar={avisar} />
           {cambio ? (
             <div className="cambio-estado">
               <span className={`estado ${cambio.estado}`}>
@@ -326,6 +525,9 @@ function TabTurnos({ empleadoId, centros, avisar }: { empleadoId: string; centro
         </div>,
       );
     }
+    // Bajo hoy y ayer: la tarjeta «Mi jornada» con el botón de confirmar (como en Skello).
+    if (iso === hoy) bloques.push(<TarjetaJornada key="mj-hoy" d={mj.hoy} esHoy avisar={avisar} onCambio={mj.recargar} />);
+    if (iso === ayer) bloques.push(<TarjetaJornada key="mj-ayer" d={mj.ayer} esHoy={false} avisar={avisar} onCambio={mj.recargar} />);
   }
 
   return (
@@ -473,6 +675,7 @@ function TabFichar({ centros, centroPrincipal, avisar }: { centros: Centro[]; ce
   const [fichando, setFichando] = useState(false);
   const hoy = hoyIso();
   const { desdeFecha, desdeTs } = rangoMesFichajes(hoy);
+  const mj = useMiJornada();
 
   const cargar = useCallback(() => {
     setFallo(false);
@@ -534,6 +737,7 @@ function TabFichar({ centros, centroPrincipal, avisar }: { centros: Centro[]; ce
         (r.data?.sinUbicacion ? " (tu centro no tiene ubicación configurada: no se comprueba el radio)" : r.data?.dentro === false ? " (fuera del radio del centro: tu encargado lo revisará)" : ""),
     );
     cargar();
+    mj.recargar();
   }
 
   return (
@@ -575,18 +779,22 @@ function TabFichar({ centros, centroPrincipal, avisar }: { centros: Centro[]; ce
           </div>
         ) : null}
       </div>
-      <div className="tarjeta">
-        <h3 style={{ fontSize: 14, marginBottom: 8 }}>Hoy</h3>
-        <div>
-          {hoyF.length
-            ? hoyF.map((f) => (
-                <span key={f.id} className={`chipf ${f.metodo === "correccion" ? "correccion" : f.tipo}`}>
-                  {NT[f.tipo]} {hora(f.ts)}{fechaLocal(f.ts) !== hoy ? ` (${ddmm(fechaLocal(f.ts))})` : ""}
-                </span>
-              ))
-            : <span className="libre">Sin fichajes.</span>}
+      <TarjetaJornada d={mj.hoy} esHoy avisar={avisar} onCambio={mj.recargar} />
+      {mj.ayer && !mj.ayer.conf ? <TarjetaJornada d={mj.ayer} esHoy={false} avisar={avisar} onCambio={mj.recargar} /> : null}
+      {!mj.hoy || (!mj.hoy.turnos.length && !mj.hoy.fichajes.length && !mj.hoy.conf) ? (
+        <div className="tarjeta">
+          <h3 style={{ fontSize: 14, marginBottom: 8 }}>Hoy</h3>
+          <div>
+            {hoyF.length
+              ? hoyF.map((f) => (
+                  <span key={f.id} className={`chipf ${f.metodo === "correccion" ? "correccion" : f.tipo}`}>
+                    {NT[f.tipo]} {hora(f.ts)}{fechaLocal(f.ts) !== hoy ? ` (${ddmm(fechaLocal(f.ts))})` : ""}
+                  </span>
+                ))
+              : <span className="libre">Sin fichajes.</span>}
+          </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 }

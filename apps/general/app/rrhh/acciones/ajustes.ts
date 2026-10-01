@@ -95,6 +95,12 @@ export type CamposConvenio = Partial<Omit<Convenio, "id" | "cuenta_id" | "creado
 export async function guardarConvenio(id: string, campos: CamposConvenio): Promise<R> {
   const { sb } = await cliente();
   if (campos.nombre !== undefined && !campos.nombre.trim()) return { ok: false, error: "El nombre no puede estar vacío" };
+  // Tasa de coste de empresa (Skello: 32,15 %): la columna es not null; fuera de 0–100 es un error de tecleo.
+  if (campos.coste_empresa_pct !== undefined) {
+    const p = Number(campos.coste_empresa_pct);
+    if (!Number.isFinite(p) || p < 0 || p > 100) return { ok: false, error: "El coste de empresa sobre el bruto tiene que estar entre 0 y 100 %" };
+    campos.coste_empresa_pct = Math.round(p * 100) / 100;
+  }
   const { error } = await sb.from("rrhh_convenios").update(campos).eq("id", id);
   return error ? { ok: false, error: errorLegible(error, DUP_CONVENIO) } : { ok: true };
 }

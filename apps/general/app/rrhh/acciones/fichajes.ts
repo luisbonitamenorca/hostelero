@@ -255,6 +255,9 @@ export async function reabrirSemana(centroId: string, lunes: string): Promise<R<
 /** Fichaje con los campos que necesita la vista Jornada (posición = movil_geo + dentro_radio). */
 export type FichajeDia = Fichaje;
 
+/** Confirmación de la jornada por el propio empleado desde su app (rrhh_jornadas_confirmadas). */
+export type ConfirmacionEmpleado = Pick<Tables<"rrhh_jornadas_confirmadas">, "empleado_id" | "confirmada_en" | "nota" | "horas_vistas" | "centro_id">;
+
 export type Jornada = {
   fecha: string;
   config: ConfigCalculo & { aviso_retraso_min: number };
@@ -266,6 +269,8 @@ export type Jornada = {
   horasDia: HorasDia[];
   /** Días de la semana (lunes–domingo) con jornada confirmada: hay filas y todas están validadas. */
   confirmados: string[];
+  /** Empleados que han confirmado su jornada de ese día desde su app (una por empleado y día). */
+  confirmacionesEmpleado: ConfirmacionEmpleado[];
   plantillaOculta: boolean;
 };
 
@@ -292,7 +297,7 @@ export async function cargarJornada(centroId: string, fecha: string): Promise<R<
   const tsDesde = isoMadrid(fecha, "00:00");
   const tsHasta = isoMadrid(sumaDia(fecha, 1), "06:00");
 
-  const [config, asigs, periodos, turnos, fichajes, ausencias, horasDia, horasSemana] = await Promise.all([
+  const [config, asigs, periodos, turnos, fichajes, ausencias, horasDia, horasSemana, confEmp] = await Promise.all([
     sb.from("rrhh_centros_config").select("regla_horas, tolerancia_min, redondeo_min, aviso_retraso_min").eq("centro_id", centroId).maybeSingle(),
     sb
       .from("rrhh_asignaciones")
@@ -316,9 +321,11 @@ export async function cargarJornada(centroId: string, fecha: string): Promise<R<
       .gte("fecha_fin", fecha),
     sb.from("rrhh_horas_dia").select("*").eq("centro_id", centroId).eq("fecha", fecha),
     sb.from("rrhh_horas_dia").select("fecha, estado").eq("centro_id", centroId).gte("fecha", lunes).lte("fecha", domingo),
+    // Confirmaciones del empleado de ese día (sin filtrar por centro: el suyo puede ir vacío; la RLS deja ver las de la gente gestionada).
+    sb.from("rrhh_jornadas_confirmadas").select("empleado_id, confirmada_en, nota, horas_vistas, centro_id").eq("fecha", fecha),
   ]);
 
-  const fallo = [config, asigs, periodos, turnos, fichajes, ausencias, horasDia, horasSemana].find((r) => r.error);
+  const fallo = [config, asigs, periodos, turnos, fichajes, ausencias, horasDia, horasSemana, confEmp].find((r) => r.error);
   if (fallo?.error) return { ok: false, error: fallo.error.message };
 
   const horasPorEmp: Record<string, { fecha_alta: string; horas: number | null }> = {};
@@ -376,6 +383,7 @@ export async function cargarJornada(centroId: string, fecha: string): Promise<R<
       ausencias: listaAus,
       horasDia: listaHd,
       confirmados,
+      confirmacionesEmpleado: (confEmp.data ?? []) as ConfirmacionEmpleado[],
       plantillaOculta: !empleados.length && (listaTurnos.length > 0 || listaFichajes.length > 0),
     },
   };

@@ -14,6 +14,21 @@ import "./contadores.css";
 const r2 = (v: number) => Math.round((Number(v) || 0) * 100) / 100;
 /** 7.5 → "7,5" */
 const h = (v: number) => String(r2(v)).replace(".", ",");
+/** 1234.5 → "1.235 €" (coste en la rejilla, sin céntimos para que quepa). */
+const eur0 = (v: number) => Math.round(Number(v) || 0).toLocaleString("es-ES") + " €";
+/** 1234.5 → "1234,50" (CSV: número con coma, sin separador de miles). */
+const eur2 = (v: number) => r2(v).toFixed(2).replace(".", ",");
+/** Estilo de la línea de coste en las celdas (sin tocar el CSS de la sección). */
+const ST_COSTE = { fontSize: 11, color: "var(--tinta-suave)", marginTop: 1 } as const;
+
+/** Cambio de pestaña (misma convención que Hoy): PanelRrhh atiende 'rrhh:tab'; si nadie lo atiende, se recarga con la preferencia. */
+const irA = (tab: string) => {
+  if (typeof window === "undefined") return;
+  const atendido = !window.dispatchEvent(new CustomEvent("rrhh:tab", { detail: tab, cancelable: true }));
+  if (atendido) return;
+  guardarPref("tab", tab);
+  window.location.reload();
+};
 /** 7.5 → "+7,5" · -3 → "−3" · 0 → "0" */
 const signo = (v: number) => {
   const x = r2(v);
@@ -164,16 +179,35 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
     [datos],
   );
 
+  // Coste de personal: solo llega si el servidor lo ha calculado (dirección). A los demás no se les pinta nada.
+  const mostrarCoste = !!datos?.coste;
+  const lunesHoy = lunesDe(hoy);
+
+  /** Totales de un empleado. `k` = coste sumado · `kFalta` = alguna semana pasada con horas sin coste/hora (el total queda corto). */
   const totalEmp = (id: string) => {
-    let c = 0, r = 0, d = 0;
-    for (const f of Object.values(porEmp[id] || {})) { c += f.horas_contrato; r += f.horas_retenidas + f.horas_ausencia_contador; d += f.diferencia; }
-    return { c, r, d };
+    let c = 0, r = 0, d = 0, k = 0, kHay = false, kFalta = false;
+    for (const f of Object.values(porEmp[id] || {})) {
+      c += f.horas_contrato; r += f.horas_retenidas + f.horas_ausencia_contador; d += f.diferencia;
+      if (f.lunes > lunesHoy) continue;
+      if (f.coste != null) { k += f.coste; kHay = true; } else if (f.horas_retenidas + f.horas_ausencia_contador > 0) kFalta = true;
+    }
+    return { c, r, d, k, kHay, kFalta };
   };
   const totalSemana = (lunes: string) => {
-    let c = 0, r = 0, d = 0;
-    for (const e of empleadosOrden) { const f = porEmp[e.id]?.[lunes]; if (f) { c += f.horas_contrato; r += f.horas_retenidas + f.horas_ausencia_contador; d += f.diferencia; } }
-    return { c, r, d };
+    let c = 0, r = 0, d = 0, k = 0, kHay = false, kFalta = false;
+    for (const e of empleadosOrden) {
+      const f = porEmp[e.id]?.[lunes];
+      if (!f) continue;
+      c += f.horas_contrato; r += f.horas_retenidas + f.horas_ausencia_contador; d += f.diferencia;
+      if (f.coste != null) { k += f.coste; kHay = true; } else if (f.horas_retenidas + f.horas_ausencia_contador > 0) kFalta = true;
+    }
+    return { c, r, d, k, kHay, kFalta };
   };
+  /** Línea de coste de una celda de totales. */
+  const lineaCoste = ({ k, kHay, kFalta }: { k: number; kHay: boolean; kFalta: boolean }) =>
+    kHay
+      ? <div style={ST_COSTE} title={kFalta ? "Falta el coste/hora de alguna persona o semana: el coste real es mayor" : undefined}>{eur0(k)}{kFalta ? " *" : ""}</div>
+      : <div className="cont-vacia" style={ST_COSTE} title={kFalta ? "Sin coste/hora" : undefined}>—</div>;
 
   const alertasDe = (e: EmpContador): { tipo: "extra" | "compl"; texto: string }[] => {
     const s = saldos?.[e.id];
@@ -199,8 +233,12 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
   function exportarCsv() {
     if (!datos) return;
     const cab: (string | number)[] = ["Empleado", "Departamento", "Centro", "Contrato (h/sem)"];
-    for (const s of semanas) cab.push(`S${s.semana} ${ddmm(s.lunes)} contrato`, `S${s.semana} realizadas`, `S${s.semana} diferencia`);
+    for (const s of semanas) {
+      cab.push(`S${s.semana} ${ddmm(s.lunes)} contrato`, `S${s.semana} realizadas`, `S${s.semana} diferencia`);
+      if (mostrarCoste) cab.push(`S${s.semana} coste €`);
+    }
     cab.push("Total contrato", "Total realizadas", "Diferencia del periodo", "Extras del año", "Saldo acumulado");
+    if (mostrarCoste) cab.push("Coste del periodo €");
     const filas: (string | number)[][] = [cab];
     for (const e of empleadosOrden) {
       const t = totalEmp(e.id);
@@ -209,9 +247,20 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
       for (const w of semanas) {
         const f = porEmp[e.id]?.[w.lunes];
         fila.push(f ? h(f.horas_contrato) : "", f ? h(f.horas_retenidas + f.horas_ausencia_contador) : "", f ? h(f.diferencia) : "");
+        if (mostrarCoste) fila.push(f?.coste != null && w.lunes <= lunesHoy ? eur2(f.coste) : "");
       }
       fila.push(h(t.c), h(t.r), h(t.d), s ? h(s.extrasAnio) : "", s ? h(s.saldo) : "");
+      if (mostrarCoste) fila.push(t.kHay ? eur2(t.k) : "");
       filas.push(fila);
+    }
+    if (mostrarCoste) {
+      // Fila de totales: solo el coste (las horas ya salen por persona).
+      const tot: (string | number)[] = ["Total", "", "", ""];
+      for (const w of semanas) { const t = totalSemana(w.lunes); tot.push("", "", "", t.kHay && w.lunes <= lunesHoy ? eur2(t.k) : ""); }
+      let k = 0, kHay = false;
+      for (const e of empleadosOrden) { const t = totalEmp(e.id); if (t.kHay) { k += t.k; kHay = true; } }
+      tot.push("", "", "", "", "", kHay ? eur2(k) : "");
+      filas.push(tot);
     }
     descargarCsv(`resumen_contadores_${desde}_${hasta}.csv`, filas);
   }
@@ -228,7 +277,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
   }, [hastaSaldo]);
 
   const detalle = detalleId ? datos?.empleados.find((e) => e.id === detalleId) ?? null : null;
-  const lunesHoy = lunesDe(hoy);
+  const sinCosteHora = datos?.coste?.sinCosteHora.length ?? 0;
   // Semanas-persona del rango con días planificados que nadie ha validado todavía (Ratios las lee según el plan).
   const sinValidar = useMemo(() => (datos?.filas ?? []).filter((f) => f.dias_validados < f.dias_plan).length, [datos]);
 
@@ -277,7 +326,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
                 </th>
               </tr>
               <tr className="cont-th-leyenda">
-                <th className="cont-th-nombre">contrato · realizadas · diferencia</th>
+                <th className="cont-th-nombre">contrato · realizadas · diferencia{mostrarCoste ? " · coste" : ""}</th>
                 {semanas.map((s) => <th key={s.lunes} />)}
                 <th /><th />
               </tr>
@@ -304,7 +353,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
                       const futura = w.lunes > lunesHoy;
                       return (
                         <td key={w.lunes} className={"cont-celda" + (w.lunes === lunesHoy ? " hoy" : "") + (futura ? " cont-futura" : "")} onClick={() => setDetalleId(e.id)}>
-                          {f ? <Celda f={f} futura={futura} /> : <span className="cont-vacia">—</span>}
+                          {f ? <Celda f={f} futura={futura} coste={mostrarCoste} /> : <span className="cont-vacia">—</span>}
                         </td>
                       );
                     })}
@@ -312,6 +361,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
                       <div className="cont-c">{h(t.c)}</div>
                       <div className="cont-r">{h(t.r)}</div>
                       <div className={clase(t.d)}>{signo(t.d)}</div>
+                      {mostrarCoste ? lineaCoste(t) : null}
                     </td>
                     <td className="cont-celda cont-saldo" onClick={() => setDetalleId(e.id)}>
                       {s ? <div className={clase(s.saldo) + " cont-saldo-v"}>{signo(s.saldo)} h</div> : <div className="cont-vacia">{cargandoSaldos ? "…" : "—"}</div>}
@@ -327,11 +377,19 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
                   <td key={w.lunes} className={"cont-celda" + (futura ? " cont-futura" : "")}>
                     <div className="cont-c">{h(t.c)}</div>
                     {futura ? <><div className="cont-vacia">—</div><div className="cont-vacia">—</div></> : <><div className="cont-r">{h(t.r)}</div><div className={clase(t.d)}>{signo(t.d)}</div></>}
+                    {mostrarCoste ? (futura ? <div className="cont-vacia" style={ST_COSTE}>—</div> : lineaCoste(t)) : null}
                   </td>
                 ); })}
-                {(() => { let c = 0, r = 0, d = 0; for (const e of empleadosOrden) { const t = totalEmp(e.id); c += t.c; r += t.r; d += t.d; } return (
-                  <td className="cont-celda cont-total"><div className="cont-c">{h(c)}</div><div className="cont-r">{h(r)}</div><div className={clase(d)}>{signo(d)}</div></td>
-                ); })()}
+                {(() => {
+                  let c = 0, r = 0, d = 0, k = 0, kHay = false, kFalta = false;
+                  for (const e of empleadosOrden) { const t = totalEmp(e.id); c += t.c; r += t.r; d += t.d; if (t.kHay) { k += t.k; kHay = true; } if (t.kFalta) kFalta = true; }
+                  return (
+                    <td className="cont-celda cont-total">
+                      <div className="cont-c">{h(c)}</div><div className="cont-r">{h(r)}</div><div className={clase(d)}>{signo(d)}</div>
+                      {mostrarCoste ? lineaCoste({ k, kHay, kFalta }) : null}
+                    </td>
+                  );
+                })()}
                 {(() => {
                   // Suma de saldos del centro (horas que debe la empresa, o que le deben): solo cuando están todos.
                   if (!saldos || empleadosOrden.some((e) => !saldos[e.id])) return <td className="cont-celda cont-saldo"><div className="cont-vacia">{cargandoSaldos ? "…" : "—"}</div></td>;
@@ -347,6 +405,12 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
       {datos && empleadosOrden.length ? (
         <div className="cont-pie">
           {cargando ? <div className="cont-calculando">Actualizando…</div> : cargandoSaldos ? <div className="cont-calculando">Calculando saldos y alertas del año… la tabla ya se puede usar.</div> : null}
+          {mostrarCoste && sinCosteHora > 0 ? (
+            <div className="cont-alerta compl" style={{ marginBottom: 8 }}>
+              ⚠ {sinCosteHora} {sinCosteHora === 1 ? "persona sin coste/hora" : "personas sin coste/hora"}: su coste sale como «—» y los totales marcados con * quedan cortos.{" "}
+              <button className="link-btn2" onClick={() => irA("empleados")}>Ponerlo en Empleados ›</button>
+            </div>
+          ) : null}
           <div className="leyenda">
             <span><span className="muestra" style={{ background: "var(--amber-light)", border: "1px solid var(--amber)" }} /> más horas que el contrato</span>
             <span><span className="muestra" style={{ background: "var(--blue-light)", border: "1px solid var(--blue)" }} /> menos horas que el contrato</span>
@@ -361,6 +425,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
             Cómo se calcula: cada semana, horas realizadas (fichajes validados o, si no los hay, turnos publicados) más ausencias que computan, menos las horas de contrato.
             El saldo suma esas diferencias desde el 1 de enero (o desde el saldo inicial traído de Skello) más los ajustes manuales.
             {centroId ? " Los empleados de otros centros que han trabajado aquí aparecen con el total de sus horas (el contador es de la persona)." : ""}
+            {mostrarCoste ? " Coste (solo dirección): horas realizadas × coste/hora vigente el lunes de la semana × (1 + coste de empresa del convenio del centro principal). Semanas futuras sin coste." : ""}
           </p>
         </div>
       ) : null}
@@ -374,6 +439,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
           reglas={datos?.reglasPorEmp[detalle.id] ?? { horas_extra_max_anual: 80, complementarias_max_pct: 30 }}
           hasta={hastaSaldo}
           esGestor={ctx.esGestor}
+          mostrarCoste={mostrarCoste}
           avisar={avisar}
           onAjuste={onAjuste}
           cerrar={() => setDetalleId(null)}
@@ -385,7 +451,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
 
 const clase = (d: number) => (r2(d) > 0 ? "cont-mas" : r2(d) < 0 ? "cont-menos" : "cont-cero");
 
-function Celda({ f, futura }: { f: FilaSemana; futura?: boolean }) {
+function Celda({ f, futura, coste }: { f: FilaSemana; futura?: boolean; coste?: boolean }) {
   const real = f.horas_retenidas + f.horas_ausencia_contador;
   // Semana futura: se enseña el contrato, pero realizadas y diferencia no cuentan todavía.
   if (futura) {
@@ -394,13 +460,15 @@ function Celda({ f, futura }: { f: FilaSemana; futura?: boolean }) {
         <div className="cont-c">{h(f.horas_contrato)}</div>
         <div className="cont-vacia">—</div>
         <div className="cont-vacia">—</div>
+        {coste ? <div className="cont-vacia" style={ST_COSTE}>—</div> : null}
       </div>
     );
   }
   const titulo =
     `Contrato ${h(f.horas_contrato)} h · realizadas ${h(f.horas_retenidas)} h` +
     (f.horas_ausencia_contador > 0 ? ` + ${h(f.horas_ausencia_contador)} h de ausencias que computan` : "") +
-    (f.dias_validados ? ` · ${f.dias_validados} de ${f.dias_plan} día(s) validado(s)` : f.dias_plan ? " · según turnos publicados, sin validar" : "");
+    (f.dias_validados ? ` · ${f.dias_validados} de ${f.dias_plan} día(s) validado(s)` : f.dias_plan ? " · según turnos publicados, sin validar" : "") +
+    (coste ? (f.coste != null ? ` · coste ${eur0(f.coste)}` : " · sin coste/hora") : "");
   // En gris cursiva cuando hay días planificados que nadie ha validado: Skello solo cuenta horas validadas.
   const sinValidar = f.dias_validados < f.dias_plan;
   return (
@@ -408,6 +476,7 @@ function Celda({ f, futura }: { f: FilaSemana; futura?: boolean }) {
       <div className="cont-c">{h(f.horas_contrato)}</div>
       <div className={"cont-r" + (sinValidar ? " cont-r-plan" : "")}>{h(real)}{f.horas_ausencia_contador > 0 ? <span className="cont-aus" title="Incluye ausencias que computan">*</span> : null}</div>
       <div className={clase(f.diferencia)}>{signo(f.diferencia)}</div>
+      {coste ? (f.coste != null ? <div style={ST_COSTE}>{eur0(f.coste)}</div> : <div className="cont-vacia" style={ST_COSTE}>—</div>) : null}
     </div>
   );
 }
@@ -423,7 +492,7 @@ function FilaEmpleado({ nuevoDepto, depto, colSpan, children }: { nuevoDepto: bo
 
 /* ==================== Detalle (panel lateral) ==================== */
 
-function DetalleEmpleado({ emp, semanas, filas, saldoAnio, reglas, hasta, esGestor, avisar, onAjuste, cerrar }: {
+function DetalleEmpleado({ emp, semanas, filas, saldoAnio, reglas, hasta, esGestor, mostrarCoste, avisar, onAjuste, cerrar }: {
   emp: EmpContador;
   semanas: { lunes: string; semana: number }[];
   filas: Record<string, FilaSemana>;
@@ -431,6 +500,8 @@ function DetalleEmpleado({ emp, semanas, filas, saldoAnio, reglas, hasta, esGest
   reglas: { horas_extra_max_anual: number; complementarias_max_pct: number };
   hasta: string;
   esGestor: boolean;
+  /** Solo dirección: columna de coste en «Semanas del rango». */
+  mostrarCoste: boolean;
   avisar: (m: string) => void;
   onAjuste: (empId: string, a: Ajuste) => void;
   cerrar: () => void;
@@ -528,10 +599,11 @@ function DetalleEmpleado({ emp, semanas, filas, saldoAnio, reglas, hasta, esGest
 
         <h3>Semanas del rango</h3>
         <table className="cont-mini">
-          <thead><tr><th>Semana</th><th>Contrato</th><th>Realizadas</th><th>Ausencias</th><th>Diferencia</th></tr></thead>
+          <thead><tr><th>Semana</th><th>Contrato</th><th>Realizadas</th><th>Ausencias</th><th>Diferencia</th>{mostrarCoste ? <th>Coste</th> : null}</tr></thead>
           <tbody>
             {semanas.map((w) => {
               const f = filas[w.lunes];
+              const futura = w.lunes > lunesDe(hasta);
               return (
                 <tr key={w.lunes}>
                   <td>S{w.semana} · {ddmm(w.lunes)}</td>
@@ -539,6 +611,7 @@ function DetalleEmpleado({ emp, semanas, filas, saldoAnio, reglas, hasta, esGest
                   <td>{f ? h(f.horas_retenidas) : "—"}{f?.dias_validados ? <span className="cont-val" title="Días validados">✓</span> : null}</td>
                   <td>{f && f.horas_ausencia_contador > 0 ? h(f.horas_ausencia_contador) : "—"}</td>
                   <td className={f ? clase(f.diferencia) : ""}>{f ? signo(f.diferencia) : "—"}</td>
+                  {mostrarCoste ? <td title={f && f.coste == null && !futura ? "Sin coste/hora para esta semana" : undefined}>{f && f.coste != null && !futura ? eur0(f.coste) : "—"}</td> : null}
                 </tr>
               );
             })}

@@ -199,8 +199,10 @@ const REGLAS_CONTADOR: ReglaNum[] = [
   ["jornada_anual_h", "Jornada anual", "si lo rellenas, el contador anual compara contra esta cifra", "h"],
   ["horas_extra_max_anual", "Tope de horas extra al año", "al pasarlo, Contadores avisa", "h"],
   ["complementarias_max_pct", "Tope de complementarias", "% sobre la jornada, a tiempo parcial", "%"],
+  ["coste_empresa_pct", "Coste de empresa sobre el bruto", "Seguridad Social a cargo de la empresa: coste = horas × €/hora × (1 + este %). Skello usa 32,15", "%"],
 ];
-const OBLIGATORIAS = new Set(["dias_vacaciones_anuales", "dias_laborables_semana", "horas_extra_max_anual", "complementarias_max_pct"]);
+const OBLIGATORIAS = new Set(["dias_vacaciones_anuales", "dias_laborables_semana", "horas_extra_max_anual", "complementarias_max_pct", "coste_empresa_pct"]);
+const PASO: Partial<Record<string, number>> = { complementarias_max_pct: 1, coste_empresa_pct: 0.01 };
 
 function SubConvenios({ datos, recargar, avisar }: SubProps) {
   const [convSel, setConvSel] = useState<string | null>(null);
@@ -337,12 +339,12 @@ function SubConvenios({ datos, recargar, avisar }: SubProps) {
 
       <div className="panel">
         <h3>Vacaciones, contadores y nocturnidad</h3>
-        <div className="nota" style={{ marginBottom: 12 }}>Lo que usan Contadores y el informe de nómina.</div>
+        <div className="nota" style={{ marginBottom: 12 }}>Lo que usan Contadores y el informe de nómina. El coste de empresa solo lo aplica dirección (es quien ve el coste por hora de cada empleado).</div>
         {REGLAS_CONTADOR.map(([k, t, d, u]) => (
           <div key={k} className="grid-regla">
             <div className="txt">{t}{OBLIGATORIAS.has(k) ? "" : <span className="aj-opcional"> · opcional</span>}<small>{d}</small></div>
             <div className="aj-regla-input">
-              <input type="number" step={k === "complementarias_max_pct" ? 1 : 0.5} min={0} value={form[k] ?? ""} onChange={(e) => campo(k, e.target.value)} />
+              <input type="number" step={PASO[k] ?? 0.5} min={0} value={form[k] ?? ""} onChange={(e) => campo(k, e.target.value)} />
               <span>{u}</span>
             </div>
           </div>

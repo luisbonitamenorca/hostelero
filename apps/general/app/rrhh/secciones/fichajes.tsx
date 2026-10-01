@@ -469,6 +469,8 @@ type FilaJ = {
   inicial: EdicionFila;
   origen: "fichado" | "planificado" | "sin_fichar" | "nada" | "guardado";
   esAusenciaCompleta: boolean;
+  /** El empleado confirmó su jornada desde su app (con su nota si puso una). */
+  conf: apiF.ConfirmacionEmpleado | null;
 };
 
 const IconoPin = ({ tachado }: { tachado?: boolean }) => (
@@ -527,6 +529,8 @@ function VistaJornada({ ctx, avisar, centroId, selector, toggle, fecha, setFecha
     const esHoy = fecha === hoy;
     const porId: Record<string, apiF.FichajeDia> = {};
     for (const f of datos.fichajes) porId[f.id] = f;
+    const confPor: Record<string, apiF.ConfirmacionEmpleado> = {};
+    for (const c of datos.confirmacionesEmpleado ?? []) confPor[c.empleado_id] = c;
 
     return datos.empleados.map((e) => {
       const turnos = datos.turnos.filter((t) => t.empleado_id === e.id);
@@ -568,11 +572,13 @@ function VistaJornada({ ctx, avisar, centroId, selector, toggle, fecha, setFecha
         retraso: desv.retraso_min, salidaAntic: desv.salida_antic_min, inc: [...new Set(inc)],
         posicion, inicial, origen,
         esAusenciaCompleta: tipoAusenciaDia(ausencia) === "completa" && !efs.length,
+        conf: confPor[e.id] ?? null,
       };
     });
   }, [datos, fecha, hoy]);
 
-  const programados = useMemo(() => filas.filter((f) => !f.esAusenciaCompleta && (f.turnos.length || f.efs.length || f.hd)), [filas]);
+  const programados = useMemo(() => filas.filter((f) => !f.esAusenciaCompleta && (f.turnos.length || f.efs.length || f.hd || f.conf)), [filas]);
+  const nConfirmados = useMemo(() => programados.filter((f) => f.conf).length, [programados]);
   const ausencias = useMemo(() => filas.filter((f) => f.ausencia), [filas]);
   const visibles = filtro === "programados" ? programados : ausencias;
 
@@ -695,6 +701,9 @@ function VistaJornada({ ctx, avisar, centroId, selector, toggle, fecha, setFecha
             {datos && !sinPermiso && filtro === "programados" ? (
               <div className="jornada-totales">
                 <span>retenidas <b>{numH(totalRet)} h</b></span>
+                <span title="Empleados que han confirmado su jornada desde su app">
+                  <b>{nConfirmados}</b> de {programados.length} han confirmado
+                </span>
                 {sinFichar ? <span className="aviso">{sinFichar} sin fichar</span> : null}
                 {hayCambios && !confirmada ? <span className="aviso">cambios sin confirmar</span> : null}
               </div>
@@ -755,6 +764,7 @@ function VistaJornada({ ctx, avisar, centroId, selector, toggle, fecha, setFecha
                 <thead>
                   <tr>
                     <th title="Confirmado" aria-label="Confirmado" className="estrecha" />
+                    <th title="El empleado ha confirmado su jornada desde su app" className="estrecha">Empl.</th>
                     <th style={{ textAlign: "left" }}>Empleado</th>
                     <th>Turno programado</th>
                     <th>Descanso prog.</th>
@@ -781,12 +791,29 @@ function VistaJornada({ ctx, avisar, centroId, selector, toggle, fecha, setFecha
                         <td className="centro">
                           <span className={`jornada-check${f.hd?.estado === "validada" ? " ok" : ""}`} title={f.hd?.estado === "validada" ? "Confirmado" : "Sin confirmar"}>{f.hd?.estado === "validada" ? <IconoCheck /> : null}</span>
                         </td>
+                        <td className="centro">
+                          {f.conf ? (
+                            <span
+                              className="jornada-check ok"
+                              title={`${f.e.nombre} confirmó su jornada a las ${horaMadrid(f.conf.confirmada_en)}${f.conf.horas_vistas != null ? ` (vio ${numH(Number(f.conf.horas_vistas))} h)` : ""}${f.conf.nota ? ` · «${f.conf.nota}»` : ""}`}
+                            >
+                              <IconoCheck />
+                            </span>
+                          ) : (
+                            <span className="jornada-check" title="El empleado aún no ha confirmado su jornada" />
+                          )}
+                        </td>
                         <td className="nombre">
                           <div className="np">{f.e.nombre} {f.e.apellidos || ""}</div>
                           <div className="jornada-sub">
                             {f.e.prestado ? <span className="fichajes-prestado">sin asignación en este centro</span> : f.e.departamento || ""}
                             {f.ausencia ? <span className="fichajes-aus peq"> · {f.ausencia.rrhh_tipos_ausencia?.nombre ?? f.ausencia.tipo}{f.ausencia.medio_dia ? " (½ día)" : f.ausencia.horas != null ? ` (${numH(Number(f.ausencia.horas))} h)` : ""}</span> : null}
                           </div>
+                          {f.conf ? (
+                            <div className="jornada-sub" title={f.conf.nota ? `Nota del empleado: ${f.conf.nota}` : undefined} style={{ color: f.conf.nota ? "var(--amber)" : undefined }}>
+                              confirmó a las {horaMadrid(f.conf.confirmada_en)}{f.conf.nota ? ` · «${f.conf.nota}»` : ""}
+                            </div>
+                          ) : null}
                         </td>
                         <td className="centro">
                           {f.turnos.length ? <span className="fichajes-plan">{hhmmDe(plan.entrada)} – {hhmmDe(plan.salida)}</span> : <span className="jornada-vacio">—</span>}

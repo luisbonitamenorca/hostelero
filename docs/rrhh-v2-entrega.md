@@ -116,3 +116,18 @@ de la semana 37 en Binifadet Restaurante. Dev server local: config `hostelero-ge
 Visto en Skello y aún no hecho: firma electrónica del horario, tareas y archivos en el turno,
 precio/hora medio en el contrato (coste), «Equipos» dentro del centro, confirmación de jornada por
 el propio empleado desde la app, planificación automática.
+
+
+## 9. Los cuatro puntos (01-10, mediodía)
+
+1. **Confirmación de jornada por el empleado**: en la app, tarjeta «Mi jornada de hoy» con botón
+   «Confirmo mi jornada» (y «Algo no cuadra…»); el gestor lo ve en Fichajes › Jornada (columna
+   «Empl.» y contador «N de M han confirmado») y en el feed de Hoy.
+2. **Tareas y archivos en el turno**: en el modal de Planificación (lista de tareas, fotos/PDF
+   hasta 6 por turno y 10 MB, bucket privado `docs`); el chip muestra «☑ 2/3» y «📎»; el empleado
+   ve las tareas en su app y las marca como hechas.
+3. **Coste/hora** (solo dirección): histórico por empleado en la ficha, «coste de empresa sobre el
+   bruto» en el convenio (32,15 % por defecto, como Skello); columna Coste en Contadores y
+   «Coste estimado» en el Informe de nómina y su Excel. Los demás roles no ven nada de coste.
+4. **Vista Mes** del cuadrante (solo lectura: clic abre la semana, doble clic crea turno) y
+   **arrastre múltiple** (Shift+clic para seleccionar, arrastrar mueve todos; Alt duplica).

@@ -74,11 +74,57 @@ function rangoMesSrv(anio: number, mes: number) {
   return { desde, hasta: `${anio}-${String(mes).padStart(2, "0")}-${String(ultimo).padStart(2, "0")}` };
 }
 
+/* ================= Coste estimado (solo dirección) ================= */
+
+type SB = Awaited<ReturnType<typeof cliente>>["sb"];
+type TramoCoste = { desde: string; coste_hora: number };
+
+/** Coste estimado del mes por empleado: (h retenidas + ausencias del contador) × coste/hora vigente el día 1
+    × (1 + coste de empresa del convenio del centro principal). Solo dirección: a los demás no se consulta
+    nada (la RLS de rrhh_coste_hora devolvería vacío) y se devuelve null, así la UI no pinta la columna.
+    null por empleado = sin coste/hora ese día. */
+async function costeEstimado(
+  sb: SB,
+  perfil: { rol: string; cuenta_id: string },
+  filas: Pick<FilaNomina, "empleado_id" | "centro_principal_id" | "horas_retenidas" | "horas_ausencia_contador">[],
+  primerDia: string,
+): Promise<Record<string, number | null> | null> {
+  if (perfil.rol !== "direccion" || !filas.length) return null;
+  const ids = filas.map((f) => f.empleado_id);
+  const [tramos, convenios, configs] = await Promise.all([
+    sb.from("rrhh_coste_hora").select("empleado_id, desde, coste_hora").in("empleado_id", ids).order("desde", { ascending: false }).limit(10000),
+    sb.from("rrhh_convenios").select("id, es_por_defecto, coste_empresa_pct").eq("cuenta_id", perfil.cuenta_id),
+    sb.from("rrhh_centros_config").select("centro_id, convenio_id").eq("cuenta_id", perfil.cuenta_id),
+  ]);
+  const err = tramos.error ?? convenios.error ?? configs.error;
+  if (err) throw new Error("coste estimado: " + err.message);
+
+  const porEmp: Record<string, TramoCoste[]> = {};
+  for (const t of tramos.data ?? []) (porEmp[t.empleado_id] = porEmp[t.empleado_id] || []).push({ desde: t.desde, coste_hora: num(t.coste_hora) });
+  const convs = convenios.data ?? [];
+  const base = convs.find((c) => c.es_por_defecto) ?? convs[0];
+  const pctDefecto = base?.coste_empresa_pct == null ? 32.15 : num(base.coste_empresa_pct);
+  const pctPorCentro: Record<string, number> = {};
+  for (const cfg of configs.data ?? []) {
+    const c = cfg.convenio_id ? convs.find((x) => x.id === cfg.convenio_id) : null;
+    pctPorCentro[cfg.centro_id] = c?.coste_empresa_pct == null ? pctDefecto : num(c.coste_empresa_pct);
+  }
+
+  const out: Record<string, number | null> = {};
+  for (const f of filas) {
+    const ch = porEmp[f.empleado_id]?.find((t) => t.desde <= primerDia)?.coste_hora ?? null;
+    if (ch == null) { out[f.empleado_id] = null; continue; }
+    const pct = f.centro_principal_id ? pctPorCentro[f.centro_principal_id] ?? pctDefecto : pctDefecto;
+    out[f.empleado_id] = Math.round((f.horas_retenidas + f.horas_ausencia_contador) * ch * (1 + pct / 100) * 100) / 100;
+  }
+  return out;
+}
+
 /* ================= Informe de nómina ================= */
 
 /** Todo lo que necesita el informe de nómina de un mes, en una sola ida (Promise.all, sin N+1). */
 export async function informeNomina(anio: number, mes: number, centroId: string | null) {
-  const { sb } = await cliente();
+  const { sb, perfil } = await cliente();
   const { desde, hasta } = rangoMesSrv(anio, mes);
   const [inf, sem, aus, vars, tipos, deptos] = await Promise.all([
     sb.rpc("rrhh_informe_nomina", centroId ? { p_anio: anio, p_mes: mes, p_centro_id: centroId } : { p_anio: anio, p_mes: mes }),
@@ -162,6 +208,16 @@ export async function informeNomina(anio: number, mes: number, centroId: string 
       };
     });
 
+  // Coste estimado: solo dirección (null para el resto → la UI no enseña la columna). Si falla, el informe
+  // sale igual sin coste: no es dato de nómina, es orientativo para dirección.
+  let coste: Record<string, number | null> | null = null;
+  let costeError: string | null = null;
+  try {
+    coste = await costeEstimado(sb, perfil, filas, desde);
+  } catch (e) {
+    costeError = e instanceof Error ? e.message : "no se pudo calcular el coste estimado";
+  }
+
   return {
     ok: true as const,
     filas,
@@ -170,6 +226,10 @@ export async function informeNomina(anio: number, mes: number, centroId: string 
     variables: ((vars.data ?? []) as VariableNomina[]).filter((v) => ids.has(v.empleado_id)),
     tipos: (tipos.data ?? []) as TipoAusenciaMin[],
     departamentos: Object.fromEntries((deptos.data ?? []).map((d) => [d.id, d.nombre])) as Record<string, string>,
+    /** Coste estimado por empleado (solo dirección); null = no se enseña. */
+    coste,
+    /** Solo si dirección y el cálculo ha fallado: el informe sale igual, sin la columna. */
+    costeError,
   };
 }
 

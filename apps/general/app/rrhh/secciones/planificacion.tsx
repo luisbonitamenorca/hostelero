@@ -2,25 +2,54 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "../acciones/planificacion";
-import type { AusenciaPlan, DisponibilidadPlan, EmpleadoPlan, Festivo, PlantillaTurno, PuestoCat, TurnoAjeno } from "../acciones/planificacion";
+import type { ArchivoTurno, AusenciaPlan, DisponibilidadPlan, EmpleadoPlan, Festivo, PlantillaTurno, PuestoCat, TareaTurno, TurnoAjeno, TurnoMes } from "../acciones/planificacion";
 import {
   DIAS_SEMANA, dowDe, finAbsoluto, hh, horasNetas, hoyIso, lunesDe, minutos, sumaDia, type Turno,
 } from "../tipos";
-import { colorTexto, fmtHoras, semanaIso, useCentroRecordado, type SecProps } from "../lib-rrhh";
+import { colorTexto, fmtHoras, rangoMes, semanaIso, useCentroRecordado, type SecProps } from "../lib-rrhh";
 import "./planificacion.css";
 
 type Datos = Awaited<ReturnType<typeof api.cargarSemanaPlan>>;
+type DatosMes = Awaited<ReturnType<typeof api.cargarMesPlan>>;
 type Celda = { empleadoId: string | null; fecha: string };
 type Modal = Celda & { turno: Turno | null };
-type Vista = "semana" | "dia";
+type Vista = "semana" | "dia" | "mes";
 
 const ddmm = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
+/** "2026-10-01" → "2026-10-01" (día 1 del mes). */
+const primeroDeMes = (f: string) => f.slice(0, 7) + "-01";
+/** Días naturales entre dos fechas ISO (b − a). */
+const diasEntre = (a: string, b: string) => Math.round((new Date(b + "T12:00").getTime() - new Date(a + "T12:00").getTime()) / 86400000);
+/** 7.5 → "7,5h" (compacto, para las barras del mes). */
+const fmtHorasCorto = (n: number) => `${String(Math.round(n * 10) / 10).replace(".", ",")}h`;
+const LETRA_DIA = ["L", "M", "X", "J", "V", "S", "D"];
+/** "Octubre 2026". */
+const nombreMes = (f: string) => {
+  const s = new Date(f + "T12:00").toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
 const MSG_CERRADO = "Día cerrado en Fichajes: reábrelo para cambiar turnos";
 const GRIS = "#888";
 const ENUM_AUS: Record<string, string> = { vacaciones: "Vacaciones", baja: "Baja", permiso: "Permiso", otro: "Ausencia" };
 const H0 = 6 * 60; // vista día: 06:00
 const H1 = 26 * 60; // … hasta 02:00
 const HORAS_DIA = Array.from({ length: (H1 - H0) / 60 }, (_, i) => (6 + i) % 24);
+const MAX_ARCHIVOS = 6;
+const MAX_MB = 10;
+/** 1234567 → "1,2 MB"; 34000 → "34 KB". */
+const fmtTamano = (b: number | null) => {
+  if (b == null) return "";
+  if (b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB`;
+  return `${(Math.round((b / 1024 / 1024) * 10) / 10).toString().replace(".", ",")} MB`;
+};
+/** Abre una URL que llega tras un await sin que el navegador bloquee la pestaña: se abre antes y se redirige. */
+const abrirTrasEsperar = async (pedir: () => Promise<string | null>) => {
+  const w = window.open("about:blank", "_blank");
+  const url = await pedir();
+  if (!url) { w?.close(); return false; }
+  if (w) w.location.href = url; else window.location.href = url;
+  return true;
+};
 
 /* ======================================================================
    Sección
@@ -45,6 +74,30 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
   const dragId = useRef<string | null>(null);
   const hasta = sumaDia(lunes, 6);
   const hoy = hoyIso();
+  // Vista Mes: carga aparte (solo lectura) y día resaltado al saltar de Mes a Semana.
+  const [mes, setMes] = useState(primeroDeMes(hoyIso()));
+  const [datosMes, setDatosMes] = useState<DatosMes | null>(null);
+  const [cargandoMes, setCargandoMes] = useState(false);
+  const [errorMes, setErrorMes] = useState<string | null>(null);
+  const peticionMes = useRef(0);
+  const [diaResaltado, setDiaResaltado] = useState<string | null>(null);
+
+  const cargarMes = useCallback(() => {
+    if (!centroId || vista !== "mes") return;
+    const n = ++peticionMes.current;
+    const r = rangoMes(mes);
+    setCargandoMes(true);
+    api.cargarMesPlan(centroId, r.desde, r.hasta)
+      .then((d) => { if (n === peticionMes.current) { setDatosMes(d); setErrorMes(null); } })
+      .catch((e: unknown) => {
+        if (n !== peticionMes.current) return;
+        setErrorMes(e instanceof Error && e.message ? e.message : "No se pudo cargar el mes");
+        avisar("No se pudo cargar el mes");
+      })
+      .finally(() => { if (n === peticionMes.current) setCargandoMes(false); });
+  }, [centroId, mes, vista, avisar]);
+  useEffect(() => { setDatosMes(null); }, [centroId, mes]); // otro centro-mes: se vacía antes de pedirlo
+  useEffect(() => { cargarMes(); }, [cargarMes]);
 
   const cargar = useCallback(() => {
     if (!centroId) { setDatos(null); setErrorCarga(null); setCargando(false); return; }
@@ -286,6 +339,21 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
     const t = datos?.turnos.find((x) => x.id === id);
     if (!t) return;
     if (diasCerrados.has(t.fecha) || diasCerrados.has(destino.fecha)) { avisar(MSG_CERRADO); return; }
+    // Arrastre múltiple: el chip arrastrado es uno de los seleccionados → se mueven todos con el mismo
+    // desplazamiento en días. Se reasignan al empleado de destino solo si todos eran del mismo empleado
+    // (si no, solo cambian de fecha); soltar en «Sin asignar» tampoco reasigna.
+    if (sel.has(t.id) && sel.size > 1) {
+      const grupo = datos!.turnos.filter((x) => sel.has(x.id));
+      const delta = diasEntre(t.fecha, destino.fecha);
+      const mismoEmp = grupo.every((x) => x.empleado_id === t.empleado_id);
+      const empleadoId = destino.empleadoId && destino.empleadoId !== t.empleado_id && mismoEmp ? destino.empleadoId : null;
+      if (!ev.altKey && delta === 0 && !empleadoId) return;
+      if (grupo.some((x) => diasCerrados.has(x.fecha) || diasCerrados.has(sumaDia(x.fecha, delta)))) { avisar(MSG_CERRADO); return; }
+      const r = await api.moverTurnos(grupo.map((x) => x.id), delta, empleadoId, ev.altKey);
+      const n = r.data ?? grupo.length;
+      tras(r, ev.altKey ? `${n} turnos duplicados como borrador` : `${n} turnos movidos`, ev.altKey ? "No se pudieron duplicar" : "No se pudieron mover");
+      return;
+    }
     const d = { empleado_id: destino.empleadoId, fecha: destino.fecha };
     if (ev.altKey) {
       tras(await api.duplicarTurno(t.id, d), "Turno duplicado", "No se pudo duplicar");
@@ -412,7 +480,15 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
         );
       }
     }
-    const ayuda = cerrado ? MSG_CERRADO : "Arrastra para mover · Alt+arrastrar duplica · Shift+clic selecciona";
+    const enGrupo = sel.has(t.id) && sel.size > 1;
+    const ayuda = cerrado ? MSG_CERRADO : enGrupo ? `Arrastra para mover los ${sel.size} seleccionados a la vez · Alt+arrastrar los duplica` : "Arrastra para mover · Alt+arrastrar duplica · Shift+clic selecciona";
+    const ex = datos.extras[t.id];
+    const iconos = ex && (ex.tareas || ex.archivos) ? (
+      <span className="plan-chip-extras" title={`${ex.tareas ? `${ex.hechas}/${ex.tareas} tareas hechas` : ""}${ex.tareas && ex.archivos ? " · " : ""}${ex.archivos ? `${ex.archivos} archivo${ex.archivos === 1 ? "" : "s"}` : ""}`}>
+        {ex.tareas ? <span className={ex.hechas === ex.tareas ? "ok" : ""}>☑ {ex.hechas}/{ex.tareas}</span> : null}
+        {ex.archivos ? <span>📎</span> : null}
+      </span>
+    ) : null;
     return (
       <div
         key={t.id}
@@ -434,6 +510,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
             <div className="plan-chip-p"><span className="plan-chip-n">{fmtHoras(horasNetas(t))} · </span>{nombrePuesto(t) || "—"}{t.nota ? <span className="plan-chip-nota" title={t.nota}> ✎</span> : null}</div>
           </>
         )}
+        {iconos}
         {cerrado ? null : <button type="button" className="plan-chip-menu" onClick={(ev) => abrirMenu(t, ev)} aria-label="Más opciones">⋯</button>}
       </div>
     );
@@ -472,7 +549,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
     return (
       <td
         key={key}
-        className={`celda plan-celda ${className} ${dropEn === clave ? "drop" : ""} ${fecha === hoy ? "es-hoy" : ""} ${festivoPorFecha.has(fecha) ? "es-festivo" : ""} ${cerrado ? "cerrada" : ""} ${disp ? `disp-${disp.tipo === "prefiere" ? "si" : "no"}` : ""}`}
+        className={`celda plan-celda ${className} ${dropEn === clave ? "drop" : ""} ${fecha === hoy ? "es-hoy" : ""} ${fecha === diaResaltado ? "resaltado" : ""} ${festivoPorFecha.has(fecha) ? "es-festivo" : ""} ${cerrado ? "cerrada" : ""} ${disp ? `disp-${disp.tipo === "prefiere" ? "si" : "no"}` : ""}`}
         onClick={(ev) => {
           if ((ev.target as Element).closest(".plan-chip, button")) return;
           if (ev.shiftKey) return;
@@ -554,7 +631,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
               const fest = festivoPorFecha.get(f);
               const cerrado = diasCerrados.has(f);
               return (
-                <th key={d} className={`${f === hoy ? "hoy" : ""} ${fest ? "plan-th-festivo" : ""} ${cerrado ? "plan-th-cerrado" : ""}`} title={[fest ? `Festivo: ${fest.nombre}` : "", cerrado ? "Día validado en Fichajes: los turnos no se pueden cambiar. Reábrelo en Fichajes si hace falta." : ""].filter(Boolean).join("\n") || undefined}>
+                <th key={d} className={`${f === hoy ? "hoy" : ""} ${fest ? "plan-th-festivo" : ""} ${cerrado ? "plan-th-cerrado" : ""} ${f === diaResaltado ? "resaltado" : ""}`} title={[fest ? `Festivo: ${fest.nombre}` : "", cerrado ? "Día validado en Fichajes: los turnos no se pueden cambiar. Reábrelo en Fichajes si hace falta." : ""].filter(Boolean).join("\n") || undefined}>
                   {cerrado ? <span className="plan-candado" aria-label="Día cerrado">🔒 </span> : null}{DIAS_SEMANA[d]}<br />{ddmm(f)}
                   {fest ? <div className="plan-festivo">★ {fest.nombre}</div> : null}
                 </th>
@@ -726,18 +803,29 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
         <select value={centroId} onChange={(e) => setCentroId(e.target.value)}>
           {ctx.centros.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </select>
-        <div className="sem-nav">
-          <button onClick={() => setLunes(sumaDia(lunes, -7))} aria-label="Semana anterior">‹</button>
-          <span className="sem-label">Sem. {numSemana} · {ddmm(lunes)} — {ddmm(hasta)}</span>
-          <button onClick={() => setLunes(sumaDia(lunes, 7))} aria-label="Semana siguiente">›</button>
-          <button className="btn btn-fantasma" style={{ height: 34 }} onClick={() => { setLunes(lunesDe(hoy)); setDia(hoy); }}>Hoy</button>
-        </div>
+        {vista === "mes" ? (
+          <div className="sem-nav">
+            <button onClick={() => setMes(primeroDeMes(sumaDia(mes, -1)))} aria-label="Mes anterior">‹</button>
+            <span className="sem-label">{nombreMes(mes)}</span>
+            <button onClick={() => setMes(primeroDeMes(sumaDia(rangoMes(mes).hasta, 1)))} aria-label="Mes siguiente">›</button>
+            <button className="btn btn-fantasma" style={{ height: 34 }} onClick={() => setMes(primeroDeMes(hoy))}>Hoy</button>
+          </div>
+        ) : (
+          <div className="sem-nav">
+            <button onClick={() => { setDiaResaltado(null); setLunes(sumaDia(lunes, -7)); }} aria-label="Semana anterior">‹</button>
+            <span className="sem-label">Sem. {numSemana} · {ddmm(lunes)} — {ddmm(hasta)}</span>
+            <button onClick={() => { setDiaResaltado(null); setLunes(sumaDia(lunes, 7)); }} aria-label="Semana siguiente">›</button>
+            <button className="btn btn-fantasma" style={{ height: 34 }} onClick={() => { setDiaResaltado(null); setLunes(lunesDe(hoy)); setDia(hoy); }}>Hoy</button>
+          </div>
+        )}
         <div className="plan-vistas" role="tablist">
-          <button className={vista === "semana" ? "activa" : ""} onClick={() => setVista("semana")}>Semana</button>
           <button className={vista === "dia" ? "activa" : ""} onClick={() => setVista("dia")}>Día</button>
+          <button className={vista === "semana" ? "activa" : ""} onClick={() => setVista("semana")}>Semana</button>
+          <button className={vista === "mes" ? "activa" : ""} onClick={() => { setMes(primeroDeMes(lunes)); setVista("mes"); }}>Mes</button>
         </div>
-        {cargando ? <span className="plan-sub">Actualizando…</span> : null}
-        {borradores ? <span className="chip-borradores">{borradores} sin publicar</span> : null}
+        {cargando || cargandoMes ? <span className="plan-sub">Actualizando…</span> : null}
+        {borradores && vista !== "mes" ? <span className="chip-borradores">{borradores} sin publicar</span> : null}
+        {vista === "mes" ? <span className="plan-sub">Solo lectura: clic en una celda abre esa semana, doble clic crea un turno.</span> : (
         <div className="plan-acciones">
           <button
             className="btn btn-fantasma"
@@ -761,13 +849,25 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
           <button className="btn btn-fantasma" onClick={() => window.print()} title="Imprimir el cuadrante">Imprimir</button>
           <button className="btn btn-publicar" disabled={!borradores} onClick={() => setModalPublicar(true)}>Publicar semana</button>
         </div>
+        )}
       </div>
 
       <div className="plan-print-cab">
-        <h2>{ctx.centros.find((c) => c.id === centroId)?.nombre} · semana {numSemana} · {ddmm(lunes)} — {ddmm(hasta)}</h2>
+        <h2>{ctx.centros.find((c) => c.id === centroId)?.nombre} · {vista === "mes" ? nombreMes(mes) : `semana ${numSemana} · ${ddmm(lunes)} — ${ddmm(hasta)}`}</h2>
       </div>
 
-      {!datos.empleados.length ? (
+      {vista === "mes" ? (
+        <VistaMes
+          datos={datosMes}
+          mes={mes}
+          hoy={hoy}
+          cargando={cargandoMes}
+          error={errorMes}
+          reintentar={cargarMes}
+          irASemana={(fecha) => { setLunes(lunesDe(fecha)); setDia(fecha); setDiaResaltado(fecha); setVista("semana"); }}
+          nuevoTurno={(empleadoId, fecha) => setModal({ empleadoId, fecha, turno: null })}
+        />
+      ) : !datos.empleados.length ? (
         <div className="vacio">
           {datos.sinPermisoPlantilla
             ? "No tienes permiso para ver la plantilla de este centro. Pídeselo a RRHH."
@@ -775,6 +875,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
         </div>
       ) : vista === "semana" ? rejillaSemana : vistaDia}
 
+      {vista === "mes" ? null : (
       <div className="leyenda plan-leyenda">
         <span><span className="muestra" style={{ border: "1.5px dashed #888", background: "#fff" }} /> Borrador (solo lo ves tú)</span>
         <span><span className="muestra" style={{ borderLeft: "4px solid #1D9E75", background: "#E1F5EE" }} /> Publicado · color del puesto</span>
@@ -785,9 +886,10 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
         <span>🔒 Día validado en Fichajes: no se toca</span>
         <span><i className="plan-disp inline no" /> No puede · <i className="plan-disp inline si" /> Prefiere (lo marca el empleado)</span>
         <span style={{ color: "var(--amber)" }}>⚠ Aviso — no bloquea</span>
-        <span className="plan-ayuda">Clic en celda: nuevo turno · arrastra para mover · Alt+arrastrar duplica · Shift+clic selecciona varios · botón derecho: menú</span>
+        <span className="plan-ayuda">Clic en celda: nuevo turno · arrastra para mover · Alt+arrastrar duplica · Shift+clic selecciona varios (arrastrar uno de ellos los mueve todos) · botón derecho: menú</span>
       </div>
-      {calc.lista.length ? (
+      )}
+      {calc.lista.length && vista !== "mes" ? (
         <div className="avisos-panel">
           <h3>⚠ Avisos de la semana (no bloquean)</h3>
           {calc.lista.map((a, i) => <div key={i}>{a}</div>)}
@@ -838,7 +940,9 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
           disponibilidades={datos.disponibilidades.filter((d) => d.fecha === modal.fecha)}
           soloLectura={diasCerrados.has(modal.fecha)}
           cerrar={() => setModal(null)}
-          hecho={(msg) => { setModal(null); avisar(msg); cargar(); }}
+          hecho={(msg) => { setModal(null); avisar(msg); cargar(); cargarMes(); }}
+          avisar={avisar}
+          recargar={() => { cargar(); cargarMes(); }}
         />
       ) : null}
 
@@ -902,10 +1006,221 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
 }
 
 /* ======================================================================
+   Vista Mes (solo lectura + saltos a Semana / nuevo turno)
+   ====================================================================== */
+
+/** «Vacaciones» → «VA», «Baja médica» → «BM». */
+const inicialesTipo = (nombre: string) => {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  return (partes.length > 1 ? partes.map((p) => p[0]).join("") : nombre.slice(0, 2)).toUpperCase();
+};
+
+function VistaMes({ datos, mes, hoy, cargando, error, reintentar, irASemana, nuevoTurno }: {
+  datos: DatosMes | null;
+  mes: string;
+  hoy: string;
+  cargando: boolean;
+  error: string | null;
+  reintentar: () => void;
+  /** Clic en una celda: salta a la vista Semana con ese día resaltado. */
+  irASemana: (fecha: string) => void;
+  /** Doble clic en una celda: modal de nuevo turno para ese empleado y día. */
+  nuevoTurno: (empleadoId: string, fecha: string) => void;
+}) {
+  const { desde, hasta } = rangoMes(mes);
+  const nDias = diasEntre(desde, hasta) + 1;
+  const dias = useMemo(() => Array.from({ length: nDias }, (_, i) => sumaDia(desde, i)), [desde, nDias]);
+  // Clic simple vs doble: el simple espera un poco por si llega el segundo.
+  const clicPendiente = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (clicPendiente.current) clearTimeout(clicPendiente.current); }, []);
+
+  const puestoPorId = useMemo(() => new Map((datos?.puestos ?? []).map((p) => [p.id, p])), [datos]);
+  const puestoPorNombre = useMemo(() => new Map((datos?.puestos ?? []).map((p) => [p.nombre.trim().toLowerCase(), p])), [datos]);
+  const festivoPorFecha = useMemo(() => {
+    const m = new Map<string, Festivo>();
+    for (const f of datos?.festivos ?? []) {
+      const prev = m.get(f.fecha);
+      if (!prev || (f.centro_id && !prev.centro_id)) m.set(f.fecha, f);
+    }
+    return m;
+  }, [datos]);
+  const indice = useMemo(() => {
+    const turnos = new Map<string, TurnoMes[]>(); // «empleado|fecha» → turnos ordenados
+    const horasEmp: Record<string, number> = {};
+    const totalDia: Record<string, { horas: number; personas: Set<string>; huecos: number }> = {};
+    const ausencias = new Map<string, AusenciaPlan>(); // «empleado|fecha»
+    for (const f of dias) totalDia[f] = { horas: 0, personas: new Set(), huecos: 0 };
+    for (const t of datos?.turnos ?? []) {
+      const k = `${t.empleado_id ?? "_"}|${t.fecha}`;
+      (turnos.get(k) ?? turnos.set(k, []).get(k)!).push(t);
+      const td = totalDia[t.fecha];
+      if (!td) continue;
+      const h = horasNetas(t);
+      td.horas += h;
+      if (t.empleado_id) { td.personas.add(t.empleado_id); horasEmp[t.empleado_id] = (horasEmp[t.empleado_id] ?? 0) + h; }
+      else td.huecos++;
+    }
+    for (const a of datos?.ausencias ?? []) {
+      const ini = a.fecha_inicio > desde ? a.fecha_inicio : desde;
+      const fin = a.fecha_fin < hasta ? a.fecha_fin : hasta;
+      for (let f = ini; f <= fin; f = sumaDia(f, 1)) ausencias.set(`${a.empleado_id}|${f}`, a);
+    }
+    return { turnos, horasEmp, totalDia, ausencias };
+  }, [datos, dias, desde, hasta]);
+
+  if (!datos) {
+    if (error) {
+      return (
+        <div className="vacio plan-error">
+          <div>No se pudo cargar el mes.</div>
+          <div className="plan-sub">{error}</div>
+          <button className="btn btn-fantasma" onClick={reintentar}>Reintentar</button>
+        </div>
+      );
+    }
+    return <div className="vacio">Cargando…</div>;
+  }
+  if (!datos.empleados.length) {
+    return <div className="vacio">{datos.sinPermisoPlantilla ? "No tienes permiso para ver la plantilla de este centro. Pídeselo a RRHH." : "Este centro no tiene empleados asignados todavía."}</div>;
+  }
+
+  const colorDe = (t: TurnoMes) =>
+    t.color || (t.puesto_id && puestoPorId.get(t.puesto_id)?.color) || (t.puesto && puestoPorNombre.get(t.puesto.trim().toLowerCase())?.color) || GRIS;
+  const nombrePuesto = (t: TurnoMes) => (t.puesto_id && puestoPorId.get(t.puesto_id)?.nombre) || t.puesto || "";
+  const claseDia = (f: string) => `${f === hoy ? "es-hoy" : ""} ${dowDe(f) >= 5 ? "finde" : ""} ${festivoPorFecha.has(f) ? "es-festivo" : ""}`;
+  const clic = (fecha: string) => {
+    if (clicPendiente.current) clearTimeout(clicPendiente.current);
+    clicPendiente.current = setTimeout(() => { clicPendiente.current = null; irASemana(fecha); }, 220);
+  };
+  const dobleClic = (empleadoId: string, fecha: string) => {
+    if (clicPendiente.current) { clearTimeout(clicPendiente.current); clicPendiente.current = null; }
+    nuevoTurno(empleadoId, fecha);
+  };
+
+  const filas: React.ReactNode[] = [];
+  let deptoActual: string | null = null;
+  let totalPlan = 0;
+  for (const e of datos.empleados) {
+    const d = e.departamento || "Sin departamento";
+    if (d !== deptoActual) {
+      deptoActual = d;
+      const n = datos.empleados.filter((x) => (x.departamento || "Sin departamento") === d).length;
+      filas.push(<tr key={"d" + d} className="fila-depto"><td colSpan={nDias + 2}><div className="plan-depto">{d} <span>· {n}</span></div></td></tr>);
+    }
+    const h = indice.horasEmp[e.id] ?? 0;
+    totalPlan += h;
+    const contrato = e.horas_contrato_mes;
+    const exceso = contrato != null && h > contrato + 0.01;
+    filas.push(
+      <tr key={e.id}>
+        <td className="nombre">
+          <div className="np">{e.nombre} {e.apellidos || ""}</div>
+          {e.puesto_defecto_id && puestoPorId.get(e.puesto_defecto_id) ? (
+            <div className="plan-puesto-def"><i style={{ background: puestoPorId.get(e.puesto_defecto_id)!.color }} />{puestoPorId.get(e.puesto_defecto_id)!.nombre}</div>
+          ) : null}
+        </td>
+        {dias.map((f) => {
+          const ts = indice.turnos.get(`${e.id}|${f}`) ?? [];
+          const aus = indice.ausencias.get(`${e.id}|${f}`);
+          const nombreAus = aus ? aus.rrhh_tipos_ausencia?.nombre || ENUM_AUS[aus.tipo] || "Ausencia" : "";
+          const cAus = aus?.rrhh_tipos_ausencia?.color || GRIS;
+          const fest = festivoPorFecha.get(f);
+          const titulo = [
+            `${DIAS_SEMANA[dowDe(f)]} ${ddmm(f)}${fest ? ` · ★ ${fest.nombre}` : ""}`,
+            ...ts.map((t) => `${hh(t)} · ${fmtHoras(horasNetas(t))}${nombrePuesto(t) ? ` · ${nombrePuesto(t)}` : ""}${t.estado === "borrador" ? " (borrador)" : ""}`),
+            aus ? `${nombreAus}${aus.medio_dia ? " (medio día)" : ""}` : "",
+            "Clic: ver la semana · doble clic: nuevo turno",
+          ].filter(Boolean).join("\n");
+          return (
+            <td
+              key={f}
+              className={`plan-mes-celda ${claseDia(f)} ${aus ? "ausencia" : ""}`}
+              title={titulo}
+              onClick={() => clic(f)}
+              onDoubleClick={() => dobleClic(e.id, f)}
+            >
+              {aus ? <div className="plan-mes-aus" style={{ ["--c" as string]: cAus, color: colorTexto(cAus) }}>{inicialesTipo(nombreAus)}{aus.medio_dia ? "½" : ""}</div> : null}
+              {ts.map((t) => {
+                const c = colorDe(t);
+                return (
+                  <div key={t.id} className={`plan-mes-barra ${t.estado}`} style={{ ["--c" as string]: c, color: t.estado === "borrador" ? undefined : colorTexto(c) }}>
+                    {fmtHorasCorto(horasNetas(t))}
+                  </div>
+                );
+              })}
+            </td>
+          );
+        })}
+        <td className={`plan-horas ${exceso ? "exceso" : ""}`} title={contrato != null ? "Planificadas en este centro / contrato del mes (contrato semanal × semanas del mes)" : "Planificadas (sin horas de contrato)"}>
+          <b>{fmtHoras(h)}</b>{contrato != null ? <span> / {fmtHoras(contrato)}</span> : null}
+          {exceso ? <div className="plan-horas-ex">+{fmtHoras(h - contrato!)}</div> : null}
+        </td>
+      </tr>,
+    );
+  }
+  const huecos = datos.turnos.filter((t) => !t.empleado_id);
+  const totalMes = datos.turnos.reduce((s, t) => s + horasNetas(t), 0);
+
+  return (
+    <div className={`plan-scroll plan-scroll-v2 ${cargando ? "plan-mes-cargando" : ""}`}>
+      <table className="cuadrante plan-cuadrante plan-mes">
+        <thead>
+          <tr>
+            <th className="plan-th-equipo">Equipo</th>
+            {dias.map((f) => {
+              const fest = festivoPorFecha.get(f);
+              return (
+                <th key={f} className={`${f === hoy ? "hoy" : ""} ${dowDe(f) >= 5 ? "finde" : ""} ${fest ? "plan-th-festivo" : ""}`} title={fest ? `Festivo: ${fest.nombre}` : `${DIAS_SEMANA[dowDe(f)]} ${ddmm(f)}`}>
+                  <span className="plan-mes-dia">{Number(f.slice(8, 10))}</span>
+                  <span className="plan-mes-letra">{fest ? "★" : LETRA_DIA[dowDe(f)]}</span>
+                </th>
+              );
+            })}
+            <th className="plan-th-horas">Horas del mes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {huecos.length ? (
+            <tr className="plan-fila-huecos">
+              <td className="nombre"><div className="np">Sin asignar</div><div className="plan-sub">{huecos.length} hueco{huecos.length === 1 ? "" : "s"}</div></td>
+              {dias.map((f) => {
+                const ts = indice.turnos.get(`_|${f}`) ?? [];
+                return (
+                  <td key={f} className={`plan-mes-celda ${claseDia(f)}`} title={ts.map((t) => `${hh(t)} · ${fmtHoras(horasNetas(t))}`).join("\n") || undefined} onClick={() => irASemana(f)}>
+                    {ts.map((t) => <div key={t.id} className={`plan-mes-barra hueco ${t.estado}`} style={{ ["--c" as string]: colorDe(t) }}>{fmtHorasCorto(horasNetas(t))}</div>)}
+                  </td>
+                );
+              })}
+              <td className="plan-horas"><b>{fmtHoras(huecos.reduce((s, t) => s + horasNetas(t), 0))}</b></td>
+            </tr>
+          ) : null}
+          {filas}
+        </tbody>
+        <tfoot>
+          <tr className="plan-total">
+            <td className="nombre"><div className="np">Total</div><div className="plan-sub">horas · personas</div></td>
+            {dias.map((f) => {
+              const td = indice.totalDia[f];
+              return (
+                <td key={f} className={`plan-mes-total ${f === hoy ? "es-hoy" : ""}`} title={`${fmtHoras(td.horas)} · ${td.personas.size} personas${td.huecos ? ` · ${td.huecos} hueco${td.huecos === 1 ? "" : "s"}` : ""}`}>
+                  <b>{fmtHorasCorto(td.horas)}</b>
+                  <div className="plan-sub">{td.personas.size}p</div>
+                </td>
+              );
+            })}
+            <td className="plan-horas" title="Horas planificadas en el mes (asignadas + huecos)"><b>{fmtHoras(totalMes)}</b>{huecos.length ? <div className="plan-sub">{fmtHoras(totalPlan)} asignadas</div> : null}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
+/* ======================================================================
    Modal de turno
    ====================================================================== */
 
-function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centroId, ausencia, disponibilidades, soloLectura, cerrar, hecho }: {
+function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centroId, ausencia, disponibilidades, soloLectura, cerrar, hecho, avisar, recargar }: {
   contexto: Modal;
   empleados: EmpleadoPlan[];
   puestos: PuestoCat[];
@@ -919,6 +1234,9 @@ function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centro
   soloLectura: boolean;
   cerrar: () => void;
   hecho: (msg: string) => void;
+  avisar: (msg: string) => void;
+  /** Tareas y archivos se guardan al momento: el cuadrante se recarga para que el chip lo refleje. */
+  recargar: () => void;
 }) {
   const t = contexto.turno;
   const empleadoIni = empleados.find((e) => e.id === contexto.empleadoId) ?? null;
@@ -1019,6 +1337,12 @@ function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centro
         <label>Nota <small className="plan-sub">(la ve el empleado)</small></label>
         <input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej.: llega 15 min antes, evento en terraza…" maxLength={200} />
         </fieldset>
+
+        {t ? (
+          <TareasArchivosTurno turnoId={t.id} soloLectura={soloLectura} avisar={avisar} recargar={recargar} />
+        ) : (
+          <div className="plan-extras-nuevo">Tareas y archivos: se añaden una vez guardado el turno.</div>
+        )}
 
         <div className="plan-modal-resumen">
           <span className="plan-modal-horas">{fmtHoras(horas)}</span>
@@ -1127,6 +1451,225 @@ function ModalModelos({ modelos, turnosSemana, cerrar, guardar, aplicar, borrar 
           <button className="btn btn-fantasma" onClick={cerrar}>Cerrar</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ======================================================================
+   Tareas y archivos del turno (modal de turno, como en Skello)
+   ====================================================================== */
+
+function TareasArchivosTurno({ turnoId, soloLectura, avisar, recargar }: { turnoId: string; soloLectura: boolean; avisar: (m: string) => void; recargar: () => void }) {
+  const [tareas, setTareas] = useState<TareaTurno[] | null>(null);
+  const [archivos, setArchivos] = useState<ArchivoTurno[] | null>(null);
+  const [fallo, setFallo] = useState(false);
+  const [nueva, setNueva] = useState("");
+  const [anadiendo, setAnadiendo] = useState(false);
+  const [editando, setEditando] = useState<{ id: string; texto: string } | null>(null);
+  const [subiendo, setSubiendo] = useState<string | null>(null); // nombre del fichero en curso
+  const [borrarArchivo, setBorrarArchivo] = useState<ArchivoTurno | null>(null);
+  const inputFichero = useRef<HTMLInputElement>(null);
+  const tocado = useRef(false); // algo cambió: el cuadrante se recarga al desmontar (cerrar el modal)
+  const recargarRef = useRef(recargar);
+  recargarRef.current = recargar;
+
+  useEffect(() => {
+    let vivo = true;
+    setFallo(false);
+    api.cargarExtrasTurno(turnoId)
+      .then((d) => { if (vivo) { setTareas(d.tareas); setArchivos(d.archivos); } })
+      .catch(() => { if (vivo) setFallo(true); });
+    return () => { vivo = false; };
+  }, [turnoId]);
+  useEffect(() => () => { if (tocado.current) recargarRef.current(); }, []);
+
+  const ko = (r: { ok: boolean; error?: string }, que: string) => {
+    if (r.ok) { tocado.current = true; if (r.error) avisar(r.error); return false; }
+    avisar(`${que}: ${r.error ?? ""}`);
+    return true;
+  };
+
+  /* ---- tareas ---- */
+  const anadir = async () => {
+    const texto = nueva.trim();
+    if (!texto || anadiendo) return;
+    setAnadiendo(true);
+    const r = await api.crearTareaTurno(turnoId, texto);
+    setAnadiendo(false);
+    if (ko(r, "No se pudo añadir la tarea") || !r.data) return;
+    setTareas((l) => [...(l ?? []), r.data!]);
+    setNueva("");
+  };
+  const marcar = async (tarea: TareaTurno, hecha: boolean) => {
+    setTareas((l) => (l ?? []).map((x) => (x.id === tarea.id ? { ...x, hecha } : x)));
+    const r = await api.actualizarTareaTurno(tarea.id, { hecha });
+    if (ko(r, "No se pudo guardar")) setTareas((l) => (l ?? []).map((x) => (x.id === tarea.id ? { ...x, hecha: !hecha } : x)));
+  };
+  const guardarTexto = async () => {
+    if (!editando) return;
+    const texto = editando.texto.trim();
+    const actual = (tareas ?? []).find((x) => x.id === editando.id);
+    setEditando(null);
+    if (!actual || !texto || texto === actual.texto) return;
+    const r = await api.actualizarTareaTurno(actual.id, { texto });
+    if (ko(r, "No se pudo guardar")) return;
+    setTareas((l) => (l ?? []).map((x) => (x.id === actual.id ? { ...x, texto } : x)));
+  };
+  const borrarTarea = async (tarea: TareaTurno) => {
+    const antes = tareas ?? [];
+    setTareas(antes.filter((x) => x.id !== tarea.id));
+    const r = await api.borrarTareaTurno(tarea.id);
+    if (ko(r, "No se pudo borrar")) setTareas(antes);
+  };
+  const mover = async (i: number, dir: -1 | 1) => {
+    const l = [...(tareas ?? [])];
+    const j = i + dir;
+    if (j < 0 || j >= l.length) return;
+    [l[i], l[j]] = [l[j], l[i]];
+    const antes = tareas ?? [];
+    setTareas(l.map((x, k) => ({ ...x, orden: k })));
+    const r = await api.reordenarTareasTurno(turnoId, l.map((x) => x.id));
+    if (ko(r, "No se pudo reordenar")) setTareas(antes);
+  };
+
+  /* ---- archivos ---- */
+  const subir = async (lista: FileList | null) => {
+    if (!lista?.length) return;
+    const ficheros = Array.from(lista);
+    if (inputFichero.current) inputFichero.current.value = "";
+    let n = archivos?.length ?? 0; // el estado no se actualiza dentro del bucle: se cuenta aparte
+    for (const f of ficheros) {
+      if (n >= MAX_ARCHIVOS) { avisar(`Un turno admite como mucho ${MAX_ARCHIVOS} archivos`); break; }
+      if (f.size > MAX_MB * 1024 * 1024) { avisar(`«${f.name}» supera los ${MAX_MB} MB`); continue; }
+      if (!(f.type.startsWith("image/") || f.type === "application/pdf")) { avisar(`«${f.name}»: solo imágenes y PDF`); continue; }
+      setSubiendo(f.name);
+      try {
+        const prep = await api.prepararSubidaArchivoTurno({ turnoId, nombre: f.name, tamano: f.size, tipo: f.type || null });
+        if (!prep.ok || !prep.data) throw new Error(prep.error || "No se pudo preparar la subida");
+        const up = await fetch(prep.data.urlSubida, { method: "PUT", headers: { "Content-Type": f.type || "application/octet-stream" }, body: f });
+        if (!up.ok) throw new Error("La subida al almacenamiento ha fallado");
+        const reg = await api.registrarArchivoTurno({ turnoId, nombre: f.name, ruta: prep.data.ruta, tamano: f.size, tipo: f.type || null });
+        if (!reg.ok || !reg.data) throw new Error(reg.error || "No se pudo registrar el archivo");
+        tocado.current = true;
+        n++;
+        const nuevo = reg.data;
+        setArchivos((l) => [...(l ?? []), nuevo]);
+      } catch (e) {
+        avisar(`No se pudo subir «${f.name}»: ${e instanceof Error ? e.message : ""}`);
+      } finally {
+        setSubiendo(null);
+      }
+    }
+  };
+  const abrir = (a: ArchivoTurno, descargar: boolean) =>
+    abrirTrasEsperar(async () => {
+      const r = await api.urlArchivoTurno(a.id, descargar);
+      if (!r.ok || !r.data) { avisar(`No se pudo abrir: ${r.error ?? ""}`); return null; }
+      return r.data.url;
+    });
+  const confirmarBorrarArchivo = async () => {
+    const a = borrarArchivo;
+    if (!a) return;
+    setBorrarArchivo(null);
+    const r = await api.borrarArchivoTurno(a.id);
+    if (ko(r, "No se pudo borrar")) return;
+    setArchivos((l) => (l ?? []).filter((x) => x.id !== a.id));
+  };
+
+  const hechas = (tareas ?? []).filter((x) => x.hecha).length;
+  const llenos = (archivos?.length ?? 0) >= MAX_ARCHIVOS;
+
+  if (fallo) return <div className="plan-extras-nuevo">No se pudieron cargar las tareas y archivos del turno.</div>;
+
+  return (
+    <div className="plan-extras">
+      <div className="plan-extras-cab">
+        <label>Tareas</label>
+        {tareas?.length ? <span className="plan-sub">{hechas}/{tareas.length} hechas · las ve y marca el empleado</span> : <span className="plan-sub">las ve y marca el empleado</span>}
+      </div>
+      {tareas === null ? (
+        <div className="plan-sub">Cargando…</div>
+      ) : (
+        <>
+          {tareas.map((x, i) => (
+            <div key={x.id} className={`plan-tarea ${x.hecha ? "hecha" : ""}`}>
+              <input type="checkbox" checked={x.hecha} disabled={soloLectura} onChange={(e) => marcar(x, e.target.checked)} aria-label={x.hecha ? "Marcar como pendiente" : "Marcar como hecha"} />
+              {editando?.id === x.id ? (
+                <input
+                  className="plan-tarea-edit"
+                  autoFocus
+                  value={editando.texto}
+                  maxLength={300}
+                  onChange={(e) => setEditando({ id: x.id, texto: e.target.value })}
+                  onBlur={guardarTexto}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); guardarTexto(); } if (e.key === "Escape") { e.stopPropagation(); setEditando(null); } }}
+                />
+              ) : (
+                <span className="plan-tarea-texto" onDoubleClick={() => { if (!soloLectura) setEditando({ id: x.id, texto: x.texto }); }} title={soloLectura ? undefined : "Doble clic para editar"}>{x.texto}</span>
+              )}
+              {soloLectura ? null : (
+                <span className="plan-tarea-acc">
+                  <button type="button" disabled={i === 0} onClick={() => mover(i, -1)} aria-label="Subir">↑</button>
+                  <button type="button" disabled={i === tareas.length - 1} onClick={() => mover(i, 1)} aria-label="Bajar">↓</button>
+                  <button type="button" className="peligro" onClick={() => borrarTarea(x)} aria-label="Borrar tarea">×</button>
+                </span>
+              )}
+            </div>
+          ))}
+          {soloLectura ? (tareas.length ? null : <div className="plan-sub">Sin tareas.</div>) : (
+            <div className="plan-tarea-nueva">
+              <input
+                value={nueva}
+                maxLength={300}
+                placeholder="+ Añadir tarea (Ej.: montar terraza, revisar cámara…)"
+                onChange={(e) => setNueva(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); anadir(); } }}
+              />
+              <button type="button" className="btn btn-fantasma btn-peque" disabled={!nueva.trim() || anadiendo} onClick={anadir}>Añadir</button>
+            </div>
+          )}
+        </>
+      )}
+
+      <div className="plan-extras-cab">
+        <label>Archivos</label>
+        <span className="plan-sub">{archivos?.length ?? 0}/{MAX_ARCHIVOS} · imágenes o PDF, máx. {MAX_MB} MB cada uno</span>
+      </div>
+      {archivos === null ? (
+        <div className="plan-sub">Cargando…</div>
+      ) : (
+        <>
+          {archivos.map((a) => (
+            <div key={a.id} className="plan-archivo">
+              <span className="plan-archivo-ico">{a.tipo_mime?.startsWith("image/") ? "🖼" : "📄"}</span>
+              <span className="plan-archivo-nombre" title={a.nombre}>{a.nombre}</span>
+              <span className="plan-sub">{fmtTamano(a.tamano)}</span>
+              <span className="plan-tarea-acc">
+                <button type="button" onClick={() => abrir(a, false)} title="Ver">Ver</button>
+                <button type="button" onClick={() => abrir(a, true)} title="Descargar">↓</button>
+                {soloLectura ? null : <button type="button" className="peligro" onClick={() => setBorrarArchivo(a)} aria-label="Borrar archivo">×</button>}
+              </span>
+            </div>
+          ))}
+          {!archivos.length && soloLectura ? <div className="plan-sub">Sin archivos.</div> : null}
+          {soloLectura ? null : (
+            <div className="plan-archivo-subir">
+              <input ref={inputFichero} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => subir(e.target.files)} />
+              <button type="button" className="btn btn-fantasma btn-peque" disabled={!!subiendo || llenos} onClick={() => inputFichero.current?.click()}>
+                {subiendo ? `Subiendo «${subiendo}»…` : llenos ? `Máximo ${MAX_ARCHIVOS} archivos` : "Añadir foto o documento"}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {borrarArchivo ? (
+        <div className="plan-extras-confirmar">
+          <span>¿Borrar «{borrarArchivo.nombre}»? El empleado dejará de verlo.</span>
+          <button type="button" className="btn btn-fantasma btn-peque" onClick={() => setBorrarArchivo(null)}>Cancelar</button>
+          <button type="button" className="btn btn-borrar btn-peque" onClick={confirmarBorrarArchivo}>Borrar</button>
+        </div>
+      ) : null}
     </div>
   );
 }

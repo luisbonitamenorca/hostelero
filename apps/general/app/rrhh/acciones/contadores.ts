@@ -28,6 +28,9 @@ export type FilaSemana = {
   diferencia: number;
   dias_plan: number;
   dias_validados: number;
+  /** Coste de personal de la semana (solo dirección): realizadas × coste/hora vigente el lunes × (1 + coste de empresa).
+      undefined = no se calcula (no es dirección) · null = el empleado no tiene coste/hora para ese lunes. */
+  coste?: number | null;
 };
 
 export type EmpContador = {
@@ -45,7 +48,7 @@ export type EmpContador = {
   nota: string | null;
 };
 
-export type ReglasContador = { horas_extra_max_anual: number; complementarias_max_pct: number };
+export type ReglasContador = { horas_extra_max_anual: number; complementarias_max_pct: number; coste_empresa_pct: number };
 
 export type Ajuste = Tables<"rrhh_contador_ajustes">;
 
@@ -128,24 +131,52 @@ async function empleados(sb: SB, cuentaId: string, ids?: string[]): Promise<EmpC
 /** Reglas del convenio que aplica a cada centro (config del centro → convenio por defecto → 80 h / 30 %). */
 async function reglasPorCentro(sb: SB, cuentaId: string): Promise<{ porCentro: Record<string, ReglasContador>; defecto: ReglasContador }> {
   const [{ data: convenios }, { data: configs }] = await Promise.all([
-    sb.from("rrhh_convenios").select("id, es_por_defecto, horas_extra_max_anual, complementarias_max_pct").eq("cuenta_id", cuentaId),
+    sb.from("rrhh_convenios").select("id, es_por_defecto, horas_extra_max_anual, complementarias_max_pct, coste_empresa_pct").eq("cuenta_id", cuentaId),
     sb.from("rrhh_centros_config").select("centro_id, convenio_id").eq("cuenta_id", cuentaId),
   ]);
   const base = (convenios ?? []).find((c) => c.es_por_defecto) ?? (convenios ?? [])[0];
-  const defecto: ReglasContador = {
-    horas_extra_max_anual: n(base?.horas_extra_max_anual) || 80,
-    complementarias_max_pct: n(base?.complementarias_max_pct) || 30,
-  };
+  const reglasDe = (c: typeof base | null | undefined): ReglasContador => ({
+    horas_extra_max_anual: n(c?.horas_extra_max_anual) || 80,
+    complementarias_max_pct: n(c?.complementarias_max_pct) || 30,
+    // Tasa de empresa sobre el bruto (Skello: 32,15 %). 0 es un valor legítimo: solo cae al defecto si falta.
+    coste_empresa_pct: c?.coste_empresa_pct == null ? 32.15 : n(c.coste_empresa_pct),
+  });
+  const defecto = reglasDe(base);
   const porId = new Map((convenios ?? []).map((c) => [c.id, c]));
   const porCentro: Record<string, ReglasContador> = {};
   for (const cfg of configs ?? []) {
     const c = cfg.convenio_id ? porId.get(cfg.convenio_id) : null;
-    porCentro[cfg.centro_id] = c
-      ? { horas_extra_max_anual: n(c.horas_extra_max_anual) || 80, complementarias_max_pct: n(c.complementarias_max_pct) || 30 }
-      : defecto;
+    porCentro[cfg.centro_id] = c ? reglasDe(c) : defecto;
   }
   return { porCentro, defecto };
 }
+
+/* ==================== Coste de personal (solo dirección) ==================== */
+
+type TramoCoste = { desde: string; coste_hora: number };
+
+/** Coste/hora vigente en una fecha: el tramo con «desde» más reciente que no sea posterior. `tramos` ordenados desc. */
+const costeVigente = (tramos: TramoCoste[] | undefined, fecha: string): number | null =>
+  tramos?.find((t) => t.desde <= fecha)?.coste_hora ?? null;
+
+/** Tramos de coste/hora por empleado, ordenados por «desde» descendente. Solo dirección: a los demás ni se
+    les consulta (la RLS devolvería 0 filas y la UI no debe enseñar nada de coste). */
+async function tramosCoste(sb: SB, perfil: { rol: string }, ids: string[]): Promise<Record<string, TramoCoste[]> | null> {
+  if (perfil.rol !== "direccion" || !ids.length) return null;
+  const { data, error } = await sb
+    .from("rrhh_coste_hora")
+    .select("empleado_id, desde, coste_hora")
+    .in("empleado_id", ids)
+    .order("desde", { ascending: false })
+    .limit(10000);
+  if (error) throw new Error(error.message);
+  const out: Record<string, TramoCoste[]> = {};
+  for (const t of data ?? []) (out[t.empleado_id] = out[t.empleado_id] || []).push({ desde: t.desde, coste_hora: n(t.coste_hora) });
+  return out;
+}
+
+/** horas × €/hora × (1 + pct/100), a céntimos. */
+const costeDe = (horas: number, costeHora: number, pct: number) => Math.round(horas * costeHora * (1 + pct / 100) * 100) / 100;
 
 /** Desde cuándo cuenta el contador de un empleado (misma regla que rrhh_saldo_horas):
     saldo inicial a cierre de ese día → si no es lunes, el lunes siguiente; sin fecha, 1 de enero del año de `hasta`. */
@@ -161,10 +192,27 @@ export async function cargarContadores(centroId: string | null, desde: string, h
   const { sb, perfil } = await cliente();
   const [filas, reglas] = await Promise.all([resumen(sb, centroId, desde, hasta), reglasPorCentro(sb, perfil.cuenta_id)]);
   const ids = [...new Set(filas.map((f) => f.empleado_id))];
-  const emps = ids.length ? await empleados(sb, perfil.cuenta_id, ids) : [];
+  const [emps, tramos] = await Promise.all([
+    ids.length ? empleados(sb, perfil.cuenta_id, ids) : Promise.resolve([] as EmpContador[]),
+    tramosCoste(sb, perfil, ids),
+  ]);
   const reglasPorEmp: Record<string, ReglasContador> = {};
   for (const e of emps) reglasPorEmp[e.id] = (e.centro_principal_id && reglas.porCentro[e.centro_principal_id]) || reglas.defecto;
-  return { filas, empleados: emps, reglasPorEmp };
+
+  // Coste de personal (solo dirección): realizadas (retenidas + ausencias que computan) × coste/hora vigente el
+  // lunes × (1 + coste de empresa del convenio del centro principal). Sin coste/hora ese lunes → null («—»).
+  let coste: { sinCosteHora: string[] } | null = null;
+  if (tramos) {
+    const sin = new Set<string>();
+    for (const f of filas) {
+      const ch = costeVigente(tramos[f.empleado_id], f.lunes);
+      if (ch == null) { f.coste = null; sin.add(f.empleado_id); continue; }
+      const pct = (reglasPorEmp[f.empleado_id] ?? reglas.defecto).coste_empresa_pct;
+      f.coste = costeDe(f.horas_retenidas + f.horas_ausencia_contador, ch, pct);
+    }
+    coste = { sinCosteHora: emps.filter((e) => sin.has(e.id)).map((e) => e.id) };
+  }
+  return { filas, empleados: emps, reglasPorEmp, coste };
 }
 
 /** Saldos acumulados y alertas del año en curso (año de `hasta`), para los empleados pedidos.

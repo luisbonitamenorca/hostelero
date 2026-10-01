@@ -24,6 +24,17 @@ async function esGestor(sb: Sb): Promise<boolean> {
   return data === true;
 }
 const SOLO_GESTOR = "Solo un gestor de RRHH puede hacer esto";
+const SOLO_DIRECCION = "El coste por hora solo lo ve y lo cambia dirección";
+
+/** Dato salarial: solo dirección. La RLS de rrhh_coste_hora ya devuelve vacío a los demás; esto evita
+    hasta la consulta y deja claro en la UI que no hay nada que enseñar. */
+const esDireccion = (perfil: { rol: string }) => perfil.rol === "direccion";
+
+/** ¿El usuario actual es dirección? Las secciones lo usan para no pintar nada de coste a otros roles. */
+export async function soyDireccion(): Promise<boolean> {
+  const { perfil } = await cliente();
+  return esDireccion(perfil);
+}
 
 /* ================= Tipos ================= */
 
@@ -33,6 +44,8 @@ export type Asignacion = Tables<"rrhh_asignaciones">;
 export type PeriodoFila = Tables<"rrhh_periodos_contrato">;
 export type PuestoCat = Pick<Tables<"rrhh_puestos_cat">, "id" | "nombre" | "departamento_id" | "color" | "activo">;
 export type EstadoEmp = "activo" | "inactivo" | "baja";
+/** Precio por hora medio (Skello) con fecha «desde». Solo dirección. */
+export type CosteHora = Tables<"rrhh_coste_hora">;
 export type EmpleadoLista = EmpleadoFila & {
   /** activo = periodo vigente hoy · inactivo = fijo-discontinuo entre temporadas (o periodo futuro) · baja = contrato terminado */
   _estado: EstadoEmp;
@@ -157,18 +170,23 @@ export async function cargarEmpleadosV2() {
 
 /** Todo lo que necesita la ficha en una sola ida: periodos, centros, saldos y fichajes de 14 días. */
 export async function cargarFicha(empleadoId: string) {
-  const { sb } = await cliente();
+  const { sb, perfil } = await cliente();
   const hoy = hoyIso();
   const anio = Number(hoy.slice(0, 4));
   const desde = new Date();
   desde.setDate(desde.getDate() - 14);
   desde.setHours(0, 0, 0, 0);
-  const [periodos, asigs, saldoH, saldoV, historial] = await Promise.all([
+  const direccion = esDireccion(perfil);
+  const [periodos, asigs, saldoH, saldoV, historial, coste] = await Promise.all([
     sb.from("rrhh_periodos_contrato").select("*").eq("empleado_id", empleadoId).order("fecha_alta", { ascending: false }),
     sb.from("rrhh_asignaciones").select("*").eq("empleado_id", empleadoId).order("fecha_inicio", { ascending: false }),
     sb.rpc("rrhh_saldo_horas", { p_empleado_id: empleadoId, p_hasta: hoy }),
     sb.rpc("rrhh_saldo_vacaciones", { p_empleado_id: empleadoId, p_anio: anio }),
     sb.from("rrhh_fichajes").select("*").eq("empleado_id", empleadoId).gte("ts", desde.toISOString()).order("ts"),
+    // Dato salarial: ni se consulta si no es dirección (la RLS devolvería vacío igualmente).
+    direccion
+      ? sb.from("rrhh_coste_hora").select("*").eq("empleado_id", empleadoId).order("desde", { ascending: false })
+      : Promise.resolve({ data: null as CosteHora[] | null }),
   ]);
   const v = Array.isArray(saldoV.data) ? saldoV.data[0] : null;
   return {
@@ -177,7 +195,41 @@ export async function cargarFicha(empleadoId: string) {
     saldoHoras: saldoH.error || saldoH.data == null ? null : Number(saldoH.data),
     saldoVacaciones: v ? ({ ...v } as SaldoVacaciones) : null,
     historial: (historial.data ?? []) as Fichaje[],
+    /** null = no es dirección (no se enseña nada de coste). */
+    costeHora: direccion ? ((coste.data ?? []) as CosteHora[]).map((c) => ({ ...c, coste_hora: Number(c.coste_hora) })) : null,
   };
+}
+
+/* ================= Coste por hora (solo dirección) ================= */
+
+/** Alta o edición de un tramo de coste/hora. La clave (empleado, desde) es única: un día, un precio. */
+export async function guardarCosteHora(
+  id: string | null,
+  empleadoId: string,
+  fila: { desde: string; coste_hora: number; nota: string | null },
+): Promise<R<CosteHora>> {
+  const { sb, perfil } = await cliente();
+  if (!esDireccion(perfil)) return { ok: false, error: SOLO_DIRECCION };
+  if (!esFecha(fila.desde)) return { ok: false, error: "Indica desde cuándo aplica" };
+  const coste = Number(fila.coste_hora);
+  if (!Number.isFinite(coste) || coste < 0 || coste > 500) return { ok: false, error: "El coste por hora no es razonable (0 a 500 €)" };
+  const datos = { desde: fila.desde, coste_hora: Math.round(coste * 10000) / 10000, nota: fila.nota?.trim() || null };
+  const { data, error } = id
+    ? await sb.from("rrhh_coste_hora").update(datos).eq("id", id).select("*").single()
+    : await sb.from("rrhh_coste_hora").insert({ ...datos, empleado_id: empleadoId, creado_por: perfil.id }).select("*").single();
+  if (error || !data) {
+    return { ok: false, error: error?.code === "23505" ? `Ya hay un coste con fecha ${ddmmaaaa(fila.desde)}: edítalo en vez de añadir otro` : error?.message ?? "No se pudo guardar" };
+  }
+  return { ok: true, data: { ...data, coste_hora: Number(data.coste_hora) } as CosteHora };
+}
+
+export async function borrarCosteHora(id: string): Promise<R> {
+  const { sb, perfil } = await cliente();
+  if (!esDireccion(perfil)) return { ok: false, error: SOLO_DIRECCION };
+  const { data, error } = await sb.from("rrhh_coste_hora").delete().eq("id", id).select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data?.length) return { ok: false, error: "No se encontró ese coste (quizá ya estaba borrado)" };
+  return { ok: true };
 }
 
 /* ================= Alta y datos ================= */

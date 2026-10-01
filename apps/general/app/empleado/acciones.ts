@@ -26,6 +26,9 @@ export type Cambio = Tables<"rrhh_cambios_turno"> & {
 };
 export type Companero = { id: string; nombre: string; apellidos: string | null; centro_id: string };
 export type Disponibilidad = Tables<"rrhh_disponibilidades">;
+export type JornadaConfirmada = Tables<"rrhh_jornadas_confirmadas">;
+export type TareaTurno = Pick<Tables<"rrhh_turno_tareas">, "id" | "turno_id" | "texto" | "hecha" | "orden">;
+export type ArchivoTurno = Pick<Tables<"rrhh_turno_archivos">, "id" | "turno_id" | "nombre" | "tamano" | "tipo_mime">;
 export type SaldoVacaciones = { derecho_anual: number; devengado_hoy: number; disfrutados: number; pendientes_aprobar: number; resto: number };
 export type SemanaResumen = { anio: number; semana: number; lunes: string; horas_contrato: number; horas_plan: number; horas_retenidas: number; horas_ausencia_contador: number; diferencia: number };
 export type R<T = undefined> = { ok: boolean; error?: string; data?: T };
@@ -98,6 +101,45 @@ export async function misTurnos(desde: string, hasta: string) {
     ausencias: lista(ausencias, "ausencias") as Ausencia[],
     festivos: lista(festivos, "festivos") as Festivo[],
   };
+}
+
+/**
+ * Tareas y archivos de mis turnos publicados (políticas *_propio_lectura: solo filas de turnos míos
+ * publicados). Dos consultas con in(turno_ids), sin N+1.
+ */
+export async function extrasTurnos(turnoIds: string[]): Promise<{ tareas: TareaTurno[]; archivos: ArchivoTurno[] }> {
+  const { sb, empId } = await contexto();
+  if (!empId || !turnoIds.length) return { tareas: [], archivos: [] };
+  const [t, a] = await Promise.all([
+    sb.from("rrhh_turno_tareas").select("id, turno_id, texto, hecha, orden").in("turno_id", turnoIds).order("orden").order("creado_en").limit(2000),
+    sb.from("rrhh_turno_archivos").select("id, turno_id, nombre, tamano, tipo_mime").in("turno_id", turnoIds).order("creado_en").limit(500),
+  ]);
+  return { tareas: lista(t, "tareas del turno") as TareaTurno[], archivos: lista(a, "archivos del turno") as ArchivoTurno[] };
+}
+
+/** Marcar/desmarcar una tarea de un turno mío: la RLS y el trigger solo dejan tocar «hecha». */
+export async function marcarTareaTurno(id: string, hecha: boolean): Promise<R> {
+  const { sb, empId } = await contexto();
+  if (!empId) return { ok: false, error: "Sin ficha de empleado" };
+  const { data, error } = await sb.from("rrhh_turno_tareas").update({ hecha }).eq("id", id).select("id");
+  if (error) return { ok: false, error: msg(error) };
+  if (!data?.length) return { ok: false, error: "Esa tarea ya no está disponible" };
+  return { ok: true };
+}
+
+/** URL firmada (5 min) de un archivo de un turno mío publicado. La fila solo se ve si el turno es mío. */
+export async function urlArchivoTurno(archivoId: string): Promise<R<{ url: string }>> {
+  const { sb, empId } = await contexto();
+  if (!empId) return { ok: false, error: "Sin ficha de empleado" };
+  const { data: a, error } = await sb.from("rrhh_turno_archivos").select("ruta").eq("id", archivoId).maybeSingle();
+  if (error) return { ok: false, error: msg(error) };
+  if (!a) return { ok: false, error: "Ese archivo ya no está disponible" };
+  const { data, error: eF } = await sb.storage.from("docs").createSignedUrl(a.ruta, 300);
+  if (eF || !data) {
+    console.error("[empleado] url archivo:", eF?.message);
+    return { ok: false, error: "No se pudo abrir el archivo. Inténtalo de nuevo" };
+  }
+  return { ok: true, data: { url: data.signedUrl } };
 }
 
 /** Huecos: turnos publicados sin empleado en mis centros, de hoy al domingo de la semana que viene (la RLS filtra los centros). */
@@ -319,6 +361,51 @@ export async function ficharMovil(input: {
     nota: sinUbicacion ? "Centro sin ubicación configurada: radio no comprobado" : null,
   });
   return error ? { ok: false, error: msg(error) } : { ok: true, data: { dentro, sinUbicacion } };
+}
+
+/* ==================== Confirmación de jornada (como en Skello) ==================== */
+
+/** Mis jornadas confirmadas en el rango (política rrhh_jornadas_conf_propio: solo las mías). */
+export async function misJornadasConfirmadas(desde: string, hasta: string): Promise<JornadaConfirmada[]> {
+  const { sb, empId } = await contexto();
+  if (!empId) return [];
+  const r = await sb.from("rrhh_jornadas_confirmadas").select("*").eq("empleado_id", empId).gte("fecha", desde).lte("fecha", hasta);
+  return lista(r, "jornadas confirmadas") as JornadaConfirmada[];
+}
+
+/**
+ * «Confirmo mi jornada»: una fila en rrhh_jornadas_confirmadas con las horas que el empleado ha visto
+ * y, si algo no cuadra, su nota. Solo hoy o ayer: lo anterior lo revisa el encargado en Fichajes › Jornada.
+ */
+export async function confirmarMiJornada(input: { fecha: string; centroId: string | null; horasVistas: number | null; nota: string }): Promise<R> {
+  const { sb, empId } = await contexto();
+  if (!empId) return { ok: false, error: "Sin ficha de empleado" };
+  const hoy = hoyIso();
+  if (input.fecha !== hoy && input.fecha !== sumaDias(hoy, -1)) return { ok: false, error: "Solo puedes confirmar la jornada de hoy o la de ayer" };
+  const nota = input.nota.trim().slice(0, 300);
+  const horas = input.horasVistas != null && Number.isFinite(input.horasVistas) ? Math.round(input.horasVistas * 100) / 100 : null;
+  const { error } = await sb.from("rrhh_jornadas_confirmadas").insert({
+    empleado_id: empId,
+    fecha: input.fecha,
+    centro_id: input.centroId || null,
+    horas_vistas: horas,
+    nota: nota || null,
+  });
+  if (error?.code === "23505") return { ok: false, error: "Esa jornada ya estaba confirmada" };
+  return error ? { ok: false, error: msg(error) } : { ok: true };
+}
+
+/** Deshacer una confirmación: solo el mismo día en que se confirmó (después queda como está). */
+export async function deshacerConfirmacion(fecha: string): Promise<R> {
+  const { sb, empId } = await contexto();
+  if (!empId) return { ok: false, error: "Sin ficha de empleado" };
+  const { data: fila, error: eF } = await sb.from("rrhh_jornadas_confirmadas").select("id, confirmada_en").eq("empleado_id", empId).eq("fecha", fecha).maybeSingle();
+  if (eF) return { ok: false, error: msg(eF) };
+  if (!fila) return { ok: true };
+  const diaConf = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(fila.confirmada_en));
+  if (diaConf !== hoyIso()) return { ok: false, error: "Solo se puede deshacer el mismo día en que confirmaste" };
+  const { error } = await sb.from("rrhh_jornadas_confirmadas").delete().eq("id", fila.id);
+  return error ? { ok: false, error: msg(error) } : { ok: true };
 }
 
 /* ==================== Ausencias ==================== */

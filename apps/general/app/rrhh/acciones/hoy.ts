@@ -533,26 +533,34 @@ export type Novedades = {
   error?: string;
 };
 
-/** Últimas entradas de la cuenta (centroId = null) o de un centro. Nunca lanza: si la RPC no existe
-    devuelve pendiente = true y la tarjeta lo explica. */
+/** Filas de una RPC de novedades (rrhh_novedades / rrhh_novedades_empleado, mismo formato) → Novedad[]. */
+function aNovedades(data: unknown): Novedad[] {
+  const filas = Array.isArray(data) ? (data as Partial<Novedad>[]) : [];
+  return filas
+    .filter((f) => typeof f.ts === "string" && typeof f.texto === "string")
+    .map((f) => ({ ts: f.ts!, tipo: f.tipo ?? "", texto: f.texto!, autor: f.autor ?? "Sistema", centro: f.centro ?? null }));
+}
+
+/** Últimas entradas de la cuenta (centroId = null) o de un centro: lo que hace la gestión (rrhh_novedades)
+    más lo que hace el empleado desde su app (rrhh_novedades_empleado: «X ha confirmado su jornada del…»),
+    unidas por fecha. Nunca lanza: si la RPC principal no existe devuelve pendiente = true y la tarjeta lo explica;
+    si falla la del empleado, el feed sale sin esas entradas. */
 export async function cargarNovedades(centroId: string | null, limite = 30): Promise<Novedades> {
   const { sb } = await cliente();
-  // rrhh_novedades todavía no está en packages/db/types.ts (se regenera al aplicar la migración): cast tipado mientras tanto.
-  const rpc = (sb as unknown as {
-    rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
-  }).rpc;
-  const { data, error } = await rpc.call(sb, "rrhh_novedades", { p_centro_id: centroId, p_limite: limite });
-  if (error) {
-    const falta = error.code === "PGRST202" || error.code === "42883" || /rrhh_novedades/.test(error.message);
-    return { items: [], pendiente: falta, error: falta ? undefined : error.message };
+  const lim = Math.max(1, Math.min(limite, 200));
+  // p_centro_id tiene default null en las funciones: si no hay centro se omite (PostgREST no admite null explícito en el tipo).
+  const args = centroId ? { p_centro_id: centroId, p_limite: lim } : { p_limite: lim };
+  const [gestion, empleado] = await Promise.all([sb.rpc("rrhh_novedades", args), sb.rpc("rrhh_novedades_empleado", args)]);
+  if (gestion.error) {
+    const e = gestion.error;
+    const falta = e.code === "PGRST202" || e.code === "42883" || /rrhh_novedades/.test(e.message);
+    return { items: [], pendiente: falta, error: falta ? undefined : e.message };
   }
-  const filas = Array.isArray(data) ? (data as Partial<Novedad>[]) : [];
-  return {
-    items: filas
-      .filter((f) => typeof f.ts === "string" && typeof f.texto === "string")
-      .map((f) => ({ ts: f.ts!, tipo: f.tipo ?? "", texto: f.texto!, autor: f.autor ?? "Sistema", centro: f.centro ?? null })),
-    pendiente: false,
-  };
+  if (empleado.error) console.error("[rrhh] novedades empleado:", empleado.error.code, empleado.error.message);
+  const items = [...aNovedades(gestion.data), ...(empleado.error ? [] : aNovedades(empleado.data))]
+    .sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0))
+    .slice(0, lim);
+  return { items, pendiente: false };
 }
 
 /* ==================== Acciones rápidas ==================== */

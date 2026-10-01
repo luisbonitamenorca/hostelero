@@ -130,6 +130,37 @@
 .rh .plan-libre{background:#fff;border:1px solid var(--linea);border-radius:20px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer;color:var(--tinta)}
 .rh .plan-libre:hover{border-color:var(--green);color:var(--green)}
 
+/* ---------- día resaltado (al saltar desde Mes a Semana) ---------- */
+.rh .plan-cuadrante thead th.resaltado{box-shadow:inset 0 -3px 0 var(--blue)}
+.rh td.plan-celda.resaltado{background:var(--blue-light)}
+.rh td.plan-celda.resaltado.es-hoy{background:#E3F0F5}
+
+/* ---------- vista mes ----------
+   Columnas estrechas (34 px × hasta 31 días ≈ 1054 + Equipo 150 + Horas 70): desplaza en horizontal
+   con las columnas fijas de siempre. Solo lectura: clic salta a la semana, doble clic crea turno. */
+.rh table.cuadrante.plan-mes{min-width:0}
+.rh .plan-mes thead th{padding:4px 1px;font-size:11px;line-height:1.15}
+.rh .plan-mes thead th .plan-mes-dia{display:block;font-weight:700;font-size:12px}
+.rh .plan-mes thead th .plan-mes-letra{display:block;font-weight:500;font-size:10px;color:var(--tinta-suave)}
+.rh .plan-mes thead th.hoy .plan-mes-letra{color:#fff}
+.rh .plan-mes thead th.plan-th-festivo .plan-mes-letra{color:var(--purple)}
+.rh .plan-mes thead th.finde{background:#E9E8E3}
+.rh .plan-mes thead th.hoy.finde{background:var(--green)}
+.rh .plan-mes td.plan-mes-celda{width:34px;min-width:34px;max-width:34px;height:44px;padding:2px;vertical-align:top;cursor:pointer;overflow:hidden}
+.rh .plan-mes td.plan-mes-celda:hover{box-shadow:inset 0 0 0 2px var(--blue)}
+.rh .plan-mes td.plan-mes-celda.finde{background:#F4F3EF}
+.rh .plan-mes td.plan-mes-celda.es-festivo{background:#F3F1FB}
+.rh .plan-mes td.plan-mes-celda.es-hoy{background:#EAF6F1}
+.rh .plan-mes td.plan-mes-celda.ausencia{background:var(--arena)}
+.rh .plan-mes-barra{--c:#888;background:var(--c);border-radius:4px;font-size:9.5px;font-weight:700;line-height:1.3;padding:1px 2px;margin-bottom:2px;text-align:center;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums}
+.rh .plan-mes-barra.borrador{background:color-mix(in srgb,var(--c) 18%,#fff);border:1.5px dashed var(--c);color:var(--tinta);padding:0 1px}
+.rh .plan-mes-barra.hueco{opacity:.75}
+.rh .plan-mes-aus{--c:#888;background:var(--c);border-radius:4px;font-size:9.5px;font-weight:700;line-height:1.3;padding:1px 2px;margin-bottom:2px;text-align:center;white-space:nowrap;overflow:hidden;letter-spacing:.3px}
+.rh .plan-mes tfoot td.plan-mes-total{padding:5px 1px;font-size:10.5px;font-variant-numeric:tabular-nums}
+.rh .plan-mes tfoot td.plan-mes-total .plan-sub{font-size:10px}
+.rh .plan-mes th.plan-th-horas{font-size:11px;white-space:normal;line-height:1.15}
+.rh .plan-mes-cargando{opacity:.6;transition:opacity .2s}
+
 /* ---------- modales ---------- */
 .rh-modal .plan-modal{max-width:460px}
 .rh-modal .plan-modal-campos{border:none;padding:0;margin:0;min-width:0}
@@ -161,6 +192,35 @@
 .rh-modal .plan-modelo{display:flex;align-items:center;gap:10px;border:1px solid #e0e0e0;border-radius:9px;padding:8px 10px}
 .rh-modal .plan-modelo > div{flex:1;min-width:0}
 
+/* ---------- tareas y archivos del turno (chip y modal) ---------- */
+.rh .plan-chip-extras{display:flex;gap:6px;font-size:9.5px;color:var(--tinta-suave);line-height:1.2;margin-top:1px;white-space:nowrap}
+.rh .plan-chip-extras .ok{color:var(--green);font-weight:600}
+.rh-modal .plan-extras{margin-top:14px;border-top:1px solid #eee;padding-top:4px}
+.rh-modal .plan-extras-cab{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.rh-modal .plan-extras-cab label{margin-bottom:6px}
+.rh-modal .plan-extras-nuevo{margin-top:14px;font-size:12px;color:#888;border-top:1px solid #eee;padding-top:10px}
+.rh-modal .plan-tarea{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f3f3f1;font-size:13px}
+.rh-modal .plan-tarea input[type=checkbox]{width:16px;height:16px;margin:0;flex:none;accent-color:#1D9E75}
+.rh-modal .plan-tarea.hecha .plan-tarea-texto{text-decoration:line-through;color:#888}
+.rh-modal .plan-tarea-texto{flex:1;min-width:0;overflow-wrap:anywhere}
+.rh-modal .plan-tarea-edit{flex:1;padding:4px 8px;font-size:13px}
+.rh-modal .plan-tarea-acc{display:inline-flex;gap:2px;flex:none}
+.rh-modal .plan-tarea-acc button{background:none;border:1px solid transparent;border-radius:5px;width:24px;height:24px;font:inherit;font-size:12px;line-height:1;cursor:pointer;color:#888;padding:0}
+.rh-modal .plan-tarea-acc button[title=Ver]{width:auto;padding:0 6px}
+.rh-modal .plan-tarea-acc button:hover:not(:disabled){border-color:#e0e0e0;color:#1a1a1a;background:#f8f8f6}
+.rh-modal .plan-tarea-acc button:disabled{opacity:.3;cursor:default}
+.rh-modal .plan-tarea-acc button.peligro:hover{color:#A32D2D;border-color:#A32D2D}
+.rh-modal .plan-tarea-nueva{display:flex;gap:8px;margin-top:8px}
+.rh-modal .plan-tarea-nueva input{flex:1;padding:6px 10px;font-size:13px}
+.rh-modal .plan-tarea-nueva .btn,.rh-modal .plan-archivo-subir .btn{flex:none}
+.rh-modal .plan-archivo{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f3f3f1;font-size:13px}
+.rh-modal .plan-archivo-ico{flex:none;font-size:14px}
+.rh-modal .plan-archivo-nombre{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh-modal .plan-archivo-subir{margin-top:8px}
+.rh-modal .plan-extras-confirmar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:8px 10px;background:#FAEEDA;border-radius:8px;font-size:12px}
+.rh-modal .plan-extras-confirmar span{flex:1;min-width:140px}
+.rh-modal .btn-peque{padding:6px 10px;font-size:12px}
+
 /* ---------- impresión: el cuadrante para colgar en la pared ---------- */
 @media print{
   @page{size:A4 landscape;margin:10mm}
@@ -179,8 +239,11 @@
   .rh .plan-chip.ajeno{display:none}
   .rh .plan-chip-n{display:none}
   .rh .plan-disp{display:none}
+  .rh .plan-chip-extras{font-size:9px}
   .rh td.plan-celda.cerrada{background:#fff}
   .rh .plan-cuadrante thead th.hoy{background:var(--arena);color:var(--tinta)}
   .rh .plan-dia-nombre{position:static}
   .rh .plan-dia-pista{min-width:0}
+  .rh .plan-mes td.plan-mes-celda{height:auto;width:auto;min-width:0;max-width:none}
+  .rh .plan-mes-barra,.rh .plan-mes-aus{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
