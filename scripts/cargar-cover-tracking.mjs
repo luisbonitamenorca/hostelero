@@ -168,12 +168,17 @@ function tsMadridCompleto(s) {
   return m ? tsMadrid(m[1], m[2]) : null;
 }
 
-const igualJson = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+// Comparación con claves ordenadas: jsonb devuelve los objetos con otro orden de claves.
+const canon = (v) => (v && typeof v === "object" && !Array.isArray(v))
+  ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])]))
+  : Array.isArray(v) ? v.map(canon) : v;
+const igualJson = (a, b) => JSON.stringify(canon(a ?? null)) === JSON.stringify(canon(b ?? null));
 
 async function todas(tabla, select, filtro) {
   const filas = [];
   for (let desde = 0; ; desde += 1000) {
-    let q = sb.from(tabla).select(select).range(desde, desde + 999);
+    // orden estable: sin él PostgREST puede repetir o saltarse filas entre páginas
+    let q = sb.from(tabla).select(select).order("id").range(desde, desde + 999);
     if (filtro) q = filtro(q);
     const { data, error } = await q;
     if (error) throw new Error(`${tabla}: ${error.message}`);
@@ -311,7 +316,7 @@ function resolverPrescriptor(nombre) {
 
 /* ================= clientes existentes ================= */
 
-const clientesBD = await todas("reservas_clientes", "id,nombre,apellidos,telefono,email,telefono_norm,email_norm,etiquetas,vip,lista_negra,cover_id,pais,codigo_postal,empresa,idioma,consentimiento_marketing,fecha_nacimiento,telefono_adicional,numero_socio,alergias,notas");
+const clientesBD = await todas("reservas_clientes", "id,nombre,apellidos,telefono,email,telefono_norm,email_norm,etiquetas,vip,lista_negra,cover_id,cover_meta,pais,codigo_postal,empresa,idioma,consentimiento_marketing,fecha_nacimiento,telefono_adicional,numero_socio,alergias,notas");
 const porTel = new Map(), porEmail = new Map(), porCover = new Map();
 // Clientes sin teléfono ni email (walk-ins con solo nombre): se casan por nombre para no
 // duplicarlos en cada pasada.
@@ -323,7 +328,7 @@ for (const c of clientesBD) {
   if (t && !porTel.has(t)) porTel.set(t, c);
   if (e && !porEmail.has(e)) porEmail.set(e, c);
   if (c.cover_id) porCover.set(c.cover_id, c);
-  if (!t && !e && !c.cover_id) {
+  if (!t && !e) {
     const k = nombreKey(c.nombre, c.apellidos);
     if (!clientesPorNombre.has(k)) clientesPorNombre.set(k, c);
   }
@@ -406,6 +411,10 @@ function resolverCliente(d) {
     pon("cover_id", d.cover_id);
     pon("cover_meta", d.cover_meta);
     if (Object.keys(cambios).length) clientesCambios.set(c.id, cambios);
+    // El mismo ID de Cover puede venir en varias filas (un cliente por restaurante): que todas
+    // casen con este cliente aunque el cover_id guardado sea otro. Lo mismo con el email.
+    if (d.cover_id && !porCover.has(d.cover_id)) porCover.set(d.cover_id, c);
+    if (email && !porEmail.has(email)) porEmail.set(email, c);
   }
   // etiquetas, VIP, lista negra (unión)
   if (d.etiquetas && d.etiquetas.length) c._etq = [...(c._etq || []), ...d.etiquetas];
@@ -598,6 +607,20 @@ console.log(`  mesas nuevas: ${nuevasMesas.length}${nuevasMesas.length ? " → "
 console.log(`  etiquetas nuevas: ${nuevasEtq.length}${nuevasEtq.length ? " → " + nuevasEtq.map((e) => `${e.ambito}:${e.nombre}`).join(", ") : ""}`);
 console.log(`  prescriptores nuevos: ${nuevosPresc.length}${nuevosPresc.length ? " → " + nuevosPresc.map((p) => p.nombre).join(", ") : ""}`);
 console.log(`  clientes nuevos: ${clientesNuevos.length} · existentes con datos nuevos: ${clientesCambios.size}`);
+{
+  const tipos = { con_cover_id: 0, con_telefono: 0, con_email: 0, solo_nombre: 0 };
+  for (const c of clientesNuevos) {
+    if (c.cover_id) tipos.con_cover_id++; else if (c.telefono) tipos.con_telefono++; else if (c.email) tipos.con_email++; else tipos.solo_nombre++;
+  }
+  const campos = new Map();
+  for (const cambios of clientesCambios.values()) for (const k of Object.keys(cambios)) campos.set(k, (campos.get(k) || 0) + 1);
+  console.log(`    nuevos por tipo: ${JSON.stringify(tipos)} · campos completados: ${JSON.stringify(Object.fromEntries(campos))}`);
+  if (process.env.DEBUG_COVER) {
+    console.log(`    ids de Cover de 3 nuevos: ${clientesNuevos.filter((c) => c.cover_id).slice(0, 3).map((c) => c.cover_id).join(", ")}`);
+    const muestra = [...clientesCambios.entries()].filter(([id]) => id).slice(0, 3).map(([id, ch]) => `${id}:${Object.keys(ch).join("+")}`);
+    console.log(`    muestra de cambios en existentes: ${muestra.join(" | ")}`);
+  }
+}
 if (FICHERO && !SOLO_CLIENTES) {
   console.log(`  reservas: ${stats.filas} filas · nuevas ${stats.nuevas} · ya existentes ${reservasCambios.length} · sin restaurante ${stats.sinRestaurante} · sin mesa ${stats.sinMesa} · sin cliente ${stats.sinCliente}`);
   if (stats.estadoDesconocido.size) console.log(`  ESTADOS DESCONOCIDOS (no cargados): ${[...stats.estadoDesconocido].map(([k, v]) => `${k || "(vacío)"}×${v}`).join(", ")}`);
@@ -641,6 +664,7 @@ if (clientesNuevos.length) {
       for (const fila of lote) {
         const r1 = await sb.from("reservas_clientes").insert(fila, { defaultToNull: false }).select("id,telefono_norm,email_norm,cover_id").single();
         if (!r1.error) { ins.push(r1.data); continue; }
+        if (process.env.DEBUG_COVER) console.log(`\n    fila rechazada (${fila.cover_id || "sin cover_id"}): ${r1.error.message}`);
         const r2 = await sb.from("reservas_clientes").select("id,telefono_norm,email_norm,cover_id")
           .eq("cuenta_id", CUENTA_ID).eq("telefono", fila.telefono).limit(1).maybeSingle();
         if (r2.error || !r2.data) throw new Error(`insert reservas_clientes: ${r1.error.message}`);
@@ -648,6 +672,7 @@ if (clientesNuevos.length) {
         casados++;
       }
     } else throw new Error(`insert reservas_clientes: ${error.message}`);
+    if (process.env.DEBUG_COVER && error) console.log(`\n    lote ${i / LOTE + 1} con conflicto: ${error.message}`);
     process.stdout.write(`\r  reservas_clientes: insertadas ${Math.min(i + LOTE, filas.length)}/${filas.length}   `);
   }
   console.log(casados ? `\n  (${casados} teléfonos ya existían con otro formato: casados con el cliente existente)` : "");
