@@ -76,7 +76,17 @@ Tamarindos; Charo, Lena → Tamarindos Bar; Mabel, Matías → Casa Tirant).
 - El registro horario sigue siendo append-only: las correcciones son inserts con motivo.
 - Hoy/Fichajes usan Europe/Madrid explícitamente (Vercel va en UTC).
 
-## 6. Datos de prueba de esta noche
+## 6. Despliegue
+
+Los cuatro commits de la noche están en `main` **en local** (build de producción comprobado:
+`next build` sin errores). El clasificador de permisos de Code bloqueó el `git push`, así que lo
+lanza Luis por la mañana; Vercel despliega `hostelero-app` solo en ~3 min:
+
+    git push origin main
+
+Las migraciones ya están aplicadas en la base, así que al desplegar todo queda vivo a la vez.
+
+## 7. Datos de prueba de esta noche
 
 Se crearon y **se han borrado** al terminar: usuario `pruebas-rrhh@hostelero.test`, empleado
 «Prueba Kiosco Hostelero», tablet «TABLET PRUEBA», un fichaje, dos turnos y las propuestas de horas
