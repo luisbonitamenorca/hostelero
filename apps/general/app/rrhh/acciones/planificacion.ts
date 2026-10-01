@@ -8,13 +8,39 @@ import type { Tables } from "@hostelero/db";
 import { exigirModulo } from "@/lib/supabase/server";
 import { enviarCorreo } from "@/lib/correo";
 import type { Ausencia, Convenio, Empleado, Turno } from "../tipos";
+import { agruparJornadas, calcularDiaMin, efectivosMin, hoyMadrid, isoMadrid, resumenJornada, type FichajeMin } from "../secciones/fichajes-calculo";
 
 async function cliente() {
   const { supabase, perfil } = await exigirModulo("rrhh");
   return { sb: supabase, perfil };
 }
+type Sb = Awaited<ReturnType<typeof cliente>>["sb"];
 
 type R<T = undefined> = { ok: boolean; error?: string; data?: T };
+
+const MSG_DIA_CERRADO = "Día cerrado en Fichajes: reábrelo para cambiar turnos";
+
+/** Candado: si alguno de los pares (empleado, fecha) tiene rrhh_horas_dia validada, el día está cerrado
+    en Fichajes y no se tocan sus turnos. Devuelve el mensaje de error o null si se puede seguir. */
+async function diaCerrado(sb: Sb, pares: { empleado_id: string | null; fecha: string }[]): Promise<string | null> {
+  const r = await paresCerrados(sb, pares);
+  if (typeof r === "string") return r;
+  return pares.some((p) => p.empleado_id && r.has(`${p.empleado_id}|${p.fecha}`)) ? MSG_DIA_CERRADO : null;
+}
+
+/** Conjunto «empleado|fecha» de los pares que están cerrados en Fichajes (o el mensaje de error de la consulta). */
+async function paresCerrados(sb: Sb, pares: { empleado_id: string | null; fecha: string }[]): Promise<Set<string> | string> {
+  const validos = pares.filter((p): p is { empleado_id: string; fecha: string } => !!p.empleado_id);
+  if (!validos.length) return new Set();
+  const { data, error } = await sb
+    .from("rrhh_horas_dia")
+    .select("empleado_id, fecha")
+    .eq("estado", "validada")
+    .in("empleado_id", [...new Set(validos.map((p) => p.empleado_id))])
+    .in("fecha", [...new Set(validos.map((p) => p.fecha))]);
+  if (error) return error.message;
+  return new Set((data ?? []).map((h) => `${h.empleado_id}|${h.fecha}`));
+}
 
 export type PuestoCat = Pick<Tables<"rrhh_puestos_cat">, "id" | "nombre" | "color" | "departamento_id" | "activo" | "orden">;
 export type PlantillaTurno = Tables<"rrhh_plantillas_turno">;
@@ -32,6 +58,19 @@ export type EmpleadoPlan = Pick<Empleado, "id" | "nombre" | "apellidos" | "depar
   /** Menor de 18 años al empezar la semana (para el aviso de turno nocturno). */
   menor_en_semana: boolean;
 };
+/** Lo fichado de verdad por un empleado un día (jornada agrupada como en Fichajes): para pintarlo bajo el turno planificado. */
+export type FichadoDia = {
+  empleado_id: string;
+  fecha: string;
+  entrada: string | null; // "HH:MM"
+  salida: string | null; // "HH:MM" (puede ser de madrugada del día siguiente)
+  pausas_min: number;
+  horas: number; // netas fichadas
+  incidencias: string[];
+  en_curso: boolean;
+};
+export type HorasDiaPlan = Pick<Tables<"rrhh_horas_dia">, "empleado_id" | "fecha" | "estado" | "horas_retenidas" | "horas_fichadas">;
+export type DisponibilidadPlan = Pick<Tables<"rrhh_disponibilidades">, "id" | "empleado_id" | "fecha" | "tipo" | "nota">;
 
 const iso = (d: Date) => d.toLocaleDateString("sv-SE");
 const suma = (isoFecha: string, n: number) => {
@@ -91,8 +130,9 @@ function horasContratoSemana(
 export async function cargarSemanaPlan(centroId: string, desde: string, hasta: string) {
   const { sb } = await cliente();
   const desdePrev = suma(desde, -7); // semana anterior: días seguidos y descanso entre semanas
+  const hoy = hoyMadrid();
 
-  const [config, emps, nAsignaciones, periodos, turnos, ausencias, puestos, plantillas, modelos, festivos, centros] = await Promise.all([
+  const [config, emps, nAsignaciones, periodos, turnos, ausencias, puestos, plantillas, modelos, festivos, centros, fichajes, horasDia] = await Promise.all([
     sb.from("rrhh_centros_config").select("*, rrhh_convenios(*)").eq("centro_id", centroId).maybeSingle(),
     sb
       .from("rrhh_asignaciones")
@@ -132,9 +172,22 @@ export async function cargarSemanaPlan(centroId: string, desde: string, hasta: s
       .lte("fecha", hasta)
       .or(`centro_id.is.null,centro_id.eq.${centroId}`),
     sb.from("centros").select("id, nombre"),
+    // Fichajes de la semana (semanas futuras: ninguno). Ventana como en Fichajes: lunes 00:00 → lunes siguiente 06:00
+    // (las salidas de madrugada del domingo). Se agrupan por jornada abajo.
+    desde <= hoy
+      ? sb
+          .from("rrhh_fichajes")
+          .select("id, empleado_id, centro_id, tipo, ts, metodo, corrige_a, motivo_correccion")
+          .eq("centro_id", centroId)
+          .gte("ts", isoMadrid(desde, "00:00"))
+          .lt("ts", isoMadrid(suma(desde, 7), "06:00"))
+          .order("ts")
+          .limit(5000)
+      : Promise.resolve({ data: [] as FichajeMin[], error: null }),
+    sb.from("rrhh_horas_dia").select("empleado_id, fecha, estado, horas_retenidas, horas_fichadas").eq("centro_id", centroId).gte("fecha", desde).lte("fecha", hasta),
   ]);
 
-  const fallo = [config, emps, nAsignaciones, periodos, turnos, ausencias].find((q) => q.error)?.error;
+  const fallo = [config, emps, nAsignaciones, periodos, turnos, ausencias, fichajes, horasDia].find((q) => q.error)?.error;
   if (fallo) throw new Error(fallo.message);
 
   type EmpFila = Pick<Empleado, "id" | "nombre" | "apellidos" | "fecha_alta" | "fecha_baja" | "horas_semana" | "departamento" | "puesto_defecto_id" | "fecha_nacimiento">;
@@ -153,7 +206,7 @@ export async function cargarSemanaPlan(centroId: string, desde: string, hasta: s
   // Segunda tanda: turnos de los asignados en OTROS centros (misma semana + anterior) y
   // comprobación de quién no tiene ningún periodo de contrato.
   const ids = asignados.map((e) => e.id);
-  const [ajenosQ, conPeriodoQ] = await Promise.all([
+  const [ajenosQ, conPeriodoQ, dispQ] = await Promise.all([
     ids.length
       ? sb
           .from("rrhh_turnos")
@@ -167,6 +220,10 @@ export async function cargarSemanaPlan(centroId: string, desde: string, hasta: s
     sinPeriodoSemana.length
       ? sb.from("rrhh_periodos_contrato").select("empleado_id").in("empleado_id", sinPeriodoSemana.map((e) => e.id))
       : Promise.resolve({ data: [] as { empleado_id: string }[], error: null }),
+    // Disponibilidades que marcó el empleado («no puedo» / «prefiero»): el planificador las ve antes de poner turno.
+    ids.length
+      ? sb.from("rrhh_disponibilidades").select("id, empleado_id, fecha, tipo, nota").in("empleado_id", ids).gte("fecha", desde).lte("fecha", hasta)
+      : Promise.resolve({ data: [] as DisponibilidadPlan[], error: null }),
   ]);
   const tienePeriodo = new Set((conPeriodoQ.data ?? []).map((p) => p.empleado_id));
 
@@ -192,6 +249,36 @@ export async function cargarSemanaPlan(centroId: string, desde: string, hasta: s
     .filter((t) => t.empleado_id && idsVisibles.has(t.empleado_id))
     .map((t) => ({ ...t, centro_nombre: nombreCentro[t.centro_id] ?? "otro centro" }));
 
+  // Fichajes efectivos (sin los anulados por corrección) agrupados por jornada, como hace Fichajes:
+  // una salida de madrugada pertenece al día de la entrada. Solo de los empleados visibles.
+  const { efectivos } = efectivosMin((fichajes.data ?? []) as FichajeMin[]);
+  const fichPorEmp: Record<string, FichajeMin[]> = {};
+  for (const f of efectivos) if (idsVisibles.has(f.empleado_id)) (fichPorEmp[f.empleado_id] ??= []).push(f);
+  // Minutos absolutos de la jornada (la salida puede pasar de 1440) → "HH:MM" del reloj.
+  const hhDe = (m: number | null) => {
+    if (m == null) return null;
+    const n = ((m % 1440) + 1440) % 1440;
+    return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+  };
+  const fichados: FichadoDia[] = [];
+  for (const [empId, fs] of Object.entries(fichPorEmp)) {
+    for (const [fecha, efs] of Object.entries(agruparJornadas(fs))) {
+      if (fecha < desde || fecha > hasta) continue;
+      const { entrada, salida, pausasMin } = resumenJornada(fecha, efs);
+      const dia = calcularDiaMin(efs, fecha === hoy);
+      fichados.push({
+        empleado_id: empId,
+        fecha,
+        entrada: hhDe(entrada),
+        salida: hhDe(salida),
+        pausas_min: pausasMin,
+        horas: Math.round(dia.horas * 100) / 100,
+        incidencias: dia.inc,
+        en_curso: dia.enCurso,
+      });
+    }
+  }
+
   const todos = (turnos.data ?? []) as Turno[];
   return {
     reglas: (config.data?.rrhh_convenios as Convenio | null) ?? null,
@@ -207,6 +294,11 @@ export async function cargarSemanaPlan(centroId: string, desde: string, hasta: s
     plantillas: (plantillas.data ?? []) as PlantillaTurno[],
     modelos: (modelos.data ?? []) as ModeloSemana[],
     festivos: (festivos.data ?? []) as Festivo[],
+    /** Fichado real por empleado y día (días pasados): se pinta bajo el turno planificado. */
+    fichados,
+    /** Filas de rrhh_horas_dia del centro en la semana: horas retenidas y candado (todas validadas = día cerrado). */
+    horasDia: (horasDia.data ?? []) as HorasDiaPlan[],
+    disponibilidades: (dispQ.data ?? []) as DisponibilidadPlan[],
   };
 }
 
@@ -227,12 +319,20 @@ export type TurnoInput = {
 export async function guardarTurnoPlan(turnoId: string | null, fila: TurnoInput): Promise<R<string>> {
   const { sb, perfil } = await cliente();
   if (turnoId) {
+    const { data: actual, error: e0 } = await sb.from("rrhh_turnos").select("empleado_id, fecha").eq("id", turnoId).maybeSingle();
+    if (e0) return { ok: false, error: e0.message };
+    if (!actual) return { ok: false, error: "No tienes permiso sobre este turno" };
+    // Candado: ni el día de donde sale ni el día donde queda pueden estar cerrados en Fichajes.
+    const cerrado = await diaCerrado(sb, [actual, { empleado_id: fila.empleado_id, fecha: fila.fecha }]);
+    if (cerrado) return { ok: false, error: cerrado };
     // .select("id"): si la RLS no deja ver el turno, el update no toca nada y hay que decirlo.
     const { data, error } = await sb.from("rrhh_turnos").update(fila).eq("id", turnoId).select("id");
     if (error) return { ok: false, error: error.message };
     if (!data?.length) return { ok: false, error: "No tienes permiso sobre este turno" };
     return { ok: true, data: turnoId };
   }
+  const cerrado = await diaCerrado(sb, [{ empleado_id: fila.empleado_id, fecha: fila.fecha }]);
+  if (cerrado) return { ok: false, error: cerrado };
   const { data, error } = await sb.from("rrhh_turnos").insert({ ...fila, creado_por: perfil.id }).select("id").single();
   return error || !data ? { ok: false, error: error?.message } : { ok: true, data: data.id };
 }
@@ -240,6 +340,11 @@ export async function guardarTurnoPlan(turnoId: string | null, fila: TurnoInput)
 /** Mueve un turno a otra celda (empleado y/o fecha). empleado_id null = sin asignar. */
 export async function moverTurno(turnoId: string, destino: { empleado_id: string | null; fecha: string }): Promise<R> {
   const { sb } = await cliente();
+  const { data: actual, error: e0 } = await sb.from("rrhh_turnos").select("empleado_id, fecha").eq("id", turnoId).maybeSingle();
+  if (e0) return { ok: false, error: e0.message };
+  if (!actual) return { ok: false, error: "No tienes permiso sobre este turno" };
+  const cerrado = await diaCerrado(sb, [actual, destino]);
+  if (cerrado) return { ok: false, error: cerrado };
   const { data, error } = await sb.from("rrhh_turnos").update(destino).eq("id", turnoId).select("id");
   if (error) return { ok: false, error: error.message };
   if (!data?.length) return { ok: false, error: "No tienes permiso sobre este turno" };
@@ -251,6 +356,8 @@ export async function duplicarTurno(turnoId: string, destino: { empleado_id: str
   const { sb, perfil } = await cliente();
   const { data: t, error } = await sb.from("rrhh_turnos").select("*").eq("id", turnoId).single();
   if (error || !t) return { ok: false, error: error?.message || "Turno no encontrado" };
+  const cerrado = await diaCerrado(sb, [destino]);
+  if (cerrado) return { ok: false, error: cerrado };
   const { data, error: e2 } = await sb
     .from("rrhh_turnos")
     .insert({
@@ -275,6 +382,10 @@ export async function duplicarTurno(turnoId: string, destino: { empleado_id: str
 export async function borrarTurnos(ids: string[]): Promise<R<number>> {
   const { sb } = await cliente();
   if (!ids.length) return { ok: true, data: 0 };
+  const { data: lista, error: e0 } = await sb.from("rrhh_turnos").select("empleado_id, fecha").in("id", ids);
+  if (e0) return { ok: false, error: e0.message };
+  const cerrado = await diaCerrado(sb, lista ?? []);
+  if (cerrado) return { ok: false, error: cerrado };
   // Devuelve los borrados de verdad (la RLS puede dejar fuera alguno).
   const { data, error } = await sb.from("rrhh_turnos").delete().in("id", ids).select("id");
   if (error) return { ok: false, error: error.message };
@@ -312,8 +423,13 @@ export async function copiarSemanaAnteriorPlan(centroId: string, lunes: string, 
       creado_por: perfil.id,
     }));
   if (!nuevos.length) return { ok: false, error: "Ningún turno de la semana anterior es de un empleado activo" };
-  const { error: e2 } = await sb.from("rrhh_turnos").insert(nuevos);
-  return e2 ? { ok: false, error: e2.message } : { ok: true, data: nuevos.length };
+  // Días ya cerrados en Fichajes se saltan (no se puede meter un turno en un día validado).
+  const cerrados = await paresCerrados(sb, nuevos);
+  if (typeof cerrados === "string") return { ok: false, error: cerrados };
+  const abiertos = nuevos.filter((t) => !t.empleado_id || !cerrados.has(`${t.empleado_id}|${t.fecha}`));
+  if (!abiertos.length) return { ok: false, error: MSG_DIA_CERRADO };
+  const { error: e2 } = await sb.from("rrhh_turnos").insert(abiertos);
+  return e2 ? { ok: false, error: e2.message } : { ok: true, data: abiertos.length };
 }
 
 type TurnoModelo = { empleado_id: string | null; dow: number; hora_inicio: string; hora_fin: string; pausa_min: number; puesto_id: string | null };
@@ -372,8 +488,12 @@ export async function aplicarModeloSemana(modeloId: string, centroId: string, lu
       creado_por: perfil.id,
     }));
   if (!nuevos.length) return { ok: false, error: "El modelo no tiene turnos de empleados activos" };
-  const { error: e2 } = await sb.from("rrhh_turnos").insert(nuevos);
-  return e2 ? { ok: false, error: e2.message } : { ok: true, data: nuevos.length };
+  const cerrados = await paresCerrados(sb, nuevos);
+  if (typeof cerrados === "string") return { ok: false, error: cerrados };
+  const abiertos = nuevos.filter((t) => !t.empleado_id || !cerrados.has(`${t.empleado_id}|${t.fecha}`));
+  if (!abiertos.length) return { ok: false, error: MSG_DIA_CERRADO };
+  const { error: e2 } = await sb.from("rrhh_turnos").insert(abiertos);
+  return e2 ? { ok: false, error: e2.message } : { ok: true, data: abiertos.length };
 }
 
 export async function borrarModeloSemana(modeloId: string): Promise<R> {

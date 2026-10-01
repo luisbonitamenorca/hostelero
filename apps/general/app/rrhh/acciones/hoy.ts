@@ -514,6 +514,47 @@ export async function cargarHoy(centroId: string): Promise<DatosHoy> {
   };
 }
 
+/* ==================== Novedades (feed «Noticias» de Skello) ==================== */
+
+export type Novedad = {
+  ts: string;
+  /** turno_creado · turno_publicado · turno_modificado · turno_eliminado · ausencia_solicitada · ausencia_aprobada ·
+      ausencia_rechazada · jornada_confirmada · cambio_pedido · cambio_aprobado · cambio_rechazado … */
+  tipo: string;
+  texto: string;
+  autor: string;
+  centro: string | null;
+};
+
+export type Novedades = {
+  items: Novedad[];
+  /** La RPC rrhh_novedades aún no está en la base (migración 20261001090000_rrhh_novedades sin aplicar). */
+  pendiente: boolean;
+  error?: string;
+};
+
+/** Últimas entradas de la cuenta (centroId = null) o de un centro. Nunca lanza: si la RPC no existe
+    devuelve pendiente = true y la tarjeta lo explica. */
+export async function cargarNovedades(centroId: string | null, limite = 30): Promise<Novedades> {
+  const { sb } = await cliente();
+  // rrhh_novedades todavía no está en packages/db/types.ts (se regenera al aplicar la migración): cast tipado mientras tanto.
+  const rpc = (sb as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
+  }).rpc;
+  const { data, error } = await rpc.call(sb, "rrhh_novedades", { p_centro_id: centroId, p_limite: limite });
+  if (error) {
+    const falta = error.code === "PGRST202" || error.code === "42883" || /rrhh_novedades/.test(error.message);
+    return { items: [], pendiente: falta, error: falta ? undefined : error.message };
+  }
+  const filas = Array.isArray(data) ? (data as Partial<Novedad>[]) : [];
+  return {
+    items: filas
+      .filter((f) => typeof f.ts === "string" && typeof f.texto === "string")
+      .map((f) => ({ ts: f.ts!, tipo: f.tipo ?? "", texto: f.texto!, autor: f.autor ?? "Sistema", centro: f.centro ?? null })),
+    pendiente: false,
+  };
+}
+
 /* ==================== Acciones rápidas ==================== */
 
 const SIN_FILA = "Esta solicitud ya estaba resuelta o no tienes permiso";

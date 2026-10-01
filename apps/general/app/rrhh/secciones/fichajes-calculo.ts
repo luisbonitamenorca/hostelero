@@ -252,6 +252,87 @@ export function estadoCelda(args: {
 /** 7.5 → "7,5" (sin unidad; para celdas estrechas). */
 export const numH = (n: number) => String(Math.round((Number(n) || 0) * 100) / 100).replace(".", ",");
 
+/* ==================== Vista Jornada (retención por fila, como Skello) ==================== */
+
+/** "HH:MM" de minutos (absolutos: 1530 → "01:30", la salida de madrugada). null → "". */
+export const hhmmDe = (m: number | null): string =>
+  m == null ? "" : `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, "0")}:${String(((m % 60) + 60) % 60).padStart(2, "0")}`;
+
+/** Minutos de un "HH:MM" (null si no es una hora válida). */
+export function minutosDe(hhmm: string | null | undefined): number | null {
+  if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
+  const [h, m] = hhmm.split(":").map(Number);
+  return h >= 0 && h < 24 && m >= 0 && m < 60 ? h * 60 + m : null;
+}
+
+/** Descanso programado del día: suma de la pausa de los turnos (min). */
+export const descansoPlanDe = (turnos: TurnoMin[]) => turnos.reduce((s, t) => s + (t.pausa_min || 0), 0);
+
+/** Entrada y salida programadas (min absolutos de la jornada; la salida puede pasar de 1440). */
+export function tramoPlanDe(turnos: TurnoMin[]): { entrada: number | null; salida: number | null } {
+  if (!turnos.length) return { entrada: null, salida: null };
+  return { entrada: Math.min(...turnos.map((t) => minutos(t.hora_inicio))), salida: Math.max(...turnos.map((t) => finAbsoluto(t))) };
+}
+
+/**
+ * Horas de una franja retenida: salida − entrada − descanso. Una salida anterior a la entrada es del día
+ * siguiente (cierre de madrugada). Devuelve null si falta entrada o salida; nunca negativo.
+ */
+export function horasFranja(entrada: number | null, salida: number | null, descansoMin: number, redondeoMin = 0): number | null {
+  if (entrada == null || salida == null) return null;
+  let dur = salida - entrada;
+  if (dur < 0) dur += 1440;
+  return redondearHoras(Math.max(0, dur - Math.max(0, descansoMin || 0)) / 60, redondeoMin);
+}
+
+export type Retencion = {
+  /** "HH:MM" o "" si no hay nada que retener (sin fichar). */
+  entrada: string;
+  salida: string;
+  descansoMin: number;
+  /** De dónde sale la propuesta, para explicarlo en la fila. */
+  origen: "fichado" | "planificado" | "sin_fichar" | "nada";
+};
+
+/**
+ * Propuesta de franja retenida de un empleado y día según la regla del centro (lo que Skello pre-rellena
+ * en «Turno retribuido»):
+ *  - 'fichado': entrada/salida fichadas; si no fichó pausa se descuenta la pausa PROGRAMADA del turno.
+ *    Sin fichajes y con turno → vacío y 0 h (fila «sin fichar»), para rellenar a mano.
+ *  - 'planificado': las horas del turno; sin turno → vacío (0 h), como la regla de siempre.
+ *  - 'plan_tolerancia': el turno si lo fichado se desvía ≤ tolerancia; si no, lo fichado.
+ */
+export function retencionJornada(args: { fecha: string; turnos: TurnoMin[]; efectivos: FichajeMin[]; cfg: ConfigCalculo; esHoy: boolean }): Retencion {
+  const { fecha, turnos, efectivos, cfg, esHoy } = args;
+  const nada: Retencion = { entrada: "", salida: "", descansoMin: 0, origen: "nada" };
+  if (!turnos.length && !efectivos.length) return nada;
+  const plan = tramoPlanDe(turnos);
+  const descPlan = descansoPlanDe(turnos);
+  const desdePlan = (): Retencion => ({ entrada: hhmmDe(plan.entrada), salida: hhmmDe(plan.salida), descansoMin: descPlan, origen: "planificado" });
+  const fich = resumenJornada(fecha, efectivos);
+  const dia = calcularDiaMin(efectivos, esHoy);
+  // Sin pausa fichada se descuenta la programada (Skello retiene «Descanso 15 mn» aunque no la fichen).
+  const desdeFichado = (): Retencion => ({
+    entrada: hhmmDe(fich.entrada), salida: hhmmDe(fich.salida), descansoMin: fich.nPausas ? fich.pausasMin : descPlan, origen: "fichado",
+  });
+  const sinFichar: Retencion = { entrada: "", salida: "", descansoMin: 0, origen: "sin_fichar" };
+
+  switch (cfg.regla_horas as ReglaHoras) {
+    case "planificado":
+      return turnos.length ? desdePlan() : nada;
+    case "fichado":
+      return efectivos.length ? desdeFichado() : sinFichar;
+    case "plan_tolerancia":
+    default: {
+      if (!efectivos.length) return turnos.length ? sinFichar : nada;
+      if (!turnos.length) return desdeFichado();
+      const horasFich = redondearHoras(dia.horas, cfg.redondeo_min);
+      const tol = (cfg.tolerancia_min || 0) / 60;
+      return Math.abs(horasFich - horasPlanDe(turnos)) <= tol + 1e-9 && !dia.inc.length && !dia.enCurso ? desdePlan() : desdeFichado();
+    }
+  }
+}
+
 /* ==================== Ejemplos numéricos ====================
 
    Configuración de ejemplo: regla plan_tolerancia, tolerancia 10 min, redondeo 0.
@@ -279,3 +360,30 @@ export const numH = (n: number) => String(Math.round((Number(n) || 0) * 100) / 1
 
    6) Hoy nunca se propone (aunque el turno haya acabado): se propone al día siguiente.
 */
+
+/* ==================== Franja retenida guardada ==================== */
+
+/** Datos extra de la franja retenida. Van en columnas propias si existen (migración pendiente); si no, se guardan al final de la nota. */
+export type FranjaRetenida = { entrada_ret: string | null; salida_ret: string | null; descanso_ret_min: number; ausente: boolean };
+
+/** Marca de la franja retenida dentro de la nota mientras no existan las columnas propias: «[ret 09:02-17:10 desc 30]». */
+const MARCA_FRANJA = /\s*\[ret (\d{2}:\d{2}|--)-(\d{2}:\d{2}|--) desc (\d+)( aus)?\]\s*$/;
+
+/** Separa la nota escrita a mano de la franja retenida que se guardó con ella (en nota o en columnas). */
+export function leerFranja(hd: { nota: string | null } & Partial<FranjaRetenida>): { nota: string; franja: FranjaRetenida | null } {
+  // Columnas propias (tras la migración): mandan si tienen algo. Si no, se mira la marca de la nota (filas anteriores).
+  if (hd.entrada_ret != null || hd.salida_ret != null || hd.ausente) {
+    const nota = (hd.nota ?? "").replace(MARCA_FRANJA, "").trim();
+    return { nota, franja: { entrada_ret: hd.entrada_ret ?? null, salida_ret: hd.salida_ret ?? null, descanso_ret_min: Number(hd.descanso_ret_min) || 0, ausente: !!hd.ausente } };
+  }
+  const nota = hd.nota ?? "";
+  const m = nota.match(MARCA_FRANJA);
+  if (!m) return { nota, franja: null };
+  return {
+    nota: nota.replace(MARCA_FRANJA, "").trim(),
+    franja: { entrada_ret: m[1] === "--" ? null : m[1], salida_ret: m[2] === "--" ? null : m[2], descanso_ret_min: Number(m[3]), ausente: !!m[4] },
+  };
+}
+
+export const franjaANota = (nota: string | null, f: FranjaRetenida) =>
+  `${(nota ?? "").replace(MARCA_FRANJA, "").trim()} [ret ${f.entrada_ret ?? "--"}-${f.salida_ret ?? "--"} desc ${f.descanso_ret_min}${f.ausente ? " aus" : ""}]`.trim();

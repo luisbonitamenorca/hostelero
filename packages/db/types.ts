@@ -8601,10 +8601,13 @@ export type Database = {
       }
       rrhh_horas_dia: {
         Row: {
+          ausente: boolean
           centro_id: string
           creado_en: string
           cuenta_id: string
+          descanso_ret_min: number
           empleado_id: string
+          entrada_ret: string | null
           estado: string
           fecha: string
           horas_fichadas: number | null
@@ -8616,14 +8619,18 @@ export type Database = {
           nota: string | null
           retraso_min: number
           salida_antic_min: number
+          salida_ret: string | null
           validado_en: string | null
           validado_por: string | null
         }
         Insert: {
+          ausente?: boolean
           centro_id: string
           creado_en?: string
           cuenta_id?: string
+          descanso_ret_min?: number
           empleado_id: string
+          entrada_ret?: string | null
           estado?: string
           fecha: string
           horas_fichadas?: number | null
@@ -8635,14 +8642,18 @@ export type Database = {
           nota?: string | null
           retraso_min?: number
           salida_antic_min?: number
+          salida_ret?: string | null
           validado_en?: string | null
           validado_por?: string | null
         }
         Update: {
+          ausente?: boolean
           centro_id?: string
           creado_en?: string
           cuenta_id?: string
+          descanso_ret_min?: number
           empleado_id?: string
+          entrada_ret?: string | null
           estado?: string
           fecha?: string
           horas_fichadas?: number | null
@@ -8654,6 +8665,7 @@ export type Database = {
           nota?: string | null
           retraso_min?: number
           salida_antic_min?: number
+          salida_ret?: string | null
           validado_en?: string | null
           validado_por?: string | null
         }
@@ -10214,6 +10226,21 @@ export type Database = {
         }
         Relationships: []
       }
+      rrhh_desde_personal: {
+        Row: {
+          anio: number | null
+          centro: string | null
+          contrato: number | null
+          dni: string | null
+          fecha: string | null
+          horas_reales: number | null
+          id: number | null
+          persona: string | null
+          puesto: string | null
+          semana: number | null
+        }
+        Relationships: []
+      }
       v_gastos_real_mes: {
         Row: {
           centro: string | null
@@ -10956,6 +10983,17 @@ export type Database = {
         }[]
       }
       rrhh_mis_centros: { Args: never; Returns: string[] }
+      rrhh_novedades: {
+        Args: { p_centro_id?: string; p_limite?: number }
+        Returns: {
+          autor: string
+          centro: string
+          texto: string
+          tipo: string
+          ts: string
+        }[]
+      }
+      rrhh_novedades_minuscula: { Args: { p: string }; Returns: string }
       rrhh_periodos_efectivos: {
         Args: { p_empleado_id: string }
         Returns: {

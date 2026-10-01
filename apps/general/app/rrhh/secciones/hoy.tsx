@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as hoyApi from "../acciones/hoy";
-import type { CambioTurno, DatosHoy, SolicitudAusencia, TrabajaHoy } from "../acciones/hoy";
+import type { CambioTurno, DatosHoy, Novedad, Novedades, SolicitudAusencia, TrabajaHoy } from "../acciones/hoy";
 import { horaDe } from "../tipos";
-import { colorTexto, fmtFechaCorta, fmtHoras, guardarPref, useCentroRecordado, type SecProps } from "../lib-rrhh";
+import { colorTexto, fmtFechaCorta, fmtHoras, guardarPref, leerPref, useCentroRecordado, type SecProps } from "../lib-rrhh";
 import "./hoy.css";
 
 /* Cambio de pestaña. Se emite 'rrhh:tab' (detail = id de pestaña, cancelable) para que PanelRrhh lo
@@ -39,6 +39,29 @@ function rangoAusencia(a: { desde: string; hasta: string; medioDia: boolean; hor
   return r;
 }
 
+/* ---------- Novedades ---------- */
+
+const diaLocal = (d: Date) => d.toLocaleDateString("sv-SE");
+
+/** «hace un momento», «hace 12 min», «hace 2 h», «ayer 20:18», «mar 29/09 20:18». */
+function tiempoRelativo(ts: string, ahora: number): string {
+  const d = new Date(ts);
+  const min = Math.round((ahora - d.getTime()) / 60000);
+  if (min < 1) return "hace un momento";
+  if (min < 60) return `hace ${min} min`;
+  const hoy = new Date(ahora);
+  if (diaLocal(d) === diaLocal(hoy)) return `hace ${Math.floor(min / 60)} h`;
+  const ayer = new Date(ahora - 86400000);
+  if (diaLocal(d) === diaLocal(ayer)) return `ayer ${horaDe(ts)}`;
+  return `${fmtFechaCorta(diaLocal(d))} ${horaDe(ts)}`;
+}
+
+/** Familia de la novedad → color del punto. */
+const familiaNovedad = (tipo: string): "turno" | "ausencia" | "jornada" | "cambio" | "otro" =>
+  tipo.startsWith("turno_") ? "turno" : tipo.startsWith("ausencia_") ? "ausencia" : tipo.startsWith("jornada_") ? "jornada" : tipo.startsWith("cambio_") ? "cambio" : "otro";
+
+const inicialDe = (nombre: string) => (nombre.trim().charAt(0) || "·").toUpperCase();
+
 type Modal =
   | { tipo: "rechazar-ausencia"; s: SolicitudAusencia }
   | { tipo: "rechazar-cambio"; c: CambioTurno }
@@ -57,6 +80,12 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
   const [motivo, setMotivo] = useState("");
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [verOtros, setVerOtros] = useState(false);
+  // Novedades: feed independiente (no frena la carga principal). Ámbito recordado en localStorage.
+  const [novedades, setNovedades] = useState<Novedades | null>(null);
+  const [novTodos, setNovTodosEstado] = useState<boolean>(() => leerPref<boolean>("hoy:novedades-todos", false));
+  const setNovTodos = (v: boolean) => { setNovTodosEstado(v); guardarPref("hoy:novedades-todos", v); };
+  const [ahora, setAhora] = useState(() => Date.now());
+  const reqNovRef = useRef(0);
   const reqRef = useRef(0);
   const modalRef = useRef<Modal>(null);
   modalRef.current = modal;
@@ -82,14 +111,30 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
       });
   }, [centroId]);
   useEffect(() => { cargar(); }, [cargar]);
+  const cargarNovedades = useCallback(() => {
+    const req = ++reqNovRef.current;
+    hoyApi
+      .cargarNovedades(novTodos ? null : centroId)
+      .then((r) => { if (req === reqNovRef.current) { setNovedades(r); setAhora(Date.now()); } })
+      .catch((e: unknown) => {
+        if (req === reqNovRef.current) setNovedades({ items: [], pendiente: false, error: e instanceof Error ? e.message : "No se pudieron cargar" });
+      });
+  }, [centroId, novTodos]);
+  useEffect(() => { cargarNovedades(); }, [cargarNovedades]);
   // Refresco cada 2 minutos: el estado de fichaje cambia solo. No mientras la pestaña esté oculta ni con un modal abierto.
   useEffect(() => {
     const t = setInterval(() => {
       if (document.hidden || modalRef.current) return;
       cargar();
+      cargarNovedades();
     }, 120000);
     return () => clearInterval(t);
-  }, [cargar]);
+  }, [cargar, cargarNovedades]);
+  // Las horas relativas («hace 3 min») envejecen solas
+  useEffect(() => {
+    const t = setInterval(() => setAhora(Date.now()), 60000);
+    return () => clearInterval(t);
+  }, []);
   // Esc cierra el modal
   useEffect(() => {
     if (!modal) return;
@@ -182,7 +227,7 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
         <span className="hoy-actualizado">
           {cargando ? "Actualizando…" : actualizadoEn ? `Actualizado ${horaDe(actualizadoEn)}` : ""}
         </span>
-        <button className="btn btn-fantasma btn-peque hoy-refrescar" onClick={cargar} disabled={cargando}>Actualizar</button>
+        <button className="btn btn-fantasma btn-peque hoy-refrescar" onClick={() => { cargar(); cargarNovedades(); }} disabled={cargando}>Actualizar</button>
       </div>
 
       {error ? <div className="aviso-caja">{error}{d ? " · Se muestran los últimos datos cargados." : ""}</div> : null}
@@ -266,7 +311,7 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
           </section>
 
           {/* (b) Ausentes hoy */}
-          <section className="hoy-tarjeta">
+          <section className="hoy-tarjeta hoy-ausentes">
             <header>
               <h3>Ausentes hoy</h3>
               <button className="link-btn2" onClick={() => irA("ausencias")}>Ausencias ›</button>
@@ -291,7 +336,7 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
           </section>
 
           {/* (c) Pendiente de ti */}
-          <section className="hoy-tarjeta" ref={pendientesRef}>
+          <section className="hoy-tarjeta hoy-pendiente" ref={pendientesRef}>
             <header>
               <h3>Pendiente de ti {nPendientes ? <span className="hoy-cont">{nPendientes}</span> : null}</h3>
             </header>
@@ -331,7 +376,7 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
           </section>
 
           {/* (d) Avisos */}
-          <section className="hoy-tarjeta">
+          <section className="hoy-tarjeta hoy-avisos">
             <header>
               <h3>Avisos {avisos.length ? <span className="hoy-cont">{avisos.length}</span> : null}</h3>
             </header>
@@ -349,6 +394,20 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
               </ul>
             )}
             {!ctx.esGestor ? <div className="nota" style={{ marginTop: 8 }}>Los avisos de contratos y PIN solo los ve dirección.</div> : null}
+          </section>
+
+          {/* (e) Novedades: lo último que ha pasado (como «Noticias» en Skello) */}
+          <section className="hoy-tarjeta hoy-novedades">
+            <header>
+              <h3>Novedades</h3>
+              {ctx.centros.length > 1 ? (
+                <div className="hoy-ambito" role="group" aria-label="Ámbito de las novedades">
+                  <button type="button" className={!novTodos ? "activo" : ""} onClick={() => setNovTodos(false)}>{centroNombre || "Este centro"}</button>
+                  <button type="button" className={novTodos ? "activo" : ""} onClick={() => setNovTodos(true)}>Todos los centros</button>
+                </div>
+              ) : null}
+            </header>
+            <FeedNovedades nov={novedades} ahora={ahora} mostrarCentro={novTodos} />
           </section>
         </div>
       )}
@@ -404,6 +463,32 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
         </div>
       ) : null}
     </>
+  );
+}
+
+/* ---------- Feed de novedades ---------- */
+
+function FeedNovedades({ nov, ahora, mostrarCentro }: { nov: Novedades | null; ahora: number; mostrarCentro: boolean }) {
+  if (!nov) return <div className="hoy-vacio">Cargando…</div>;
+  if (nov.pendiente) return <div className="hoy-vacio">Las novedades se activan al aplicar la migración.</div>;
+  if (nov.error) return <div className="hoy-vacio">No se pudieron cargar las novedades: {nov.error}</div>;
+  if (!nov.items.length) return <div className="hoy-vacio">Todavía no hay novedades. Aquí verás turnos publicados, ausencias pedidas y jornadas confirmadas.</div>;
+  return (
+    <ul className="hoy-feed">
+      {nov.items.map((n: Novedad, i) => (
+        <li key={n.ts + i} className={"hoy-nov " + familiaNovedad(n.tipo)}>
+          <span className="hoy-nov-avatar" title={n.autor} aria-hidden="true">{inicialDe(n.autor)}</span>
+          <span className="hoy-nov-cuerpo">
+            <span className="hoy-nov-txt">{n.texto}</span>
+            <span className="hoy-nov-meta">
+              <span className="hoy-nov-punto" />
+              <time dateTime={n.ts} title={`${fmtFechaCorta(diaLocal(new Date(n.ts)))} ${horaDe(n.ts)}`}>{tiempoRelativo(n.ts, ahora)}</time>
+              {mostrarCentro && n.centro ? <span className="hoy-nov-centro">{n.centro}</span> : null}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

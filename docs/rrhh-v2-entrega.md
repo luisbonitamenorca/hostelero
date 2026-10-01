@@ -95,3 +95,24 @@ Se crearon y **se han borrado** al terminar: usuario `pruebas-rrhh@hostelero.tes
 «Prueba Kiosco Hostelero», tablet «TABLET PRUEBA», un fichaje, dos turnos y las propuestas de horas
 de la semana 37 en Binifadet Restaurante. Dev server local: config `hostelero-general` (puerto 3010),
 `apps/general/.env.local` (gitignored; pepper de desarrollo, no el real).
+
+
+## 8. Añadido por la mañana (01-10, tras revisar Skello con la sesión de Luis)
+
+- **Fichajes › Jornada**: la vista por día del «Control horario» de Skello (programado / fichado /
+  retribuido editable / descanso / duración / notas, check por día, «Confirmar jornada»). La regla
+  de retención de los 8 centros es ahora «la hora fichada», que es la que Bonita tiene en Skello.
+- **Planificación**: en días pasados el chip muestra el fichado bajo el programado; 🔒 en los días
+  ya confirmados (no se tocan los turnos); aviso de horas por debajo del contrato; puntos de
+  disponibilidad del empleado («no puedo» / «prefiero»).
+- **Hoy › Novedades**: el feed «Noticias» de Skello (publicaciones, ausencias, jornadas
+  confirmadas, cambios de turno), agrupado por autor y minuto.
+- **Datos**: cargado el informe de Skello del 01-10 (turnos hasta el 31-12, 14.167 jornadas
+  validadas, ausencias retipadas, saldo inicial del contador a 27-09 y vacaciones cuadradas).
+  Script reutilizable: `scripts/cargar-skello-informe.mjs <carpeta>` (idempotente).
+- **Ratios** lee las horas en vivo de Personal (vista `rrhh_desde_personal`); el cargador de
+  8 ficheros queda como respaldo.
+
+Visto en Skello y aún no hecho: firma electrónica del horario, tareas y archivos en el turno,
+precio/hora medio en el contrato (coste), «Equipos» dentro del centro, confirmación de jornada por
+el propio empleado desde la app, planificación automática.

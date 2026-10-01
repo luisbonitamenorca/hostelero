@@ -28,6 +28,20 @@
 .rh .plan-cuadrante td.plan-horas.exceso{background:var(--amber-light)}
 .rh .plan-cuadrante td.plan-horas.exceso b,.rh .plan-cuadrante td.plan-horas.exceso span{color:var(--amber)}
 .rh .plan-horas-ex{font-size:10.5px;font-weight:600;color:var(--amber)}
+/* Jornada contractual (Skello): le faltan horas para su contrato. Mismo ámbar que el exceso, más suave. */
+.rh .plan-cuadrante td.plan-horas.defecto{background:#FDF6E9}
+.rh .plan-cuadrante td.plan-horas.defecto b{color:var(--amber)}
+/* Candado: día validado en Fichajes. */
+.rh .plan-cuadrante thead th.plan-th-cerrado{background:#ECEBE7;color:var(--tinta-suave)}
+.rh .plan-candado{font-size:12px}
+.rh td.plan-celda.cerrada{background:repeating-linear-gradient(135deg,#f6f6f4 0 6px,#fbfbfa 6px 12px);cursor:not-allowed}
+.rh td.plan-celda.cerrada.es-hoy{background:repeating-linear-gradient(135deg,#eef6f2 0 6px,#f6fbf9 6px 12px)}
+/* Disponibilidad del empleado: puntito en la esquina de la celda (rojo = no puede, verde = prefiere). */
+.rh .plan-disp{position:absolute;right:4px;bottom:4px;width:9px;height:9px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.08);z-index:2;display:block}
+.rh .plan-disp.no{background:var(--red)}
+.rh .plan-disp.si{background:var(--green)}
+.rh .plan-disp.inline{position:static;display:inline-block;vertical-align:middle;margin-right:5px}
+.rh td.plan-celda.disp-no{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--red) 35%,transparent)}
 .rh .plan-cuadrante thead th.plan-th-festivo{background:var(--purple-light);color:var(--purple)}
 .rh .plan-cuadrante thead th.hoy.plan-th-festivo{background:var(--green);color:#fff}
 .rh .plan-festivo{font-size:10px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:116px;margin-inline:auto}
@@ -64,6 +78,18 @@
 .rh .plan-chip-menu{position:absolute;right:2px;top:2px;width:16px;height:16px;border:none;background:none;color:var(--tinta-suave);font-size:14px;line-height:1;cursor:pointer;border-radius:4px;padding:0;opacity:0}
 .rh .plan-chip:hover .plan-chip-menu{opacity:1}
 .rh .plan-chip-menu:hover{background:rgba(0,0,0,.08);color:var(--tinta)}
+/* Día pasado (como Skello): planificado en pequeño arriba y lo FICHADO en grande debajo. */
+.rh .plan-chip-plan{font-size:9.5px;line-height:1.15;color:var(--tinta-suave);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-decoration:none}
+.rh .plan-chip-fich{font-size:12px;font-weight:700;line-height:1.25;color:var(--tinta);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
+.rh .plan-chip.fichado .plan-chip-p{color:var(--tinta-suave)}
+.rh .plan-chip.retenido .plan-chip-fich{color:var(--green)}
+.rh .plan-chip.sin-fichar{border-left-color:var(--red);background:var(--red-light);border-color:color-mix(in srgb,var(--red) 35%,#fff)}
+.rh .plan-chip.sin-fichar.borrador{background:#fff}
+.rh .plan-chip.sin-fichar .plan-chip-fich{color:var(--red);font-size:11px}
+.rh .plan-chip.sin-plan{--c:#bbb;background:#f4f4f2;border:1px dashed #c9c9c6;border-left:4px solid #c9c9c6;cursor:default;padding-right:6px}
+/* Día cerrado: ni arrastrar ni menú. */
+.rh .plan-chip.cerrado{cursor:default;opacity:.92}
+.rh .plan-chip.cerrado:active{cursor:default}
 .rh .plan-chip.ajeno{--c:#bbb;background:#f1f1f0;border:1px dashed #c9c9c6;border-left:4px solid #c9c9c6;color:var(--tinta-suave);cursor:default;padding-right:6px}
 .rh .plan-chip.ajeno .plan-chip-h{color:var(--tinta-suave);font-weight:500}
 .rh .plan-aus{--c:#888;font-size:10.5px;font-weight:600;border-radius:6px;padding:2px 6px;margin-bottom:3px;background:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -106,6 +132,9 @@
 
 /* ---------- modales ---------- */
 .rh-modal .plan-modal{max-width:460px}
+.rh-modal .plan-modal-campos{border:none;padding:0;margin:0;min-width:0}
+.rh-modal .plan-modal-campos:disabled{opacity:.7}
+.rh-modal .plan-aviso-rojo{color:#A32D2D}
 .rh-modal .plan-confirmar{max-width:400px}
 .rh-modal .plan-confirmar p{margin:10px 0 0;color:#555;line-height:1.45}
 .rh-modal .plan-plantillas{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 2px}
@@ -149,6 +178,8 @@
   .rh .plan-chip{padding:2px 5px;margin-bottom:2px;font-size:10.5px;break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .rh .plan-chip.ajeno{display:none}
   .rh .plan-chip-n{display:none}
+  .rh .plan-disp{display:none}
+  .rh td.plan-celda.cerrada{background:#fff}
   .rh .plan-cuadrante thead th.hoy{background:var(--arena);color:var(--tinta)}
   .rh .plan-dia-nombre{position:static}
   .rh .plan-dia-pista{min-width:0}

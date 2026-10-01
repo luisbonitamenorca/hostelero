@@ -75,3 +75,76 @@
 @media (max-width:760px){
   .rh .fichajes-acciones{margin-left:0;width:100%}
 }
+
+/* ==================== Jornada (por día, como el Control horario de Skello) ==================== */
+.rh .jornada{display:flex;gap:16px;align-items:flex-start}
+.rh .jornada-dias{display:flex;flex-direction:column;gap:4px;width:150px;flex:0 0 150px;position:sticky;top:64px}
+.rh .jornada-dia{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:8px;background:#fff;border:1px solid var(--linea);border-radius:10px;padding:9px 10px;font:inherit;font-size:12.5px;cursor:pointer;text-align:left;color:var(--tinta)}
+.rh .jornada-dia:hover{border-color:var(--green)}
+.rh .jornada-dia.activa{border-color:var(--green);background:var(--green-light);font-weight:600}
+.rh .jornada-dia.hoy .jornada-dia-nombre{color:var(--green);font-weight:700}
+.rh .jornada-dia.futuro{color:var(--tinta-suave)}
+.rh .jornada-dia-fecha{color:var(--tinta-suave);font-weight:400;font-variant-numeric:tabular-nums}
+.rh .jornada-check{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--linea);color:#fff;background:#fff;flex:0 0 18px}
+.rh .jornada-check.ok{background:var(--green);border-color:var(--green)}
+.rh .jornada-cuerpo{flex:1;min-width:0}
+.rh .jornada-cab{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.rh .jornada-titulo{font-size:15px;font-weight:600}
+.rh .jornada-hoy{margin-left:8px;font-size:11px;font-weight:600;color:var(--green);background:var(--green-light);border-radius:12px;padding:2px 8px;vertical-align:middle}
+.rh .jornada-filtros{display:inline-flex;gap:2px;background:var(--arena);border-radius:8px;padding:3px}
+.rh .jornada-filtros button{background:none;border:none;border-radius:6px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;color:var(--tinta-suave);cursor:pointer}
+.rh .jornada-filtros button.activa{background:#fff;color:var(--tinta);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rh .jornada-totales{margin-left:auto;display:flex;gap:14px;font-size:12px;color:var(--tinta-suave);flex-wrap:wrap}
+.rh .jornada-totales b{color:var(--tinta)}
+.rh .jornada-totales .aviso{color:var(--amber);font-weight:600}
+.rh .jornada-banner{display:flex;align-items:center;gap:8px;border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:10px;background:var(--arena);color:var(--tinta-suave)}
+.rh .jornada-banner.ok{background:var(--green-light);color:var(--green-dark);font-weight:500}
+.rh .jornada-banner.ok svg{color:var(--green)}
+
+/* tabla */
+.rh table.jornada-tabla{min-width:1180px}
+.rh table.jornada-tabla thead th{padding:7px 6px;font-size:11.5px;white-space:nowrap}
+.rh table.jornada-tabla thead th.estrecha{width:36px;min-width:36px}
+.rh table.jornada-tabla td{padding:6px 6px;font-size:12px;vertical-align:middle;white-space:nowrap}
+.rh table.jornada-tabla td.centro{text-align:center}
+.rh table.jornada-tabla td.nombre{min-width:170px;max-width:220px;padding:6px 8px}
+.rh table.jornada-tabla td.nombre .np{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rh table.jornada-tabla td.input{padding:4px}
+.rh table.jornada-tabla td.input input{padding:5px 7px;font-size:12px;border-radius:7px;height:30px}
+.rh table.jornada-tabla td.input input[type=time]{width:92px}
+.rh table.jornada-tabla td.input input.min{width:64px;text-align:right}
+.rh table.jornada-tabla td.input.nota{min-width:150px}
+.rh table.jornada-tabla td.input.nota input{width:100%;min-width:140px}
+.rh table.jornada-tabla td.input input:disabled{background:var(--arena);color:var(--tinta-suave);border-color:transparent}
+.rh table.jornada-tabla td.acciones{position:relative;width:36px}
+.rh .jornada-sub{font-size:11px;color:var(--tinta-suave);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.rh .jornada-vacio{color:var(--tinta-suave)}
+.rh .jornada-inc{font-size:11px;color:var(--amber);font-weight:600;white-space:normal;max-width:220px}
+.rh .jornada-pos{display:inline-flex;color:var(--green)}
+.rh .jornada-pos.mal{color:var(--red)}
+.rh .jornada-fichado{font-weight:600;font-variant-numeric:tabular-nums}
+.rh .jornada-fichado.est-ok{color:var(--green)}
+.rh .jornada-fichado.est-desvio,.rh .jornada-fichado.est-incidencia{color:var(--amber)}
+.rh .jornada-fichado.est-no_ficho{color:var(--red)}
+.rh .jornada-fichado.est-en_curso{color:var(--blue)}
+.rh .jornada-fichado.est-no_plan,.rh .jornada-fichado.est-pendiente,.rh .jornada-fichado.est-vacio,.rh .jornada-fichado.est-futuro{color:var(--tinta-suave);font-weight:500}
+.rh .jornada-dur{font-variant-numeric:tabular-nums}
+.rh .jornada-dur.cero{color:var(--tinta-suave);font-weight:500}
+.rh tr.jornada-fila.est-sin-fichar td{background:#FDF6EA}
+.rh tr.jornada-fila.est-ausente td{background:var(--arena);color:var(--tinta-suave)}
+.rh tr.jornada-fila.est-en_curso td{background:var(--blue-light)}
+.rh tr.jornada-fila.editada td.nombre .np::after{content:" •";color:var(--amber)}
+.rh tr.jornada-fila.est-confirmada td{background:#fff}
+.rh .jornada-mas{background:none;border:1px solid var(--linea);border-radius:7px;width:28px;height:28px;font-size:16px;line-height:1;cursor:pointer;color:var(--tinta-suave);font-family:inherit}
+.rh .jornada-mas:hover{border-color:var(--green);color:var(--tinta)}
+.rh .jornada-menu-fondo{position:fixed;inset:0;z-index:20}
+.rh .jornada-menu{position:absolute;right:6px;top:34px;z-index:21;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);padding:4px;min-width:200px;text-align:left}
+.rh .jornada-menu button{display:block;width:100%;background:none;border:none;padding:8px 10px;font:inherit;font-size:12.5px;text-align:left;cursor:pointer;border-radius:7px;color:var(--tinta)}
+.rh .jornada-menu button:hover{background:var(--arena)}
+
+@media (max-width:900px){
+  .rh .jornada{flex-direction:column}
+  .rh .jornada-dias{flex-direction:row;width:100%;flex:none;position:static;overflow-x:auto}
+  .rh .jornada-dia{grid-template-columns:18px auto;padding:7px 9px}
+  .rh .jornada-dia-fecha{display:none}
+}

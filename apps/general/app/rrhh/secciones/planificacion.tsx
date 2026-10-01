@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "../acciones/planificacion";
-import type { AusenciaPlan, EmpleadoPlan, Festivo, PlantillaTurno, PuestoCat, TurnoAjeno } from "../acciones/planificacion";
+import type { AusenciaPlan, DisponibilidadPlan, EmpleadoPlan, Festivo, PlantillaTurno, PuestoCat, TurnoAjeno } from "../acciones/planificacion";
 import {
   DIAS_SEMANA, dowDe, finAbsoluto, hh, horasNetas, hoyIso, lunesDe, minutos, sumaDia, type Turno,
 } from "../tipos";
@@ -15,6 +15,7 @@ type Modal = Celda & { turno: Turno | null };
 type Vista = "semana" | "dia";
 
 const ddmm = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
+const MSG_CERRADO = "Día cerrado en Fichajes: reábrelo para cambiar turnos";
 const GRIS = "#888";
 const ENUM_AUS: Record<string, string> = { vacaciones: "Vacaciones", baja: "Baja", permiso: "Permiso", otro: "Ausencia" };
 const H0 = 6 * 60; // vista día: 06:00
@@ -110,14 +111,31 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
     return m;
   }, [datos]);
 
+  /* ---------- candado: días cerrados en Fichajes ----------
+     Un día cuyas filas de rrhh_horas_dia del centro están todas validadas (y hay al menos una) está cerrado:
+     🔒 en la cabecera y sus turnos no se mueven, editan ni borran (el servidor también lo rechaza). */
+  const diasCerrados = useMemo(() => {
+    const s = new Set<string>();
+    if (!datos) return s;
+    const porFecha: Record<string, { total: number; validadas: number }> = {};
+    for (const h of datos.horasDia) {
+      const p = (porFecha[h.fecha] ??= { total: 0, validadas: 0 });
+      p.total++;
+      if (h.estado === "validada") p.validadas++;
+    }
+    for (const [f, p] of Object.entries(porFecha)) if (p.total && p.validadas === p.total) s.add(f);
+    return s;
+  }, [datos]);
+
   /* ---------- cálculo: horas, totales y avisos ---------- */
   const calc = useMemo(() => {
     const horasEmp: Record<string, number> = {};
     const horasOtros: Record<string, number> = {}; // horas de la semana en otros centros (el contrato es de la persona)
+    const defecto: Record<string, number> = {}; // horas que faltan para llegar al contrato (jornada contractual)
     const totalDia: Record<string, { horas: number; personas: Set<string>; huecos: number }> = {};
     const lista: string[] = [];
     const conflicto = new Set<string>();
-    if (!datos) return { horasEmp, horasOtros, totalDia, lista, conflicto };
+    if (!datos) return { horasEmp, horasOtros, defecto, totalDia, lista, conflicto };
 
     for (let d = 0; d < 7; d++) totalDia[sumaDia(lunes, d)] = { horas: 0, personas: new Set(), huecos: 0 };
     for (const t of datos.turnos) {
@@ -148,6 +166,19 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
     const diasDesdeLunesPrev = (f: string) => Math.round((new Date(f + "T12:00").getTime() - new Date(lunesPrev + "T12:00").getTime()) / 86400000);
     // Festivos: una sola línea por día (en hostelería se trabaja todos; lo que importa es cuántos).
     const enFestivo: Record<string, Set<string>> = {};
+    // Jornada contractual (Skello): el aviso por defecto de horas solo tiene sentido si la semana ya está
+    // planificada (algo publicado) o es la actual/futura; una semana pasada sin planificar no se avisa.
+    const hayPublicado = datos.turnos.some((t) => t.estado === "publicado");
+    const semanaVigente = lunes >= lunesDe(hoyIso());
+    const diasAusencia = (empId: string) => {
+      let n = 0;
+      for (let d = 0; d < 7; d++) {
+        const f = sumaDia(lunes, d);
+        const a = datos.ausencias.find((x) => x.empleado_id === empId && x.fecha_inicio <= f && x.fecha_fin >= f);
+        if (a) n += a.medio_dia ? 0.5 : 1;
+      }
+      return n;
+    };
 
     for (const e of datos.empleados) {
       const nombre = `${e.nombre}${e.apellidos ? " " + e.apellidos.split(" ")[0] : ""}`;
@@ -164,6 +195,19 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
         lista.push(
           `${nombre}: ${fmtHoras(total + otros)} planificadas${otros ? ` (${fmtHoras(otros)} en otros centros)` : ""}, contrato de ${fmtHoras(Number(e.horas_vigentes))}.`,
         );
+      else if (e.horas_vigentes && (hayPublicado || semanaVigente)) {
+        // Por defecto: le faltan horas para su jornada contractual. Los días de ausencia aprobada se descuentan
+        // a razón de contrato/7 por día (mismo prorrateo que el contrato de la semana).
+        const contrato = Number(e.horas_vigentes);
+        const dAus = diasAusencia(e.id);
+        const faltan = Math.round((contrato - total - otros - (contrato * dAus) / 7) * 100) / 100;
+        if (faltan > 0.01) {
+          defecto[e.id] = faltan;
+          lista.push(
+            `${nombre}: ${fmtHoras(total + otros)} planificadas${otros ? ` (${fmtHoras(otros)} en otros centros)` : ""}, contrato de ${fmtHoras(contrato)} (faltan ${fmtHoras(faltan)}${dAus ? `, descontado${dAus === 1 ? "" : "s"} ${String(dAus).replace(".", ",")} día${dAus === 1 ? "" : "s"} de ausencia` : ""}).`,
+          );
+        }
+      }
 
       for (let i = 1; i < todos.length; i++) {
         const a = todos[i - 1], b = todos[i];
@@ -223,7 +267,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
       const fest = festivoPorFecha.get(fecha)!;
       lista.push(`${DIAS_SEMANA[dowDe(fecha)]} ${ddmm(fecha)} es festivo (${fest.nombre}): ${quienes.size} persona${quienes.size === 1 ? "" : "s"} con turno.`);
     }
-    return { horasEmp, horasOtros, totalDia, lista: [...new Set(lista)], conflicto };
+    return { horasEmp, horasOtros, defecto, totalDia, lista: [...new Set(lista)], conflicto };
   }, [datos, lunes, festivoPorFecha]);
 
   /* ---------- acciones ---------- */
@@ -241,6 +285,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
     dragId.current = null;
     const t = datos?.turnos.find((x) => x.id === id);
     if (!t) return;
+    if (diasCerrados.has(t.fecha) || diasCerrados.has(destino.fecha)) { avisar(MSG_CERRADO); return; }
     const d = { empleado_id: destino.empleadoId, fecha: destino.fecha };
     if (ev.altKey) {
       tras(await api.duplicarTurno(t.id, d), "Turno duplicado", "No se pudo duplicar");
@@ -270,11 +315,17 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
   const abrirMenu = (t: Turno, ev: React.MouseEvent) => {
     ev.preventDefault();
     ev.stopPropagation();
+    if (diasCerrados.has(t.fecha)) { avisar(MSG_CERRADO); return; }
     setMenu({ turno: t, x: Math.min(ev.clientX, window.innerWidth - 200), y: Math.min(ev.clientY, window.innerHeight - 150) });
   };
 
   const clicChip = (t: Turno, ev: React.MouseEvent) => {
     ev.stopPropagation();
+    if (diasCerrados.has(t.fecha)) {
+      // Día cerrado: se puede mirar el turno, no tocarlo.
+      setModal({ empleadoId: t.empleado_id, fecha: t.fecha, turno: t });
+      return;
+    }
     if (ev.shiftKey) {
       setSel((s) => { const n = new Set(s); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n; });
       return;
@@ -304,29 +355,98 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
     datos.turnos.filter((t) => t.empleado_id === empId && t.fecha === fecha).sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
   const ajenosCelda = (empId: string, fecha: string) =>
     datos.ajenos.filter((t) => t.empleado_id === empId && t.fecha === fecha).sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+  const fichadoDe = (empId: string, fecha: string) => datos.fichados.find((f) => f.empleado_id === empId && f.fecha === fecha);
+  const horasDiaDe = (empId: string, fecha: string) => datos.horasDia.find((h) => h.empleado_id === empId && h.fecha === fecha);
+  const dispDe = (empId: string, fecha: string) => datos.disponibilidades.find((d) => d.empleado_id === empId && d.fecha === fecha);
+  const tituloDisp = (d: { tipo: string; nota: string | null }) =>
+    (d.tipo === "prefiere" ? "Prefiere trabajar este día" : "Ha marcado que NO puede este día") + (d.nota ? `: ${d.nota}` : "");
 
   /* ---------- piezas ---------- */
-  const chip = (t: Turno) => {
+  /** `idx` = posición del turno dentro de la celda: lo fichado del día se pinta solo en el primero. */
+  const chip = (t: Turno, idx = 0) => {
     const c = colorDe(t);
     const conf = calc.conflicto.has(t.id);
+    const cerrado = diasCerrados.has(t.fecha);
+    const pasado = t.fecha < hoy;
+    // Día pasado (como Skello): arriba en pequeño lo planificado y debajo en grande lo FICHADO.
+    // Si hay fila en Fichajes (rrhh_horas_dia), sus horas retenidas mandan (✓ si está validada).
+    let real: React.ReactNode = null;
+    let claseReal = "";
+    let tituloReal = "";
+    if (pasado && t.empleado_id && idx === 0) {
+      const f = fichadoDe(t.empleado_id, t.fecha);
+      const hd = horasDiaDe(t.empleado_id, t.fecha);
+      const validada = hd?.estado === "validada";
+      const horasChip = hd ? Number(hd.horas_retenidas) : f ? f.horas : null;
+      const etiqueta = hd ? `${validada ? "✓ " : ""}${fmtHoras(horasChip ?? 0)}${validada ? "" : " propuestas"}` : f ? `${fmtHoras(f.horas)} fichadas` : "";
+      if (f) {
+        claseReal = "fichado";
+        tituloReal = `Planificado ${hh(t)} · ${fmtHoras(horasNetas(t))}\nFichado ${f.entrada ?? "—"} – ${f.salida ?? (f.en_curso ? "en curso" : "—")} · ${fmtHoras(f.horas)}${f.pausas_min ? ` (pausas ${f.pausas_min} min)` : ""}${hd ? `\nRetenidas ${fmtHoras(Number(hd.horas_retenidas))}${validada ? " (validado)" : " (propuesta)"}` : ""}${f.incidencias.length ? `\n⚠ ${f.incidencias.join(", ")}` : ""}`;
+        real = (
+          <>
+            <div className="plan-chip-plan">{hh(t)}{conf ? <span className="plan-chip-w"> ⚠</span> : null}</div>
+            <div className="plan-chip-fich">{f.entrada ?? "—"} – {f.salida ?? (f.en_curso ? "…" : "—")}</div>
+            <div className="plan-chip-p">{etiqueta}{f.incidencias.length ? <span className="plan-chip-w"> ⚠</span> : null}</div>
+          </>
+        );
+      } else if (hd && Number(hd.horas_retenidas) > 0) {
+        // Sin fichajes pero con horas en Fichajes (validadas a mano o importadas de Skello): las retenidas mandan.
+        claseReal = "retenido";
+        tituloReal = `Planificado ${hh(t)} · ${fmtHoras(horasNetas(t))}\nSin fichajes registrados\nRetenidas ${fmtHoras(Number(hd.horas_retenidas))}${validada ? " (validado)" : " (propuesta)"}`;
+        real = (
+          <>
+            <div className="plan-chip-plan">{hh(t)}{conf ? <span className="plan-chip-w"> ⚠</span> : null}</div>
+            <div className="plan-chip-fich">{etiqueta}</div>
+            <div className="plan-chip-p">{validada ? "validado en Fichajes" : "propuesta en Fichajes"}</div>
+          </>
+        );
+      } else if (!ausenciaDe(t.empleado_id, t.fecha)) {
+        claseReal = "sin-fichar";
+        tituloReal = `Planificado ${hh(t)} · ${fmtHoras(horasNetas(t))}\nNo fichó${hd ? `\nRetenidas ${fmtHoras(Number(hd.horas_retenidas))}${validada ? " (validado)" : " (propuesta)"}` : ""}`;
+        real = (
+          <>
+            <div className="plan-chip-plan">{hh(t)}</div>
+            <div className="plan-chip-fich">sin fichar</div>
+            <div className="plan-chip-p">{hd ? etiqueta : nombrePuesto(t) || "—"}</div>
+          </>
+        );
+      }
+    }
+    const ayuda = cerrado ? MSG_CERRADO : "Arrastra para mover · Alt+arrastrar duplica · Shift+clic selecciona";
     return (
       <div
         key={t.id}
-        className={`plan-chip ${t.estado} ${sel.has(t.id) ? "sel" : ""} ${conf ? "conflicto" : ""}`}
+        className={`plan-chip ${t.estado} ${sel.has(t.id) ? "sel" : ""} ${conf ? "conflicto" : ""} ${claseReal} ${cerrado ? "cerrado" : ""}`}
         style={{ ["--c" as string]: c }}
-        draggable
-        onDragStart={(ev) => { dragId.current = t.id; ev.dataTransfer.setData("text/plain", t.id); ev.dataTransfer.effectAllowed = "copyMove"; }}
+        draggable={!cerrado}
+        onDragStart={(ev) => { if (cerrado) { ev.preventDefault(); return; } dragId.current = t.id; ev.dataTransfer.setData("text/plain", t.id); ev.dataTransfer.effectAllowed = "copyMove"; }}
         onDragEnd={() => { dragId.current = null; setDropEn(null); }}
         onClick={(ev) => clicChip(t, ev)}
         onContextMenu={(ev) => abrirMenu(t, ev)}
-        title={`${hh(t)} · ${fmtHoras(horasNetas(t))}${t.nota ? "\n" + t.nota : ""}\nArrastra para mover · Alt+arrastrar duplica · Shift+clic selecciona`}
+        title={`${tituloReal || `${hh(t)} · ${fmtHoras(horasNetas(t))}`}${t.nota ? "\n" + t.nota : ""}\n${ayuda}`}
       >
-        <div className="plan-chip-h">
-          <span>{hh(t)}</span>
-          {conf ? <span className="plan-chip-w">⚠</span> : null}
-        </div>
-        <div className="plan-chip-p"><span className="plan-chip-n">{fmtHoras(horasNetas(t))} · </span>{nombrePuesto(t) || "—"}{t.nota ? <span className="plan-chip-nota" title={t.nota}> ✎</span> : null}</div>
-        <button type="button" className="plan-chip-menu" onClick={(ev) => abrirMenu(t, ev)} aria-label="Más opciones">⋯</button>
+        {real ?? (
+          <>
+            <div className="plan-chip-h">
+              <span>{hh(t)}</span>
+              {conf ? <span className="plan-chip-w">⚠</span> : null}
+            </div>
+            <div className="plan-chip-p"><span className="plan-chip-n">{fmtHoras(horasNetas(t))} · </span>{nombrePuesto(t) || "—"}{t.nota ? <span className="plan-chip-nota" title={t.nota}> ✎</span> : null}</div>
+          </>
+        )}
+        {cerrado ? null : <button type="button" className="plan-chip-menu" onClick={(ev) => abrirMenu(t, ev)} aria-label="Más opciones">⋯</button>}
+      </div>
+    );
+  };
+  /** Día pasado con fichajes pero sin turno planificado: se enseña en gris para que no pase desapercibido. */
+  const chipSinPlan = (f: Datos["fichados"][number]) => {
+    const hd = horasDiaDe(f.empleado_id, f.fecha);
+    const validada = hd?.estado === "validada";
+    return (
+      <div key={"f" + f.fecha} className="plan-chip fichado sin-plan" title={`Fichó sin turno planificado\n${f.entrada ?? "—"} – ${f.salida ?? "—"} · ${fmtHoras(f.horas)}${hd ? `\nRetenidas ${fmtHoras(Number(hd.horas_retenidas))}${validada ? " (validado)" : " (propuesta)"}` : ""}`}>
+        <div className="plan-chip-plan">sin turno</div>
+        <div className="plan-chip-fich">{f.entrada ?? "—"} – {f.salida ?? (f.en_curso ? "…" : "—")}</div>
+        <div className="plan-chip-p">{hd ? `${validada ? "✓ " : ""}${fmtHoras(Number(hd.horas_retenidas))}` : `${fmtHoras(f.horas)} fichadas`}</div>
       </div>
     );
   };
@@ -347,20 +467,24 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
   };
   const celda = (empleadoId: string | null, fecha: string, children: React.ReactNode, className = "", key?: React.Key) => {
     const clave = `${empleadoId ?? "_"}|${fecha}`;
+    const cerrado = diasCerrados.has(fecha);
+    const disp = empleadoId ? dispDe(empleadoId, fecha) : undefined;
     return (
       <td
         key={key}
-        className={`celda plan-celda ${className} ${dropEn === clave ? "drop" : ""} ${fecha === hoy ? "es-hoy" : ""} ${festivoPorFecha.has(fecha) ? "es-festivo" : ""}`}
+        className={`celda plan-celda ${className} ${dropEn === clave ? "drop" : ""} ${fecha === hoy ? "es-hoy" : ""} ${festivoPorFecha.has(fecha) ? "es-festivo" : ""} ${cerrado ? "cerrada" : ""} ${disp ? `disp-${disp.tipo === "prefiere" ? "si" : "no"}` : ""}`}
         onClick={(ev) => {
           if ((ev.target as Element).closest(".plan-chip, button")) return;
           if (ev.shiftKey) return;
+          if (cerrado) { avisar(MSG_CERRADO); return; }
           setModal({ empleadoId, fecha, turno: null });
         }}
-        onDragOver={(ev) => { ev.preventDefault(); ev.dataTransfer.dropEffect = ev.altKey ? "copy" : "move"; if (dropEn !== clave) setDropEn(clave); }}
+        onDragOver={(ev) => { if (cerrado) return; ev.preventDefault(); ev.dataTransfer.dropEffect = ev.altKey ? "copy" : "move"; if (dropEn !== clave) setDropEn(clave); }}
         onDragLeave={() => { if (dropEn === clave) setDropEn(null); }}
         onDrop={(ev) => soltar({ empleadoId, fecha }, ev)}
       >
         {children}
+        {disp ? <i className={`plan-disp ${disp.tipo === "prefiere" ? "si" : "no"}`} title={tituloDisp(disp)} aria-label={tituloDisp(disp)} /> : null}
       </td>
     );
   };
@@ -379,6 +503,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
     const otros = calc.horasOtros[e.id] ?? 0;
     const contrato = e.horas_vigentes != null ? Number(e.horas_vigentes) : null;
     const exceso = contrato != null && h + otros > contrato + 0.01;
+    const faltan = calc.defecto[e.id];
     filas.push(
       <tr key={e.id}>
         <td className="nombre">
@@ -390,22 +515,26 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
         {Array.from({ length: 7 }, (_, dd) => {
           const fecha = sumaDia(lunes, dd);
           const aus = ausenciaDe(e.id, fecha);
+          const turnosDia = turnosCelda(e.id, fecha);
+          const fichSinPlan = fecha < hoy && !turnosDia.length ? fichadoDe(e.id, fecha) : undefined;
           return celda(
             e.id,
             fecha,
             <>
               {aus ? tagAusencia(aus) : null}
-              {turnosCelda(e.id, fecha).map((t) => chip(t))}
+              {turnosDia.map((t, i) => chip(t, i))}
+              {fichSinPlan ? chipSinPlan(fichSinPlan) : null}
               {ajenosCelda(e.id, fecha).map((t) => chipAjeno(t))}
             </>,
             aus ? "ausencia" : "",
             dd,
           );
         })}
-        <td className={`plan-horas ${exceso ? "exceso" : ""}`} title={(contrato != null ? "Planificadas en este centro / contrato de la semana" : "Planificadas (sin horas de contrato)") + (otros ? ". El contrato cuenta todos los centros." : "")}>
+        <td className={`plan-horas ${exceso ? "exceso" : ""} ${faltan ? "defecto" : ""}`} title={(contrato != null ? "Planificadas en este centro / contrato de la semana" : "Planificadas (sin horas de contrato)") + (otros ? ". El contrato cuenta todos los centros." : "") + (faltan ? `. Jornada contractual: faltan ${fmtHoras(faltan)}.` : "")}>
           <b>{fmtHoras(h)}</b>{contrato != null ? <span> / {fmtHoras(contrato)}</span> : null}
           {otros ? <div className="plan-sub plan-horas-otros">+{fmtHoras(otros)} en otros centros</div> : null}
           {exceso ? <div className="plan-horas-ex">+{fmtHoras(h + otros - contrato!)}</div> : null}
+          {faltan ? <div className="plan-horas-ex">−{fmtHoras(faltan)}</div> : null}
         </td>
       </tr>,
     );
@@ -423,9 +552,10 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
             {Array.from({ length: 7 }, (_, d) => {
               const f = sumaDia(lunes, d);
               const fest = festivoPorFecha.get(f);
+              const cerrado = diasCerrados.has(f);
               return (
-                <th key={d} className={`${f === hoy ? "hoy" : ""} ${fest ? "plan-th-festivo" : ""}`} title={fest ? `Festivo: ${fest.nombre}` : undefined}>
-                  {DIAS_SEMANA[d]}<br />{ddmm(f)}
+                <th key={d} className={`${f === hoy ? "hoy" : ""} ${fest ? "plan-th-festivo" : ""} ${cerrado ? "plan-th-cerrado" : ""}`} title={[fest ? `Festivo: ${fest.nombre}` : "", cerrado ? "Día validado en Fichajes: los turnos no se pueden cambiar. Reábrelo en Fichajes si hace falta." : ""].filter(Boolean).join("\n") || undefined}>
+                  {cerrado ? <span className="plan-candado" aria-label="Día cerrado">🔒 </span> : null}{DIAS_SEMANA[d]}<br />{ddmm(f)}
                   {fest ? <div className="plan-festivo">★ {fest.nombre}</div> : null}
                 </th>
               );
@@ -447,7 +577,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
                 fecha,
                 <>
                   {hs.map((t) => chip(t))}
-                  <button type="button" className="plan-mas" onClick={() => setModal({ empleadoId: null, fecha, turno: null })} title="Crear hueco">+ hueco</button>
+                  {diasCerrados.has(fecha) ? null : <button type="button" className="plan-mas" onClick={() => setModal({ empleadoId: null, fecha, turno: null })} title="Crear hueco">+ hueco</button>}
                 </>,
                 "",
                 dd,
@@ -509,24 +639,38 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
         </div>
       );
     };
-    const fila = (nombre: string, sub: string | undefined, children: React.ReactNode, empleadoId: string | null, key: React.Key) => (
+    const cerradoDia = diasCerrados.has(dia);
+    const fila = (nombre: string, sub: string | undefined, children: React.ReactNode, empleadoId: string | null, key: React.Key) => {
+      const disp = empleadoId ? dispDe(empleadoId, dia) : undefined;
+      return (
       <div className="plan-dia-fila" key={key}>
-        <div className="plan-dia-nombre"><div className="np">{nombre}</div>{sub ? <div className="plan-sub">{sub}</div> : null}</div>
+        <div className="plan-dia-nombre">
+          <div className="np">{disp ? <i className={`plan-disp inline ${disp.tipo === "prefiere" ? "si" : "no"}`} title={tituloDisp(disp)} /> : null}{nombre}</div>
+          {sub ? <div className="plan-sub">{sub}</div> : null}
+        </div>
         <div
           className="plan-dia-pista"
-          onDoubleClick={(ev) => { if (!(ev.target as Element).closest(".plan-barra")) setModal({ empleadoId, fecha: dia, turno: null }); }}
-          title="Doble clic para crear un turno"
+          onDoubleClick={(ev) => {
+            if ((ev.target as Element).closest(".plan-barra")) return;
+            if (cerradoDia) { avisar(MSG_CERRADO); return; }
+            setModal({ empleadoId, fecha: dia, turno: null });
+          }}
+          title={cerradoDia ? MSG_CERRADO : "Doble clic para crear un turno"}
         >
           {HORAS_DIA.map((_, i) => <i key={i} className="plan-dia-linea" style={{ left: `${(i / HORAS_DIA.length) * 100}%` }} />)}
           {children}
         </div>
       </div>
-    );
+      );
+    };
     return (
       <div className="plan-dia">
         <div className="plan-dia-cab">
           <button className="btn btn-fantasma btn-peque" onClick={() => { const d = sumaDia(dia, -1); if (d < lunes) setLunes(sumaDia(lunes, -7)); setDia(d); }}>‹ día</button>
-          <h3>{DIAS_SEMANA[dowDe(dia)]} {ddmm(dia)}{fest ? <span className="plan-festivo-inline">★ {fest.nombre}</span> : null}</h3>
+          <h3>
+            {cerradoDia ? <span className="plan-candado" title="Día validado en Fichajes: los turnos no se pueden cambiar.">🔒 </span> : null}
+            {DIAS_SEMANA[dowDe(dia)]} {ddmm(dia)}{fest ? <span className="plan-festivo-inline">★ {fest.nombre}</span> : null}
+          </h3>
           <button className="btn btn-fantasma btn-peque" onClick={() => { const d = sumaDia(dia, 1); if (d > hasta) setLunes(sumaDia(lunes, 7)); setDia(d); }}>día ›</button>
           <span className="plan-sub">{fmtHoras(calc.totalDia[dia]?.horas ?? 0)} · {calc.totalDia[dia]?.personas.size ?? 0} personas</span>
         </div>
@@ -565,7 +709,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
           <div className="plan-dia-libres">
             <b>Sin turno este día ({sinTurno.length}):</b>{" "}
             {sinTurno.map((e) => (
-              <button key={e.id} type="button" className="plan-libre" onClick={() => setModal({ empleadoId: e.id, fecha: dia, turno: null })} title="Crear turno">
+              <button key={e.id} type="button" className="plan-libre" onClick={() => { if (cerradoDia) { avisar(MSG_CERRADO); return; } setModal({ empleadoId: e.id, fecha: dia, turno: null }); }} title={cerradoDia ? MSG_CERRADO : "Crear turno"}>
                 {e.nombre} {e.apellidos ? e.apellidos.split(" ")[0] : ""}
               </button>
             ))}
@@ -637,6 +781,9 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
         <span><span className="muestra" style={{ background: "#eee", border: "1px dashed #bbb" }} /> En otro centro</span>
         <span><span className="muestra" style={{ background: "var(--arena)", border: "1px solid var(--linea)" }} /> Ausencia aprobada</span>
         <span>★ Festivo</span>
+        <span><span className="muestra" style={{ borderLeft: "4px solid var(--red)", background: "var(--red-light)" }} /> Sin fichar (día pasado)</span>
+        <span>🔒 Día validado en Fichajes: no se toca</span>
+        <span><i className="plan-disp inline no" /> No puede · <i className="plan-disp inline si" /> Prefiere (lo marca el empleado)</span>
         <span style={{ color: "var(--amber)" }}>⚠ Aviso — no bloquea</span>
         <span className="plan-ayuda">Clic en celda: nuevo turno · arrastra para mover · Alt+arrastrar duplica · Shift+clic selecciona varios · botón derecho: menú</span>
       </div>
@@ -688,6 +835,8 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
           puestoDe={puestoDe}
           centroId={centroId}
           ausencia={modal.empleadoId ? ausenciaDe(modal.empleadoId, modal.fecha) ?? null : null}
+          disponibilidades={datos.disponibilidades.filter((d) => d.fecha === modal.fecha)}
+          soloLectura={diasCerrados.has(modal.fecha)}
           cerrar={() => setModal(null)}
           hecho={(msg) => { setModal(null); avisar(msg); cargar(); }}
         />
@@ -756,7 +905,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
    Modal de turno
    ====================================================================== */
 
-function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centroId, ausencia, cerrar, hecho }: {
+function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centroId, ausencia, disponibilidades, soloLectura, cerrar, hecho }: {
   contexto: Modal;
   empleados: EmpleadoPlan[];
   puestos: PuestoCat[];
@@ -764,6 +913,10 @@ function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centro
   puestoDe: (t: { puesto_id: string | null; puesto: string | null }) => PuestoCat | null;
   centroId: string;
   ausencia: AusenciaPlan | null;
+  /** Disponibilidades marcadas por los empleados ese día (para avisar al elegir empleado). */
+  disponibilidades: DisponibilidadPlan[];
+  /** Día cerrado en Fichajes: se puede mirar, no guardar ni borrar. */
+  soloLectura: boolean;
   cerrar: () => void;
   hecho: (msg: string) => void;
 }) {
@@ -783,6 +936,12 @@ function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centro
 
   const horas = horasNetas({ hora_inicio: inicio || "00:00", hora_fin: fin || "00:00", pausa_min: Number(pausa) || 0 });
   const puestosVisibles = puestos.filter((p) => p.activo || p.id === puesto);
+  const disp = empleadoId ? disponibilidades.find((d) => d.empleado_id === empleadoId) : undefined;
+  const avisoDisp = disp
+    ? disp.tipo === "prefiere"
+      ? `Prefiere trabajar este día${disp.nota ? ` («${disp.nota}»)` : ""}.`
+      : `Ojo: ha marcado que NO puede este día${disp.nota ? ` («${disp.nota}»)` : ""}.`
+    : "";
   const alCambiarEmpleado = (id: string) => {
     setEmpleadoId(id);
     if (!t && !puesto) {
@@ -803,7 +962,7 @@ function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centro
         className="modal plan-modal"
         onSubmit={async (e) => {
           e.preventDefault();
-          if (guardando) return;
+          if (guardando || soloLectura) return;
           const cat = puesto && !puesto.startsWith("txt:") ? puestos.find((p) => p.id === puesto) ?? null : null;
           setGuardando(true);
           const r = await api.guardarTurnoPlan(t?.id ?? null, {
@@ -822,10 +981,11 @@ function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centro
           hecho(t ? "Turno guardado" : empleadoId ? "Turno creado" : "Hueco creado");
         }}
       >
-        <h2>{t ? "Editar turno" : empleadoId ? "Nuevo turno" : "Nuevo hueco (sin asignar)"}</h2>
-        <div className="sub">{DIAS_SEMANA[dowDe(contexto.fecha)]} {ddmm(contexto.fecha)}{t?.estado === "publicado" ? " · publicado" : ""}</div>
+        <h2>{soloLectura ? "Turno (día cerrado)" : t ? "Editar turno" : empleadoId ? "Nuevo turno" : "Nuevo hueco (sin asignar)"}</h2>
+        <div className="sub">{DIAS_SEMANA[dowDe(contexto.fecha)]} {ddmm(contexto.fecha)}{t?.estado === "publicado" ? " · publicado" : ""}{soloLectura ? " · 🔒 validado en Fichajes" : ""}</div>
 
-        {plantillas.length ? (
+        <fieldset className="plan-modal-campos" disabled={soloLectura}>
+        {plantillas.length && !soloLectura ? (
           <div className="plan-plantillas">
             {plantillas.slice(0, 8).map((p) => (
               <button key={p.id} type="button" className="plan-plantilla" onClick={() => aplicarPlantilla(p)} title={p.puesto_id ? puestos.find((x) => x.id === p.puesto_id)?.nombre : undefined}>
@@ -858,19 +1018,22 @@ function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centro
         </div>
         <label>Nota <small className="plan-sub">(la ve el empleado)</small></label>
         <input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej.: llega 15 min antes, evento en terraza…" maxLength={200} />
+        </fieldset>
 
         <div className="plan-modal-resumen">
           <span className="plan-modal-horas">{fmtHoras(horas)}</span>
           {puesto && !puesto.startsWith("txt:") ? (() => { const p = puestos.find((x) => x.id === puesto); return p ? <span className="plan-modal-puesto"><i style={{ background: p.color }} />{p.nombre}</span> : null; })() : null}
         </div>
 
-        <div className="aviso-modal">
+        <div className={`aviso-modal ${!error && disp?.tipo === "no_disponible" ? "plan-aviso-rojo" : ""}`}>
           {error ||
+            (soloLectura ? "Día cerrado en Fichajes: reábrelo para cambiar turnos." : "") ||
+            avisoDisp ||
             (ausencia ? `Ojo: este día tiene una ausencia aprobada (${ausencia.rrhh_tipos_ausencia?.nombre || ENUM_AUS[ausencia.tipo]}).` : "") ||
             (t?.estado === "publicado" ? "Este turno ya está publicado: el cambio será visible para el empleado al guardar." : "")}
         </div>
         <div className="modal-acciones">
-          {t ? (
+          {t && !soloLectura ? (
             pideBorrar ? (
               <button type="button" className="btn btn-borrar" onClick={async () => {
                 const r = await api.borrarTurnos([t.id]);
@@ -881,8 +1044,8 @@ function ModalTurno({ contexto, empleados, puestos, plantillas, puestoDe, centro
               <button type="button" className="btn btn-borrar" onClick={() => setPideBorrar(true)}>Eliminar</button>
             )
           ) : null}
-          <button type="button" className="btn btn-fantasma" onClick={cerrar}>Cancelar</button>
-          <button type="submit" className="btn btn-primario" disabled={guardando}>{guardando ? "Guardando…" : "Guardar"}</button>
+          <button type="button" className="btn btn-fantasma" onClick={cerrar}>{soloLectura ? "Cerrar" : "Cancelar"}</button>
+          {soloLectura ? null : <button type="submit" className="btn btn-primario" disabled={guardando}>{guardando ? "Guardando…" : "Guardar"}</button>}
         </div>
       </form>
     </div>
