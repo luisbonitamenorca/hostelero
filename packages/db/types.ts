@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -711,6 +711,65 @@ export type Database = {
           },
         ]
       }
+      agentes_buzon: {
+        Row: {
+          canal: string
+          cuenta_id: string
+          evento_en: string | null
+          id: string
+          pagina_ref: string | null
+          procesado: boolean
+          raw: Json
+          recibido_en: string
+          remitente_id: string | null
+          remitente_nombre: string | null
+          respondido_en: string | null
+          respuesta: string | null
+          texto: string | null
+          tipo: string
+        }
+        Insert: {
+          canal: string
+          cuenta_id: string
+          evento_en?: string | null
+          id?: string
+          pagina_ref?: string | null
+          procesado?: boolean
+          raw: Json
+          recibido_en?: string
+          remitente_id?: string | null
+          remitente_nombre?: string | null
+          respondido_en?: string | null
+          respuesta?: string | null
+          texto?: string | null
+          tipo: string
+        }
+        Update: {
+          canal?: string
+          cuenta_id?: string
+          evento_en?: string | null
+          id?: string
+          pagina_ref?: string | null
+          procesado?: boolean
+          raw?: Json
+          recibido_en?: string
+          remitente_id?: string | null
+          remitente_nombre?: string | null
+          respondido_en?: string | null
+          respuesta?: string | null
+          texto?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agentes_buzon_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agentes_catalogo: {
         Row: {
           ambito: string
@@ -832,6 +891,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      agentes_credenciales: {
+        Row: {
+          actualizado_en: string
+          cuenta_id: string
+          datos: Json
+          proveedor: string
+        }
+        Insert: {
+          actualizado_en?: string
+          cuenta_id: string
+          datos: Json
+          proveedor: string
+        }
+        Update: {
+          actualizado_en?: string
+          cuenta_id?: string
+          datos?: Json
+          proveedor?: string
+        }
+        Relationships: []
       }
       agentes_hallazgos: {
         Row: {
@@ -1686,6 +1766,48 @@ export type Database = {
         }
         Relationships: []
       }
+      compras_asiento_rehecho: {
+        Row: {
+          a3_numdoc: number | null
+          accion: string
+          asiento_anulado: string | null
+          asiento_contra: string | null
+          asiento_nuevo: string | null
+          cuenta_id: string
+          doc_id: string | null
+          hecho_en: string
+          hecho_por: string | null
+          id: number
+          motivo: string | null
+        }
+        Insert: {
+          a3_numdoc?: number | null
+          accion: string
+          asiento_anulado?: string | null
+          asiento_contra?: string | null
+          asiento_nuevo?: string | null
+          cuenta_id: string
+          doc_id?: string | null
+          hecho_en?: string
+          hecho_por?: string | null
+          id?: number
+          motivo?: string | null
+        }
+        Update: {
+          a3_numdoc?: number | null
+          accion?: string
+          asiento_anulado?: string | null
+          asiento_contra?: string | null
+          asiento_nuevo?: string | null
+          cuenta_id?: string
+          doc_id?: string | null
+          hecho_en?: string
+          hecho_por?: string | null
+          id?: number
+          motivo?: string | null
+        }
+        Relationships: []
+      }
       compras_centro_coste: {
         Row: {
           activo: boolean
@@ -1717,6 +1839,126 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      compras_concil_confirmada: {
+        Row: {
+          albaran_id: string
+          created_at: string
+          factura_id: string
+          id: string
+          num_albaran: string
+        }
+        Insert: {
+          albaran_id: string
+          created_at?: string
+          factura_id: string
+          id?: string
+          num_albaran: string
+        }
+        Update: {
+          albaran_id?: string
+          created_at?: string
+          factura_id?: string
+          id?: string
+          num_albaran?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_concil_confirmada_albaran_id_fkey"
+            columns: ["albaran_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_concil_confirmada_albaran_id_fkey"
+            columns: ["albaran_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_concil_confirmada_albaran_id_fkey"
+            columns: ["albaran_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_concil_confirmada_albaran_id_fkey"
+            columns: ["albaran_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_concil_confirmada_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_concil_confirmada_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_concil_confirmada_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_concil_confirmada_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
+          },
+        ]
+      }
+      compras_contrato_centro: {
+        Row: {
+          activo: boolean
+          centro_coste: number
+          contrato: string
+          created_at: string
+          cuenta_alquiler: string
+          cuenta_id: string
+          cuenta_seguro: string
+          id: number
+          nota: string | null
+          proveedor: string | null
+        }
+        Insert: {
+          activo?: boolean
+          centro_coste: number
+          contrato: string
+          created_at?: string
+          cuenta_alquiler?: string
+          cuenta_id?: string
+          cuenta_seguro?: string
+          id?: number
+          nota?: string | null
+          proveedor?: string | null
+        }
+        Update: {
+          activo?: boolean
+          centro_coste?: number
+          contrato?: string
+          created_at?: string
+          cuenta_alquiler?: string
+          cuenta_id?: string
+          cuenta_seguro?: string
+          id?: number
+          nota?: string | null
+          proveedor?: string | null
+        }
+        Relationships: []
       }
       compras_correo: {
         Row: {
@@ -1989,6 +2231,7 @@ export type Database = {
           estado_detalle: string | null
           factura_id: string | null
           fecha: string | null
+          fecha_contable: string | null
           hash_doc: string | null
           id: string
           imagen_url: string | null
@@ -2003,6 +2246,7 @@ export type Database = {
           proveedor_id: string | null
           proveedor_nif: string | null
           raw: Json | null
+          regimen_iva: string | null
           reparto_sugerido: Json | null
           retencion: number | null
           retencion_base: number | null
@@ -2025,6 +2269,7 @@ export type Database = {
           estado_detalle?: string | null
           factura_id?: string | null
           fecha?: string | null
+          fecha_contable?: string | null
           hash_doc?: string | null
           id?: string
           imagen_url?: string | null
@@ -2039,6 +2284,7 @@ export type Database = {
           proveedor_id?: string | null
           proveedor_nif?: string | null
           raw?: Json | null
+          regimen_iva?: string | null
           reparto_sugerido?: Json | null
           retencion?: number | null
           retencion_base?: number | null
@@ -2061,6 +2307,7 @@ export type Database = {
           estado_detalle?: string | null
           factura_id?: string | null
           fecha?: string | null
+          fecha_contable?: string | null
           hash_doc?: string | null
           id?: string
           imagen_url?: string | null
@@ -2075,6 +2322,7 @@ export type Database = {
           proveedor_id?: string | null
           proveedor_nif?: string | null
           raw?: Json | null
+          regimen_iva?: string | null
           reparto_sugerido?: Json | null
           retencion?: number | null
           retencion_base?: number | null
@@ -2429,8 +2677,10 @@ export type Database = {
           nombre_norm: string | null
           pauta_factura: string | null
           pautas: string | null
+          regimen_iva: string | null
           retencion_modelo: string | null
           retencion_pct: number | null
+          tipo_iva_autorep: string | null
         }
         Insert: {
           alias?: string | null
@@ -2452,8 +2702,10 @@ export type Database = {
           nombre_norm?: string | null
           pauta_factura?: string | null
           pautas?: string | null
+          regimen_iva?: string | null
           retencion_modelo?: string | null
           retencion_pct?: number | null
+          tipo_iva_autorep?: string | null
         }
         Update: {
           alias?: string | null
@@ -2475,8 +2727,10 @@ export type Database = {
           nombre_norm?: string | null
           pauta_factura?: string | null
           pautas?: string | null
+          regimen_iva?: string | null
           retencion_modelo?: string | null
           retencion_pct?: number | null
+          tipo_iva_autorep?: string | null
         }
         Relationships: [
           {
@@ -3626,6 +3880,9 @@ export type Database = {
           apellidos: string | null
           area_funcional: Database["public"]["Enums"]["area_funcional"] | null
           centro_principal_id: string | null
+          codigo_nomina: string | null
+          contador_inicial_fecha: string | null
+          contador_inicial_h: number
           creado_en: string
           cuenta_id: string
           departamento: string | null
@@ -3634,19 +3891,26 @@ export type Database = {
           email: string | null
           fecha_alta: string | null
           fecha_baja: string | null
+          fecha_nacimiento: string | null
           fichaje_movil: boolean
           horas_semana: number | null
           id: string
           nombre: string
+          nota: string | null
           pin_hash: string | null
+          puesto_defecto_id: string | null
           telefono: string | null
           tipo_contrato: string | null
           user_id: string | null
+          vacaciones_ajuste_dias: number
         }
         Insert: {
           apellidos?: string | null
           area_funcional?: Database["public"]["Enums"]["area_funcional"] | null
           centro_principal_id?: string | null
+          codigo_nomina?: string | null
+          contador_inicial_fecha?: string | null
+          contador_inicial_h?: number
           creado_en?: string
           cuenta_id?: string
           departamento?: string | null
@@ -3655,19 +3919,26 @@ export type Database = {
           email?: string | null
           fecha_alta?: string | null
           fecha_baja?: string | null
+          fecha_nacimiento?: string | null
           fichaje_movil?: boolean
           horas_semana?: number | null
           id?: string
           nombre: string
+          nota?: string | null
           pin_hash?: string | null
+          puesto_defecto_id?: string | null
           telefono?: string | null
           tipo_contrato?: string | null
           user_id?: string | null
+          vacaciones_ajuste_dias?: number
         }
         Update: {
           apellidos?: string | null
           area_funcional?: Database["public"]["Enums"]["area_funcional"] | null
           centro_principal_id?: string | null
+          codigo_nomina?: string | null
+          contador_inicial_fecha?: string | null
+          contador_inicial_h?: number
           creado_en?: string
           cuenta_id?: string
           departamento?: string | null
@@ -3676,14 +3947,18 @@ export type Database = {
           email?: string | null
           fecha_alta?: string | null
           fecha_baja?: string | null
+          fecha_nacimiento?: string | null
           fichaje_movil?: boolean
           horas_semana?: number | null
           id?: string
           nombre?: string
+          nota?: string | null
           pin_hash?: string | null
+          puesto_defecto_id?: string | null
           telefono?: string | null
           tipo_contrato?: string | null
           user_id?: string | null
+          vacaciones_ajuste_dias?: number
         }
         Relationships: [
           {
@@ -3705,6 +3980,13 @@ export type Database = {
             columns: ["departamento_id"]
             isOneToOne: false
             referencedRelation: "departamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empleados_puesto_defecto_id_fkey"
+            columns: ["puesto_defecto_id"]
+            isOneToOne: false
+            referencedRelation: "rrhh_puestos_cat"
             referencedColumns: ["id"]
           },
         ]
@@ -4134,6 +4416,7 @@ export type Database = {
           concepto: string
           conciliado_en: string | null
           conciliado_via: string | null
+          contraparte: string | null
           creado_en: string
           cuenta_id: string
           detalle: string | null
@@ -4143,7 +4426,10 @@ export type Database = {
           hash_mov: string
           id: string
           importe: number
+          n43_comun: string | null
+          n43_propio: string | null
           nota: string | null
+          referencia: string | null
           saldo: number | null
           sociedad_id: string
         }
@@ -4153,6 +4439,7 @@ export type Database = {
           concepto: string
           conciliado_en?: string | null
           conciliado_via?: string | null
+          contraparte?: string | null
           creado_en?: string
           cuenta_id: string
           detalle?: string | null
@@ -4162,7 +4449,10 @@ export type Database = {
           hash_mov: string
           id?: string
           importe: number
+          n43_comun?: string | null
+          n43_propio?: string | null
           nota?: string | null
+          referencia?: string | null
           saldo?: number | null
           sociedad_id: string
         }
@@ -4172,6 +4462,7 @@ export type Database = {
           concepto?: string
           conciliado_en?: string | null
           conciliado_via?: string | null
+          contraparte?: string | null
           creado_en?: string
           cuenta_id?: string
           detalle?: string | null
@@ -4181,7 +4472,10 @@ export type Database = {
           hash_mov?: string
           id?: string
           importe?: number
+          n43_comun?: string | null
+          n43_propio?: string | null
           nota?: string | null
+          referencia?: string | null
           saldo?: number | null
           sociedad_id?: string
         }
@@ -4479,6 +4773,85 @@ export type Database = {
             columns: ["sociedad_id"]
             isOneToOne: true
             referencedRelation: "sociedades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_cruce_reglas: {
+        Row: {
+          accion: string
+          activa: boolean
+          banco_cuenta_id: string | null
+          centro_id: string | null
+          creado_en: string
+          cuenta_codigo: string | null
+          cuenta_id: string
+          id: string
+          importe_max: number | null
+          importe_min: number | null
+          n43_comun: string | null
+          n43_propio: string | null
+          nombre: string
+          patron: string | null
+          prioridad: number
+          sentido: string | null
+        }
+        Insert: {
+          accion: string
+          activa?: boolean
+          banco_cuenta_id?: string | null
+          centro_id?: string | null
+          creado_en?: string
+          cuenta_codigo?: string | null
+          cuenta_id: string
+          id?: string
+          importe_max?: number | null
+          importe_min?: number | null
+          n43_comun?: string | null
+          n43_propio?: string | null
+          nombre: string
+          patron?: string | null
+          prioridad?: number
+          sentido?: string | null
+        }
+        Update: {
+          accion?: string
+          activa?: boolean
+          banco_cuenta_id?: string | null
+          centro_id?: string | null
+          creado_en?: string
+          cuenta_codigo?: string | null
+          cuenta_id?: string
+          id?: string
+          importe_max?: number | null
+          importe_min?: number | null
+          n43_comun?: string | null
+          n43_propio?: string | null
+          nombre?: string
+          patron?: string | null
+          prioridad?: number
+          sentido?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_cruce_reglas_banco_cuenta_id_fkey"
+            columns: ["banco_cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_bancos_cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_cruce_reglas_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_cruce_reglas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
             referencedColumns: ["id"]
           },
         ]
@@ -4843,6 +5216,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fin_n43_staging: {
+        Row: {
+          concepto: string | null
+          contraparte: string | null
+          extra: string | null
+          fecha: string
+          fecha_valor: string | null
+          id: number
+          importe: number
+          n43_comun: string | null
+          n43_propio: string | null
+          referencia: string | null
+          saldo: number
+        }
+        Insert: {
+          concepto?: string | null
+          contraparte?: string | null
+          extra?: string | null
+          fecha: string
+          fecha_valor?: string | null
+          id?: never
+          importe: number
+          n43_comun?: string | null
+          n43_propio?: string | null
+          referencia?: string | null
+          saldo: number
+        }
+        Update: {
+          concepto?: string | null
+          contraparte?: string | null
+          extra?: string | null
+          fecha?: string
+          fecha_valor?: string | null
+          id?: never
+          importe?: number
+          n43_comun?: string | null
+          n43_propio?: string | null
+          referencia?: string | null
+          saldo?: number
+        }
+        Relationships: []
       }
       fin_periodos: {
         Row: {
@@ -5462,66 +5877,45 @@ export type Database = {
           },
         ]
       }
-      gastos_dijit: {
+      ia_consumo: {
         Row: {
-          base: number | null
-          cantidad: number | null
-          centro: string | null
-          created_at: string | null
-          factor: number | null
-          familia: string | null
-          fecha: string | null
-          id: number
-          id_prod: string | null
-          mes: number | null
-          origen: string | null
-          producto: string | null
-          proveedor: string | null
-          semana: number | null
-          subfamilia: string | null
-          total: number | null
-          unidad: string | null
-          unidades: number | null
+          busquedas: number | null
+          coste: number | null
+          cuenta_id: string
+          id: string
+          modelo: string | null
+          modulo: string
+          nota: string | null
+          proceso: string | null
+          tokens_in: number | null
+          tokens_out: number | null
+          ts: string
         }
         Insert: {
-          base?: number | null
-          cantidad?: number | null
-          centro?: string | null
-          created_at?: string | null
-          factor?: number | null
-          familia?: string | null
-          fecha?: string | null
-          id: number
-          id_prod?: string | null
-          mes?: number | null
-          origen?: string | null
-          producto?: string | null
-          proveedor?: string | null
-          semana?: number | null
-          subfamilia?: string | null
-          total?: number | null
-          unidad?: string | null
-          unidades?: number | null
+          busquedas?: number | null
+          coste?: number | null
+          cuenta_id?: string
+          id?: string
+          modelo?: string | null
+          modulo: string
+          nota?: string | null
+          proceso?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+          ts?: string
         }
         Update: {
-          base?: number | null
-          cantidad?: number | null
-          centro?: string | null
-          created_at?: string | null
-          factor?: number | null
-          familia?: string | null
-          fecha?: string | null
-          id?: number
-          id_prod?: string | null
-          mes?: number | null
-          origen?: string | null
-          producto?: string | null
-          proveedor?: string | null
-          semana?: number | null
-          subfamilia?: string | null
-          total?: number | null
-          unidad?: string | null
-          unidades?: number | null
+          busquedas?: number | null
+          coste?: number | null
+          cuenta_id?: string
+          id?: string
+          modelo?: string | null
+          modulo?: string
+          nota?: string | null
+          proceso?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+          ts?: string
         }
         Relationships: []
       }
@@ -5539,6 +5933,7 @@ export type Database = {
           fecha: string | null
           id: number
           mes: number | null
+          modificado_at: string
           pvp: number | null
           semana: number | null
           subfamilia: string | null
@@ -5557,6 +5952,7 @@ export type Database = {
           fecha?: string | null
           id: number
           mes?: number | null
+          modificado_at?: string
           pvp?: number | null
           semana?: number | null
           subfamilia?: string | null
@@ -5575,6 +5971,7 @@ export type Database = {
           fecha?: string | null
           id?: number
           mes?: number | null
+          modificado_at?: string
           pvp?: number | null
           semana?: number | null
           subfamilia?: string | null
@@ -5881,6 +6278,7 @@ export type Database = {
         Row: {
           anio: number | null
           anticipo: number | null
+          anticipo_alojamiento: number | null
           anticipo_autonomo: number | null
           anticipo_manutencion: number | null
           canal: string | null
@@ -5908,6 +6306,7 @@ export type Database = {
         Insert: {
           anio?: number | null
           anticipo?: number | null
+          anticipo_alojamiento?: number | null
           anticipo_autonomo?: number | null
           anticipo_manutencion?: number | null
           canal?: string | null
@@ -5935,6 +6334,7 @@ export type Database = {
         Update: {
           anio?: number | null
           anticipo?: number | null
+          anticipo_alojamiento?: number | null
           anticipo_autonomo?: number | null
           anticipo_manutencion?: number | null
           canal?: string | null
@@ -6074,6 +6474,632 @@ export type Database = {
           actualizado_en?: string
           clave?: string
           valor?: Json
+        }
+        Relationships: []
+      }
+      pre_coef_cuenta: {
+        Row: {
+          centro: string
+          coef: number
+          cuenta: string
+          version_id: string
+        }
+        Insert: {
+          centro: string
+          coef?: number
+          cuenta: string
+          version_id: string
+        }
+        Update: {
+          centro?: string
+          coef?: number
+          cuenta?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_coef_cuenta_cuenta_fkey"
+            columns: ["cuenta"]
+            isOneToOne: false
+            referencedRelation: "pre_cuentas"
+            referencedColumns: ["cuenta"]
+          },
+          {
+            foreignKeyName: "pre_coef_cuenta_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_compras_pct: {
+        Row: {
+          centro: string
+          familia: string
+          pct_ext: number
+          pct_int: number
+          ref_ext: number | null
+          ref_int: number | null
+          version_id: string
+        }
+        Insert: {
+          centro: string
+          familia: string
+          pct_ext?: number
+          pct_int?: number
+          ref_ext?: number | null
+          ref_int?: number | null
+          version_id: string
+        }
+        Update: {
+          centro?: string
+          familia?: string
+          pct_ext?: number
+          pct_int?: number
+          ref_ext?: number | null
+          ref_int?: number | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_compras_pct_familia_fkey"
+            columns: ["familia"]
+            isOneToOne: false
+            referencedRelation: "pre_familias"
+            referencedColumns: ["familia"]
+          },
+          {
+            foreignKeyName: "pre_compras_pct_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_convenio: {
+        Row: {
+          bruto_mensual: number
+          categorias: string | null
+          cuenta_id: string
+          id: number
+          nivel: number
+          vigente_desde: string
+        }
+        Insert: {
+          bruto_mensual: number
+          categorias?: string | null
+          cuenta_id: string
+          id?: number
+          nivel: number
+          vigente_desde: string
+        }
+        Update: {
+          bruto_mensual?: number
+          categorias?: string | null
+          cuenta_id?: string
+          id?: number
+          nivel?: number
+          vigente_desde?: string
+        }
+        Relationships: []
+      }
+      pre_cuentas: {
+        Row: {
+          activa: boolean
+          cuenta: string
+          descripcion: string
+          grupo: string
+          grupo_desc: string
+          tipo: string
+        }
+        Insert: {
+          activa?: boolean
+          cuenta: string
+          descripcion: string
+          grupo: string
+          grupo_desc: string
+          tipo?: string
+        }
+        Update: {
+          activa?: boolean
+          cuenta?: string
+          descripcion?: string
+          grupo?: string
+          grupo_desc?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
+      pre_departamentos: {
+        Row: {
+          id: string
+          orden: number
+        }
+        Insert: {
+          id: string
+          orden?: number
+        }
+        Update: {
+          id?: string
+          orden?: number
+        }
+        Relationships: []
+      }
+      pre_familias: {
+        Row: {
+          cuenta_compra: string | null
+          cuenta_interna: string | null
+          cuenta_venta: string
+          familia: string
+          orden: number
+        }
+        Insert: {
+          cuenta_compra?: string | null
+          cuenta_interna?: string | null
+          cuenta_venta: string
+          familia: string
+          orden?: number
+        }
+        Update: {
+          cuenta_compra?: string | null
+          cuenta_interna?: string | null
+          cuenta_venta?: string
+          familia?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_familias_cuenta_compra_fkey"
+            columns: ["cuenta_compra"]
+            isOneToOne: false
+            referencedRelation: "pre_cuentas"
+            referencedColumns: ["cuenta"]
+          },
+          {
+            foreignKeyName: "pre_familias_cuenta_interna_fkey"
+            columns: ["cuenta_interna"]
+            isOneToOne: false
+            referencedRelation: "pre_cuentas"
+            referencedColumns: ["cuenta"]
+          },
+          {
+            foreignKeyName: "pre_familias_cuenta_venta_fkey"
+            columns: ["cuenta_venta"]
+            isOneToOne: false
+            referencedRelation: "pre_cuentas"
+            referencedColumns: ["cuenta"]
+          },
+        ]
+      }
+      pre_gastos: {
+        Row: {
+          actualizado_en: string
+          base_importe: number | null
+          centro: string
+          cuenta: string
+          importe: number
+          manual: boolean
+          mes: number
+          nota: string | null
+          origen: string
+          version_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          base_importe?: number | null
+          centro: string
+          cuenta: string
+          importe?: number
+          manual?: boolean
+          mes: number
+          nota?: string | null
+          origen?: string
+          version_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          base_importe?: number | null
+          centro?: string
+          cuenta?: string
+          importe?: number
+          manual?: boolean
+          mes?: number
+          nota?: string | null
+          origen?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_gastos_cuenta_fkey"
+            columns: ["cuenta"]
+            isOneToOne: false
+            referencedRelation: "pre_cuentas"
+            referencedColumns: ["cuenta"]
+          },
+          {
+            foreignKeyName: "pre_gastos_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_ingresos: {
+        Row: {
+          centro: string
+          familia: string
+          fecha: string
+          importe: number
+          mes: number | null
+          version_id: string
+        }
+        Insert: {
+          centro: string
+          familia: string
+          fecha: string
+          importe?: number
+          mes?: number | null
+          version_id: string
+        }
+        Update: {
+          centro?: string
+          familia?: string
+          fecha?: string
+          importe?: number
+          mes?: number | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_ingresos_familia_fkey"
+            columns: ["familia"]
+            isOneToOne: false
+            referencedRelation: "pre_familias"
+            referencedColumns: ["familia"]
+          },
+          {
+            foreignKeyName: "pre_ingresos_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_ingresos_dia: {
+        Row: {
+          actualizado_en: string
+          base_importe: number | null
+          centro: string
+          fecha: string
+          importe: number
+          manual: boolean
+          version_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          base_importe?: number | null
+          centro: string
+          fecha: string
+          importe?: number
+          manual?: boolean
+          version_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          base_importe?: number | null
+          centro?: string
+          fecha?: string
+          importe?: number
+          manual?: boolean
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_ingresos_dia_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_mix_familia: {
+        Row: {
+          centro: string
+          familia: string
+          pct: number
+          pct_ref: number | null
+          version_id: string
+        }
+        Insert: {
+          centro: string
+          familia: string
+          pct?: number
+          pct_ref?: number | null
+          version_id: string
+        }
+        Update: {
+          centro?: string
+          familia?: string
+          pct?: number
+          pct_ref?: number | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_mix_familia_familia_fkey"
+            columns: ["familia"]
+            isOneToOne: false
+            referencedRelation: "pre_familias"
+            referencedColumns: ["familia"]
+          },
+          {
+            foreignKeyName: "pre_mix_familia_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_nominas: {
+        Row: {
+          centro: string
+          departamento: string
+          importe: number
+          mes: number
+          version_id: string
+        }
+        Insert: {
+          centro: string
+          departamento: string
+          importe?: number
+          mes: number
+          version_id: string
+        }
+        Update: {
+          centro?: string
+          departamento?: string
+          importe?: number
+          mes?: number
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_nominas_departamento_fkey"
+            columns: ["departamento"]
+            isOneToOne: false
+            referencedRelation: "pre_departamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_nominas_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_parametros: {
+        Row: {
+          clave: string
+          valor: number
+          version_id: string
+        }
+        Insert: {
+          clave: string
+          valor: number
+          version_id: string
+        }
+        Update: {
+          clave?: string
+          valor?: number
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_parametros_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_pauta: {
+        Row: {
+          abierto: boolean
+          centro: string
+          fecha: string
+          hora_apertura: string | null
+          hora_cierre: string | null
+          id: number
+          nota: string | null
+          version_id: string
+        }
+        Insert: {
+          abierto?: boolean
+          centro: string
+          fecha: string
+          hora_apertura?: string | null
+          hora_cierre?: string | null
+          id?: number
+          nota?: string | null
+          version_id: string
+        }
+        Update: {
+          abierto?: boolean
+          centro?: string
+          fecha?: string
+          hora_apertura?: string | null
+          hora_cierre?: string | null
+          id?: number
+          nota?: string | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_pauta_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_plantilla: {
+        Row: {
+          bruto_manual: number | null
+          centro: string
+          departamento: string
+          empleado_id: string | null
+          fecha_fin: string | null
+          id: string
+          nivel: number | null
+          nombre: string
+          notas: string | null
+          orden: number
+          pct_extra: number
+          version_id: string
+        }
+        Insert: {
+          bruto_manual?: number | null
+          centro: string
+          departamento: string
+          empleado_id?: string | null
+          fecha_fin?: string | null
+          id?: string
+          nivel?: number | null
+          nombre: string
+          notas?: string | null
+          orden?: number
+          pct_extra?: number
+          version_id: string
+        }
+        Update: {
+          bruto_manual?: number | null
+          centro?: string
+          departamento?: string
+          empleado_id?: string | null
+          fecha_fin?: string | null
+          id?: string
+          nivel?: number | null
+          nombre?: string
+          notas?: string | null
+          orden?: number
+          pct_extra?: number
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_plantilla_departamento_fkey"
+            columns: ["departamento"]
+            isOneToOne: false
+            referencedRelation: "pre_departamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_plantilla_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_plantilla_horas: {
+        Row: {
+          horas: number
+          plantilla_id: string
+          semana: number
+        }
+        Insert: {
+          horas?: number
+          plantilla_id: string
+          semana: number
+        }
+        Update: {
+          horas?: number
+          plantilla_id?: string
+          semana?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_plantilla_horas_plantilla_id_fkey"
+            columns: ["plantilla_id"]
+            isOneToOne: false
+            referencedRelation: "pre_plantilla"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_subida_mes: {
+        Row: {
+          centro: string
+          mes: number
+          pct: number
+          version_id: string
+        }
+        Insert: {
+          centro: string
+          mes: number
+          pct?: number
+          version_id: string
+        }
+        Update: {
+          centro?: string
+          mes?: number
+          pct?: number
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_subida_mes_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "pre_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_versiones: {
+        Row: {
+          base_ejercicio: number | null
+          creado_en: string
+          cuenta_id: string
+          ejercicio: number
+          id: string
+          mes_cierre_base: number | null
+          nombre: string
+          notas: string | null
+          vigente: boolean
+        }
+        Insert: {
+          base_ejercicio?: number | null
+          creado_en?: string
+          cuenta_id: string
+          ejercicio: number
+          id?: string
+          mes_cierre_base?: number | null
+          nombre?: string
+          notas?: string | null
+          vigente?: boolean
+        }
+        Update: {
+          base_ejercicio?: number | null
+          creado_en?: string
+          cuenta_id?: string
+          ejercicio?: number
+          id?: string
+          mes_cierre_base?: number | null
+          nombre?: string
+          notas?: string | null
+          vigente?: boolean
         }
         Relationships: []
       }
@@ -6224,6 +7250,24 @@ export type Database = {
           origen?: string | null
           subfamilia?: string | null
           unidades?: string | null
+        }
+        Relationships: []
+      }
+      ratios_cache_estado: {
+        Row: {
+          clave: string
+          refrescado_at: string | null
+          sucio: boolean
+        }
+        Insert: {
+          clave: string
+          refrescado_at?: string | null
+          sucio?: boolean
+        }
+        Update: {
+          clave?: string
+          refrescado_at?: string | null
+          sucio?: boolean
         }
         Relationships: []
       }
@@ -6846,6 +7890,7 @@ export type Database = {
           fecha: string | null
           horas_reales: number | null
           id: number
+          origen: string | null
           persona: string | null
           puesto: string | null
           semana: number | null
@@ -6858,6 +7903,7 @@ export type Database = {
           fecha?: string | null
           horas_reales?: number | null
           id?: number
+          origen?: string | null
           persona?: string | null
           puesto?: string | null
           semana?: number | null
@@ -6870,6 +7916,7 @@ export type Database = {
           fecha?: string | null
           horas_reales?: number | null
           id?: number
+          origen?: string | null
           persona?: string | null
           puesto?: string | null
           semana?: number | null
@@ -6927,42 +7974,70 @@ export type Database = {
       }
       rrhh_ausencias: {
         Row: {
+          centro_id: string | null
           creado_en: string
           cuenta_id: string
           empleado_id: string
           estado: Database["public"]["Enums"]["rrhh_estado_ausencia"]
           fecha_fin: string
           fecha_inicio: string
+          horas: number | null
           id: string
+          medio_dia: boolean
+          motivo_rechazo: string | null
+          nota: string | null
+          resuelta_en: string | null
           resuelta_por: string | null
           solicitada_por: string | null
           tipo: Database["public"]["Enums"]["rrhh_tipo_ausencia"]
+          tipo_id: string | null
         }
         Insert: {
+          centro_id?: string | null
           creado_en?: string
           cuenta_id?: string
           empleado_id: string
           estado?: Database["public"]["Enums"]["rrhh_estado_ausencia"]
           fecha_fin: string
           fecha_inicio: string
+          horas?: number | null
           id?: string
+          medio_dia?: boolean
+          motivo_rechazo?: string | null
+          nota?: string | null
+          resuelta_en?: string | null
           resuelta_por?: string | null
           solicitada_por?: string | null
           tipo: Database["public"]["Enums"]["rrhh_tipo_ausencia"]
+          tipo_id?: string | null
         }
         Update: {
+          centro_id?: string | null
           creado_en?: string
           cuenta_id?: string
           empleado_id?: string
           estado?: Database["public"]["Enums"]["rrhh_estado_ausencia"]
           fecha_fin?: string
           fecha_inicio?: string
+          horas?: number | null
           id?: string
+          medio_dia?: boolean
+          motivo_rechazo?: string | null
+          nota?: string | null
+          resuelta_en?: string | null
           resuelta_por?: string | null
           solicitada_por?: string | null
           tipo?: Database["public"]["Enums"]["rrhh_tipo_ausencia"]
+          tipo_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rrhh_ausencias_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rrhh_ausencias_cuenta_id_fkey"
             columns: ["cuenta_id"]
@@ -6977,29 +8052,116 @@ export type Database = {
             referencedRelation: "empleados"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rrhh_ausencias_tipo_id_fkey"
+            columns: ["tipo_id"]
+            isOneToOne: false
+            referencedRelation: "rrhh_tipos_ausencia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_cambios_turno: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          destinatario_id: string | null
+          estado: string
+          id: string
+          nota: string | null
+          resuelto_en: string | null
+          resuelto_por: string | null
+          solicitante_id: string
+          turno_id: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id?: string
+          destinatario_id?: string | null
+          estado?: string
+          id?: string
+          nota?: string | null
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          solicitante_id: string
+          turno_id: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          destinatario_id?: string | null
+          estado?: string
+          id?: string
+          nota?: string | null
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          solicitante_id?: string
+          turno_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_cambios_turno_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_cambios_turno_destinatario_id_fkey"
+            columns: ["destinatario_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_cambios_turno_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_cambios_turno_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "rrhh_turnos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       rrhh_centros_config: {
         Row: {
+          aviso_retraso_min: number
           centro_id: string
           convenio_id: string | null
           cuenta_id: string
           pacto_descanso_10h: boolean
           radio_fichaje_m: number
+          redondeo_min: number
+          regla_horas: string
+          tolerancia_min: number
         }
         Insert: {
+          aviso_retraso_min?: number
           centro_id: string
           convenio_id?: string | null
           cuenta_id?: string
           pacto_descanso_10h?: boolean
           radio_fichaje_m?: number
+          redondeo_min?: number
+          regla_horas?: string
+          tolerancia_min?: number
         }
         Update: {
+          aviso_retraso_min?: number
           centro_id?: string
           convenio_id?: string | null
           cuenta_id?: string
           pacto_descanso_10h?: boolean
           radio_fichaje_m?: number
+          redondeo_min?: number
+          regla_horas?: string
+          tolerancia_min?: number
         }
         Relationships: [
           {
@@ -7025,48 +8187,120 @@ export type Database = {
           },
         ]
       }
+      rrhh_contador_ajustes: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          empleado_id: string
+          fecha: string
+          horas: number
+          id: string
+          motivo: string
+          tipo: string
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          empleado_id: string
+          fecha?: string
+          horas: number
+          id?: string
+          motivo: string
+          tipo: string
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          empleado_id?: string
+          fecha?: string
+          horas?: number
+          id?: string
+          motivo?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_contador_ajustes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_contador_ajustes_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rrhh_convenios: {
         Row: {
+          complementarias_max_pct: number
           creado_en: string
           cuenta_id: string
           descanso_diario_h: number | null
           descanso_semanal_dias: number | null
+          dias_laborables_semana: number
+          dias_vacaciones_anuales: number
           es_por_defecto: boolean
+          horas_extra_max_anual: number
           id: string
+          jornada_anual_h: number | null
           jornada_max_diaria_h: number | null
           jornada_max_semanal_h: number | null
           jornada_min_diaria_h: number | null
           max_dias_consecutivos: number | null
+          nocturno_fin: string
+          nocturno_inicio: string
           nombre: string
           pausa_min_minutos: number | null
           pausa_tras_h: number | null
         }
         Insert: {
+          complementarias_max_pct?: number
           creado_en?: string
           cuenta_id?: string
           descanso_diario_h?: number | null
           descanso_semanal_dias?: number | null
+          dias_laborables_semana?: number
+          dias_vacaciones_anuales?: number
           es_por_defecto?: boolean
+          horas_extra_max_anual?: number
           id?: string
+          jornada_anual_h?: number | null
           jornada_max_diaria_h?: number | null
           jornada_max_semanal_h?: number | null
           jornada_min_diaria_h?: number | null
           max_dias_consecutivos?: number | null
+          nocturno_fin?: string
+          nocturno_inicio?: string
           nombre: string
           pausa_min_minutos?: number | null
           pausa_tras_h?: number | null
         }
         Update: {
+          complementarias_max_pct?: number
           creado_en?: string
           cuenta_id?: string
           descanso_diario_h?: number | null
           descanso_semanal_dias?: number | null
+          dias_laborables_semana?: number
+          dias_vacaciones_anuales?: number
           es_por_defecto?: boolean
+          horas_extra_max_anual?: number
           id?: string
+          jornada_anual_h?: number | null
           jornada_max_diaria_h?: number | null
           jornada_max_semanal_h?: number | null
           jornada_min_diaria_h?: number | null
           max_dias_consecutivos?: number | null
+          nocturno_fin?: string
+          nocturno_inicio?: string
           nombre?: string
           pausa_min_minutos?: number | null
           pausa_tras_h?: number | null
@@ -7077,6 +8311,51 @@ export type Database = {
             columns: ["cuenta_id"]
             isOneToOne: false
             referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_disponibilidades: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          empleado_id: string
+          fecha: string
+          id: string
+          nota: string | null
+          tipo: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id?: string
+          empleado_id: string
+          fecha: string
+          id?: string
+          nota?: string | null
+          tipo: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          empleado_id?: string
+          fecha?: string
+          id?: string
+          nota?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_disponibilidades_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_disponibilidades_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
             referencedColumns: ["id"]
           },
         ]
@@ -7180,6 +8459,57 @@ export type Database = {
         }
         Relationships: []
       }
+      rrhh_festivos: {
+        Row: {
+          activo: boolean
+          ambito: string
+          centro_id: string | null
+          comentario: string | null
+          creado_en: string
+          cuenta_id: string
+          fecha: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          ambito: string
+          centro_id?: string | null
+          comentario?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          fecha: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          ambito?: string
+          centro_id?: string | null
+          comentario?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          fecha?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_festivos_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_festivos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rrhh_fichajes: {
         Row: {
           centro_id: string
@@ -7195,8 +8525,10 @@ export type Database = {
           lng: number | null
           metodo: Database["public"]["Enums"]["rrhh_metodo_fichaje"]
           motivo_correccion: string | null
+          nota: string | null
           tipo: Database["public"]["Enums"]["rrhh_tipo_fichaje"]
           ts: string
+          ts_dispositivo: string | null
         }
         Insert: {
           centro_id: string
@@ -7212,8 +8544,10 @@ export type Database = {
           lng?: number | null
           metodo: Database["public"]["Enums"]["rrhh_metodo_fichaje"]
           motivo_correccion?: string | null
+          nota?: string | null
           tipo: Database["public"]["Enums"]["rrhh_tipo_fichaje"]
           ts?: string
+          ts_dispositivo?: string | null
         }
         Update: {
           centro_id?: string
@@ -7229,8 +8563,10 @@ export type Database = {
           lng?: number | null
           metodo?: Database["public"]["Enums"]["rrhh_metodo_fichaje"]
           motivo_correccion?: string | null
+          nota?: string | null
           tipo?: Database["public"]["Enums"]["rrhh_tipo_fichaje"]
           ts?: string
+          ts_dispositivo?: string | null
         }
         Relationships: [
           {
@@ -7256,6 +8592,133 @@ export type Database = {
           },
           {
             foreignKeyName: "rrhh_fichajes_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_horas_dia: {
+        Row: {
+          centro_id: string
+          creado_en: string
+          cuenta_id: string
+          empleado_id: string
+          estado: string
+          fecha: string
+          horas_fichadas: number | null
+          horas_plan: number | null
+          horas_retenidas: number
+          id: string
+          incidencias: Json
+          modificado_en: string
+          nota: string | null
+          retraso_min: number
+          salida_antic_min: number
+          validado_en: string | null
+          validado_por: string | null
+        }
+        Insert: {
+          centro_id: string
+          creado_en?: string
+          cuenta_id?: string
+          empleado_id: string
+          estado?: string
+          fecha: string
+          horas_fichadas?: number | null
+          horas_plan?: number | null
+          horas_retenidas: number
+          id?: string
+          incidencias?: Json
+          modificado_en?: string
+          nota?: string | null
+          retraso_min?: number
+          salida_antic_min?: number
+          validado_en?: string | null
+          validado_por?: string | null
+        }
+        Update: {
+          centro_id?: string
+          creado_en?: string
+          cuenta_id?: string
+          empleado_id?: string
+          estado?: string
+          fecha?: string
+          horas_fichadas?: number | null
+          horas_plan?: number | null
+          horas_retenidas?: number
+          id?: string
+          incidencias?: Json
+          modificado_en?: string
+          nota?: string | null
+          retraso_min?: number
+          salida_antic_min?: number
+          validado_en?: string | null
+          validado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_horas_dia_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_horas_dia_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_horas_dia_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_nomina_comentarios: {
+        Row: {
+          anio: number
+          comentario: string
+          cuenta_id: string
+          empleado_id: string
+          mes: number
+          modificado_en: string
+          modificado_por: string | null
+        }
+        Insert: {
+          anio: number
+          comentario?: string
+          cuenta_id?: string
+          empleado_id: string
+          mes: number
+          modificado_en?: string
+          modificado_por?: string | null
+        }
+        Update: {
+          anio?: number
+          comentario?: string
+          cuenta_id?: string
+          empleado_id?: string
+          mes?: number
+          modificado_en?: string
+          modificado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_nomina_comentarios_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_nomina_comentarios_empleado_id_fkey"
             columns: ["empleado_id"]
             isOneToOne: false
             referencedRelation: "empleados"
@@ -7311,6 +8774,115 @@ export type Database = {
           },
         ]
       }
+      rrhh_plantillas_semana: {
+        Row: {
+          centro_id: string
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          id: string
+          nombre: string
+          turnos: Json
+        }
+        Insert: {
+          centro_id: string
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          id?: string
+          nombre: string
+          turnos?: Json
+        }
+        Update: {
+          centro_id?: string
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          id?: string
+          nombre?: string
+          turnos?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_plantillas_semana_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_plantillas_semana_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_plantillas_turno: {
+        Row: {
+          activo: boolean
+          centro_id: string | null
+          creado_en: string
+          cuenta_id: string
+          hora_fin: string
+          hora_inicio: string
+          id: string
+          nombre: string
+          orden: number
+          pausa_min: number
+          puesto_id: string | null
+        }
+        Insert: {
+          activo?: boolean
+          centro_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          hora_fin: string
+          hora_inicio: string
+          id?: string
+          nombre: string
+          orden?: number
+          pausa_min?: number
+          puesto_id?: string | null
+        }
+        Update: {
+          activo?: boolean
+          centro_id?: string | null
+          creado_en?: string
+          cuenta_id?: string
+          hora_fin?: string
+          hora_inicio?: string
+          id?: string
+          nombre?: string
+          orden?: number
+          pausa_min?: number
+          puesto_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_plantillas_turno_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_plantillas_turno_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_plantillas_turno_puesto_id_fkey"
+            columns: ["puesto_id"]
+            isOneToOne: false
+            referencedRelation: "rrhh_puestos_cat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rrhh_puestos: {
         Row: {
           departamento: string | null
@@ -7329,35 +8901,98 @@ export type Database = {
         }
         Relationships: []
       }
+      rrhh_puestos_cat: {
+        Row: {
+          activo: boolean
+          color: string
+          creado_en: string
+          cuenta_id: string
+          departamento_id: string | null
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activo?: boolean
+          color?: string
+          creado_en?: string
+          cuenta_id?: string
+          departamento_id?: string | null
+          id?: string
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activo?: boolean
+          color?: string
+          creado_en?: string
+          cuenta_id?: string
+          departamento_id?: string | null
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_puestos_cat_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_puestos_cat_departamento_id_fkey"
+            columns: ["departamento_id"]
+            isOneToOne: false
+            referencedRelation: "departamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rrhh_tipos_ausencia: {
         Row: {
           activo: boolean
+          categoria: string
+          codigo: string | null
+          color: string | null
+          computa_contador: boolean
           computa_vacaciones: boolean
           creado_en: string
           cuenta_id: string
           id: string
           nombre: string
           orden: number
+          requiere_justificante: boolean
           solicitable_empleado: boolean
         }
         Insert: {
           activo?: boolean
+          categoria?: string
+          codigo?: string | null
+          color?: string | null
+          computa_contador?: boolean
           computa_vacaciones?: boolean
           creado_en?: string
           cuenta_id?: string
           id?: string
           nombre: string
           orden?: number
+          requiere_justificante?: boolean
           solicitable_empleado?: boolean
         }
         Update: {
           activo?: boolean
+          categoria?: string
+          codigo?: string | null
+          color?: string | null
+          computa_contador?: boolean
           computa_vacaciones?: boolean
           creado_en?: string
           cuenta_id?: string
           id?: string
           nombre?: string
           orden?: number
+          requiere_justificante?: boolean
           solicitable_empleado?: boolean
         }
         Relationships: [
@@ -7408,48 +9043,60 @@ export type Database = {
       rrhh_turnos: {
         Row: {
           centro_id: string
+          color: string | null
           creado_en: string
           creado_por: string | null
           cuenta_id: string
-          empleado_id: string
+          empleado_id: string | null
           estado: Database["public"]["Enums"]["rrhh_estado_turno"]
           fecha: string
           hora_fin: string
           hora_inicio: string
           id: string
+          modificado_en: string
+          nota: string | null
           pausa_min: number
           publicado_at: string | null
           puesto: string | null
+          puesto_id: string | null
         }
         Insert: {
           centro_id: string
+          color?: string | null
           creado_en?: string
           creado_por?: string | null
           cuenta_id?: string
-          empleado_id: string
+          empleado_id?: string | null
           estado?: Database["public"]["Enums"]["rrhh_estado_turno"]
           fecha: string
           hora_fin: string
           hora_inicio: string
           id?: string
+          modificado_en?: string
+          nota?: string | null
           pausa_min?: number
           publicado_at?: string | null
           puesto?: string | null
+          puesto_id?: string | null
         }
         Update: {
           centro_id?: string
+          color?: string | null
           creado_en?: string
           creado_por?: string | null
           cuenta_id?: string
-          empleado_id?: string
+          empleado_id?: string | null
           estado?: Database["public"]["Enums"]["rrhh_estado_turno"]
           fecha?: string
           hora_fin?: string
           hora_inicio?: string
           id?: string
+          modificado_en?: string
+          nota?: string | null
           pausa_min?: number
           publicado_at?: string | null
           puesto?: string | null
+          puesto_id?: string | null
         }
         Relationships: [
           {
@@ -7468,6 +9115,103 @@ export type Database = {
           },
           {
             foreignKeyName: "rrhh_turnos_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_turnos_puesto_id_fkey"
+            columns: ["puesto_id"]
+            isOneToOne: false
+            referencedRelation: "rrhh_puestos_cat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_turnos_historial: {
+        Row: {
+          accion: string
+          antes: Json | null
+          centro_id: string | null
+          cuenta_id: string
+          despues: Json | null
+          id: string
+          ts: string
+          turno_id: string
+          user_id: string | null
+        }
+        Insert: {
+          accion: string
+          antes?: Json | null
+          centro_id?: string | null
+          cuenta_id: string
+          despues?: Json | null
+          id?: string
+          ts?: string
+          turno_id: string
+          user_id?: string | null
+        }
+        Update: {
+          accion?: string
+          antes?: Json | null
+          centro_id?: string | null
+          cuenta_id?: string
+          despues?: Json | null
+          id?: string
+          ts?: string
+          turno_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      rrhh_variables_nomina: {
+        Row: {
+          anio: number
+          concepto: string
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          descripcion: string | null
+          empleado_id: string
+          id: string
+          importe: number
+          mes: number
+        }
+        Insert: {
+          anio: number
+          concepto: string
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          descripcion?: string | null
+          empleado_id: string
+          id?: string
+          importe: number
+          mes: number
+        }
+        Update: {
+          anio?: number
+          concepto?: string
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          descripcion?: string | null
+          empleado_id?: string
+          id?: string
+          importe?: number
+          mes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_variables_nomina_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_variables_nomina_empleado_id_fkey"
             columns: ["empleado_id"]
             isOneToOne: false
             referencedRelation: "empleados"
@@ -8025,6 +9769,132 @@ export type Database = {
           },
         ]
       }
+      z_gastos_dijit_jubilado: {
+        Row: {
+          base: number | null
+          cantidad: number | null
+          centro: string | null
+          created_at: string | null
+          factor: number | null
+          familia: string | null
+          fecha: string | null
+          id: number
+          id_prod: string | null
+          mes: number | null
+          origen: string | null
+          producto: string | null
+          proveedor: string | null
+          semana: number | null
+          subfamilia: string | null
+          total: number | null
+          unidad: string | null
+          unidades: number | null
+        }
+        Insert: {
+          base?: number | null
+          cantidad?: number | null
+          centro?: string | null
+          created_at?: string | null
+          factor?: number | null
+          familia?: string | null
+          fecha?: string | null
+          id: number
+          id_prod?: string | null
+          mes?: number | null
+          origen?: string | null
+          producto?: string | null
+          proveedor?: string | null
+          semana?: number | null
+          subfamilia?: string | null
+          total?: number | null
+          unidad?: string | null
+          unidades?: number | null
+        }
+        Update: {
+          base?: number | null
+          cantidad?: number | null
+          centro?: string | null
+          created_at?: string | null
+          factor?: number | null
+          familia?: string | null
+          fecha?: string | null
+          id?: number
+          id_prod?: string | null
+          mes?: number | null
+          origen?: string | null
+          producto?: string | null
+          proveedor?: string | null
+          semana?: number | null
+          subfamilia?: string | null
+          total?: number | null
+          unidad?: string | null
+          unidades?: number | null
+        }
+        Relationships: []
+      }
+      z_nomina_recon_bkp: {
+        Row: {
+          banco_cuenta_id: string | null
+          codigo: string | null
+          creado: string | null
+          err: string | null
+          importe: number | null
+          mes: number | null
+          movimiento_id: string | null
+          reconciliado: boolean | null
+        }
+        Insert: {
+          banco_cuenta_id?: string | null
+          codigo?: string | null
+          creado?: string | null
+          err?: string | null
+          importe?: number | null
+          mes?: number | null
+          movimiento_id?: string | null
+          reconciliado?: boolean | null
+        }
+        Update: {
+          banco_cuenta_id?: string | null
+          codigo?: string | null
+          creado?: string | null
+          err?: string | null
+          importe?: number | null
+          mes?: number | null
+          movimiento_id?: string | null
+          reconciliado?: boolean | null
+        }
+        Relationships: []
+      }
+      z_productos_dijit_jubilado: {
+        Row: {
+          descripcion: string | null
+          factor: number | null
+          familia: string | null
+          id_interno: string | null
+          origen: string | null
+          subfamilia: string | null
+          unidades: string | null
+        }
+        Insert: {
+          descripcion?: string | null
+          factor?: number | null
+          familia?: string | null
+          id_interno?: string | null
+          origen?: string | null
+          subfamilia?: string | null
+          unidades?: string | null
+        }
+        Update: {
+          descripcion?: string | null
+          factor?: number | null
+          familia?: string | null
+          id_interno?: string | null
+          origen?: string | null
+          subfamilia?: string | null
+          unidades?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       clientes_consentimiento_vigente: {
@@ -8096,6 +9966,7 @@ export type Database = {
           cabfechacontable: string | null
           cabnumdoc: number | null
           cabreferencia: string | null
+          cabregiva: string | null
           capporirpf: number | null
           captipoirpf: string | null
           doc_id: string | null
@@ -8167,6 +10038,19 @@ export type Database = {
           fecha_correo: string | null
           id: number | null
           remitente: string | null
+        }
+        Relationships: []
+      }
+      compras_cuadre: {
+        Row: {
+          base_albaranes: number | null
+          base_facturas: number | null
+          diferencia: number | null
+          mercancia: boolean | null
+          mes: string | null
+          por_centro: Json | null
+          proveedor: string | null
+          proveedor_id: string | null
         }
         Relationships: []
       }
@@ -8295,6 +10179,110 @@ export type Database = {
         }
         Relationships: []
       }
+      gastos_cache: {
+        Row: {
+          base: number | null
+          cantidad: number | null
+          centro: string | null
+          created_at: string | null
+          factor: number | null
+          familia: string | null
+          fecha: string | null
+          id: number | null
+          id_prod: string | null
+          mes: number | null
+          origen: string | null
+          producto: string | null
+          proveedor: string | null
+          semana: number | null
+          subfamilia: string | null
+          total: number | null
+          unidad: string | null
+          unidades: number | null
+        }
+        Relationships: []
+      }
+      ia_consumo_v: {
+        Row: {
+          busquedas: number | null
+          coste: number | null
+          modulo: string | null
+          proceso: string | null
+          tokens_in: number | null
+          tokens_out: number | null
+          ts: string | null
+        }
+        Relationships: []
+      }
+      v_gastos_real_mes: {
+        Row: {
+          centro: string | null
+          ejercicio: number | null
+          familia: string | null
+          importe: number | null
+          interno: boolean | null
+          mes: number | null
+        }
+        Relationships: []
+      }
+      v_ingresos_real_dia: {
+        Row: {
+          centro: string | null
+          familia: string | null
+          fecha: string | null
+          importe: number | null
+        }
+        Relationships: []
+      }
+      v_pre_ingresos_dia: {
+        Row: {
+          centro: string | null
+          ejercicio: number | null
+          familia: string | null
+          fecha: string | null
+          importe: number | null
+          mes: number | null
+          semana: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_ingresos_familia_fkey"
+            columns: ["familia"]
+            isOneToOne: false
+            referencedRelation: "pre_familias"
+            referencedColumns: ["familia"]
+          },
+        ]
+      }
+      v_pre_nominas: {
+        Row: {
+          canal: string | null
+          departamento: string | null
+          ejercicio: number | null
+          importe: number | null
+          mes: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_nominas_departamento_fkey"
+            columns: ["departamento"]
+            isOneToOne: false
+            referencedRelation: "pre_departamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_pre_pyg_mensual: {
+        Row: {
+          canal: string | null
+          cuenta: string | null
+          descripcion: string | null
+          ejercicio: number | null
+          importe: number | null
+          mes: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       aplicar_reparto_cups: {
@@ -8345,7 +10333,61 @@ export type Database = {
       clave_producto: { Args: { t: string }; Returns: string }
       cliente_apto_email: { Args: { p_cliente_id: string }; Returns: boolean }
       cod_iva_de_pct: { Args: { p_pct: number }; Returns: string }
+      compras_asiento_rehacer: {
+        Args: { p_doc: string; p_motivo: string; p_por?: string }
+        Returns: string
+      }
+      compras_asientos_vivos: {
+        Args: { p_doc: string }
+        Returns: {
+          confirmado_en: string | null
+          confirmado_por: string | null
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          descripcion: string | null
+          ejercicio_id: string
+          estado: string
+          fecha: string
+          id: string
+          numero: number | null
+          origen_id: string | null
+          origen_tipo: string
+          sociedad_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "fin_asientos"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      compras_autoconciliar: { Args: { p_doc: string }; Returns: string }
+      compras_borrar_duplicado: {
+        Args: {
+          p_doc: string
+          p_doc_bueno: string
+          p_motivo: string
+          p_por?: string
+        }
+        Returns: undefined
+      }
+      compras_construir_asiento: {
+        Args: { p_doc: string; p_origen_tipo?: string; p_sufijo?: string }
+        Returns: string
+      }
+      compras_fecha_contable_defecto: {
+        Args: { p_fecha: string; p_registro: string }
+        Returns: string
+      }
+      compras_generar_asiento: { Args: { p_doc: string }; Returns: string }
+      compras_generar_asiento_como: {
+        Args: { p_doc: string; p_por: string }
+        Returns: string
+      }
       compras_next_codigo: { Args: never; Returns: string }
+      compras_pct_iva: { Args: { p_tipo: string }; Returns: number }
+      compras_regimen_iva: { Args: { p_doc: string }; Returns: string }
       cuenta_actual: { Args: never; Returns: string }
       cups_reparto: {
         Args: { p_cups: string; p_fecha: string }
@@ -8366,7 +10408,12 @@ export type Database = {
       es_direccion: { Args: never; Returns: boolean }
       es_operador: { Args: never; Returns: boolean }
       exportar_a3: {
-        Args: { p_confirmar?: boolean; p_desde: string; p_hasta: string }
+        Args: {
+          p_confirmar?: boolean
+          p_desde: string
+          p_hasta: string
+          p_todo?: boolean
+        }
         Returns: {
           cabcodpro: string
           cabfecha: string
@@ -8383,12 +10430,35 @@ export type Database = {
           proveedor_nombre: string
         }[]
       }
+      exportar_a3_anual: {
+        Args: { p_confirmar?: boolean }
+        Returns: {
+          cabcodpro: string
+          cabfecha: string
+          cabfechacontable: string
+          cabnumdoc: number
+          cabreferencia: string
+          cabregiva: string
+          capporirpf: number
+          captipoirpf: string
+          lincentrocoste: number
+          linctacon: string
+          lindesclin: string
+          linprcmoneda: number
+          lintipiva: string
+          proveedor_nombre: string
+        }[]
+      }
       fin_anular_factura: {
         Args: { p_factura_id: string; p_motivo: string }
         Returns: Json
       }
       fin_apuntes_compensados: { Args: never; Returns: string[] }
       fin_apuntes_conciliados: { Args: never; Returns: string[] }
+      fin_asiento_nominas: {
+        Args: { p_anio: number; p_lineas: Json; p_mes: number }
+        Returns: string
+      }
       fin_cartera_candidatos: {
         Args: { p_banco: string; p_mov: string }
         Returns: {
@@ -8454,12 +10524,48 @@ export type Database = {
           mov_id: string
         }[]
       }
+      fin_conciliar_asiento_manual: {
+        Args: {
+          p_banco: string
+          p_descripcion?: string
+          p_lineas: Json
+          p_mov: string
+        }
+        Returns: string
+      }
       fin_conciliar_auto: { Args: { p_banco: string }; Returns: number }
+      fin_conciliar_confirming: {
+        Args: {
+          p_apuntes: string[]
+          p_banco: string
+          p_extras: Json
+          p_mov: string
+        }
+        Returns: string
+      }
       fin_conciliar_liquidando: {
-        Args: { p_apuntes: string[]; p_banco: string; p_mov: string }
+        Args: {
+          p_apuntes: string[]
+          p_banco: string
+          p_mov: string
+          p_resto_centro?: string
+          p_resto_codigo?: string
+        }
+        Returns: string
+      }
+      fin_conciliar_traspaso: {
+        Args: { p_mov_cobro: string; p_mov_pago: string }
         Returns: string
       }
       fin_confirmar_asiento: { Args: { p_asiento_id: string }; Returns: Json }
+      fin_contra_asiento: {
+        Args: { p_asiento: string; p_motivo: string; p_por?: string }
+        Returns: string
+      }
+      fin_cruce_aplicar: {
+        Args: { p_banco: string; p_desde?: string; p_lote?: number }
+        Returns: Json
+      }
       fin_desconciliar_liquidando: {
         Args: { p_mov: string }
         Returns: undefined
@@ -8476,6 +10582,15 @@ export type Database = {
           pareja: string
           tipo: string
           total: number
+        }[]
+      }
+      fin_firmar_como: { Args: { p_por: string }; Returns: undefined }
+      fin_impuestos: {
+        Args: { p_anio: number }
+        Returns: {
+          clave: string
+          importe: number
+          trimestre: number
         }[]
       }
       fin_informe_mensual: {
@@ -8501,6 +10616,7 @@ export type Database = {
           ultima_fecha: string
         }[]
       }
+      fin_n43_absorber: { Args: { p_banco: string }; Returns: Json }
       fin_vf_cadena_alta: {
         Args: {
           p_cuota_total: number
@@ -8587,6 +10703,20 @@ export type Database = {
         }
         Returns: Json
       }
+      gastos_cache_asegurar: { Args: never; Returns: string }
+      ia_registrar: {
+        Args: {
+          p_busquedas?: number
+          p_coste: number
+          p_modelo: string
+          p_modulo: string
+          p_nota?: string
+          p_proceso: string
+          p_tin: number
+          p_tout: number
+        }
+        Returns: undefined
+      }
       irpf_modelo_de_pct: { Args: { p_pct: number }; Returns: string }
       irpf_pct_de_documento: {
         Args: { p_base: number; p_ret: number; p_ret_base: number }
@@ -8610,6 +10740,7 @@ export type Database = {
         Args: { p_nombre: string; p_prov: string }
         Returns: number
       }
+      ratios_sello_ingresos: { Args: never; Returns: Json }
       recalcular_estado_facturas: {
         Args: never
         Returns: {
@@ -8694,6 +10825,42 @@ export type Database = {
         }
         Returns: number
       }
+      rrhh_codigo_centro_ratios: { Args: { p_nombre: string }; Returns: string }
+      rrhh_color_departamento: {
+        Args: { p_nombre_departamento: string }
+        Returns: string
+      }
+      rrhh_convenio_centro: {
+        Args: { p_centro_id: string; p_cuenta_id?: string }
+        Returns: {
+          complementarias_max_pct: number
+          creado_en: string
+          cuenta_id: string
+          descanso_diario_h: number | null
+          descanso_semanal_dias: number | null
+          dias_laborables_semana: number
+          dias_vacaciones_anuales: number
+          es_por_defecto: boolean
+          horas_extra_max_anual: number
+          id: string
+          jornada_anual_h: number | null
+          jornada_max_diaria_h: number | null
+          jornada_max_semanal_h: number | null
+          jornada_min_diaria_h: number | null
+          max_dias_consecutivos: number | null
+          nocturno_fin: string
+          nocturno_inicio: string
+          nombre: string
+          pausa_min_minutos: number | null
+          pausa_tras_h: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rrhh_convenios"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rrhh_descanso_minimo_horas: {
         Args: { p_empleado_id: string }
         Returns: number
@@ -8702,13 +10869,140 @@ export type Database = {
         Args: { dia: string; emp: string }
         Returns: boolean
       }
+      rrhh_empleado_misma_cuenta: {
+        Args: { p_empleado_id: string }
+        Returns: boolean
+      }
+      rrhh_enum_tipo_ausencia: {
+        Args: { p_tipo_id: string }
+        Returns: Database["public"]["Enums"]["rrhh_tipo_ausencia"]
+      }
       rrhh_es_gestor: { Args: never; Returns: boolean }
+      rrhh_exportar_ratios: {
+        Args: { p_desde: string; p_hasta: string }
+        Returns: number
+      }
       rrhh_gestiona_centro: { Args: { p_centro_id: string }; Returns: boolean }
+      rrhh_gestiona_empleado: {
+        Args: { p_empleado_id: string }
+        Returns: boolean
+      }
+      rrhh_horas_contrato_semana: {
+        Args: { p_empleado_id: string; p_lunes: string }
+        Returns: number
+      }
+      rrhh_horas_turno: {
+        Args: { p_fin: string; p_inicio: string; p_pausa_min: number }
+        Returns: number
+      }
       rrhh_horas_vigentes: {
         Args: { dia: string; emp: string }
         Returns: number
       }
+      rrhh_hoy: {
+        Args: { p_centro_id: string }
+        Returns: {
+          apellidos: string
+          ausencia_color: string
+          ausencia_id: string
+          ausencia_tipo: string
+          empleado_id: string
+          estado_fichaje: string
+          hora_fin: string
+          hora_inicio: string
+          nombre: string
+          pausa_min: number
+          puesto: string
+          puesto_color: string
+          turno_id: string
+          ultimo_fichaje_tipo: Database["public"]["Enums"]["rrhh_tipo_fichaje"]
+          ultimo_fichaje_ts: string
+        }[]
+      }
+      rrhh_informe_nomina: {
+        Args: { p_anio: number; p_centro_id?: string; p_mes: number }
+        Returns: {
+          apellidos: string
+          ausencias: Json
+          centro_principal_id: string
+          codigo_nomina: string
+          comentario: string
+          departamento_id: string
+          dias_contrato: number
+          dias_trabajados: number
+          empleado_id: string
+          horas_ausencia_contador: number
+          horas_contrato_mes: number
+          horas_domingo: number
+          horas_extra: number
+          horas_festivo: number
+          horas_nocturnas: number
+          horas_retenidas: number
+          horas_semana: number
+          nombre: string
+          tipo_contrato: string
+          variables: Json
+        }[]
+      }
+      rrhh_mis_centros: { Args: never; Returns: string[] }
+      rrhh_periodos_efectivos: {
+        Args: { p_empleado_id: string }
+        Returns: {
+          fecha_alta: string
+          fecha_baja: string
+          horas_semana: number
+        }[]
+      }
       rrhh_plantilla_centro: { Args: { p_centro_id: string }; Returns: number }
+      rrhh_resumen_semana: {
+        Args: {
+          p_centro_id: string
+          p_desde: string
+          p_empleado_id?: string
+          p_hasta: string
+        }
+        Returns: {
+          anio: number
+          apellidos: string
+          centro_principal_id: string
+          departamento_id: string
+          dias_plan: number
+          dias_validados: number
+          diferencia: number
+          empleado_id: string
+          horas_ausencia_contador: number
+          horas_contrato: number
+          horas_plan: number
+          horas_plan_centro: number
+          horas_retenidas: number
+          lunes: string
+          nombre: string
+          semana: number
+        }[]
+      }
+      rrhh_saldo_horas: {
+        Args: { p_empleado_id: string; p_hasta?: string }
+        Returns: number
+      }
+      rrhh_saldo_vacaciones: {
+        Args: { p_anio: number; p_empleado_id: string }
+        Returns: {
+          derecho_anual: number
+          devengado_hoy: number
+          disfrutados: number
+          pendientes_aprobar: number
+          resto: number
+        }[]
+      }
+      rrhh_semana_iso: {
+        Args: { p_fecha: string }
+        Returns: {
+          anio: number
+          lunes: string
+          semana: number
+        }[]
+      }
+      rrhh_sin_acentos: { Args: { p: string }; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       soundex: { Args: { "": string }; Returns: string }
@@ -8852,7 +11146,13 @@ export type Database = {
       visitas_estado_reserva: "pendiente_pago" | "pagada" | "cancelada"
       visitas_estado_sesion: "activa" | "cancelada"
       visitas_idioma: "es" | "en" | "fr"
-      visitas_metodo_pago: "stripe" | "agora_tpv" | "bono" | "tpv"
+      visitas_metodo_pago:
+        | "stripe"
+        | "agora_tpv"
+        | "bono"
+        | "tpv"
+        | "codetickets"
+        | "invitacion"
       visitas_tipo_bono: "visita" | "maridaje" | "importe"
       visitas_tipo_producto: "visita_experiencia" | "bono"
     }
@@ -8870,12 +11170,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8899,11 +11199,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8924,11 +11224,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8949,11 +11249,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8966,11 +11266,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -9007,7 +11307,14 @@ export const Constants = {
       visitas_estado_reserva: ["pendiente_pago", "pagada", "cancelada"],
       visitas_estado_sesion: ["activa", "cancelada"],
       visitas_idioma: ["es", "en", "fr"],
-      visitas_metodo_pago: ["stripe", "agora_tpv", "bono", "tpv"],
+      visitas_metodo_pago: [
+        "stripe",
+        "agora_tpv",
+        "bono",
+        "tpv",
+        "codetickets",
+        "invitacion",
+      ],
       visitas_tipo_bono: ["visita", "maridaje", "importe"],
       visitas_tipo_producto: ["visita_experiencia", "bono"],
     },

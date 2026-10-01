@@ -129,7 +129,7 @@ export async function copiarSemanaAnterior(centroId: string, lunes: string, empl
   if (!previos?.length) return { ok: false, error: "La semana anterior está vacía" };
   const activos = new Set(empleadosActivos);
   const nuevos = previos
-    .filter((t) => activos.has(t.empleado_id))
+    .filter((t) => t.empleado_id && activos.has(t.empleado_id))
     .map((t) => {
       const f = new Date(t.fecha + "T12:00");
       f.setDate(f.getDate() + 7);
