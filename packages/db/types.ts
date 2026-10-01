@@ -8241,6 +8241,7 @@ export type Database = {
       rrhh_convenios: {
         Row: {
           complementarias_max_pct: number
+          coste_empresa_pct: number
           creado_en: string
           cuenta_id: string
           descanso_diario_h: number | null
@@ -8263,6 +8264,7 @@ export type Database = {
         }
         Insert: {
           complementarias_max_pct?: number
+          coste_empresa_pct?: number
           creado_en?: string
           cuenta_id?: string
           descanso_diario_h?: number | null
@@ -8285,6 +8287,7 @@ export type Database = {
         }
         Update: {
           complementarias_max_pct?: number
+          coste_empresa_pct?: number
           creado_en?: string
           cuenta_id?: string
           descanso_diario_h?: number | null
@@ -8311,6 +8314,54 @@ export type Database = {
             columns: ["cuenta_id"]
             isOneToOne: false
             referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_coste_hora: {
+        Row: {
+          coste_hora: number
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          desde: string
+          empleado_id: string
+          id: string
+          nota: string | null
+        }
+        Insert: {
+          coste_hora: number
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          desde: string
+          empleado_id: string
+          id?: string
+          nota?: string | null
+        }
+        Update: {
+          coste_hora?: number
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          desde?: string
+          empleado_id?: string
+          id?: string
+          nota?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_coste_hora_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_coste_hora_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
             referencedColumns: ["id"]
           },
         ]
@@ -8693,6 +8744,61 @@ export type Database = {
           },
         ]
       }
+      rrhh_jornadas_confirmadas: {
+        Row: {
+          centro_id: string | null
+          confirmada_en: string
+          cuenta_id: string
+          empleado_id: string
+          fecha: string
+          horas_vistas: number | null
+          id: string
+          nota: string | null
+        }
+        Insert: {
+          centro_id?: string | null
+          confirmada_en?: string
+          cuenta_id?: string
+          empleado_id: string
+          fecha: string
+          horas_vistas?: number | null
+          id?: string
+          nota?: string | null
+        }
+        Update: {
+          centro_id?: string | null
+          confirmada_en?: string
+          cuenta_id?: string
+          empleado_id?: string
+          fecha?: string
+          horas_vistas?: number | null
+          id?: string
+          nota?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_jornadas_confirmadas_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_jornadas_confirmadas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_jornadas_confirmadas_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rrhh_nomina_comentarios: {
         Row: {
           anio: number
@@ -9048,6 +9154,105 @@ export type Database = {
             columns: ["cuenta_id"]
             isOneToOne: false
             referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_turno_archivos: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          id: string
+          nombre: string
+          ruta: string
+          subido_por: string | null
+          tamano: number | null
+          tipo_mime: string | null
+          turno_id: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre: string
+          ruta: string
+          subido_por?: string | null
+          tamano?: number | null
+          tipo_mime?: string | null
+          turno_id: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          id?: string
+          nombre?: string
+          ruta?: string
+          subido_por?: string | null
+          tamano?: number | null
+          tipo_mime?: string | null
+          turno_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_turno_archivos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_turno_archivos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "rrhh_turnos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rrhh_turno_tareas: {
+        Row: {
+          creado_en: string
+          cuenta_id: string
+          hecha: boolean
+          hecha_en: string | null
+          id: string
+          orden: number
+          texto: string
+          turno_id: string
+        }
+        Insert: {
+          creado_en?: string
+          cuenta_id?: string
+          hecha?: boolean
+          hecha_en?: string | null
+          id?: string
+          orden?: number
+          texto: string
+          turno_id: string
+        }
+        Update: {
+          creado_en?: string
+          cuenta_id?: string
+          hecha?: boolean
+          hecha_en?: string | null
+          id?: string
+          orden?: number
+          texto?: string
+          turno_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rrhh_turno_tareas_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rrhh_turno_tareas_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "rrhh_turnos"
             referencedColumns: ["id"]
           },
         ]
@@ -10871,6 +11076,7 @@ export type Database = {
         Args: { p_centro_id: string; p_cuenta_id?: string }
         Returns: {
           complementarias_max_pct: number
+          coste_empresa_pct: number
           creado_en: string
           cuenta_id: string
           descanso_diario_h: number | null
@@ -10983,7 +11189,18 @@ export type Database = {
         }[]
       }
       rrhh_mis_centros: { Args: never; Returns: string[] }
+      rrhh_mis_turnos_publicados: { Args: never; Returns: string[] }
       rrhh_novedades: {
+        Args: { p_centro_id?: string; p_limite?: number }
+        Returns: {
+          autor: string
+          centro: string
+          texto: string
+          tipo: string
+          ts: string
+        }[]
+      }
+      rrhh_novedades_empleado: {
         Args: { p_centro_id?: string; p_limite?: number }
         Returns: {
           autor: string
@@ -11061,6 +11278,7 @@ export type Database = {
       }
       rrhh_sin_acentos: { Args: { p: string }; Returns: string }
       rrhh_turnos_de_mis_centros_con_cambios: { Args: never; Returns: string[] }
+      rrhh_turnos_gestionados: { Args: never; Returns: string[] }
       rrhh_turnos_que_me_piden: { Args: never; Returns: string[] }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
