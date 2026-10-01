@@ -306,10 +306,6 @@ export async function ajustarVacaciones(empleadoId: string, diasSaldo: number, m
   return { ok: true, data: { nota } };
 }
 
-/* ==================== Ratios ==================== */
-
-export async function enviarRatios(desde: string, hasta: string): Promise<R<number>> {
-  const { sb } = await cliente();
-  const { data, error } = await sb.rpc("rrhh_exportar_ratios", { p_desde: desde, p_hasta: hasta });
-  return error ? { ok: false, error: error.message } : { ok: true, data: n(data) };
-}
+/* Ratios: ya no hay «Enviar a Ratios». Ratios lee estas horas en vivo desde la vista
+   rrhh_desde_personal (migración 20261001070000_rrhh_vista_ratios.sql); rrhh_exportar_ratios
+   sigue existiendo en la base como respaldo manual, sin botón. */

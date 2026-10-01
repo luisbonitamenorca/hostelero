@@ -1497,8 +1497,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
         </div>
       </div>
       <div class="card" style="margin-top:16px">
-        <div class="card-t">👥 Cargar horas Skello (informe estándar · 8 ficheros)</div>
-        <div style="font-size:12px;color:#888;margin-bottom:12px">Selecciona o arrastra los <strong>8 ficheros</strong> (uno por centro). Se procesan juntos para repartir el contrato entre centros. Reemplaza todas las horas cargadas.</div>
+        <div class="card-t">👥 Cargar horas Skello (informe estándar · 8 ficheros) — ya no hace falta</div>
+        <div style="font-size:12px;color:#888;margin-bottom:12px"><strong>Ratios lee las horas del módulo Personal en vivo</strong> (turnos, horas validadas y ausencias). Este cargador queda solo como respaldo: selecciona o arrastra los <strong>8 ficheros</strong> (uno por centro). Se procesan juntos para repartir el contrato entre centros. Reemplaza todas las horas cargadas.</div>
         <input type="file" id="sk-input" accept=".xlsx,.xls" multiple style="display:none" onchange="handleSkelloFiles(this.files)">
         <div class="drop-zone" id="sk-drop" onclick="document.getElementById('sk-input').click()"
           ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')"
@@ -6889,7 +6889,12 @@ async function loadFromStorage() {
       loadIngresosRapido(loadAll),
       loadGastosRapido(loadAll),
       loadAll('presupuesto'),
-      loadAll('rrhh'),
+      // Horas en vivo desde el módulo Personal (vista rrhh_desde_personal, 01-10-2026).
+      // Mismo formato que la tabla `rrhh`; si la vista no devuelve nada (sin turnos
+      // publicados aún) o falla, se cae a la tabla `rrhh` cargada desde Skello como respaldo.
+      loadAll('rrhh_desde_personal').then(
+        v => (v && v.length) ? v : loadAll('rrhh'),
+        e => { console.warn('[carga] rrhh_desde_personal no disponible, uso tabla rrhh:', e.message); return loadAll('rrhh'); }),
       safeLoad('nominas'),
       safeLoad('presupuesto_nominas'),
       safeLoad('nominas_reparto'),
@@ -9620,7 +9625,7 @@ function renderRRHH(){
       <td class="tr" style="color:${col}">${ext>=0?'+':''}${fmtN(ext)}</td>
       <td class="tr" style="color:${col}">${pct!==null?(pct>=0?'+':'')+(pct*100).toFixed(1)+'%':'—'}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px">Sin datos — carga los ficheros de Skello en la pestaña de carga</td></tr>';
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px">Sin datos — planifica y valida en Personal</td></tr>';
 
   const tCol = totExt>0?'#BA7517':totExt<0?'#1D9E75':'#888';
   const tPct = totTeo>0?totExt/totTeo:null;

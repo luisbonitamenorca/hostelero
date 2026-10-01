@@ -14,7 +14,7 @@ Empleados · Ajustes**. El selector de centro y la semana se recuerdan entre pes
 | Planificación | **Planificación** | Rejilla semanal con chips de color por puesto, columna Horas (plan/contrato), fila Total por día, fila «Sin asignar» (huecos), arrastrar y soltar (Alt = duplicar), selección múltiple, menú ⋯ por chip, plantillas rápidas de turno, modelos de semana (guardar/aplicar), copiar semana anterior, turnos en otros centros en gris, festivos en cabecera, avisos de convenio (descanso, jornada, días seguidos, festivo, menores de noche), vista Día, impresión, publicar con resumen + correo a los empleados (si hay clave de Resend). Historial de cambios de cada turno en la base. |
 | Fichaje / Validación | **Fichajes** | Vista Semana planificado vs fichado por celda (verde/ámbar/rojo/gris), «Proponer horas» según la regla del centro (planificado / fichado / plan con tolerancia, redondeo), edición de horas retenidas con nota, «Validar semana» / «Reabrir». Vista Día con corrección de fichajes (append-only, como antes). |
 | Ausencias | **Ausencias** | Catálogo completo (18 tipos con categoría, color, si computa contador/vacaciones, si la pide el empleado), medio día / horas, nota, rechazo con motivo, **calendario mensual** por centro, saldo de vacaciones al crear, CSV con el formato de Skello. |
-| Contador de horas · Saldo de vacaciones | **Contadores** | Empleados × semanas ISO (contrato / realizadas / ±), total y saldo acumulado, alertas 80 h extra/año y 30 % complementarias, ajustes inmutables (pago, descanso, saldo inicial), saldo de vacaciones (derecho, devengado, disfrutado, pendiente, resto), **Enviar a Ratios** (escribe la tabla `rrhh` que ya lee Ratios, con origen `hostelero`). |
+| Contador de horas · Saldo de vacaciones | **Contadores** | Empleados × semanas ISO (contrato / realizadas / ±), total y saldo acumulado, alertas 80 h extra/año y 30 % complementarias, ajustes inmutables (pago, descanso, saldo inicial), saldo de vacaciones (derecho, devengado, disfrutado, pendiente, resto), Ratios lee estas horas en vivo (vista `rrhh_desde_personal`, ver §5). |
 | Informe (nóminas) | **Informes** | Informe de nómina mensual por empleado (contrato mes, retenidas, extra, nocturnas, domingos, festivos, ausencias por tipo, variables: primas/anticipos/plus, comentario para la gestoría) en **Excel** (4 hojas) y CSV; «Horas y registro» (resumen, detalle diario, registro completo para Inspección); «Plantilla» (fijos discontinuos: activos / inactivos / baja, próximos fines de periodo). |
 | Empleados | **Empleados** | Alta con modal completo, ficha con estado y saldos, código nómina, puesto por defecto, fecha de nacimiento, nota, centros con fechas, periodos de contrato, **Dar de baja** / **Reactivar (llamamiento)**, PIN, historial. Filtros activos / inactivos / baja. |
 | Ajustes | **Ajustes** | Convenios (vacaciones, días laborables, tramo nocturno, topes), reglas de validación por centro, **Puestos** (color, departamento, fusionar), tipos de ausencia, **Festivos** 2026-2027 (BOIB), plantillas de turno, **Encargados por centro**, departamentos, contratos, tablets. |
@@ -71,8 +71,11 @@ Tamarindos; Charo, Lena → Tamarindos Bar; Mabel, Matías → Casa Tirant).
 ## 5. Limitaciones conocidas
 
 - Vista Mes del cuadrante no hecha (Semana y Día sí). Arrastrar varios chips a la vez no (uno a uno).
-- Ratios: «Enviar a Ratios» escribe filas con `dni=''` (Ratios casa por nombre) y filas «(AUSENCIA)»
-  con las horas de ausencia que computan; no toca las filas que vienen del Excel de Skello.
+- Ratios (01-10): ya no hay «Enviar a Ratios». Ratios lee las horas EN VIVO desde la vista `rrhh_desde_personal`
+  (migración `20261001070000_rrhh_vista_ratios.sql`): mismo formato que la tabla `rrhh`, calculado al vuelo con la
+  regla de `rrhh_exportar_ratios` (validadas o, si no, planificadas; puesto más frecuente; contrato; fila «(AUSENCIA)»
+  en el centro principal), `dni=''` (casa por nombre), security_invoker, ~0,45 s para todo el año. Si la vista viene
+  vacía o falla, Ratios cae a la tabla `rrhh` (cargador de Skello) como respaldo; `rrhh_exportar_ratios` sigue en la base sin botón.
 - El registro horario sigue siendo append-only: las correcciones son inserts con motivo.
 - Hoy/Fichajes usan Europe/Madrid explícitamente (Vercel va en UTC).
 

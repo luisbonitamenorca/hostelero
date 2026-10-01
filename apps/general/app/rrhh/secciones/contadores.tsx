@@ -100,8 +100,6 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
   // Caché por fecha final → saldo de cada empleado (el saldo es de la persona, no del centro).
   const cacheSaldos = useRef<Map<string, Record<string, SaldoEmp>>>(new Map());
   const [detalleId, setDetalleId] = useState<string | null>(null);
-  const [confirmRatios, setConfirmRatios] = useState(false);
-  const [enviando, setEnviando] = useState(false);
   const peticion = useRef(0);
 
   const { desde, hasta } = rango;
@@ -218,15 +216,6 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
     descargarCsv(`resumen_contadores_${desde}_${hasta}.csv`, filas);
   }
 
-  async function enviar() {
-    setEnviando(true);
-    const r = await api.enviarRatios(desde, hasta);
-    setEnviando(false);
-    setConfirmRatios(false);
-    if (!r.ok) { avisar(r.error || "No se ha podido enviar"); return; }
-    avisar(`Enviado a Ratios: ${r.data} filas escritas`);
-  }
-
   const onAjuste = useCallback((empId: string, a: Ajuste) => {
     // El saldo cambia si el ajuste cae dentro de lo que se cuenta; la caché queda vieja.
     cacheSaldos.current.clear();
@@ -240,7 +229,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
 
   const detalle = detalleId ? datos?.empleados.find((e) => e.id === detalleId) ?? null : null;
   const lunesHoy = lunesDe(hoy);
-  // Semanas-persona del rango con días planificados que nadie ha validado todavía (van a Ratios según el plan).
+  // Semanas-persona del rango con días planificados que nadie ha validado todavía (Ratios las lee según el plan).
   const sinValidar = useMemo(() => (datos?.filas ?? []).filter((f) => f.dias_validados < f.dias_plan).length, [datos]);
 
   return (
@@ -260,9 +249,6 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
         </div>
         <div className="cont-barra-der">
           <button className="btn btn-fantasma" onClick={exportarCsv} disabled={!datos || !empleadosOrden.length}>Exportar CSV</button>
-          {ctx.esGestor ? (
-            <button className="btn btn-primario" onClick={() => setConfirmRatios(true)} disabled={!datos || !empleadosOrden.length}>Enviar a Ratios</button>
-          ) : null}
         </div>
       </div>
 
@@ -367,6 +353,9 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
             <span><span className="cont-r cont-r-plan">7,5</span> en gris: según turnos publicados, aún sin validar</span>
             {saldoRecortado ? <span><span className="cont-vacia">—</span> semanas futuras: no cuentan en el saldo</span> : null}
             <span>Toca un empleado para ver el detalle y los ajustes.</span>
+            <span title={sinValidar > 0 ? `${sinValidar} semana${sinValidar === 1 ? "" : "s"}-persona del rango sin validar: Ratios las lee según los turnos publicados` : undefined}>
+              Ratios lee estas horas en vivo (fichajes validados o, si no, turnos publicados; más ausencias que computan).
+            </span>
           </div>
           <p className="nota-inf">
             Cómo se calcula: cada semana, horas realizadas (fichajes validados o, si no los hay, turnos publicados) más ausencias que computan, menos las horas de contrato.
@@ -389,29 +378,6 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
           onAjuste={onAjuste}
           cerrar={() => setDetalleId(null)}
         />
-      ) : null}
-
-      {confirmRatios ? (
-        <div className="rh-modal" onClick={(e) => { if (e.target === e.currentTarget && !enviando) setConfirmRatios(false); }}>
-          <div className="modal">
-            <h2>Enviar a Ratios</h2>
-            <div className="sub">Semanas del {ddmm(lunesDe(desde))} al {ddmm(sumaDia(lunesDe(hasta), 6))} (semanas completas)</div>
-            <p>
-              Ratios recibirá una fila por persona, semana y centro con el contrato y las horas realizadas, más las ausencias que computan.
-              Lo que Hostelero envió antes para esas semanas se sustituye. Las filas que vinieron de Skello no se tocan.
-            </p>
-            {sinValidar > 0 ? (
-              <div className="cont-aviso-val">
-                {sinValidar === 1 ? "1 semana-persona del rango tiene" : `${sinValidar} semanas-persona del rango tienen`} días sin validar: se enviarán según los turnos publicados.
-                Si quieres mandar horas fichadas, valida antes en Fichajes.
-              </div>
-            ) : null}
-            <div className="modal-acciones">
-              <button className="btn btn-fantasma" onClick={() => setConfirmRatios(false)} disabled={enviando}>Cancelar</button>
-              <button className="btn btn-primario" onClick={enviar} disabled={enviando}>{enviando ? "Enviando…" : "Enviar"}</button>
-            </div>
-          </div>
-        </div>
       ) : null}
     </>
   );
