@@ -1,1 +1,150 @@
-/* Estilos propios de la sección planificacion del panel RRHH. Los comunes están en ../rrhh.css. */
+/* Estilos propios de la sección Planificación del panel RRHH. Los comunes están en ../rrhh.css.
+   Todo prefijado .rh .plan-* para no pisar a nadie. */
+
+/* ---------- barra ---------- */
+.rh .plan-barra-top{position:sticky;top:44px;z-index:20;background:var(--fondo)}
+.rh .plan-vistas{display:inline-flex;border:1px solid var(--linea);border-radius:8px;overflow:hidden;background:#fff}
+.rh .plan-vistas button{background:none;border:none;padding:8px 14px;font:inherit;font-weight:600;color:var(--tinta-suave);cursor:pointer}
+.rh .plan-vistas button.activa{background:var(--green);color:#fff}
+.rh .plan-acciones{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.rh .plan-sub{font-size:11px;color:var(--tinta-suave)}
+.rh .plan-print-cab{display:none}
+.rh .plan-error{display:flex;flex-direction:column;align-items:center;gap:8px}
+
+/* ---------- rejilla ----------
+   Columnas fijas al desplazar en horizontal (en 1024 px la tabla no cabe): «Equipo» y los
+   nombres a la izquierda, «Horas» a la derecha (como Skello, siempre visible). */
+.rh .plan-cuadrante th.plan-th-equipo{min-width:170px;text-align:left;position:sticky;left:0;z-index:6;background:var(--arena)}
+.rh .plan-cuadrante th.plan-th-horas,.rh .plan-cuadrante td.plan-horas{min-width:92px;text-align:right;padding:8px 10px;white-space:nowrap;font-variant-numeric:tabular-nums;position:sticky;right:0;z-index:5;border-left:2px solid var(--linea)}
+.rh .plan-cuadrante td.plan-horas{vertical-align:middle;font-size:12px;color:var(--tinta-suave);background:#fbfbfa}
+.rh .plan-cuadrante tfoot td.plan-horas{background:var(--arena)}
+.rh .plan-horas-otros{margin-top:2px;white-space:normal;line-height:1.2}
+.rh .plan-cuadrante tr.fila-depto td{padding:0}
+.rh .plan-depto{position:sticky;left:0;display:inline-block;padding:5px 10px}
+.rh .plan-cuadrante td.plan-horas b{color:var(--tinta);font-size:13px}
+.rh .plan-cuadrante td.plan-horas.exceso{background:var(--amber-light)}
+.rh .plan-cuadrante td.plan-horas.exceso b,.rh .plan-cuadrante td.plan-horas.exceso span{color:var(--amber)}
+.rh .plan-horas-ex{font-size:10.5px;font-weight:600;color:var(--amber)}
+.rh .plan-cuadrante thead th.plan-th-festivo{background:var(--purple-light);color:var(--purple)}
+.rh .plan-cuadrante thead th.hoy.plan-th-festivo{background:var(--green);color:#fff}
+.rh .plan-festivo{font-size:10px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;margin-inline:auto}
+.rh .plan-festivo-inline{font-size:12px;color:var(--purple);margin-left:8px;font-weight:600}
+.rh td.plan-celda{min-width:112px;height:60px;padding:4px;position:relative}
+.rh td.plan-celda.es-hoy{background:#F6FBF9}
+.rh td.plan-celda.es-festivo{background:#F8F7FD}
+.rh td.plan-celda.drop{background:var(--green-light);outline:2px dashed var(--green);outline-offset:-3px}
+.rh .plan-puesto-def{font-size:11px;color:var(--tinta-suave);margin-top:2px;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh .plan-puesto-def i{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.rh tr.plan-fila-huecos td{background:#FBFAF6}
+.rh tr.plan-fila-huecos td.nombre .np{color:var(--amber)}
+.rh .plan-mas{display:none;background:none;border:1px dashed var(--linea);border-radius:6px;color:var(--tinta-suave);font:inherit;font-size:11px;padding:3px 6px;cursor:pointer;width:100%}
+.rh td.plan-celda:hover .plan-mas{display:block}
+.rh .plan-mas:hover{border-color:var(--amber);color:var(--amber)}
+.rh .plan-cuadrante tfoot td{background:var(--arena);font-size:12px;text-align:center;padding:8px 6px;border-top:2px solid var(--linea);vertical-align:middle}
+.rh .plan-cuadrante tfoot td.nombre{text-align:left;background:var(--arena)}
+.rh .plan-cuadrante tfoot td.es-hoy{background:#E6F3EE}
+
+/* ---------- chips ---------- */
+.rh .plan-chip{--c:#888;position:relative;border-radius:7px;padding:4px 18px 4px 7px;margin-bottom:4px;font-size:12px;line-height:1.3;cursor:grab;
+  background:color-mix(in srgb,var(--c) 14%,#fff);border:1.5px solid color-mix(in srgb,var(--c) 55%,#fff);border-left:4px solid var(--c);user-select:none}
+.rh .plan-chip:active{cursor:grabbing}
+.rh .plan-chip.borrador{background:#fff;border-style:dashed;border-left-style:solid}
+.rh .plan-chip.conflicto{border-color:var(--red)}
+.rh .plan-chip.sel{outline:2px solid var(--blue);outline-offset:1px;background:var(--blue-light)}
+.rh .plan-chip-h{font-weight:600;display:flex;gap:6px;align-items:baseline;white-space:nowrap}
+.rh .plan-chip-n{font-weight:400;color:var(--tinta-suave);font-size:11px}
+.rh .plan-chip-w{color:var(--amber);font-weight:700}
+.rh .plan-chip-p{color:var(--tinta-suave);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh .plan-chip-nota{color:var(--blue)}
+.rh .plan-chip-menu{position:absolute;right:2px;top:2px;width:16px;height:16px;border:none;background:none;color:var(--tinta-suave);font-size:14px;line-height:1;cursor:pointer;border-radius:4px;padding:0;opacity:0}
+.rh .plan-chip:hover .plan-chip-menu{opacity:1}
+.rh .plan-chip-menu:hover{background:rgba(0,0,0,.08);color:var(--tinta)}
+.rh .plan-chip.ajeno{--c:#bbb;background:#f1f1f0;border:1px dashed #c9c9c6;border-left:4px solid #c9c9c6;color:var(--tinta-suave);cursor:default;padding-right:7px}
+.rh .plan-chip.ajeno .plan-chip-h{color:var(--tinta-suave);font-weight:500}
+.rh .plan-aus{--c:#888;font-size:10.5px;font-weight:600;border-radius:6px;padding:3px 6px;margin-bottom:4px;background:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- selección y menú ---------- */
+.rh .plan-flotante{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--linea);box-shadow:0 8px 24px rgba(0,0,0,.14);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;z-index:45}
+.rh .plan-menu-fondo{position:fixed;inset:0;z-index:48}
+.rh .plan-menu{position:fixed;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.16);min-width:190px;padding:6px;z-index:49}
+.rh .plan-menu-cab{font-size:11px;color:var(--tinta-suave);padding:4px 10px 6px;border-bottom:1px solid var(--fondo);margin-bottom:4px;font-weight:600}
+.rh .plan-menu button{display:block;width:100%;text-align:left;background:none;border:none;padding:8px 10px;border-radius:7px;font:inherit;cursor:pointer;color:var(--tinta)}
+.rh .plan-menu button:hover{background:var(--fondo)}
+.rh .plan-menu button.peligro{color:var(--red)}
+.rh .plan-leyenda .plan-ayuda{flex-basis:100%;font-size:11px}
+
+/* ---------- vista día ---------- */
+.rh .plan-dia{background:#fff;border:1px solid var(--linea);border-radius:12px;overflow:hidden}
+.rh .plan-dia-cab{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--linea);background:var(--arena);flex-wrap:wrap}
+.rh .plan-dia-cab h3{font-size:15px}
+.rh .plan-dia-fila{display:grid;grid-template-columns:190px 1fr;border-bottom:1px solid var(--fondo);min-height:44px}
+.rh .plan-dia-nombre{padding:8px 12px;border-right:2px solid var(--linea);position:sticky;left:0;background:#fff;z-index:2}
+.rh .plan-dia-nombre .np{font-weight:600;font-size:13px}
+.rh .plan-dia-pista{position:relative;min-width:800px;margin:0 8px}
+.rh .plan-dia-linea{position:absolute;top:0;bottom:0;border-left:1px solid var(--fondo)}
+.rh .plan-dia-horas{min-height:26px;background:var(--arena)}
+.rh .plan-dia-horas .plan-dia-pista span,.rh .plan-dia-cob .plan-dia-pista span{position:absolute;top:5px;font-size:11px;color:var(--tinta-suave);transform:translateX(2px)}
+.rh .plan-dia-cob{min-height:26px;background:#fbfbfa}
+.rh .plan-dia-cob .plan-dia-pista span{font-weight:600;color:var(--green)}
+.rh .plan-dia-cob .plan-dia-pista span.cero{color:var(--linea);font-weight:400}
+.rh .plan-cob-hueco{font-size:9px;color:var(--amber);margin-left:1px}
+.rh .plan-barra{--c:#888;position:absolute;top:8px;height:28px;border-radius:6px;background:var(--c);padding:0 8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.rh .plan-barra small{font-weight:400;opacity:.85}
+.rh .plan-barra.borrador{background:color-mix(in srgb,var(--c) 18%,#fff);color:var(--tinta)!important;border:1.5px dashed var(--c)}
+.rh .plan-barra.ajeno{background:#e4e4e2;color:var(--tinta-suave)!important;cursor:default;border:1px dashed #c9c9c6}
+.rh .plan-barra.conflicto{outline:2px solid var(--red)}
+.rh .plan-barra.sel{outline:2px solid var(--blue)}
+.rh .plan-dia-aus{--c:#888;position:absolute;inset:6px 0;border-radius:6px;background:color-mix(in srgb,var(--c) 20%,#fff);border:1px solid var(--c);color:var(--tinta);font-size:11.5px;font-weight:600;display:flex;align-items:center;padding:0 10px}
+.rh .plan-dia-libres{padding:10px 14px;font-size:12px;color:var(--tinta-suave);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rh .plan-libre{background:#fff;border:1px solid var(--linea);border-radius:20px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer;color:var(--tinta)}
+.rh .plan-libre:hover{border-color:var(--green);color:var(--green)}
+
+/* ---------- modales ---------- */
+.rh-modal .plan-modal{max-width:460px}
+.rh-modal .plan-confirmar{max-width:400px}
+.rh-modal .plan-confirmar p{margin:10px 0 0;color:#555;line-height:1.45}
+.rh-modal .plan-plantillas{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 2px}
+.rh-modal .plan-plantilla{background:#fff;border:1px solid #e0e0e0;border-radius:20px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;color:#1a1a1a}
+.rh-modal .plan-plantilla:hover{border-color:#1D9E75;color:#1D9E75;background:#E1F5EE}
+.rh-modal .plan-modal-resumen{display:flex;align-items:center;gap:14px;margin-top:14px;padding:10px 12px;background:#f8f8f6;border-radius:9px}
+.rh-modal .plan-modal-horas{font-size:18px;font-weight:700;color:#1D9E75}
+.rh-modal .plan-modal-puesto{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#555}
+.rh-modal .plan-modal-puesto i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.rh-modal .plan-sub{font-size:11px;color:#888;font-weight:400}
+.rh-modal .plan-resumen{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.rh-modal .plan-resumen div{background:#f8f8f6;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column}
+.rh-modal .plan-resumen b{font-size:20px;color:#1D9E75}
+.rh-modal .plan-resumen span{font-size:11.5px;color:#888}
+.rh-modal .plan-aviso-linea{margin-top:12px;font-size:12.5px;color:#BA7517;background:#FAEEDA;border-radius:8px;padding:8px 10px}
+.rh-modal .plan-ok-linea{margin-top:12px;font-size:12.5px;color:#1D9E75}
+.rh-modal .plan-avisos-modal{margin-top:12px;background:#FAEEDA;border-radius:8px;padding:8px 10px;font-size:12px;color:#1a1a1a;max-height:180px;overflow-y:auto}
+.rh-modal .plan-avisos-modal b{display:block;color:#BA7517;margin-bottom:4px}
+.rh-modal .plan-avisos-modal div{margin:2px 0}
+.rh-modal .plan-modelo-nuevo{display:flex;gap:8px}
+.rh-modal .plan-modelo-nuevo input{flex:1}
+.rh-modal .plan-modelo-nuevo .btn{flex:none}
+.rh-modal .plan-modelos{display:flex;flex-direction:column;gap:6px}
+.rh-modal .plan-modelo{display:flex;align-items:center;gap:10px;border:1px solid #e0e0e0;border-radius:9px;padding:8px 10px}
+.rh-modal .plan-modelo > div{flex:1;min-width:0}
+
+/* ---------- impresión: el cuadrante para colgar en la pared ---------- */
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  .rh{background:#fff;font-size:11px}
+  .rh .tabsbar,.rh .plan-barra-top,.rh .plan-leyenda,.rh .avisos-panel,.rh .plan-flotante,.rh .plan-menu-fondo,.rh .plan-mas,.rh .plan-chip-menu,.rh .toast,.rh-modal{display:none!important}
+  .rh main{padding:0;max-width:none}
+  .rh .plan-print-cab{display:block;margin:0 0 8px}
+  .rh .plan-print-cab h2{font-size:15px}
+  .rh .plan-scroll{overflow:visible}
+  .rh table.cuadrante{min-width:0;width:100%;border-radius:0;page-break-inside:auto}
+  .rh table.cuadrante tr{page-break-inside:avoid}
+  .rh td.nombre,.rh .plan-cuadrante th.plan-th-equipo,.rh .plan-cuadrante th.plan-th-horas,.rh .plan-cuadrante td.plan-horas,.rh .plan-depto{position:static}
+  .rh table.cuadrante th,.rh table.cuadrante td,.rh .plan-aus,.rh .plan-barra,.rh .plan-dia-aus{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rh td.plan-celda{height:auto;min-width:0;padding:2px}
+  .rh .plan-chip{padding:2px 5px;margin-bottom:2px;font-size:10.5px;break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rh .plan-chip.ajeno{display:none}
+  .rh .plan-chip-n{display:none}
+  .rh .plan-cuadrante thead th.hoy{background:var(--arena);color:var(--tinta)}
+  .rh .plan-dia-nombre{position:static}
+  .rh .plan-dia-pista{min-width:0}
+}

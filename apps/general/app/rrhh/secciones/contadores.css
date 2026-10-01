@@ -1,1 +1,98 @@
-/* Estilos propios de la sección contadores del panel RRHH. Los comunes están en ../rrhh.css. */
+/* Estilos propios de la sección Contadores del panel RRHH. Los comunes están en ../rrhh.css. */
+
+.rh .cont-subtabs{display:flex;gap:4px;padding-top:12px}
+.rh .cont-subtabs button{background:none;border:1px solid var(--linea);border-radius:20px;padding:6px 14px;font-weight:600;font-size:12.5px;color:var(--tinta-suave);cursor:pointer;font-family:inherit}
+.rh .cont-subtabs button.activa{background:var(--green);border-color:var(--green);color:#fff}
+
+.rh .cont-fechas{display:flex;align-items:center;gap:6px;color:var(--tinta-suave)}
+.rh .cont-fechas input{height:34px;padding:4px 6px;width:128px}
+.rh .cont-sec .sem-label{min-width:130px}
+.rh .cont-label-mes{cursor:pointer}
+.rh .cont-label-mes:hover{color:var(--green)}
+.rh .cont-barra-der{margin-left:auto;display:flex;gap:10px}
+.rh .cont-error{background:var(--red-light);color:var(--red);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+
+/* tabla principal */
+.rh .cont-scroll{overflow-x:auto}
+.rh table.cont-tabla{border-collapse:separate;border-spacing:0;width:100%;background:#fff;border:1px solid var(--linea);border-radius:12px;overflow:hidden;font-variant-numeric:tabular-nums}
+.rh table.cont-tabla th,.rh table.cont-tabla td{border-bottom:1px solid var(--fondo);border-right:1px solid var(--fondo);vertical-align:top}
+.rh table.cont-tabla thead th{background:var(--arena);font-size:12px;font-weight:600;padding:8px 6px;text-align:center;white-space:nowrap}
+.rh table.cont-tabla thead th.cont-th-hoy{background:var(--green);color:#fff}
+.rh table.cont-tabla thead th.cont-th-hoy .cont-th-sub{color:#E1F5EE}
+.rh .cont-th-sub{font-weight:400;font-size:11px;color:var(--tinta-suave);margin-top:1px}
+.rh .cont-th-total{background:#e8e7e3 !important}
+.rh tr.cont-th-leyenda th{font-weight:400;font-size:11px;color:var(--tinta-suave);padding:3px 10px;text-align:left;text-transform:none}
+.rh .cont-th-nombre{text-align:left !important;min-width:210px;position:sticky;left:0;z-index:6;border-right:2px solid var(--linea) !important}
+/* la fila de departamento ocupa todo el ancho: lo que se queda pegado al hacer scroll horizontal es el texto, no la celda */
+.rh tr.cont-depto td{background:var(--arena);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;padding:0}
+.rh tr.cont-depto .cont-depto-txt{position:sticky;left:10px;display:inline-block;padding:5px 0}
+.rh td.cont-nombre{background:#fff;padding:8px 10px;min-width:210px;position:sticky;left:0;z-index:5;border-right:2px solid var(--linea) !important;cursor:pointer}
+.rh tr.cont-fila:hover td{background:#F6F9F8}
+.rh .cont-np{font-weight:600}
+.rh .cont-sub{font-size:11px;color:var(--tinta-suave);margin-top:2px}
+.rh .cont-alerta{font-size:11px;font-weight:600;border-radius:12px;padding:2px 8px;margin-top:4px;display:inline-block}
+.rh .cont-alerta.extra{background:var(--red-light);color:var(--red)}
+.rh .cont-alerta.compl{background:var(--amber-light);color:var(--amber)}
+.rh td.cont-celda{min-width:92px;padding:6px 8px;text-align:right;cursor:pointer;line-height:1.35;font-size:12.5px}
+.rh td.cont-celda.hoy{background:#F3FAF7}
+.rh td.cont-total{background:var(--fondo);font-weight:600}
+.rh td.cont-saldo{background:var(--fondo);vertical-align:middle}
+.rh .cont-saldo-v{font-weight:700;font-size:13.5px}
+.rh .cont-c{color:var(--tinta-suave)}
+.rh .cont-r{color:var(--tinta);font-weight:600}
+.rh .cont-r.cont-r-plan{color:var(--tinta-suave);font-style:italic}
+.rh .cont-aus{color:var(--purple);margin-left:2px;font-weight:700}
+.rh .cont-mas{color:var(--amber);font-weight:700}
+.rh .cont-menos{color:var(--blue);font-weight:700}
+.rh .cont-cero{color:var(--tinta-suave)}
+.rh .cont-vacia{color:#c8c8c8}
+.rh table.cont-tabla tfoot td{background:var(--arena);font-weight:600;cursor:default}
+.rh table.cont-tabla tfoot td.cont-nombre{background:var(--arena)}
+.rh .cont-pie{margin-top:12px}
+.rh .cont-calculando{font-size:12px;color:var(--tinta-suave);margin-bottom:8px}
+.rh .cont-calculando::before{content:"";display:inline-block;width:10px;height:10px;border:2px solid var(--linea);border-top-color:var(--green);border-radius:50%;margin-right:6px;vertical-align:-1px;animation:cont-giro .9s linear infinite}
+@keyframes cont-giro{to{transform:rotate(360deg)}}
+
+/* vacaciones */
+.rh table.cont-vac thead th{text-align:right;padding:8px 12px}
+.rh table.cont-vac td.cont-num{text-align:right;padding:8px 12px;vertical-align:middle;white-space:nowrap}
+.rh .cont-resto{font-weight:700}
+.rh .cont-pend{color:var(--amber);font-weight:600}
+.rh .cont-ajustar{margin-left:10px}
+.rh .cont-ajv-mas{color:var(--green);font-weight:700}
+.rh .cont-ajv-menos{color:var(--red);font-weight:700}
+.rh .cont-resumen-aj,.rh-modal .cont-resumen-aj{margin-top:8px;font-size:12.5px;background:var(--green-light);color:var(--green-dark);border-radius:8px;padding:8px 10px}
+.rh-modal .cont-aviso-val{margin:0 0 10px;font-size:12.5px;background:var(--amber-light);color:var(--amber);border-radius:8px;padding:8px 10px}
+.rh-modal .cont-nota-prev{margin-top:10px;font-size:12px;color:var(--tinta-suave);white-space:pre-wrap;background:#f8f8f6;border-radius:8px;padding:8px 10px;max-height:120px;overflow-y:auto}
+
+/* panel lateral de detalle */
+.rh .cont-drawer-fondo{position:fixed;inset:0;background:rgba(28,43,51,.35);z-index:45}
+.rh .cont-drawer{position:absolute;top:0;right:0;bottom:0;width:min(560px,100%);background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.15);padding:22px 24px 40px;overflow-y:auto;animation:cont-entra .18s ease-out}
+@keyframes cont-entra{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+.rh .cont-drawer-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.rh .cont-drawer h2{font-size:18px}
+.rh .cont-drawer h3{font-size:13px;margin:18px 0 8px}
+.rh .cont-cerrar{background:none;border:none;font-size:26px;line-height:1;color:var(--tinta-suave);cursor:pointer;padding:0 4px}
+.rh .cont-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.rh .cont-kpi{background:var(--fondo);border-radius:10px;padding:10px 12px}
+.rh .cont-kpi-l{font-size:11px;color:var(--tinta-suave);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.rh .cont-kpi-v{font-size:20px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.rh .cont-kpi-s{font-size:11px;color:var(--tinta-suave)}
+.rh table.cont-mini{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+.rh table.cont-mini th,.rh table.cont-mini td{padding:6px 8px;border-bottom:1px solid var(--fondo);text-align:right;vertical-align:top}
+.rh table.cont-mini th:first-child,.rh table.cont-mini td:first-child{text-align:left;white-space:nowrap}
+.rh table.cont-mini thead th{background:var(--arena);font-size:11.5px}
+.rh table.cont-mini td.cont-motivo{text-align:left;color:var(--tinta-suave);max-width:220px}
+.rh .cont-val{color:var(--green);margin-left:3px;font-weight:700}
+.rh .cont-form{margin-top:18px;border-top:1px solid var(--linea);padding-top:4px}
+.rh .cont-form input,.rh .cont-form select,.rh .cont-form textarea{width:100%}
+.rh .cont-form .fila-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rh .cont-form .aviso-modal{margin-top:10px;font-size:12px;color:var(--red)}
+
+@media (max-width:1100px){
+  .rh .cont-este-mes{display:none}
+}
+@media (max-width:720px){
+  .rh .cont-kpis{grid-template-columns:1fr}
+  .rh .cont-barra-der{margin-left:0}
+}

@@ -1,1 +1,70 @@
 /* Estilos propios de la sección informes del panel RRHH. Los comunes están en ../rrhh.css. */
+
+/* subpestañas */
+.rh .inf-subtabs{display:flex;gap:4px;padding-top:14px;border-bottom:0.5px solid var(--linea)}
+.rh .inf-subtabs button{background:none;border:none;padding:10px 14px;color:var(--tinta-suave);font-weight:600;font-size:13px;border-bottom:2.5px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap}
+.rh .inf-subtabs button.activa{color:var(--green);border-bottom-color:var(--green)}
+
+/* barra */
+.rh .inf-busca{min-width:180px}
+.rh .inf-sep{flex:1}
+.rh .inf-a{color:var(--tinta-suave)}
+/* navegación de mes del informe de nómina: ‹ [mes][año] › «Mes anterior» (misma estética que la de semana) */
+.rh .sem-nav .inf-nav-sel{height:34px;padding:6px 10px}
+.rh .sem-nav .inf-nav-btn{width:auto;height:34px;font-size:13px}
+/* Horas y registro: filtros en una fila y descargas en otra, con Excel a la derecha */
+.rh .inf-barra-filtros{border-bottom:none;margin-bottom:0;padding-bottom:4px}
+.rh .inf-barra-descargas{padding-top:4px;min-height:0}
+.rh .inf-reintentar{margin-top:12px}
+
+/* resumen numérico encima de la tabla */
+.rh .inf-resumen{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 12px;color:var(--tinta-suave);font-size:12.5px}
+.rh .inf-resumen b{color:var(--tinta);font-size:14px}
+.rh .inf-resumen .inf-alerta b{color:var(--amber)}
+.rh .inf-cargando{color:var(--green);font-weight:600}
+
+/* tablas anchas */
+.rh .inf-scroll{overflow-x:auto}
+.rh table.inf-nomina,.rh table.inf-plantilla{max-width:none;min-width:1100px}
+.rh table.inf th.izq,.rh table.inf td.izq{text-align:left}
+.rh table.inf thead th{white-space:nowrap}
+.rh table.inf td{vertical-align:top}
+.rh tr.inf-fila{cursor:pointer}
+.rh tr.inf-fila:hover td{background:#F6F9F8}
+.rh .inf-sub{font-size:11px;color:var(--tinta-suave);font-weight:400;margin-top:2px}
+.rh .inf-cod{font-variant-numeric:tabular-nums;white-space:nowrap}
+.rh .inf-falta{color:var(--tinta-suave);font-weight:400}
+.rh .inf-contrato{max-width:150px;font-size:12px}
+.rh .inf-coment{max-width:220px;font-size:12px;white-space:pre-wrap}
+.rh .inf-aus{display:inline-block;border:1.5px solid var(--linea);border-radius:20px;padding:1px 8px;font-size:11px;margin:1px 4px 1px 0;white-space:nowrap;background:#fff}
+
+/* estados de plantilla */
+.rh .inf-estado{display:inline-block;border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.rh .inf-estado.activo{background:var(--green-light);color:var(--green)}
+.rh .inf-estado.proximo{background:var(--blue-light);color:var(--blue)}
+.rh .inf-estado.inactivo{background:var(--amber-light);color:var(--amber)}
+.rh .inf-estado.baja{background:var(--arena);color:var(--tinta-suave)}
+.rh .inf-fin{color:var(--amber);font-weight:600}
+
+/* modal de variables y comentario */
+.rh-modal .inf-modal{max-width:560px}
+.rh-modal .inf-h3{font-size:13px;font-weight:600;margin:16px 0 8px}
+.rh-modal .inf-sub{font-size:11.5px;color:#888;font-weight:400;margin-top:2px}
+.rh-modal table.inf-vars{border-collapse:collapse;width:100%}
+.rh-modal table.inf-vars td{padding:7px 6px;border-bottom:1px solid #f0efec;font-size:13px;vertical-align:top}
+.rh-modal table.inf-vars td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rh-modal table.inf-vars td.acc{text-align:right;white-space:nowrap}
+.rh-modal table.inf-vars td.acc button{margin-left:10px}
+.rh-modal table.inf-vars tr.edit td{background:#E1F5EE}
+.rh-modal table.inf-vars tr.total td{font-weight:700;border-bottom:none}
+.rh-modal .link-btn2{background:none;border:none;color:#1D9E75;font-weight:600;font-size:12px;cursor:pointer;padding:0;font-family:inherit}
+.rh-modal .link-btn2.rojo{color:#A32D2D}
+.rh-modal .inf-form-var{display:grid;grid-template-columns:1fr 130px;gap:0 12px;background:#f8f8f6;border-radius:10px;padding:4px 12px 12px;margin-top:10px}
+.rh-modal .inf-form-var .ancho,.rh-modal .inf-form-var .botones{grid-column:1 / -1}
+.rh-modal .inf-form-var .botones{display:flex;gap:8px;margin-top:12px}
+.rh-modal .inf-form-var label{margin-top:10px}
+.rh-modal textarea{resize:vertical}
+
+@media (max-width:760px){
+  .rh-modal .inf-form-var{grid-template-columns:1fr}
+}

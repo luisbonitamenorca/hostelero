@@ -51,6 +51,17 @@ export default function PanelRrhh() {
     guardarPref("tab", id);
   };
 
+  /* Otras secciones pueden pedir un cambio de pestaña:
+     window.dispatchEvent(new CustomEvent("rrhh:tab", { detail: "fichajes" })) */
+  useEffect(() => {
+    const onTab = (e: Event) => {
+      const id = (e as CustomEvent<unknown>).detail;
+      if (typeof id === "string" && esTab(id)) cambiarTab(id);
+    };
+    window.addEventListener("rrhh:tab", onTab);
+    return () => window.removeEventListener("rrhh:tab", onTab);
+  }, []);
+
   if (!ctx) return <div className="rh"><div className="vacio">Cargando…</div></div>;
   if (!ctx.centros.length) {
     return <div className="rh"><div className="vacio">No tienes ningún centro asignado. Habla con dirección.</div></div>;

@@ -1,1 +1,79 @@
-/* Estilos propios de la sección empleados del panel RRHH. Los comunes están en ../rrhh.css. */
+/* Estilos propios de la sección empleados del panel RRHH. Los comunes están en ../rrhh.css.
+   Todas las clases van con prefijo .rh .emp- para no pisar a nadie. */
+
+/* barra */
+.rh .emp-titulo{font-size:15px;font-weight:600}
+.rh .emp-titulo small{font-weight:400;color:var(--tinta-suave);margin-left:6px}
+.rh .emp-nuevo{margin-left:auto}
+
+/* lista izquierda */
+/* 2×2: en el aside de 290 px una fila de 4 no deja sitio para «Inactivos 77» */
+.rh .emp-estados{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:var(--arena);border-radius:9px;padding:3px;margin-bottom:8px}
+.rh .emp-estados button{background:none;border:none;border-radius:7px;padding:6px 4px;font-weight:600;font-size:12px;color:var(--tinta-suave);cursor:pointer;font-family:inherit;white-space:nowrap}
+.rh .emp-estados button.activa{background:#fff;color:var(--green);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rh .emp-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer}
+.rh .emp-item:hover{background:var(--fondo)}
+.rh .emp-item.activo{background:var(--green);color:#fff}
+.rh .emp-item.activo .emp-sub,.rh .emp-item.activo .emp-mini{color:#CFE8EA;border-color:#CFE8EA}
+.rh .emp-item.apagado .avatar{opacity:.55}
+.rh .emp-item.apagado .emp-np{color:var(--tinta-suave)}
+.rh .emp-item.activo.apagado .emp-np{color:#fff}
+.rh .emp-item > div:last-child{min-width:0;flex:1}
+.rh .emp-np{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh .emp-sub{font-size:11.5px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh .emp-minis{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.rh .emp-mini{font-size:10px;font-weight:600;border-radius:8px;padding:1px 6px;border:1px solid var(--linea);color:var(--tinta-suave);line-height:1.5}
+.rh .emp-mini.inactivo{background:var(--amber-light);color:var(--amber);border-color:transparent}
+.rh .emp-mini.baja{background:var(--red-light);color:var(--red);border-color:transparent}
+.rh .emp-item.activo .emp-mini.inactivo,.rh .emp-item.activo .emp-mini.baja{background:rgba(255,255,255,.2);color:#fff}
+
+/* cabecera de la ficha */
+.rh .emp-cab{display:flex;align-items:center;gap:14px;margin-bottom:8px;flex-wrap:wrap}
+.rh .emp-cab h2{font-size:20px}
+.rh .emp-cab .emp-acciones{margin-left:auto;display:flex;gap:8px}
+.rh .emp-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.rh .emp-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:20px;padding:4px 11px;background:var(--arena);color:var(--tinta)}
+.rh .emp-chip small{font-weight:400;color:var(--tinta-suave)}
+.rh .emp-chip.estado-activo{background:var(--green-light);color:var(--green)}
+.rh .emp-chip.estado-inactivo{background:var(--amber-light);color:var(--amber)}
+.rh .emp-chip.estado-baja{background:var(--red-light);color:var(--red)}
+.rh .emp-chip.saldo-pos{background:var(--green-light);color:var(--green)}
+.rh .emp-chip.saldo-neg{background:var(--red-light);color:var(--red)}
+.rh .emp-chip.menor{background:var(--purple-light);color:var(--purple)}
+.rh .emp-punto{display:inline-block;width:9px;height:9px;border-radius:50%}
+
+/* formularios en paneles */
+.rh .emp-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 16px}
+.rh .emp-grid-2 input,.rh .emp-grid-2 select,.rh .emp-grid-3 input,.rh .emp-grid-3 select,.rh .grid-2 textarea{width:100%}
+.rh .emp-textarea{width:100%;min-height:60px;resize:vertical}
+.rh .emp-ayuda{font-size:11.5px;color:var(--tinta-suave);margin-top:4px}
+.rh .emp-sep{height:1px;background:var(--fondo);margin:14px 0}
+
+/* tablas de centros y periodos */
+.rh table.emp-tabla{border-collapse:collapse;width:100%}
+.rh table.emp-tabla th,.rh table.emp-tabla td{border-bottom:1px solid var(--fondo);padding:9px 8px;text-align:left;font-size:13px;vertical-align:middle}
+.rh table.emp-tabla thead th{font-size:12px;color:var(--tinta-suave)}
+.rh table.emp-tabla td.r,.rh table.emp-tabla th.r{text-align:right;white-space:nowrap}
+.rh table.emp-tabla td.r .link-btn2{margin-left:10px}
+.rh .emp-badge{font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px}
+.rh .emp-badge.ok{background:var(--green-light);color:var(--green)}
+.rh .emp-badge.fin{background:var(--arena);color:var(--tinta-suave)}
+.rh .emp-badge.prox{background:var(--blue-light);color:var(--blue)}
+.rh .emp-badge.principal{background:var(--purple-light);color:var(--purple);margin-left:6px}
+.rh .emp-fila-add{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:12px}
+.rh .emp-fila-add label{margin-top:0}
+.rh .emp-nota-periodo{color:var(--tinta-suave);font-size:12px;max-width:260px;white-space:pre-line}
+
+/* modales de la sección */
+.rh-modal .emp-modal-ancho{max-width:640px}
+.rh-modal .emp-fila-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.rh-modal .emp-texto{margin:8px 0 0;font-size:13px;line-height:1.5}
+.rh-modal .emp-resumen{background:var(--arena, #f0efec);border-radius:9px;padding:10px 12px;margin-top:12px;font-size:12.5px;line-height:1.6}
+.rh-modal .btn-peligro{background:var(--red, #A32D2D);color:#fff}
+.rh-modal .btn-peligro:hover{background:#7f1f1f}
+
+@media (max-width:760px){
+  .rh .emp-grid-3{grid-template-columns:1fr}
+  .rh-modal .emp-fila-3{grid-template-columns:1fr}
+  .rh .emp-cab .emp-acciones{margin-left:0}
+}

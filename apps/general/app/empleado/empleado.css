@@ -62,3 +62,94 @@
 .emp .tabbar button.activo{color:var(--mar)}
 .emp .tabbar .ico{font-size:20px;line-height:1}
 .emp .toast{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:60;pointer-events:none;max-width:90vw;text-align:center}
+
+/* ---------- v2: cabecera, chips de puesto, modales ---------- */
+.emp header.cab .salir{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:8px;width:34px;height:34px;font-size:17px;cursor:pointer;flex-shrink:0}
+.emp .dia-cab.titulo{font-size:15px;color:var(--tinta)}
+.emp .dia-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.emp .dia-cab.festivo{color:var(--aviso)}
+.emp .badge.fest{background:var(--aviso-f);color:var(--aviso);text-transform:none}
+.emp .puesto{display:inline-block;font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 8px;margin-right:6px;white-space:nowrap}
+.emp .turno-det{display:flex;align-items:center;flex-wrap:wrap;gap:4px 0}
+.emp .tarjeta.turno .btn-sec{margin-top:10px}
+.emp .nota{font-size:12.5px;color:var(--tinta-suave);margin-top:6px;font-style:italic}
+.emp .btn-sec{background:var(--arena);color:var(--tinta);width:100%;padding:11px 14px;font-size:14px}
+.emp .btn-sec:active{background:var(--linea)}
+.emp .btn-peligro{background:var(--error);color:#fff;width:100%}
+.emp .btn.chico{width:auto;margin-top:0;padding:10px 14px;font-size:14px;white-space:nowrap}
+.emp .enlace{background:none;border:none;color:var(--mar);font-weight:600;font-size:13px;cursor:pointer;padding:6px 0;font-family:inherit}
+.emp .fila-2 .btn{margin-top:12px}
+.emp textarea{resize:vertical;min-height:52px}
+.emp label.check{display:flex;align-items:center;gap:10px;font-weight:500;font-size:14px;margin-top:14px}
+.emp label.check input{width:20px;height:20px;margin:0}
+.emp .velo{position:fixed;inset:0;background:rgba(28,43,51,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.emp .hoja{background:#fff;border-radius:18px 18px 0 0;padding:16px 18px calc(18px + env(safe-area-inset-bottom));width:100%;max-width:520px;max-height:88vh;overflow:auto}
+.emp .hoja-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.emp .hoja-cab h3{font-size:16px;margin:0}
+.emp .hoja .cerrar{background:var(--arena);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;line-height:1;cursor:pointer;color:var(--tinta)}
+.emp .hoja p{margin:6px 0 10px;font-size:14.5px}
+
+/* ---------- v2: cambios de turno y huecos ---------- */
+.emp .aviso-cambio{border-color:var(--aviso);background:var(--aviso-f)}
+.emp .aviso-cambio h3,.emp .huecos h3{font-size:14px;margin-bottom:8px}
+.emp .peticion{padding:8px 0;border-top:1px solid rgba(0,0,0,.06);font-size:14px}
+.emp .peticion:first-of-type{border-top:none}
+.emp .cambio-estado{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.emp .estado.pendiente{background:var(--aviso-f);color:var(--aviso)}
+.emp .estado.aceptado_companero,.emp .estado.aprobado{background:var(--ok-f);color:var(--ok)}
+.emp .estado.cancelado{background:var(--pausa-f);color:var(--tinta-suave)}
+.emp .huecos{border-color:var(--mar)}
+.emp .hueco{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--fondo)}
+.emp .hueco .turno-hora{font-size:14.5px;text-transform:capitalize}
+
+/* ---------- v2: resumen de horas y vacaciones ---------- */
+.emp .resumen-h{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.emp .kpi{text-align:center;padding:4px 0}
+.emp .kpi .n{font-size:28px;font-weight:700;color:var(--mar)}
+.emp .kpi .t{font-size:12.5px;color:var(--tinta-suave)}
+.emp .vac .kpi .n{font-size:38px}
+.emp .vac-det{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12.5px;color:var(--tinta-suave);margin-top:10px}
+.emp .vac-det b{color:var(--tinta)}
+.emp .aus-tipo{display:flex;align-items:center;gap:6px}
+.emp .punto{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.emp .aus-acc{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.emp .total-mes.neg{color:var(--error)}
+.emp .sem{padding:9px 0;border-bottom:1px solid var(--fondo)}
+.emp .sem:last-child{border-bottom:none}
+.emp .sem.actual{background:var(--fondo);margin:0 -16px;padding:9px 16px;border-radius:8px}
+.emp .sem-cab{display:flex;align-items:center;gap:6px;font-size:13.5px}
+.emp .sem-cab .dif{margin-left:auto;font-weight:700}
+.emp .sem-cab .dif.pos{color:var(--ok)} .emp .sem-cab .dif.neg{color:var(--error)}
+.emp .sem-det{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--tinta-suave);margin-top:3px}
+.emp .sem-det b{color:var(--tinta)}
+
+/* ---------- v2: disponibilidades ---------- */
+.emp .pinceles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.emp .pincel{border:2px solid var(--linea);background:#fff;border-radius:10px;padding:10px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;color:var(--tinta)}
+.emp .pincel.no.activo{border-color:var(--error);background:var(--error-f);color:var(--error)}
+.emp .pincel.si.activo{border-color:var(--ok);background:var(--ok-f);color:var(--ok)}
+.emp .calendario .semana{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px}
+.emp .calendario .semana.cab span{text-align:center;font-size:11px;font-weight:700;color:var(--tinta-suave);padding:2px 0}
+.emp .celda{position:relative;aspect-ratio:1;border:1px solid var(--linea);border-radius:10px;background:#fff;font-family:inherit;font-size:15px;font-weight:600;color:var(--tinta);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.emp .celda .mes{position:absolute;top:3px;left:0;right:0;font-size:9px;font-weight:600;color:var(--tinta-suave);text-transform:uppercase}
+.emp .celda.hoy{outline:2px solid var(--mar);outline-offset:-2px}
+.emp .celda.pasado{opacity:.35;cursor:default}
+.emp .celda.no_disponible{background:var(--error);border-color:var(--error);color:#fff}
+.emp .celda.no_disponible .mes{color:rgba(255,255,255,.8)}
+.emp .celda.prefiere{background:var(--ok);border-color:var(--ok);color:#fff}
+.emp .celda.prefiere .mes{color:rgba(255,255,255,.8)}
+.emp .celda.guardando{opacity:.6}
+.emp .leyenda{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--tinta-suave);margin-top:10px;align-items:center}
+.emp .leyenda i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.emp .leyenda i.no{background:var(--error)} .emp .leyenda i.si{background:var(--ok)}
+
+/* ---------- v2 revisión: navegación de semanas, fallos de carga, saldos negativos ---------- */
+.emp .turnos-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 2px}
+.emp .nav-btn{background:#fff;border:1px solid var(--linea);border-radius:10px;width:40px;height:36px;font-size:20px;line-height:1;cursor:pointer;color:var(--tinta);font-family:inherit}
+.emp .nav-btn:active{background:var(--arena)}
+.emp .nav-rango{display:flex;align-items:center;gap:10px;font-weight:600;font-size:13.5px;color:var(--tinta-suave)}
+.emp .nav-rango .enlace{padding:4px 8px;border:1px solid var(--mar);border-radius:20px;font-size:12px}
+.emp .kpi .n.neg{color:var(--error)}
+.emp .fallo{text-align:center;color:var(--tinta-suave);font-size:14px;padding:22px 16px}
+.emp .fallo .btn-sec{margin-top:12px}
+.emp .botones-fichar button:disabled{opacity:.5;cursor:default}

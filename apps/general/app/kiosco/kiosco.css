@@ -9,7 +9,11 @@
 .kio *{box-sizing:border-box}
 .kio header{background:var(--mar);color:#fff;padding:16px 22px;display:flex;justify-content:space-between;align-items:baseline;cursor:pointer}
 .kio header .marca{font-weight:700;font-size:17px}
-.kio header .local{font-size:14px;opacity:.9}
+.kio header .estado{display:flex;align-items:center;gap:10px;font-size:14px}
+.kio header .local{opacity:.9}
+.kio header .badge{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.18)}
+.kio header .badge.pendientes{background:#F2C14E;color:var(--tinta)}
+.kio header .badge.offline{background:var(--error);color:#fff}
 .kio .centro-msg{flex:1;display:flex;align-items:center;justify-content:center;color:var(--tinta-suave)}
 .kio .config{max-width:420px;margin:60px auto;padding:0 20px;text-align:center}
 .kio .config h2{font-size:22px;margin:0 0 6px}
@@ -17,6 +21,8 @@
 .kio .config input{width:100%;padding:14px;border:1px solid var(--linea);border-radius:10px;font:inherit;font-size:16px;text-align:center}
 .kio .config button{width:100%;margin-top:12px;padding:14px;border:none;border-radius:10px;background:var(--mar);color:#fff;font-weight:600;font-size:15px;cursor:pointer;font-family:inherit}
 .kio .config .msg{margin-top:12px;font-size:13px;color:var(--error);min-height:18px}
+.kio .config .nota-cola{margin-top:10px;color:var(--tinta);font-size:13px;background:#FFF6DB;border:1px solid #F2C14E;border-radius:10px;padding:10px}
+.kio .config button.secundario{background:#fff;color:var(--mar);border:1px solid var(--linea)}
 .kio .fichar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:10px}
 .kio .reloj{font-size:56px;font-weight:600;letter-spacing:1px}
 .kio .fecha{color:var(--tinta-suave);text-transform:capitalize;margin-bottom:4px}
@@ -31,9 +37,43 @@
 .kio .acciones.activas button{opacity:1;pointer-events:auto}
 .kio .b-entrada{background:var(--ok)} .kio .b-salida{background:var(--error)}
 .kio .b-pausa{background:var(--arena);color:var(--tinta)!important;font-size:14px!important}
+.kio .b-horas{grid-column:1/-1;background:#fff;color:var(--mar)!important;border:1px solid var(--linea)!important;padding:14px 8px!important;font-size:15px!important}
+.kio .pista{color:var(--tinta-suave);font-size:13px;margin-top:6px;min-height:16px}
 .kio .overlay{position:fixed;inset:0;background:rgba(28,43,51,.92);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;z-index:50}
 .kio .overlay .icono{font-size:72px;line-height:1;margin-bottom:14px}
 .kio .overlay.ok .icono{color:#7BE0A8}
 .kio .overlay.mal .icono{color:#F1998E}
+.kio .overlay.aviso .icono{color:#F2C14E}
 .kio .overlay h2{font-size:30px;margin:0 0 8px}
 .kio .overlay .detalle{font-size:17px;opacity:.9;white-space:pre-line}
+
+.kio .overlay .cerrar{position:absolute;bottom:18px;font-size:13px;opacity:.6}
+.kio .overlay .hoy{margin-top:18px;max-width:640px;width:100%;background:rgba(255,255,255,.08);border-radius:14px;padding:14px 18px;text-align:left}
+.kio .overlay .hoy-linea{font-size:17px;line-height:1.45}
+.kio .overlay .hoy-lista{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.kio .overlay .chip{font-size:13px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14)}
+.kio .overlay .chip.entrada{background:rgba(123,224,168,.3)}
+.kio .overlay .chip.salida{background:rgba(241,153,142,.3)}
+.kio .overlay .hoy-estado{margin-top:10px;font-size:13px;opacity:.85}
+.kio .overlay .hoy-inc{margin-top:8px;font-size:13px;color:#F2C14E}
+.kio .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;max-width:min(560px,92vw);text-align:center;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.kio header .badge.fallidos{background:var(--error);color:#fff}
+.kio .config .fallidos-lista{margin-top:14px;text-align:left;background:#FBE9E7;border:1px solid #F1998E;border-radius:10px;padding:12px 14px}
+.kio .config .fallidos-lista h3{font-size:15px;margin:0 0 4px;color:var(--error)}
+.kio .config .fallidos-lista p{margin:0 0 10px;font-size:13px}
+.kio .config .fallidos-lista ul{list-style:none;margin:0;padding:0}
+.kio .config .fallidos-lista li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid rgba(0,0,0,.06);font-size:13px}
+.kio .config .fallidos-lista .f-tipo{font-weight:600}
+.kio .config .fallidos-lista .f-error{color:var(--tinta-suave);text-align:right}
+.kio .config .fallidos-lista button{margin-top:10px}
+/* Tablet apaisada (1024×768 y la barra del navegador): que todo entre sin scroll. */
+@media (max-height:820px){
+  .kio .fichar{gap:6px;padding:10px 18px}
+  .kio .reloj{font-size:44px}
+  .kio .puntos{margin:4px 0}
+  .kio .teclado{grid-template-columns:repeat(3,80px);gap:8px}
+  .kio .teclado button{height:54px;font-size:22px}
+  .kio .acciones{margin-top:8px;gap:8px}
+  .kio .acciones button{padding:14px 8px}
+  .kio .b-horas{padding:10px 8px!important}
+}

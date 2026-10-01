@@ -1,1 +1,87 @@
-/* Estilos propios de la sección ajustes del panel RRHH. Los comunes están en ../rrhh.css. */
+/* Estilos propios de la sección Ajustes del panel RRHH. Los comunes están en ../rrhh.css.
+   Todas las clases van con prefijo .rh .aj- para no pisar a nadie. */
+
+.rh .aj-cuerpo{max-width:980px}
+.rh .aj-texto{font-size:13px;line-height:1.5;margin-top:6px}
+.rh .aj-opcional{font-weight:400;color:var(--tinta-suave);font-size:11.5px}
+.rh .aj-inactivo td{color:var(--tinta-suave)}
+.rh .aj-inactivo td .aj-inline{color:var(--tinta-suave)}
+
+/* filtros y cabeceras */
+.rh .aj-filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.rh .aj-check-inline{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;margin:0;color:var(--tinta-suave)}
+.rh .aj-check-inline input{width:auto;margin:0}
+.rh .aj-cab-conv{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rh .aj-cab-botones{display:flex;gap:8px;flex-wrap:wrap}
+.rh .aj-fila-nombre{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.rh .aj-regla-input{display:flex;align-items:center;gap:6px}
+.rh .aj-regla-input input{text-align:right;width:100%}
+.rh .aj-regla-input span{font-size:12px;color:var(--tinta-suave);min-width:26px}
+.rh .aj-tramo input{text-align:left;min-width:0}
+.rh .aj-anadir{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+
+/* edición en línea */
+.rh .aj-inline{padding:5px 8px;border:1px solid transparent;border-radius:6px;background:transparent;width:100%;min-width:90px;font:inherit}
+.rh .aj-inline:hover{border-color:var(--linea);background:#fff}
+.rh .aj-inline:focus{border-color:var(--green);background:#fff}
+.rh .aj-mayus{text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.rh .aj-color{width:34px;height:28px;padding:1px 2px;border:1px solid var(--linea);border-radius:6px;background:#fff;cursor:pointer}
+.rh .aj-select{padding:5px 8px;font-size:12.5px;max-width:200px}
+.rh table.aj th.c .switch{vertical-align:middle}
+
+/* puestos / tipos */
+.rh table.aj-tabla-puestos{min-width:640px}
+.rh table.aj-tabla-puestos tr.aj-grupo td{background:var(--arena);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--tinta-suave);padding:6px 12px}
+/* A 1024 px el cuerpo mide ~748 px: la tabla de tipos cabe entera sin scroll (Justificante y Activo a la vista). */
+.rh table.aj-tabla-aus{min-width:740px}
+.rh table.aj-tabla-aus th.c{font-size:11px;line-height:1.2;max-width:84px}
+.rh .aj-tabla-aus .aj-select{max-width:150px}
+.rh .aj-th-corto{display:none}
+@media (max-width:1100px){
+  .rh .aj-tabla-aus .aj-th-largo{display:none}
+  .rh .aj-tabla-aus .aj-th-corto{display:inline}
+}
+.rh .aj-uso{background:var(--arena);border-radius:9px;padding:10px 12px;font-size:12.5px;margin:6px 0 4px}
+.rh-modal .aj-uso{background:#f0efec;border-radius:9px;padding:10px 12px;font-size:12.5px;margin:6px 0 4px}
+.rh-modal .aj-aviso-fusion{margin-top:12px;background:#FAEEDA;border:1px solid #EAD9AF;color:#BA7517;border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.45}
+.rh .aj-leyenda-cat{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:12px;color:var(--tinta-suave);margin:10px 2px 4px}
+.rh .aj-leyenda-cat b{color:var(--tinta)}
+
+/* centros */
+.rh .aj-centro{padding:0;overflow:hidden}
+.rh .aj-centro-cab{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;color:var(--tinta)}
+.rh .aj-centro-cab:hover{background:#F6F9F8}
+.rh .aj-centro-cab h3{margin:0;font-size:14px;white-space:nowrap}
+.rh .aj-centro-resumen{flex:1;font-size:12px;color:var(--tinta-suave);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rh .aj-chevron{color:var(--tinta-suave);font-size:14px}
+.rh .aj-centro > :not(.aj-centro-cab){margin-left:18px;margin-right:18px}
+.rh .aj-centro .fila-guardar{margin-bottom:16px}
+.rh .aj-h4{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--tinta-suave);margin:14px 18px 4px;font-weight:600}
+.rh .aj-reglas-horas{display:grid;gap:6px;margin-bottom:4px}
+.rh .aj-opcion{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--linea);border-radius:10px;padding:10px 12px;cursor:pointer;margin:0;font-weight:400}
+.rh .aj-opcion.activa{border-color:var(--green);background:var(--green-light)}
+.rh .aj-opcion input{width:auto;margin:3px 0 0;padding:0}
+.rh .aj-opcion b{display:block;font-size:13px}
+.rh .aj-opcion small{display:block;color:var(--tinta-suave);font-size:11.5px;line-height:1.4;margin-top:2px}
+.rh .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 16px}
+.rh .grid-3 input,.rh .grid-3 select{width:100%}
+.rh .grid-3 small.nota{display:block;margin-top:4px;line-height:1.35}
+.rh .aj-pill{font-size:11px;font-weight:600;border-radius:10px;padding:2px 8px;white-space:nowrap}
+.rh .aj-pill-amber{font-size:11px;font-weight:600;border-radius:10px;padding:2px 8px;background:var(--amber-light);color:var(--amber)}
+.rh .aj-amb-nacional{background:var(--blue-light);color:var(--blue)}
+.rh .aj-amb-autonomico{background:var(--purple-light);color:var(--purple)}
+.rh .aj-amb-local{background:var(--green-light);color:var(--green)}
+
+/* rejillas (encargados, matriz) */
+.rh table.aj-rejilla{min-width:640px}
+.rh table.aj-rejilla th.aj-fijo,.rh table.aj-rejilla td.aj-fijo{position:sticky;left:0;background:#fff;z-index:2;min-width:200px;border-right:1px solid var(--linea)}
+.rh table.aj-rejilla th.aj-vert{height:110px;vertical-align:bottom;padding-bottom:8px}
+.rh table.aj-rejilla th.aj-vert span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;display:inline-block;font-weight:600;color:var(--tinta)}
+
+.rh .link-btn2.rojo{color:var(--red)}
+
+@media (max-width:760px){
+  .rh .grid-3{grid-template-columns:1fr}
+  .rh .aj-leyenda-cat{grid-template-columns:1fr}
+  .rh .aj-centro-resumen{display:none}
+}

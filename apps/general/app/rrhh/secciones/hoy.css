@@ -1,1 +1,78 @@
 /* Estilos propios de la sección hoy del panel RRHH. Los comunes están en ../rrhh.css. */
+
+.rh .hoy-fecha{font-weight:600;font-size:15px}
+.rh .hoy-actualizado{margin-left:auto;font-size:12px;color:var(--tinta-suave);white-space:nowrap}
+.rh .hoy-refrescar{margin-left:0}
+.rh .hoy-atenuado{opacity:.55;transition:opacity .2s}
+
+/* números grandes */
+.rh .hoy-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.rh .hoy-kpi{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:12px 14px;text-align:left;font-family:inherit;color:var(--tinta);cursor:default}
+.rh button.hoy-kpi{cursor:pointer}
+.rh button.hoy-kpi:hover{border-color:var(--green)}
+.rh .hoy-kpi .n{font-size:30px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.rh .hoy-kpi .t{font-size:12px;color:var(--tinta-suave);margin-top:3px}
+.rh .hoy-kpi.verde .n{color:var(--green)}
+.rh .hoy-kpi.rojo{background:var(--red-light);border-color:#EBC7C7}.rh .hoy-kpi.rojo .n{color:var(--red)}
+.rh .hoy-kpi.ambar{background:var(--amber-light);border-color:#EAD9AF}.rh .hoy-kpi.ambar .n{color:var(--amber)}
+
+/* rejilla de tarjetas */
+.rh .hoy-rejilla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.rh .hoy-tarjeta{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:16px 18px;min-width:0}
+.rh .hoy-tarjeta.hoy-trabajan{grid-row:span 2}
+.rh .hoy-tarjeta header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+.rh .hoy-tarjeta h3{font-size:15px;display:flex;align-items:center;gap:8px}
+.rh .hoy-centro{font-weight:400;color:var(--tinta-suave);font-size:13px}
+.rh .hoy-cont{background:var(--amber);color:#fff;border-radius:20px;font-size:11px;font-weight:700;padding:1px 8px}
+.rh .hoy-vacio{color:var(--tinta-suave);padding:14px 0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.rh .hoy-vacio.ok{color:var(--green)}
+.rh .hoy-subtitulo{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--tinta-suave);margin:12px 0 4px}
+.rh .hoy-subtitulo:first-of-type{margin-top:0}
+
+/* filas */
+.rh .hoy-lista{list-style:none;margin:0;padding:0}
+.rh .hoy-fila{display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--fondo);flex-wrap:wrap;border-left:3px solid transparent;border-radius:4px}
+.rh .hoy-fila:last-child{border-bottom:none}
+.rh .hoy-fila.verde{border-left-color:var(--green)}
+.rh .hoy-fila.ambar{border-left-color:var(--amber)}
+.rh .hoy-fila.rojo{border-left-color:var(--red);background:#FFF8F8}
+.rh .hoy-fila.gris{border-left-color:var(--linea)}
+.rh .hoy-fila.hueco{border-left-color:var(--amber);border-left-style:dashed;color:var(--tinta-suave)}
+.rh .hoy-ayer{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--tinta-suave);background:var(--arena);border-radius:4px;padding:1px 5px;vertical-align:middle}
+.rh .hoy-hora{font-variant-numeric:tabular-nums;font-weight:600;min-width:92px;color:var(--tinta)}
+.rh .hoy-np{font-weight:600;flex:1;min-width:140px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rh .hoy-puesto{font-size:10.5px;font-weight:600;border-radius:5px;padding:2px 7px;white-space:nowrap}
+.rh .hoy-tipo{font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px;white-space:nowrap}
+.rh .hoy-estado{font-size:12.5px;font-weight:600;min-width:150px}
+.rh .hoy-estado.verde{color:var(--green)}
+.rh .hoy-estado.ambar{color:var(--amber)}
+.rh .hoy-estado.rojo{color:var(--red)}
+.rh .hoy-estado.gris{color:var(--tinta-suave);font-weight:500}
+.rh .hoy-estado.hueco{color:var(--amber);font-weight:500}
+.rh .hoy-pill{font-size:11px;font-weight:600;border-radius:20px;padding:2px 9px;white-space:nowrap}
+.rh .hoy-pill.ambar{background:var(--amber-light);color:var(--amber)}
+.rh .hoy-pill.gris{background:var(--arena);color:var(--tinta-suave)}
+.rh .hoy-sub{color:var(--tinta-suave);font-size:12.5px;flex:1 1 100%}
+.rh .hoy-pend .hoy-sub{flex:1 1 auto}
+.rh .hoy-acciones{display:flex;gap:6px;margin-left:auto}
+.rh .hoy-flecha{color:var(--tinta-suave);font-weight:400}
+.rh .hoy-otros{margin-top:10px;padding-top:8px;border-top:1px dashed var(--linea)}
+
+/* avisos */
+.rh .hoy-aviso{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--fondo)}
+.rh .hoy-aviso:last-child{border-bottom:none}
+.rh .hoy-punto{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--linea)}
+.rh .hoy-aviso.rojo .hoy-punto{background:var(--red)}
+.rh .hoy-aviso.ambar .hoy-punto{background:var(--amber)}
+.rh .hoy-aviso .hoy-txt{flex:1;font-size:13px}
+.rh .hoy-aviso .btn{white-space:nowrap}
+
+@media (max-width:960px){
+  .rh .hoy-kpis{grid-template-columns:repeat(3,1fr)}
+  .rh .hoy-rejilla{grid-template-columns:1fr}
+  .rh .hoy-tarjeta.hoy-trabajan{grid-row:auto}
+}
+@media (max-width:520px){
+  .rh .hoy-kpis{grid-template-columns:repeat(2,1fr)}
+  .rh .hoy-estado{min-width:0}
+}

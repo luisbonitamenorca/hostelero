@@ -1,1 +1,93 @@
-/* Estilos propios de la sección ausencias del panel RRHH. Los comunes están en ../rrhh.css. */
+/* Estilos propios de la sección ausencias del panel RRHH. Los comunes están en ../rrhh.css.
+   Todas las clases van con prefijo .rh .aus- para no pisar a nadie. */
+
+/* barra */
+.rh .aus-vistas{display:inline-flex;background:var(--arena);border-radius:9px;padding:3px}
+.rh .aus-vistas button{background:none;border:none;border-radius:7px;padding:7px 14px;font-weight:600;font-size:13px;color:var(--tinta-suave);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.rh .aus-vistas button.activa{background:#fff;color:var(--green);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rh .aus-n{background:var(--amber);color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;line-height:1.4}
+.rh .aus-mes{min-width:120px;text-transform:capitalize}
+.rh .aus-nueva{margin-left:auto}
+/* segunda fila: filtros de la lista (estado, tipo, exportar) para que la barra quepa en una línea a 1024 */
+.rh .aus-filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:-6px 0 12px}
+.rh .aus-error{display:flex;flex-direction:column;align-items:center;gap:12px}
+
+/* lista */
+.rh .aus-lista{max-width:1180px}
+.rh .aus-cab-pend{background:var(--amber-light);color:var(--amber);border-radius:10px;padding:9px 14px;font-weight:600;font-size:12.5px;margin-bottom:10px}
+.rh table.aus-tabla{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--linea);border-radius:12px;overflow:hidden}
+.rh table.aus-tabla th,.rh table.aus-tabla td{border-bottom:1px solid var(--fondo);padding:9px 10px;text-align:left;font-size:13px;vertical-align:middle}
+.rh table.aus-tabla thead th{background:var(--arena);font-size:12px;color:var(--tinta-suave);font-weight:600}
+.rh table.aus-tabla th.r,.rh table.aus-tabla td.r{text-align:right;white-space:nowrap}
+.rh table.aus-tabla td.np{font-weight:600;white-space:nowrap}
+.rh .aus-fila{cursor:pointer}
+.rh .aus-fila.quieta{cursor:default}
+.rh .aus-fila:hover td{background:#F6F9F8}
+.rh .aus-fila.solicitada td{background:#FFFAF0}
+.rh .aus-fila.solicitada:hover td{background:#FBF2DC}
+.rh .aus-fila.rechazada td{color:var(--tinta-suave)}
+.rh .aus-punto{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px}
+.rh .aus-sub{font-size:11.5px;color:var(--tinta-suave)}
+.rh .aus-baja{font-size:10.5px;color:var(--red);font-weight:600;margin-left:6px;text-transform:uppercase}
+.rh .aus-nota{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tinta-suave)}
+.rh .aus-acc{white-space:nowrap;text-align:right}
+.rh .aus-acc .btn,.rh .aus-acc .link-btn2{margin-left:8px}
+.rh .link-btn2.rojo{color:var(--red)}
+.rh .aus-estado.solicitada{background:var(--amber-light);color:var(--amber)}
+.rh .aus-estado.aprobada{background:var(--green-light);color:var(--green)}
+.rh .aus-estado.rechazada{background:var(--red-light);color:var(--red)}
+.rh .aus-texto{margin:10px 0 0;font-size:13px;line-height:1.5}
+
+/* calendario */
+.rh table.aus-cal{border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--linea);border-radius:12px;overflow:hidden;min-width:900px}
+.rh table.aus-cal th,.rh table.aus-cal td{border-right:1px solid var(--fondo);border-bottom:1px solid var(--fondo);font-size:12px}
+.rh table.aus-cal thead th{background:var(--arena);font-weight:600;padding:5px 0;text-align:center;min-width:28px;line-height:1.2}
+.rh table.aus-cal thead th .dl{display:block;font-size:10px;color:var(--tinta-suave);font-weight:500}
+.rh table.aus-cal thead th.finde{background:#E8E7E3}
+.rh table.aus-cal thead th.festivo{background:var(--purple-light);color:var(--purple)}
+.rh table.aus-cal thead th.hoy{background:var(--green);color:#fff}
+.rh table.aus-cal thead th.hoy .dl{color:#CFE8EA}
+.rh table.aus-cal .aus-cal-nombre{text-align:left;padding:6px 10px;min-width:190px;max-width:240px;position:sticky;left:0;background:#fff;z-index:5;border-right:2px solid var(--linea);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh table.aus-cal thead .aus-cal-nombre{background:var(--arena)}
+.rh table.aus-cal tr.fila-depto td{position:sticky;left:0}
+.rh table.aus-cal td.np,.rh table.aus-cal .np{font-weight:600}
+.rh .aus-celda{height:30px;text-align:center;cursor:pointer;font-weight:700;font-size:10.5px;letter-spacing:.2px}
+.rh .aus-celda:hover{box-shadow:inset 0 0 0 2px var(--green)}
+.rh .aus-celda.finde{background:#F3F2EF}
+.rh .aus-celda.festivo{background:var(--purple-light)}
+.rh .aus-celda.fuera{background:repeating-linear-gradient(45deg,#fff 0 4px,#EDECE8 4px 8px);cursor:default}
+.rh .aus-celda.fuera:hover{box-shadow:none}
+.rh .aus-celda.hoy{box-shadow:inset 2px 0 0 var(--green),inset -2px 0 0 var(--green)}
+.rh .aus-celda.hoy:hover{box-shadow:inset 0 0 0 2px var(--green)}
+.rh .aus-celda.con.pendiente{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.45) 0 4px,transparent 4px 8px);outline:1.5px dashed rgba(0,0,0,.35);outline-offset:-2px}
+.rh .aus-leyenda .muestra{border:1px solid rgba(0,0,0,.08)}
+.rh .aus-m-pend{background:repeating-linear-gradient(135deg,#fff 0 4px,#9AA0A6 4px 8px);outline:1.5px dashed #666;outline-offset:-2px}
+.rh .aus-m-fest{background:var(--purple-light)}
+.rh .aus-m-finde{background:#E8E7E3}
+
+/* modal */
+.rh-modal .aus-modal{max-width:520px}
+.rh-modal .aus-emp-fijo{padding:8px 11px;border:1px solid var(--linea);border-radius:8px;background:var(--arena);font-weight:600}
+.rh-modal .aus-busca{position:relative}
+.rh-modal .aus-sugerencias{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;margin-top:4px;max-height:260px;overflow-y:auto}
+.rh-modal .aus-sugerencias button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--fondo);padding:8px 12px;cursor:pointer;font-family:inherit;font-size:13px;color:#1a1a1a}
+.rh-modal .aus-sugerencias button:hover{background:#F6F9F8}
+.rh-modal .aus-sugerencias .np{font-weight:600}
+.rh-modal .aus-sub{font-size:11.5px;color:#888}
+.rh-modal .aus-punto{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px}
+.rh-modal .aus-ayuda{font-size:12px;color:#888;margin-top:5px;min-height:14px}
+.rh-modal .aus-check{display:flex;align-items:center;gap:8px;font-weight:400;margin:0;padding:8px 0}
+.rh-modal .aus-check input{width:auto;margin:0}
+.rh-modal .aus-saldo{margin-top:16px;background:#F6F9F8;border:1px solid #CFE8DF;border-radius:10px;padding:12px 14px}
+.rh-modal .aus-saldo.neg{background:#FCEBEB;border-color:#EFC2C2}
+.rh-modal .aus-saldo h3{font-size:13px;font-weight:600;margin:0 0 8px}
+.rh-modal .aus-saldo-grid{display:grid;grid-template-columns:1fr auto;gap:3px 14px;font-size:12.5px}
+.rh-modal .aus-saldo-grid b{text-align:right;font-variant-numeric:tabular-nums}
+.rh-modal .aus-saldo-tras{margin-top:8px;font-size:12.5px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06)}
+.rh-modal .aus-aviso{color:#A32D2D;font-weight:600;margin-top:4px}
+.rh-modal .aus-modal .modal-acciones .btn-borrar{flex:0 0 auto}
+
+@media (max-width:760px){
+  .rh .aus-nueva{margin-left:0}
+  .rh table.aus-cal .aus-cal-nombre{min-width:130px}
+}

@@ -47,17 +47,22 @@ export default async function EmpleadoPage() {
     );
   }
 
-  // Centros asignados (para el selector de fichaje)
-  const hoy = new Date().toLocaleDateString("sv-SE");
-  const { data: asigs } = await sb
-    .from("rrhh_asignaciones")
-    .select("centro_id, centros(id, nombre)")
-    .eq("empleado_id", emp.id)
-    .or(`fecha_fin.is.null,fecha_fin.gte.${hoy}`);
+  // Mis centros: el principal + asignaciones vigentes (selector de fichaje, huecos y festivos locales).
+  // «Hoy» en hora española: el servidor de Vercel va en UTC y de 00:00 a 02:00 aún cree que es ayer.
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const [{ data: asigs }, { data: principal }] = await Promise.all([
+    sb
+      .from("rrhh_asignaciones")
+      .select("centro_id, centros(id, nombre)")
+      .eq("empleado_id", emp.id)
+      .or(`fecha_fin.is.null,fecha_fin.gte.${hoy}`)
+      .or(`fecha_inicio.is.null,fecha_inicio.lte.${hoy}`),
+    emp.centro_principal_id ? sb.from("centros").select("id, nombre").eq("id", emp.centro_principal_id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
   const vistos = new Set<string>();
-  const centros = (asigs ?? [])
-    .map((r) => r.centros as { id: string; nombre: string } | null)
-    .filter((c): c is { id: string; nombre: string } => !!c && !vistos.has(c.id) && !!vistos.add(c.id));
+  const centros = [principal, ...(asigs ?? []).map((r) => r.centros as { id: string; nombre: string } | null)].filter(
+    (c): c is { id: string; nombre: string } => !!c && !vistos.has(c.id) && !!vistos.add(c.id),
+  );
 
   return (
     <EmpleadoApp
