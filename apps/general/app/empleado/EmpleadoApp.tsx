@@ -380,7 +380,7 @@ function TabTurnos({ empleadoId, centros, avisar }: { empleadoId: string; centro
 
       {bloques}
 
-      {pedir ? <ModalPedirCambio turno={pedir} onCerrar={() => setPedir(null)} onHecho={() => { setPedir(null); cargar(); }} avisar={avisar} /> : null}
+      {pedir ? <ModalPedirCambio turno={pedir} centros={centros} onCerrar={() => setPedir(null)} onHecho={() => { setPedir(null); cargar(); }} avisar={avisar} /> : null}
       {apuntar ? (
         <Modal titulo="Apuntarme a este turno" onCerrar={() => setApuntar(null)}>
           <p><b>{diaLargo(apuntar.fecha)}</b>, {hh(apuntar)} en {apuntar.centros?.nombre || "tu centro"}{apuntar.puesto ? ` · ${apuntar.puesto}` : ""}.</p>
@@ -407,7 +407,7 @@ function TabTurnos({ empleadoId, centros, avisar }: { empleadoId: string; centro
   );
 }
 
-function ModalPedirCambio({ turno, onCerrar, onHecho, avisar }: { turno: Turno; onCerrar: () => void; onHecho: () => void; avisar: Avisar }) {
+function ModalPedirCambio({ turno, centros, onCerrar, onHecho, avisar }: { turno: Turno; centros: Centro[]; onCerrar: () => void; onHecho: () => void; avisar: Avisar }) {
   const [companeros, setCompaneros] = useState<Companero[] | null>(null);
   const [destino, setDestino] = useState<string>("");
   const [nota, setNota] = useState("");
@@ -416,6 +416,16 @@ function ModalPedirCambio({ turno, onCerrar, onHecho, avisar }: { turno: Turno; 
     // Si no se pueden cargar, se puede seguir dejando la petición abierta.
     api.companeros().then(setCompaneros).catch(() => { setCompaneros([]); avisar(MSG_CARGA); });
   }, [avisar]);
+
+  // Agrupados por centro (en el orden de mis centros); si solo hay uno, lista plana.
+  const grupos = useMemo(() => {
+    if (!companeros) return [];
+    const porCentro = new Map<string, Companero[]>();
+    for (const c of companeros) (porCentro.get(c.centro_id) ?? porCentro.set(c.centro_id, []).get(c.centro_id)!).push(c);
+    const orden = [...centros.map((c) => c.id), ...[...porCentro.keys()].filter((id) => !centros.some((c) => c.id === id))];
+    return orden.filter((id) => porCentro.has(id)).map((id) => ({ id, nombre: centros.find((c) => c.id === id)?.nombre || "Otro centro", lista: porCentro.get(id)! }));
+  }, [companeros, centros]);
+  const opcion = (c: Companero) => <option key={`${c.centro_id}-${c.id}`} value={c.id}>{nombreDe(c)}</option>;
 
   async function enviar() {
     if (enviando) return;
@@ -436,7 +446,9 @@ function ModalPedirCambio({ turno, onCerrar, onHecho, avisar }: { turno: Turno; 
       ) : (
         <select value={destino} onChange={(e) => setDestino(e.target.value)}>
           <option value="">Dejarlo abierto (quien pueda)</option>
-          {companeros.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          {grupos.length > 1
+            ? grupos.map((g) => <optgroup key={g.id} label={g.nombre}>{g.lista.map(opcion)}</optgroup>)
+            : grupos[0]?.lista.map(opcion)}
         </select>
       )}
       {companeros !== null && !companeros.length ? (

@@ -23,12 +23,22 @@
 .rh .inf-resumen .inf-alerta b{color:var(--amber)}
 .rh .inf-cargando{color:var(--green);font-weight:600}
 
-/* tablas anchas */
-.rh .inf-scroll{overflow-x:auto}
-.rh table.inf-nomina,.rh table.inf-plantilla{max-width:none;min-width:1100px}
+/* tablas anchas: el scroll (horizontal y vertical) vive en el wrapper, no en la página; la cabecera queda fija */
+.rh .inf-scroll{overflow:auto;max-height:calc(100vh - 230px);background:#fff;border:1px solid var(--linea);border-radius:12px}
+.rh .inf-scroll table.inf{border:none;border-radius:0;overflow:visible;max-width:none}
+.rh .inf-scroll table.inf-horas{max-width:940px}
+.rh table.inf-nomina,.rh table.inf-plantilla{min-width:1100px}
+.rh .inf-scroll table.inf thead th{position:sticky;top:0;z-index:2}
 .rh table.inf th.izq,.rh table.inf td.izq{text-align:left}
 .rh table.inf thead th{white-space:nowrap}
 .rh table.inf td{vertical-align:top}
+/* columna Empleado: nombre en una línea con puntos suspensivos y centro · departamento debajo */
+.rh table.inf td.np{min-width:220px;max-width:300px}
+.rh .inf-nombre{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* números compactos y sin partir */
+.rh table.inf-nomina td,.rh table.inf-horas td,.rh table.inf-plantilla td{font-size:12px;white-space:nowrap;padding:8px 10px}
+.rh table.inf-nomina td.izq,.rh table.inf-plantilla td.izq{white-space:normal}
+.rh table.inf-nomina td.inf-coment{white-space:pre-wrap}
 .rh tr.inf-fila{cursor:pointer}
 .rh tr.inf-fila:hover td{background:#F6F9F8}
 .rh .inf-sub{font-size:11px;color:var(--tinta-suave);font-weight:400;margin-top:2px}

@@ -311,6 +311,7 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
     const conf = calc.conflicto.has(t.id);
     return (
       <div
+        key={t.id}
         className={`plan-chip ${t.estado} ${sel.has(t.id) ? "sel" : ""} ${conf ? "conflicto" : ""}`}
         style={{ ["--c" as string]: c }}
         draggable
@@ -322,18 +323,17 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
       >
         <div className="plan-chip-h">
           <span>{hh(t)}</span>
-          <span className="plan-chip-n">{fmtHoras(horasNetas(t))}</span>
           {conf ? <span className="plan-chip-w">⚠</span> : null}
         </div>
-        <div className="plan-chip-p">{nombrePuesto(t) || "—"}{t.nota ? <span className="plan-chip-nota" title={t.nota}> ✎</span> : null}</div>
+        <div className="plan-chip-p"><span className="plan-chip-n">{fmtHoras(horasNetas(t))} · </span>{nombrePuesto(t) || "—"}{t.nota ? <span className="plan-chip-nota" title={t.nota}> ✎</span> : null}</div>
         <button type="button" className="plan-chip-menu" onClick={(ev) => abrirMenu(t, ev)} aria-label="Más opciones">⋯</button>
       </div>
     );
   };
   const chipAjeno = (t: TurnoAjeno) => (
-    <div className="plan-chip ajeno" title={`Turno en ${t.centro_nombre} (${t.estado})`}>
-      <div className="plan-chip-h"><span>{hh(t)}</span><span className="plan-chip-n">{fmtHoras(horasNetas(t))}</span></div>
-      <div className="plan-chip-p">en {t.centro_nombre}</div>
+    <div key={"a" + t.id} className="plan-chip ajeno" title={`Turno en ${t.centro_nombre} (${t.estado})`}>
+      <div className="plan-chip-h"><span>{hh(t)}</span></div>
+      <div className="plan-chip-p"><span className="plan-chip-n">{fmtHoras(horasNetas(t))} · </span>en {t.centro_nombre}</div>
     </div>
   );
   const tagAusencia = (a: AusenciaPlan) => {

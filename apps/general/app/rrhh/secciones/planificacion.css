@@ -14,9 +14,12 @@
 /* ---------- rejilla ----------
    Columnas fijas al desplazar en horizontal (en 1024 px la tabla no cabe): «Equipo» y los
    nombres a la izquierda, «Horas» a la derecha (como Skello, siempre visible). */
-.rh .plan-cuadrante th.plan-th-equipo{min-width:170px;text-align:left;position:sticky;left:0;z-index:6;background:var(--arena)}
-.rh .plan-cuadrante th.plan-th-horas,.rh .plan-cuadrante td.plan-horas{min-width:92px;text-align:right;padding:8px 10px;white-space:nowrap;font-variant-numeric:tabular-nums;position:sticky;right:0;z-index:5;border-left:2px solid var(--linea)}
-.rh .plan-cuadrante td.plan-horas{vertical-align:middle;font-size:12px;color:var(--tinta-suave);background:#fbfbfa}
+.rh .plan-cuadrante th.plan-th-equipo{width:150px;min-width:150px;max-width:150px;text-align:left;position:sticky;left:0;z-index:6;background:var(--arena)}
+.rh .plan-cuadrante td.nombre{width:150px;min-width:150px;max-width:150px;padding:6px 8px;overflow:hidden}
+.rh .plan-cuadrante td.nombre .np{font-size:12.5px;line-height:1.25;overflow-wrap:anywhere}
+.rh .plan-cuadrante th.plan-th-horas,.rh .plan-cuadrante td.plan-horas{width:70px;min-width:70px;max-width:70px;text-align:right;padding:6px;font-variant-numeric:tabular-nums;position:sticky;right:0;z-index:5;border-left:2px solid var(--linea)}
+.rh .plan-cuadrante td.plan-horas{vertical-align:middle;font-size:11.5px;color:var(--tinta-suave);background:#fbfbfa;line-height:1.25}
+.rh .plan-cuadrante td.plan-horas > span{display:block;white-space:nowrap}
 .rh .plan-cuadrante tfoot td.plan-horas{background:var(--arena)}
 .rh .plan-horas-otros{margin-top:2px;white-space:normal;line-height:1.2}
 .rh .plan-cuadrante tr.fila-depto td{padding:0}
@@ -27,9 +30,11 @@
 .rh .plan-horas-ex{font-size:10.5px;font-weight:600;color:var(--amber)}
 .rh .plan-cuadrante thead th.plan-th-festivo{background:var(--purple-light);color:var(--purple)}
 .rh .plan-cuadrante thead th.hoy.plan-th-festivo{background:var(--green);color:#fff}
-.rh .plan-festivo{font-size:10px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;margin-inline:auto}
+.rh .plan-festivo{font-size:10px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:116px;margin-inline:auto}
 .rh .plan-festivo-inline{font-size:12px;color:var(--purple);margin-left:8px;font-weight:600}
-.rh td.plan-celda{min-width:112px;height:60px;padding:4px;position:relative}
+/* 7 días × 128 + Equipo 150 + Horas 70 ≈ 1150 px: cabe en 1240 sin scroll; en 1024 desplaza con columnas fijas. */
+.rh table.cuadrante.plan-cuadrante thead th{padding:6px 4px}
+.rh td.plan-celda{width:128px;min-width:128px;max-width:128px;height:56px;padding:3px;position:relative;overflow:hidden}
 .rh td.plan-celda.es-hoy{background:#F6FBF9}
 .rh td.plan-celda.es-festivo{background:#F8F7FD}
 .rh td.plan-celda.drop{background:var(--green-light);outline:2px dashed var(--green);outline-offset:-3px}
@@ -45,23 +50,23 @@
 .rh .plan-cuadrante tfoot td.es-hoy{background:#E6F3EE}
 
 /* ---------- chips ---------- */
-.rh .plan-chip{--c:#888;position:relative;border-radius:7px;padding:4px 18px 4px 7px;margin-bottom:4px;font-size:12px;line-height:1.3;cursor:grab;
+.rh .plan-chip{--c:#888;position:relative;border-radius:6px;padding:3px 16px 3px 6px;margin-bottom:3px;font-size:11px;line-height:1.25;cursor:grab;min-width:0;
   background:color-mix(in srgb,var(--c) 14%,#fff);border:1.5px solid color-mix(in srgb,var(--c) 55%,#fff);border-left:4px solid var(--c);user-select:none}
 .rh .plan-chip:active{cursor:grabbing}
 .rh .plan-chip.borrador{background:#fff;border-style:dashed;border-left-style:solid}
 .rh .plan-chip.conflicto{border-color:var(--red)}
 .rh .plan-chip.sel{outline:2px solid var(--blue);outline-offset:1px;background:var(--blue-light)}
-.rh .plan-chip-h{font-weight:600;display:flex;gap:6px;align-items:baseline;white-space:nowrap}
-.rh .plan-chip-n{font-weight:400;color:var(--tinta-suave);font-size:11px}
+.rh .plan-chip-h{font-weight:600;display:flex;gap:4px;align-items:baseline;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums}
+.rh .plan-chip-n{font-weight:400;color:var(--tinta-suave)}
 .rh .plan-chip-w{color:var(--amber);font-weight:700}
-.rh .plan-chip-p{color:var(--tinta-suave);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh .plan-chip-p{color:var(--tinta-suave);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rh .plan-chip-nota{color:var(--blue)}
 .rh .plan-chip-menu{position:absolute;right:2px;top:2px;width:16px;height:16px;border:none;background:none;color:var(--tinta-suave);font-size:14px;line-height:1;cursor:pointer;border-radius:4px;padding:0;opacity:0}
 .rh .plan-chip:hover .plan-chip-menu{opacity:1}
 .rh .plan-chip-menu:hover{background:rgba(0,0,0,.08);color:var(--tinta)}
-.rh .plan-chip.ajeno{--c:#bbb;background:#f1f1f0;border:1px dashed #c9c9c6;border-left:4px solid #c9c9c6;color:var(--tinta-suave);cursor:default;padding-right:7px}
+.rh .plan-chip.ajeno{--c:#bbb;background:#f1f1f0;border:1px dashed #c9c9c6;border-left:4px solid #c9c9c6;color:var(--tinta-suave);cursor:default;padding-right:6px}
 .rh .plan-chip.ajeno .plan-chip-h{color:var(--tinta-suave);font-weight:500}
-.rh .plan-aus{--c:#888;font-size:10.5px;font-weight:600;border-radius:6px;padding:3px 6px;margin-bottom:4px;background:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh .plan-aus{--c:#888;font-size:10.5px;font-weight:600;border-radius:6px;padding:2px 6px;margin-bottom:3px;background:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- selección y menú ---------- */
 .rh .plan-flotante{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--linea);box-shadow:0 8px 24px rgba(0,0,0,.14);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;z-index:45}

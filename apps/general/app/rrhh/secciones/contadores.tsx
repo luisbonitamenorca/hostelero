@@ -106,6 +106,9 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
 
   const { desde, hasta } = rango;
   const centroArg = centroId || null;
+  // El saldo se calcula SIEMPRE a hoy como máximo: las semanas futuras sin planificar restarían el contrato entero.
+  const saldoRecortado = hasta > hoy;
+  const hastaSaldo = saldoRecortado ? hoy : hasta;
 
   // Tabla del rango.
   useEffect(() => {
@@ -125,22 +128,22 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
     if (!datos) return;
     const ids = datos.empleados.map((e) => e.id);
     if (!ids.length) { setSaldos({}); return; }
-    const enCache = cacheSaldos.current.get(hasta) ?? {};
+    const enCache = cacheSaldos.current.get(hastaSaldo) ?? {};
     const faltan = ids.filter((i) => !enCache[i]);
     if (!faltan.length) { setSaldos(enCache); return; }
     const id = peticion.current;
     // Los que ya están en caché para esta fecha se enseñan ya; los demás, «…» hasta que lleguen.
     setSaldos(Object.keys(enCache).length ? enCache : null);
     setCargandoSaldos(true);
-    api.cargarSaldos(hasta, faltan)
+    api.cargarSaldos(hastaSaldo, faltan)
       .then((r) => {
-        const todos = { ...(cacheSaldos.current.get(hasta) ?? {}), ...r.saldos };
-        cacheSaldos.current.set(hasta, todos);
+        const todos = { ...(cacheSaldos.current.get(hastaSaldo) ?? {}), ...r.saldos };
+        cacheSaldos.current.set(hastaSaldo, todos);
         if (id === peticion.current) setSaldos(todos);
       })
       .catch((e: Error) => { if (id === peticion.current) avisar("No se han podido calcular los saldos: " + e.message); })
       .finally(() => { if (id === peticion.current) setCargandoSaldos(false); });
-  }, [datos, hasta, avisar]);
+  }, [datos, hastaSaldo, avisar]);
 
   // Semanas del rango y filas por empleado.
   const semanas = useMemo(() => {
@@ -179,7 +182,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
     if (!s || !datos) return [];
     const reglas = datos.reglasPorEmp[e.id];
     const out: { tipo: "extra" | "compl"; texto: string }[] = [];
-    if (s.extrasAnio > reglas.horas_extra_max_anual) out.push({ tipo: "extra", texto: `${h(s.extrasAnio)} h extra en ${hasta.slice(0, 4)} (máx. ${h(reglas.horas_extra_max_anual)})` });
+    if (s.extrasAnio > reglas.horas_extra_max_anual) out.push({ tipo: "extra", texto: `${h(s.extrasAnio)} h extra en ${hastaSaldo.slice(0, 4)} (máx. ${h(reglas.horas_extra_max_anual)})` });
     if (s.horasSemana > 0 && s.horasSemana < 40 && s.complementariasPct != null && s.complementariasPct > reglas.complementarias_max_pct) {
       out.push({ tipo: "compl", texto: `${h(s.complementariasPct)} % de complementarias (máx. ${h(reglas.complementarias_max_pct)} %)` });
     }
@@ -230,10 +233,10 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
     setSaldos((prev) => {
       if (!prev?.[empId]) return prev;
       const s = prev[empId];
-      if (a.fecha < s.desde || a.fecha > hasta) return prev;
+      if (a.fecha < s.desde || a.fecha > hastaSaldo) return prev;
       return { ...prev, [empId]: { ...s, saldo: r2(s.saldo + Number(a.horas)) } };
     });
-  }, [hasta]);
+  }, [hastaSaldo]);
 
   const detalle = detalleId ? datos?.empleados.find((e) => e.id === detalleId) ?? null : null;
   const lunesHoy = lunesDe(hoy);
@@ -283,7 +286,9 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
                   </th>
                 ))}
                 <th className="cont-th-total"><div>Total</div><div className="cont-th-sub">{ddmm(desde)} – {ddmm(hasta)}</div></th>
-                <th className="cont-th-total"><div>Saldo</div><div className="cont-th-sub">a {ddmm(hasta)}</div></th>
+                <th className="cont-th-total" title={saldoRecortado ? "El saldo se calcula a hoy: las semanas futuras no cuentan." : undefined}>
+                  <div>Saldo</div><div className="cont-th-sub">{saldoRecortado ? "a hoy" : "a " + ddmm(hasta)}</div>
+                </th>
               </tr>
               <tr className="cont-th-leyenda">
                 <th className="cont-th-nombre">contrato · realizadas · diferencia</th>
@@ -310,9 +315,10 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
                     </td>
                     {semanas.map((w) => {
                       const f = porEmp[e.id]?.[w.lunes];
+                      const futura = w.lunes > lunesHoy;
                       return (
-                        <td key={w.lunes} className={"cont-celda" + (w.lunes === lunesHoy ? " hoy" : "")} onClick={() => setDetalleId(e.id)}>
-                          {f ? <Celda f={f} /> : <span className="cont-vacia">—</span>}
+                        <td key={w.lunes} className={"cont-celda" + (w.lunes === lunesHoy ? " hoy" : "") + (futura ? " cont-futura" : "")} onClick={() => setDetalleId(e.id)}>
+                          {f ? <Celda f={f} futura={futura} /> : <span className="cont-vacia">—</span>}
                         </td>
                       );
                     })}
@@ -331,8 +337,11 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
             <tfoot>
               <tr>
                 <td className="cont-nombre"><div className="cont-np">Total {centroId ? centroNombre(centroId) : "todos los centros"}</div><div className="cont-sub">{empleadosOrden.length} personas</div></td>
-                {semanas.map((w) => { const t = totalSemana(w.lunes); return (
-                  <td key={w.lunes} className="cont-celda"><div className="cont-c">{h(t.c)}</div><div className="cont-r">{h(t.r)}</div><div className={clase(t.d)}>{signo(t.d)}</div></td>
+                {semanas.map((w) => { const t = totalSemana(w.lunes); const futura = w.lunes > lunesHoy; return (
+                  <td key={w.lunes} className={"cont-celda" + (futura ? " cont-futura" : "")}>
+                    <div className="cont-c">{h(t.c)}</div>
+                    {futura ? <><div className="cont-vacia">—</div><div className="cont-vacia">—</div></> : <><div className="cont-r">{h(t.r)}</div><div className={clase(t.d)}>{signo(t.d)}</div></>}
+                  </td>
                 ); })}
                 {(() => { let c = 0, r = 0, d = 0; for (const e of empleadosOrden) { const t = totalEmp(e.id); c += t.c; r += t.r; d += t.d; } return (
                   <td className="cont-celda cont-total"><div className="cont-c">{h(c)}</div><div className="cont-r">{h(r)}</div><div className={clase(d)}>{signo(d)}</div></td>
@@ -356,6 +365,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
             <span><span className="muestra" style={{ background: "var(--amber-light)", border: "1px solid var(--amber)" }} /> más horas que el contrato</span>
             <span><span className="muestra" style={{ background: "var(--blue-light)", border: "1px solid var(--blue)" }} /> menos horas que el contrato</span>
             <span><span className="cont-r cont-r-plan">7,5</span> en gris: según turnos publicados, aún sin validar</span>
+            {saldoRecortado ? <span><span className="cont-vacia">—</span> semanas futuras: no cuentan en el saldo</span> : null}
             <span>Toca un empleado para ver el detalle y los ajustes.</span>
           </div>
           <p className="nota-inf">
@@ -373,7 +383,7 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
           filas={porEmp[detalle.id] || {}}
           saldoAnio={saldos?.[detalle.id] ?? null}
           reglas={datos?.reglasPorEmp[detalle.id] ?? { horas_extra_max_anual: 80, complementarias_max_pct: 30 }}
-          hasta={hasta}
+          hasta={hastaSaldo}
           esGestor={ctx.esGestor}
           avisar={avisar}
           onAjuste={onAjuste}
@@ -409,8 +419,18 @@ function ContadorHoras({ ctx, avisar, centroId, setCentroId, centroNombre }: Pro
 
 const clase = (d: number) => (r2(d) > 0 ? "cont-mas" : r2(d) < 0 ? "cont-menos" : "cont-cero");
 
-function Celda({ f }: { f: FilaSemana }) {
+function Celda({ f, futura }: { f: FilaSemana; futura?: boolean }) {
   const real = f.horas_retenidas + f.horas_ausencia_contador;
+  // Semana futura: se enseña el contrato, pero realizadas y diferencia no cuentan todavía.
+  if (futura) {
+    return (
+      <div title={`Contrato ${h(f.horas_contrato)} h · semana futura: no cuenta en el saldo`}>
+        <div className="cont-c">{h(f.horas_contrato)}</div>
+        <div className="cont-vacia">—</div>
+        <div className="cont-vacia">—</div>
+      </div>
+    );
+  }
   const titulo =
     `Contrato ${h(f.horas_contrato)} h · realizadas ${h(f.horas_retenidas)} h` +
     (f.horas_ausencia_contador > 0 ? ` + ${h(f.horas_ausencia_contador)} h de ausencias que computan` : "") +

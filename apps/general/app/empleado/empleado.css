@@ -11,6 +11,8 @@
 .emp label{display:block;font-weight:600;font-size:12px;margin:12px 0 5px}
 .emp input,.emp select,.emp textarea{width:100%;padding:12px;border:1px solid var(--linea);border-radius:10px;font:inherit;background:#fff;font-size:16px;color:var(--tinta)}
 .emp input:focus,.emp select:focus{outline:2px solid var(--mar);outline-offset:1px}
+.emp select optgroup{font-weight:600;color:var(--tinta-suave)}
+.emp select option{color:var(--tinta);font-weight:400}
 .emp .btn{cursor:pointer;border:none;border-radius:10px;padding:13px 16px;font-weight:600;font-size:15px;font-family:inherit}
 .emp .btn-primario{background:var(--mar);color:#fff;width:100%;margin-top:18px}
 .emp .btn-primario:active{background:var(--mar-oscuro)}

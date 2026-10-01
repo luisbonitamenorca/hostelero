@@ -96,3 +96,8 @@
   .rh .cont-kpis{grid-template-columns:1fr}
   .rh .cont-barra-der{margin-left:0}
 }
+
+/* contador de horas: semanas futuras (no cuentan en el saldo) */
+.rh .cont-este-mes{white-space:nowrap}
+.rh td.cont-celda.cont-futura{background:#f7f7f5;color:var(--tinta-suave)}
+.rh tr.cont-fila:hover td.cont-futura{background:#f7f7f5}

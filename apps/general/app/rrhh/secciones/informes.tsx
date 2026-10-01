@@ -291,7 +291,7 @@ function SubNomina({ ctx, avisar }: SecProps) {
                   return (
                     <tr key={f.empleado_id} className={ctx.esGestor ? "inf-fila" : ""} onClick={ctx.esGestor ? () => setEdicion(f.empleado_id) : undefined} title={ctx.esGestor ? "Variables y comentario" : undefined}>
                       <td className="np">
-                        {nombreDe(f)}
+                        <div className="inf-nombre" title={nombreDe(f)}>{nombreDe(f)}</div>
                         <div className="inf-sub">{centroNombre(f.centro_principal_id)}{f.departamento_id && datos.departamentos[f.departamento_id] ? ` · ${datos.departamentos[f.departamento_id]}` : ""}</div>
                       </td>
                       <td className="inf-cod">{f.codigo_nomina || <span className="inf-falta">sin código</span>}</td>
@@ -606,7 +606,8 @@ function SubHoras({ ctx, avisar }: SecProps) {
       ) : !ids.length ? (
         <div className="vacio">Sin turnos ni fichajes en este periodo.</div>
       ) : (
-        <table className="inf">
+        <div className="inf-scroll">
+        <table className="inf inf-horas">
           <thead><tr><th>Empleado</th><th>Planificado</th><th>Fichado</th><th>Desviación</th></tr></thead>
           <tbody>
             {ids.map((id) => {
@@ -616,7 +617,7 @@ function SubHoras({ ctx, avisar }: SecProps) {
               const cl = Math.abs(d) < 0.02 ? "" : d > 0 ? "desv-mas" : "desv-menos";
               return (
                 <tr key={id}>
-                  <td className="np">{datos.nombres[id] || "—"}{r.inc ? <span className="aviso-inc">⚠ {r.inc}</span> : null}</td>
+                  <td className="np"><div className="inf-nombre" title={datos.nombres[id] || ""}>{datos.nombres[id] || "—"}{r.inc ? <span className="aviso-inc">⚠ {r.inc}</span> : null}</div></td>
                   <td>{fmtHoras(r.plan)}</td>
                   <td>{fmtHoras(r.real)}</td>
                   <td className={cl}>{d >= 0 ? "+" : ""}{fmtHoras(d)}</td>
@@ -633,6 +634,7 @@ function SubHoras({ ctx, avisar }: SecProps) {
             </tr>
           </tfoot>
         </table>
+        </div>
       )}
       <div className="nota-inf">
         Horas fichadas = entradas↔salidas menos pausas, con las correcciones ya aplicadas. Planificado = solo turnos publicados. El registro completo para Inspección incluye método, correcciones y motivos, tal como exige la normativa.
@@ -791,7 +793,7 @@ function SubPlantilla({ ctx, avisar }: SecProps) {
                 <tbody>
                   {visibles.map((f) => (
                     <tr key={f.e.id}>
-                      <td className="np">{nombreDe(f.e)}{f.e.codigo_nomina ? <div className="inf-sub">código {f.e.codigo_nomina}</div> : null}</td>
+                      <td className="np"><div className="inf-nombre" title={nombreDe(f.e)}>{nombreDe(f.e)}</div>{f.e.codigo_nomina ? <div className="inf-sub">código {f.e.codigo_nomina}</div> : null}</td>
                       <td className="izq">{centroNombre(f.e.centro_principal_id) || "—"}</td>
                       <td className="izq">{f.e.departamento || "—"}</td>
                       <td className="izq inf-contrato">{f.e.tipo_contrato || "—"}</td>

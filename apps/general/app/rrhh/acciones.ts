@@ -151,18 +151,34 @@ export async function copiarSemanaAnterior(centroId: string, lunes: string, empl
 
 /* ================= Fichajes ================= */
 
+/** ISO (UTC) del instante «fecha a las hh:mm» en Madrid (mismo enfoque que isoMadrid en acciones/fichajes.ts). */
+function isoMadridLocal(fecha: string, hhmm: string): string {
+  const supuesto = new Date(`${fecha}T${hhmm}:00Z`);
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  });
+  const p: Record<string, string> = {};
+  for (const x of fmt.formatToParts(supuesto)) p[x.type] = x.value;
+  const h = p.hour === "24" ? "00" : p.hour;
+  const comoUtc = new Date(`${p.year}-${p.month}-${p.day}T${h}:${p.minute}:00Z`);
+  const desfase = comoUtc.getTime() - supuesto.getTime();
+  return new Date(supuesto.getTime() - desfase).toISOString();
+}
+
 export async function fichajesDia(centroId: string, fecha: string) {
   const { sb } = await cliente();
-  const ini = new Date(fecha + "T00:00").toISOString();
-  const finD = new Date(fecha + "T00:00");
-  finD.setDate(finD.getDate() + 1);
+  // Rango [fecha 00:00, fecha+1 00:00) en Europe/Madrid, independiente de la zona horaria del servidor (Vercel = UTC).
+  const sig = new Date(fecha + "T12:00:00Z");
+  sig.setUTCDate(sig.getUTCDate() + 1);
+  const ini = isoMadridLocal(fecha, "00:00");
+  const fin = isoMadridLocal(sig.toISOString().slice(0, 10), "00:00");
   const [emps, fichs] = await Promise.all([
     sb
       .from("rrhh_asignaciones")
       .select("empleados!inner(id, nombre, apellidos, fecha_baja)")
       .eq("centro_id", centroId)
       .or(`fecha_fin.is.null,fecha_fin.gte.${fecha}`),
-    sb.from("rrhh_fichajes").select("*").eq("centro_id", centroId).gte("ts", ini).lt("ts", finD.toISOString()).order("ts"),
+    sb.from("rrhh_fichajes").select("*").eq("centro_id", centroId).gte("ts", ini).lt("ts", fin).order("ts"),
   ]);
   const vistos = new Set<string>();
   const empleados = (emps.data ?? [])

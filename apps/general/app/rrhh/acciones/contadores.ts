@@ -168,60 +168,35 @@ export async function cargarContadores(centroId: string | null, desde: string, h
 }
 
 /** Saldos acumulados y alertas del año en curso (año de `hasta`), para los empleados pedidos.
-    Es la parte lenta: se llama en segundo plano desde el cliente y se cachea por empleado y fecha final.
-    El saldo es de la persona (todos sus centros), así que el resumen se pide SIEMPRE sin centro, como
-    hace rrhh_saldo_horas: con centro, un empleado de otro centro con turnos sueltos aquí solo entraría
-    en los trozos donde tuvo turnos y le faltarían semanas. */
+    Se llama en segundo plano desde el cliente y se cachea por empleado y fecha final.
+    El saldo lo da rrhh_saldos_horas(p_hasta) en una sola llamada para toda la plantilla (saldo inicial +
+    diferencias desde `desde` + ajustes; es de la persona, todos sus centros). Las extras y complementarias
+    del año se siguen sacando del resumen semanal del año (sin centro, por el mismo motivo). */
 export async function cargarSaldos(hasta: string, empleadoIds: string[]) {
   const { sb, perfil } = await cliente();
   if (!empleadoIds.length) return { saldos: {} as Record<string, SaldoEmp> };
-  const emps = await empleados(sb, perfil.cuenta_id, empleadoIds);
   const anio = hasta.slice(0, 4);
-  const desdePorEmp: Record<string, string> = {};
-  let desdeGlobal = anio + "-01-01";
-  for (const e of emps) {
-    desdePorEmp[e.id] = desdeContador(e, hasta);
-    if (desdePorEmp[e.id] < desdeGlobal) desdeGlobal = desdePorEmp[e.id];
-  }
-  // Trozos de ~13 semanas en paralelo: la función es lenta y así no agota el tiempo del servidor.
-  const trozos: [string, string][] = [];
-  for (let d = desdeGlobal; d <= hasta; ) {
-    const fin = sumaDia(d, 90) < hasta ? sumaDia(d, 90) : hasta;
-    trozos.push([d, fin]);
-    d = sumaDia(fin, 1);
-  }
-  const [partes, { data: ajustes, error }] = await Promise.all([
-    Promise.all(trozos.map(([d, h]) => resumen(sb, null, d, h))),
-    sb.from("rrhh_contador_ajustes").select("empleado_id, fecha, horas").in("empleado_id", empleadoIds).gte("fecha", desdeGlobal).lte("fecha", hasta),
+  const [emps, filas, { data: saldosRpc, error }] = await Promise.all([
+    empleados(sb, perfil.cuenta_id, empleadoIds),
+    resumen(sb, null, anio + "-01-01", hasta),
+    sb.rpc("rrhh_saldos_horas", { p_hasta: hasta }),
   ]);
   if (error) throw new Error(error.message);
-  // Solo los pedidos; las semanas que tocan dos trozos vienen repetidas: una por (empleado, lunes).
-  const pedidos = new Set(empleadoIds);
-  const vistas = new Set<string>();
-  const filas: FilaSemana[] = [];
-  for (const p of partes) for (const f of p) {
-    if (!pedidos.has(f.empleado_id)) continue;
-    const k = f.empleado_id + f.lunes;
-    if (!vistas.has(k)) { vistas.add(k); filas.push(f); }
-  }
+  const rpcPorEmp = new Map((saldosRpc ?? []).map((s) => [s.empleado_id, s]));
   const lunesHasta = lunesDe(hasta);
   const saldos: Record<string, SaldoEmp> = {};
   for (const e of emps) {
-    const desde = desdePorEmp[e.id];
-    const lunesDesde = lunesDe(desde);
-    let saldo = e.contador_inicial_h;
+    const s = rpcPorEmp.get(e.id);
+    const desde = s?.desde ?? desdeContador(e, hasta);
+    const saldo = s ? n(s.saldo) : e.contador_inicial_h;
     let extras = 0, contrato = 0, horasSemana = 0, ultimoLunes = "";
     for (const f of filas) {
       if (f.empleado_id !== e.id) continue;
-      if (f.lunes >= lunesDesde && f.lunes <= lunesHasta) saldo += f.diferencia;
       if (f.lunes.slice(0, 4) === anio && f.lunes <= lunesHasta) {
         if (f.diferencia > 0) extras += f.diferencia;
         contrato += f.horas_contrato;
         if (f.horas_contrato > 0 && f.lunes > ultimoLunes) { ultimoLunes = f.lunes; horasSemana = f.horas_contrato; }
       }
-    }
-    for (const a of ajustes ?? []) {
-      if (a.empleado_id === e.id && a.fecha >= desde && a.fecha <= hasta) saldo += n(a.horas);
     }
     if (!horasSemana) horasSemana = n(e.horas_semana);
     saldos[e.id] = {

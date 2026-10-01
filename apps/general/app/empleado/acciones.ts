@@ -24,7 +24,7 @@ export type Cambio = Tables<"rrhh_cambios_turno"> & {
   solicitante?: { nombre: string; apellidos: string | null } | null;
   destinatario?: { nombre: string; apellidos: string | null } | null;
 };
-export type Companero = { id: string; nombre: string };
+export type Companero = { id: string; nombre: string; apellidos: string | null; centro_id: string };
 export type Disponibilidad = Tables<"rrhh_disponibilidades">;
 export type SaldoVacaciones = { derecho_anual: number; devengado_hoy: number; disfrutados: number; pendientes_aprobar: number; resto: number };
 export type SemanaResumen = { anio: number; semana: number; lunes: string; horas_contrato: number; horas_plan: number; horas_retenidas: number; horas_ausencia_contador: number; diferencia: number };
@@ -161,18 +161,22 @@ export async function apuntarmeHueco(turnoId: string): Promise<R> {
   return { ok: true };
 }
 
-/** Compañeros de mis centros (solo id y nombre). Necesita la RPC rrhh_companeros_centro (ver informe); si no existe, lista vacía. */
+/**
+ * Compañeros activos de mis centros (RPC rrhh_companeros_centro, security definer): una fila por
+ * compañero y centro, sin mí. Ordenados por nombre; el cliente los agrupa por centro si hay varios.
+ */
 export async function companeros(): Promise<Companero[]> {
   const { sb, empId } = await contexto();
   if (!empId) return [];
-  // La RPC aún no está en los tipos generados: llamada sin tipar y tolerante a que no exista.
-  const rpc = sb.rpc.bind(sb) as unknown as (fn: string) => PromiseLike<{ data: unknown; error: unknown }>;
-  const { data, error } = await rpc("rrhh_companeros_centro");
-  if (error || !Array.isArray(data)) return [];
-  return (data as { id: string; nombre: string; apellidos: string | null }[])
+  const { data, error } = await sb.rpc("rrhh_companeros_centro");
+  if (error) {
+    console.error("[empleado] compañeros:", error.code, error.message);
+    throw new Error("No se pudo cargar");
+  }
+  return (data ?? [])
     .filter((c) => c.id !== empId)
-    .map((c) => ({ id: c.id, nombre: [c.nombre, c.apellidos].filter(Boolean).join(" ") }))
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+    .map((c) => ({ id: c.id, nombre: c.nombre, apellidos: c.apellidos || null, centro_id: c.centro_id }))
+    .sort((a, b) => `${a.nombre} ${a.apellidos ?? ""}`.localeCompare(`${b.nombre} ${b.apellidos ?? ""}`, "es"));
 }
 
 /** Pedir cambio de un turno mío publicado: a un compañero concreto o abierto (destinatario null). */
@@ -199,7 +203,11 @@ export async function pedirCambio(turnoId: string, destinatarioId: string | null
   return error ? { ok: false, error: msg(error) } : { ok: true };
 }
 
-/** Cambios donde soy solicitante o destinatario (la RLS decide), más recientes primero. */
+/**
+ * Cambios donde soy solicitante o destinatario (la RLS decide), más recientes primero.
+ * El turno embebido (rrhh_turnos por id con centros(nombre)) también llega cuando soy el destinatario:
+ * política rrhh_turnos_me_piden_lectura.
+ */
 export async function misCambios(): Promise<Cambio[]> {
   const { sb, empId } = await contexto();
   if (!empId) return [];
