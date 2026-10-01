@@ -10825,10 +10825,20 @@ export type Database = {
         }
         Returns: number
       }
+      rrhh_centros_gestionados: { Args: never; Returns: string[] }
       rrhh_codigo_centro_ratios: { Args: { p_nombre: string }; Returns: string }
       rrhh_color_departamento: {
         Args: { p_nombre_departamento: string }
         Returns: string
+      }
+      rrhh_companeros_centro: {
+        Args: never
+        Returns: {
+          apellidos: string
+          centro_id: string
+          id: string
+          nombre: string
+        }[]
       }
       rrhh_convenio_centro: {
         Args: { p_centro_id: string; p_cuenta_id?: string }
@@ -10873,6 +10883,7 @@ export type Database = {
         Args: { p_empleado_id: string }
         Returns: boolean
       }
+      rrhh_empleados_gestionados: { Args: never; Returns: string[] }
       rrhh_enum_tipo_ausencia: {
         Args: { p_tipo_id: string }
         Returns: Database["public"]["Enums"]["rrhh_tipo_ausencia"]
@@ -10994,6 +11005,14 @@ export type Database = {
           resto: number
         }[]
       }
+      rrhh_saldos_horas: {
+        Args: { p_hasta?: string }
+        Returns: {
+          desde: string
+          empleado_id: string
+          saldo: number
+        }[]
+      }
       rrhh_semana_iso: {
         Args: { p_fecha: string }
         Returns: {
@@ -11003,6 +11022,8 @@ export type Database = {
         }[]
       }
       rrhh_sin_acentos: { Args: { p: string }; Returns: string }
+      rrhh_turnos_de_mis_centros_con_cambios: { Args: never; Returns: string[] }
+      rrhh_turnos_que_me_piden: { Args: never; Returns: string[] }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       soundex: { Args: { "": string }; Returns: string }
