@@ -112,6 +112,11 @@ const normEmail = (e) => {
   const x = String(e || "").trim().toLowerCase();
   return x && x.includes("@") ? x : null;
 };
+// Clientes «comodín» de Cover sin contacto (walk-ins y prerreservas de OpenTable): no son
+// personas; sus reservas quedan sin ficha de cliente.
+const SIN_CLIENTE = "__sin_cliente__";
+const esGenerico = (n, a) => /^(walk[\s-]?in|walkin|opentable[\s-]?prereserv|sin nombre|cliente|no name|-+|\.+)$/i
+  .test(`${String(n || "").trim()} ${String(a || "").trim()}`.trim());
 const nombreKey = (n, a) => `${String(n || "").trim().toLowerCase()}|${String(a || "").trim().toLowerCase()}`;
 const vacio = (v) => v == null || v === "" || (Array.isArray(v) && v.length === 0);
 const siNo = (v) => /^(si|sí|yes|s)$/i.test(String(v || "").trim());
@@ -194,6 +199,7 @@ function clavePara(tel, email, nombre, apellidos, coverId) {
     if (!coverId) continue;
     const tel = normTel(g("Código"), g("Teléfono"));
     const email = normEmail(g("Email"));
+    if (!tel && !email && esGenerico(g("Nombre"), g("Apellidos"))) continue;
     const clave = clavePara(tel, email, g("Nombre"), g("Apellidos"), coverId);
     if (!clave) continue;
     let p = personas.get(clave);
@@ -236,6 +242,7 @@ const contactoReserva = new Map(); // token (localizador) → clave de persona
     const tel = normTel(g("Prefijo"), g("Teléfono"));
     const email = normEmail(g("Email"));
     let clave = null;
+    if (!tel && !email && esGenerico(g("Nombre"), g("Apellidos"))) { contactoReserva.set(token.toUpperCase(), SIN_CLIENTE); continue; }
     if (tel && personas.has(`t:${tel}`)) clave = `t:${tel}`;
     else if (email && porEmail.has(email)) clave = porEmail.get(email);
     else if (!tel && !email && personas.has(`n:${nombreKey(g("Nombre"), g("Apellidos"))}`)) clave = `n:${nombreKey(g("Nombre"), g("Apellidos"))}`;
@@ -265,8 +272,9 @@ console.log(`Cover: ${personasCover} personas en el listado (+${personas.size - 
 console.log(`Base: ${clientes.length} fichas, ${reservas.length} reservas, ${espera.length} en espera con ficha, ${mensajes.length} mensajes con ficha`);
 
 const reservasDe = new Map(); // cliente_id → reservas
+const claveReserva = (r) => contactoReserva.get(String(r.cover_id || r.localizador || "").toUpperCase());
 for (const r of reservas) {
-  if (!r.cliente_id) continue;
+  if (!r.cliente_id || claveReserva(r) === SIN_CLIENTE) continue;
   if (!reservasDe.has(r.cliente_id)) reservasDe.set(r.cliente_id, []);
   reservasDe.get(r.cliente_id).push(r);
 }
@@ -510,9 +518,12 @@ console.log(`  resultado esperado: ${clientes.length - borrar.length + insertar.
 
 if (DRY) {
   // reasignaciones posibles sin crear fichas (las de personas que ya tienen canónica)
-  let n = 0;
-  for (const d of destinoReserva) { const c = canonica.get(d.clave); if (c && c.id !== d.actual) n++; }
-  console.log(`  reservas a reasignar (a fichas existentes): ${n}`);
+  let n = 0, sinFicha = 0;
+  for (const d of destinoReserva) {
+    if (d.clave === SIN_CLIENTE) { if (d.actual) sinFicha++; continue; }
+    const c = canonica.get(d.clave); if (c && c.id !== d.actual) n++;
+  }
+  console.log(`  reservas a reasignar (a fichas existentes): ${n} · walk-ins/comodines que pasan a «sin ficha»: ${sinFicha}`);
   console.log("\nSimulación: no se ha escrito nada.");
   process.exit(0);
 }
@@ -571,13 +582,20 @@ console.log("3/5 creando fichas que faltan…");
 console.log("4/5 reasignando reservas…");
 {
   const porDestino = new Map(); // canónica → [reservaId]
+  const aNulo = [];
   for (const d of destinoReserva) {
+    if (d.clave === SIN_CLIENTE) { if (d.actual) aNulo.push(d.reservaId); continue; }
     const c = canonica.get(d.clave);
     if (!c?.id || c.id === d.actual) continue;
     if (!porDestino.has(c.id)) porDestino.set(c.id, []);
     porDestino.get(c.id).push(d.reservaId);
   }
   let n = 0;
+  await enParalelo(trozos(aNulo, 200).map((lote) => async () => {
+    const { error } = await sb.from("reservas_reservas").update({ cliente_id: null }).in("id", lote);
+    if (error) throw new Error(`sin ficha: ${error.message}`);
+  }));
+  if (aNulo.length) console.log(`  ${aNulo.length} reservas de walk-in/comodín sin ficha de cliente`);
   await enParalelo([...porDestino].flatMap(([destino, ids]) => trozos(ids, 200).map((lote) => async () => {
     const { error } = await sb.from("reservas_reservas").update({ cliente_id: destino }).in("id", lote);
     if (error) throw new Error(`reasignar: ${error.message}`);

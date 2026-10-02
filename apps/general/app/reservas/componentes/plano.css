@@ -1,1 +1,170 @@
-/* Estilos propios del plano de sala. Los comunes están en ../reservas.css. */
+/* Plano de sala (componentes/plano.tsx). Variables propias: el tema llega por data-tema en .pl,
+   así el plano se ve bien aunque se monte fuera del .rv (p. ej. en Ajustes). */
+
+.pl {
+  --pl-suelo: #2a2e33;
+  --pl-borde-sala: #3b4047;
+  --pl-punto: rgba(255, 255, 255, .22);
+  --pl-raya: rgba(255, 255, 255, .22);
+  --pl-sombra: rgba(0, 0, 0, .45);
+  --pl-selec: #e53935;
+  --pl-resalte: #2FA886;
+  --pl-destino: #F0B64C;
+  --pl-asa: #2FA886;
+  --pl-foco: #8ec5ff;
+  --pl-tip-fondo: #1f2227;
+  --pl-tip-texto: #e6e6e6;
+  --pl-tip-gris: #a3aab3;
+  --pl-tip-borde: #3b4047;
+  --pl-ctrl-fondo: rgba(42, 46, 51, .92);
+  --pl-ctrl-texto: #e6e6e6;
+  --pl-ctrl-borde: #3b4047;
+  --pl-fantasma: rgba(139, 195, 74, .55);
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 10 / 7;
+  min-height: 280px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--pl-suelo);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: 'Figtree', system-ui, sans-serif;
+}
+.pl[data-tema="claro"] {
+  --pl-suelo: #f1ece3;
+  --pl-borde-sala: #d6cfc0;
+  --pl-punto: rgba(0, 0, 0, .18);
+  --pl-raya: rgba(0, 0, 0, .16);
+  --pl-sombra: rgba(0, 0, 0, .28);
+  --pl-resalte: #0F6E56;
+  --pl-destino: #B7791F;
+  --pl-asa: #0F6E56;
+  --pl-foco: #1f4e9e;
+  --pl-tip-fondo: #ffffff;
+  --pl-tip-texto: #1A2226;
+  --pl-tip-gris: #6B7280;
+  --pl-tip-borde: #E2DCCE;
+  --pl-ctrl-fondo: rgba(255, 255, 255, .94);
+  --pl-ctrl-texto: #1A2226;
+  --pl-ctrl-borde: #E2DCCE;
+}
+
+.pl .pl-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  outline: none;
+}
+.pl.moviendo .pl-svg { cursor: grabbing; }
+.pl .pl-svg text { font-family: inherit; pointer-events: none; }
+.pl .pl-suelo { fill: var(--pl-suelo); }
+.pl .pl-borde-sala { fill: none; stroke: var(--pl-borde-sala); stroke-width: .3; stroke-dasharray: 1 .6; }
+.pl .pl-punto { fill: var(--pl-punto); }
+.pl .pl-raya { fill: var(--pl-raya); }
+
+/* ---- mesas ---- */
+.pl .pl-mesa { cursor: pointer; outline: none; }
+.pl .pl-mesa .pl-forma { stroke-width: .35; }
+.pl .pl-mesa .pl-sombra { fill: var(--pl-sombra) !important; stroke: none !important; transform: translate(0, .35px); }
+.pl.moviendo .pl-mesa .pl-sombra { display: none; }
+.pl .pl-mesa .pl-alta { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: .18; stroke-dasharray: .5 .4; }
+.pl .pl-mesa .pl-barra-linea { stroke: rgba(255, 255, 255, .35); stroke-width: .2; }
+.pl .pl-mesa.inactiva { opacity: .4; }
+.pl .pl-mesa.est-inactiva { opacity: .45; }
+.pl .pl-mesa .pl-aro { fill: none; stroke: var(--pl-resalte); stroke-width: .35; stroke-dasharray: .9 .6; pointer-events: none; }
+.pl .pl-mesa.seleccionada .pl-aro { stroke: var(--pl-selec); stroke-width: .45; stroke-dasharray: none; }
+.pl .pl-mesa.destino .pl-aro { stroke: var(--pl-destino); stroke-width: .5; stroke-dasharray: none; }
+.pl .pl-mesa.destino .pl-forma { filter: brightness(1.25); }
+/* destino no válido (mesa bloqueada o inactiva): aro rojo continuo, sin realce */
+.pl .pl-mesa.destino-no .pl-aro { stroke: var(--pl-selec); stroke-width: .5; stroke-dasharray: none; }
+.pl .pl-mesa.destino-no { cursor: not-allowed; }
+.pl .pl-mesa:hover .pl-forma { filter: brightness(1.08); }
+.pl .pl-mesa:focus-visible .pl-forma { stroke: var(--pl-foco); stroke-width: .5; }
+.pl .pl-mesa.edicion { cursor: move; }
+.pl .pl-mesa .pl-badge circle { fill: #fff; stroke: #7C2D3E; stroke-width: .25; }
+.pl .pl-mesa .pl-badge text { fill: #7C2D3E; }
+.pl .pl-mesa .pl-candado { fill: currentColor; stroke: currentColor; color: #e6e6e6; }
+.pl[data-tema="claro"] .pl-mesa .pl-candado { color: #4b5057; }
+.pl .pl-mesa.resaltada .pl-aro { animation: pl-pulso 1.2s ease-in-out infinite; }
+@keyframes pl-pulso { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ---- objetos ---- */
+.pl .pl-objeto { pointer-events: none; }
+.pl .pl-objeto.edicion { pointer-events: auto; cursor: move; }
+.pl .pl-objeto .pl-objeto-hit { fill: transparent; stroke: none; }
+.pl .pl-objeto .pl-aro { fill: none; stroke: var(--pl-selec); stroke-width: .4; pointer-events: none; }
+.pl .pl-objeto.edicion:hover .pl-aro,
+.pl .pl-objeto.edicion:hover .pl-objeto-hit { stroke: var(--pl-resalte); stroke-width: .25; stroke-dasharray: .8 .5; }
+
+/* ---- edición: asa ---- */
+.pl .pl-asa { fill: var(--pl-asa); stroke: #fff; stroke-width: .18; cursor: nwse-resize; }
+
+/* ---- arrastre de reserva ---- */
+.pl .pl-fantasma rect { fill: var(--pl-fantasma); stroke: #fff; stroke-width: .25; stroke-dasharray: .8 .5; }
+.pl .pl-fantasma text { fill: #fff; }
+
+/* ---- controles de zoom ---- */
+.pl .pl-controles {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 2;
+}
+.pl .pl-controles button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--pl-ctrl-borde);
+  border-radius: 8px;
+  background: var(--pl-ctrl-fondo);
+  color: var(--pl-ctrl-texto);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+  font-family: inherit;
+}
+.pl .pl-controles button:hover { filter: brightness(1.12); }
+.pl .pl-controles button:active { transform: scale(.96); }
+
+/* ---- tooltip ---- */
+.pl .pl-tip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  display: none;
+  min-width: 180px;
+  max-width: 280px;
+  padding: 8px 10px;
+  border: 1px solid var(--pl-tip-borde);
+  border-radius: 10px;
+  background: var(--pl-tip-fondo);
+  color: var(--pl-tip-texto);
+  font-size: 12.5px;
+  line-height: 1.35;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+  pointer-events: none;
+}
+.pl .pl-tip.visible { display: block; }
+.pl .pl-tip-cab { display: flex; gap: 6px; align-items: baseline; margin-bottom: 4px; color: var(--pl-tip-gris); }
+.pl .pl-tip-cab b { color: var(--pl-tip-texto); font-size: 13.5px; }
+.pl .pl-tip-vacio { color: var(--pl-tip-gris); }
+.pl .pl-tip-res + .pl-tip-res { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--pl-tip-borde); }
+.pl .pl-tip-l2 { display: flex; flex-wrap: wrap; gap: 8px; color: var(--pl-tip-gris); font-size: 12px; }
+.pl .pl-tip-notas { margin-top: 2px; color: #F0C56A; font-size: 12px; white-space: pre-wrap; }
+.pl[data-tema="claro"] .pl-tip-notas { color: #7a5410; }
+
+@media (hover: none) {
+  .pl .pl-tip { display: none !important; }
+}

@@ -1,1 +1,234 @@
-/* Estilos propios de la sección dia del panel de Reservas. Los comunes están en ../reservas.css. */
+/* Pantalla Día (guía §2). Oscuro por defecto; en claro valen los mismos selectores con los
+   fallback de las variables. Los estilos de la lista y del popover van en sus componentes. */
+
+.rv .dia { position: relative; min-width: 0; }
+.rv .dia.cargando { opacity: .92; }
+.rv .dia-print-cab { display: none; }
+
+/* ---- fila de turnos ---- */
+.rv .dia-turnos { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.rv .dia-turnos-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.rv .dia-turno {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+  border: 1.5px solid var(--borde); border-radius: 8px; background: var(--panel, #fff); color: var(--tinta);
+  font: inherit; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; cursor: pointer;
+}
+.rv .dia-turno small { font-size: 10.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--gris); }
+.rv .dia-turno:hover { border-color: var(--mar); }
+.rv .dia-turno.activo { background: var(--acento, var(--mar)); border-color: var(--acento, var(--mar)); color: #fff; }
+.rv .dia-turno.activo small { color: rgba(255, 255, 255, .8); }
+.rv .dia-turno.cerrado { border-style: dashed; }
+.rv .dia-turno.cerrado .lr-ico { color: #F28B8E; }
+
+.rv .dia-iconos { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.rv .dia-ico {
+  position: relative; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--borde); border-radius: 8px; background: var(--panel, #fff); color: var(--tinta); cursor: pointer;
+}
+.rv .dia-ico:hover { border-color: var(--mar); color: var(--mar); }
+.rv .dia-ico-punto { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: #F0B64C; }
+.rv .dia-espera {
+  height: 34px; padding: 0 12px; border: 1.5px solid var(--borde); border-radius: 8px; background: var(--panel, #fff); color: var(--tinta);
+  font: inherit; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.rv .dia-espera:hover { border-color: var(--mar); }
+.rv .dia-espera-n { background: #7C3AED; color: #fff; border-radius: 999px; font-size: 10.5px; padding: 1px 7px; }
+
+.rv .dia-nota {
+  display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; margin-bottom: 8px; padding: 7px 10px;
+  border-radius: 8px; border: 1px solid rgba(240, 182, 76, .45); background: rgba(240, 182, 76, .14); color: #F0C56A;
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.rv:not([data-tema="oscuro"]) .dia-nota { color: #7a5410; background: #FFF3DE; border-color: #EDD9B0; }
+
+/* ---- chips de estado ---- */
+.rv .dia-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; position: relative; }
+.rv .dia-chip {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid var(--borde); background: var(--panel, #fff); color: var(--tinta); font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.rv .dia-chip span { color: var(--gris); font-weight: 600; }
+.rv .dia-chip i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.rv .dia-chip:hover { border-color: var(--mar); }
+.rv .dia-chip.activo { border-color: var(--mar); background: color-mix(in srgb, var(--mar) 18%, var(--panel, #fff)); color: var(--tinta); }
+.rv .dia-mas { position: relative; }
+.rv .dia-mas-menu {
+  position: absolute; top: 32px; left: 0; z-index: 20; min-width: 220px; padding: 4px;
+  background: var(--panel, #fff); border: 1px solid var(--borde); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+}
+.rv .dia-mas-menu button {
+  display: flex; align-items: center; gap: 7px; width: 100%; padding: 8px 10px; border: none; border-radius: 7px; background: none;
+  color: var(--tinta); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.rv .dia-mas-menu button:hover { background: var(--panel-2, #F1EDE2); }
+.rv .dia-mas-menu button i { width: 10px; height: 10px; border-radius: 2px; border: 1px solid transparent; }
+.rv .dia-mas-menu button span { color: var(--gris); margin-left: auto; }
+.rv .dia-vista { display: none; margin-left: auto; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+.rv .dia-vista button { height: 28px; padding: 0 12px; border: none; background: var(--panel, #fff); color: var(--gris); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.rv .dia-vista button.activo { background: var(--acento, var(--mar)); color: #fff; }
+
+/* ---- cuerpo: lista 42 % + plano 58 % ---- */
+.rv .dia-cuerpo { display: grid; gap: 12px; align-items: start; min-width: 0; }
+@media (min-width: 1000px) {
+  .rv .dia-cuerpo { grid-template-columns: minmax(380px, 42fr) 58fr; }
+  .rv .dia-plano { position: sticky; top: 118px; }
+  .rv .dia-lista { max-height: calc(100vh - 230px); overflow-y: auto; padding-right: 2px; }
+}
+@media (max-width: 999px) {
+  .rv .dia-vista { display: inline-flex; }
+  .rv .dia-cuerpo.vista-lista .dia-plano { display: none; }
+  .rv .dia-cuerpo.vista-plano .dia-lista { display: none; }
+}
+
+.rv .dia-plano { min-width: 0; background: var(--panel, #fff); border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; }
+.rv .dia-plano-cab { display: flex; align-items: center; gap: 8px; padding: 6px 8px 0; border-bottom: 1px solid var(--borde); }
+.rv .dia-salas { display: flex; gap: 2px; overflow-x: auto; flex: 1; min-width: 0; }
+.rv .dia-sala {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 12px 8px; border: none; border-bottom: 2.5px solid transparent;
+  background: none; color: var(--gris); font: inherit; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; white-space: nowrap;
+}
+.rv .dia-sala small { font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.rv .dia-sala.activa { color: var(--tinta); border-bottom-color: var(--mar); }
+.rv .dia-sala:hover { color: var(--tinta); }
+.rv .dia-plano-iconos { display: flex; gap: 4px; padding-bottom: 6px; }
+.rv .dia-plano-iconos .dia-ico { width: 30px; height: 30px; }
+.rv .dia-plano-lienzo { min-height: 320px; background: var(--panel, #fff); }
+.rv[data-tema="oscuro"] .dia-plano-lienzo { background: #2a2e33; }
+
+/* ---- leyenda ---- */
+.rv .dia-leyenda { padding: 6px 10px 8px; border-top: 1px solid var(--borde); }
+.rv .dia-leyenda-btn { border: none; background: none; color: var(--gris); font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 2px 0; }
+.rv .dia-leyenda-fila { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.rv .dia-leyenda-pill { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1.5px solid transparent; }
+.rv .dia-leyenda-fila.iconos span { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--gris); margin-right: 6px; }
+
+/* ---- elegir reserva (mesa con varias) ---- */
+.rv .dia-elegir {
+  position: fixed; z-index: 65; min-width: 280px; max-width: 360px; padding: 6px;
+  background: var(--panel, #fff); border: 1px solid var(--borde); border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+}
+.rv .dia-elegir-tit { font-size: 11.5px; font-weight: 700; color: var(--gris); padding: 4px 8px 6px; }
+.rv .dia-elegir button {
+  display: flex; align-items: center; gap: 6px; width: 100%; padding: 9px 10px; border: none; border-radius: 8px; background: none;
+  color: var(--tinta); font: inherit; font-size: 13px; cursor: pointer; text-align: left;
+}
+.rv .dia-elegir button:hover { background: var(--panel-2, #F1EDE2); }
+.rv .dia-elegir button.nueva { color: var(--mar); font-weight: 700; border-top: 1px solid var(--borde); border-radius: 0 0 8px 8px; margin-top: 4px; }
+.rv .dia-elegir button:disabled { opacity: .5; cursor: default; background: none; }
+.rv .dia-elegir button:focus-visible { outline: 2px solid var(--mar); outline-offset: -2px; }
+.rv .dia-elegir button.destacado { color: var(--acento-claro, var(--mar)); font-weight: 800; }
+.rv .dia-elegir .lr-ico { flex: 0 0 auto; opacity: .85; }
+.rv .dia-elegir-n { margin-left: auto; font-size: 10.5px; font-weight: 800; color: var(--gris); background: var(--panel-2, #F1EDE2); border-radius: 999px; padding: 1px 7px; }
+.rv .dia-elegir-sub { margin: 0 0 4px 14px; padding-left: 6px; border-left: 2px solid var(--borde); max-height: 220px; overflow-y: auto; }
+.rv .dia-elegir-sub button { font-size: 12.5px; padding: 7px 8px; }
+.rv .dia-elegir-aviso { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--ambar, #9a6700); }
+.rv:not([data-tema="oscuro"]) .dia-elegir-aviso { color: #9a6700; }
+.rv .dia-elegir-estado { margin-left: auto; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
+
+/* ---- cajas (cupos, bloqueos, desplazar, confirmar) ---- */
+.rv .dia-caja-fondo { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .55); display: flex; align-items: flex-end; justify-content: center; }
+@media (min-width: 640px) { .rv .dia-caja-fondo { align-items: center; } }
+.rv .dia-caja {
+  width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; padding: 14px 16px 18px;
+  background: var(--panel, #F7F4EE); color: var(--tinta); border-radius: 16px 16px 0 0; border: 1px solid var(--borde);
+}
+@media (min-width: 640px) { .rv .dia-caja { border-radius: 16px; } }
+.rv .dia-caja.estrecha { max-width: 420px; }
+.rv .dia-caja-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.rv .dia-caja-cab h3 { margin: 0; font-size: 16px; color: var(--mar); }
+.rv .dia-caja-x { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--borde); background: var(--panel-2, #fff); color: var(--gris); cursor: pointer; font-size: 13px; }
+.rv .dia-caja-pie { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.rv .dia-caja .btn.mini { margin-top: 0; }
+.rv .dia-confirmar-txt { margin: 4px 0 0; font-size: 14px; line-height: 1.45; }
+
+.rv .dia-form-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; }
+.rv .dia-caja label { display: block; font-size: 11.5px; font-weight: 700; color: var(--gris); margin: 0; }
+.rv .dia-caja input, .rv .dia-caja select, .rv .dia-caja textarea {
+  width: 100%; margin-top: 3px; padding: 8px 10px; font-size: 14px; border-radius: 8px; border: 1px solid var(--borde);
+  background: var(--panel-2, #fff); color: var(--tinta); font-family: inherit;
+}
+.rv .dia-caja input:focus, .rv .dia-caja select:focus, .rv .dia-caja textarea:focus { outline: 2px solid var(--mar); border-color: var(--mar); }
+.rv .dia-form-lbl { font-size: 12.5px; font-weight: 700; margin: 14px 0 6px; }
+.rv .dia-form-lbl small { font-weight: 500; color: var(--gris); }
+.rv .dia-form-ayuda { font-size: 12px; color: var(--gris); margin-top: 8px; }
+.rv .dia-nota-txt { resize: vertical; min-height: 64px; }
+
+.rv .dia-segmento { display: inline-flex; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; margin-bottom: 4px; }
+.rv .dia-segmento button { height: 30px; padding: 0 12px; border: none; background: var(--panel-2, #fff); color: var(--gris); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.rv .dia-segmento button.activo { background: var(--acento, var(--mar)); color: #fff; }
+
+/* cupos */
+.rv .dia-cupos { display: flex; flex-direction: column; gap: 8px; }
+.rv .dia-cupo { border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; background: var(--panel-2, #fff); }
+.rv .dia-cupo.cerrado { border-color: rgba(229, 72, 77, .5); }
+.rv .dia-cupo-cab { display: flex; align-items: center; gap: 8px; }
+.rv .dia-cupo-cab b { font-size: 14px; text-transform: uppercase; letter-spacing: .03em; }
+.rv .dia-cupo-cab small { color: var(--gris); font-size: 11.5px; }
+.rv .dia-cupo-pie { display: flex; justify-content: flex-end; margin-top: 8px; }
+.rv .dia-switch { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; cursor: pointer; }
+.rv .dia-switch input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+.rv .dia-switch-pista { width: 38px; height: 22px; border-radius: 999px; background: #6b7178; position: relative; transition: background .15s; }
+.rv .dia-switch-bola { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+.rv .dia-switch input:checked + .dia-switch-pista { background: var(--acento-claro, var(--mar)); }
+.rv .dia-switch input:checked + .dia-switch-pista .dia-switch-bola { left: 19px; }
+.rv .dia-switch input:focus-visible + .dia-switch-pista { outline: 2px solid var(--mar); }
+.rv .dia-switch-txt { font-size: 12px; font-weight: 700; min-width: 50px; }
+.rv .dia-cupo.cerrado .dia-switch-txt { color: #F28B8E; }
+
+/* bloqueos */
+.rv .dia-bloqueos { display: flex; flex-direction: column; gap: 6px; }
+.rv .dia-bloqueo { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 9px; background: var(--panel-2, #fff); }
+.rv .dia-bloqueo > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rv .dia-bloqueo b { font-size: 13px; }
+.rv .dia-bloqueo small { color: var(--gris); font-size: 11.5px; }
+.rv .dia-bloqueo-x { border: 1px solid var(--borde); background: none; color: #F28B8E; font: inherit; font-size: 11.5px; font-weight: 700; border-radius: 7px; padding: 5px 9px; cursor: pointer; }
+
+/* desplazar: rejilla de mesas */
+.rv .dia-mesas-grid { display: flex; flex-direction: column; gap: 8px; max-height: 40vh; overflow-y: auto; }
+.rv .dia-mesas-sala-nom { font-size: 11px; font-weight: 800; color: var(--gris); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.rv .dia-mesas-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.rv .dia-mesa-chip {
+  display: inline-flex; align-items: baseline; gap: 2px; height: 32px; padding: 0 10px; border-radius: 8px;
+  border: 1.5px solid var(--borde); background: var(--panel-2, #fff); color: var(--tinta); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.rv .dia-mesa-chip small { font-size: 10px; color: var(--gris); font-weight: 600; }
+.rv .dia-mesa-chip.ocupada { border-style: dashed; color: var(--gris); }
+.rv .dia-mesa-chip.pequena { opacity: .7; }
+.rv .dia-mesa-chip.sel { background: var(--acento, var(--mar)); border-color: var(--acento, var(--mar)); color: #fff; }
+.rv .dia-mesa-chip.sel small { color: rgba(255, 255, 255, .8); }
+
+/* desplazar: mesa bloqueada en la franja */
+.rv .dia-mesa-chip.bloqueada { border-color: rgba(229, 72, 77, .6); color: #F28B8E; gap: 4px; align-items: center; }
+.rv:not([data-tema="oscuro"]) .dia-mesa-chip.bloqueada { color: #b42318; }
+.rv .dia-mesa-chip.sel.bloqueada { color: #fff; }
+.rv .dia-mesa-chip:focus-visible { outline: 2px solid var(--mar); outline-offset: 1px; }
+
+/* avisos y errores de formulario */
+.rv .dia-form-error { margin-top: 8px; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: #F28B8E; background: rgba(229, 72, 77, .12); border: 1px solid rgba(229, 72, 77, .4); }
+.rv:not([data-tema="oscuro"]) .dia-form-error { color: #b42318; background: #FDECEC; border-color: #F5C2C0; }
+.rv .dia-form-aviso { display: block; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--ambar, #F0B64C); }
+.rv:not([data-tema="oscuro"]) .dia-form-aviso { color: #9a6700; }
+.rv .dia-form-lbl .dia-form-aviso { display: inline; margin: 0; }
+
+/* walk-in: selector de personas */
+.rv .dia-pax { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rv .dia-pax .btn.mini { width: 40px; height: 36px; padding: 0; font-size: 18px; }
+.rv .dia-caja .dia-pax input { width: 72px; margin-top: 0; text-align: center; font-size: 18px; font-weight: 700; }
+.rv .dia-pax .dia-form-aviso { margin: 0 0 0 4px; }
+
+/* ---- impresión: solo la lista ---- */
+@media print {
+  .rsp .barra, .rsp .tabsbar, .rsp .fab, .rsp .toast,
+  .rv .dia-turnos, .rv .dia-chips, .rv .dia-plano, .rv .lr-buscar, .rv .dia-nota { display: none !important; }
+  .rsp main { padding: 0; max-width: none; }
+  .rv, .rv[data-tema="oscuro"] { background: #fff !important; color: #000 !important; }
+  .rv .dia-print-cab { display: block; font-size: 14px; margin-bottom: 8px; }
+  .rv .dia-cuerpo { display: block; }
+  .rv .dia-lista { max-height: none !important; overflow: visible !important; }
+  .rv .dia-cuerpo.vista-plano .dia-lista { display: block; }
+  .rv .lr-item { break-inside: avoid; background: #fff !important; color: #000 !important; border-color: #ccc !important; }
+  .rv .lr-cabecera { background: #fff !important; color: #000 !important; position: static; }
+  .rv .lr-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rv .lr-info.cliente, .rv .lr-info.reserva { color: #000 !important; }
+}

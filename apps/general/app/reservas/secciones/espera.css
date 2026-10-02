@@ -1,1 +1,123 @@
-/* Estilos propios de la sección espera del panel de Reservas. Los comunes están en ../reservas.css. */
+/* Estilos propios de la Lista de espera del panel de Reservas. Los comunes están en ../reservas.css.
+   Cuelga de .rv (oscuro por defecto); en claro se usan los fallback de las variables.
+   .le.puerta = vista para la tablet de la entrada: letras grandes, menos columnas. */
+
+.rv .le { --le-panel: var(--panel, #fff); --le-panel-2: var(--panel-2, #F7F4EE); --le-acento: var(--acento, var(--mar)); }
+
+/* ---- cabecera ---- */
+.rv .le-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.rv .le-tit h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--tinta); }
+.rv .le-tit span { font-size: 12.5px; color: var(--gris); text-transform: capitalize; }
+.rv .le-res { display: flex; gap: 6px; flex-wrap: wrap; }
+.rv .le-res span { background: var(--le-panel); border: 1px solid var(--borde); border-radius: 999px; padding: 5px 10px; font-size: 11.5px; font-weight: 600; color: var(--gris); white-space: nowrap; }
+.rv .le-res b { color: var(--mar); font-size: 13px; }
+.rv .le-toggle { margin-left: auto; border: 1px solid var(--borde); background: var(--le-panel); color: var(--tinta); border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.rv .le-toggle.activo { background: var(--le-acento); border-color: var(--le-acento); color: #fff; }
+
+/* ---- alta rápida ---- */
+.rv .le-alta-form { display: grid; grid-template-columns: minmax(140px, 1.4fr) minmax(120px, 1fr) 64px 96px minmax(120px, .9fr) minmax(140px, 1.6fr) auto; gap: 6px; align-items: center; background: var(--le-panel); border: 1px solid var(--borde); border-radius: 12px; padding: 8px; margin-bottom: 12px; }
+.rv .le-alta-form input, .rv .le-alta-form select { width: 100%; padding: 9px 10px; font-size: 14px; border-radius: 9px; border: 1px solid var(--borde); min-width: 0; }
+.rv .le-alta-form .le-add { border: none; background: var(--le-acento); color: #fff; border-radius: 9px; padding: 10px 14px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.rv .le-alta-form .le-add:disabled { opacity: .45; cursor: default; }
+.rv .le-alta-form input[aria-invalid="true"] { border-color: var(--e-noshow); box-shadow: 0 0 0 1px var(--e-noshow); }
+
+/* ---- tabla ---- */
+.rv .le-tabla { display: flex; flex-direction: column; gap: 5px; }
+.rv .le-fila { display: grid; grid-template-columns: 64px minmax(0, 1.6fr) 52px 72px minmax(80px, .8fr) 92px 120px auto; gap: 10px; align-items: center; min-height: 48px; padding: 7px 10px; font-size: 13.5px; }
+.rv .le-fila.cab { min-height: 0; padding: 2px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gris); }
+.rv .le-item { background: var(--le-panel); border: 1px solid var(--borde); border-left: 3px solid #D99A1E; border-radius: 10px; }
+.rv .le-item.avisado { border-left-color: #7C3AED; }
+.rv .le-item.cerrada { border-left-color: var(--borde); opacity: .75; }
+.rv .le-alta { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; font-weight: 600; color: var(--mar); display: flex; align-items: center; gap: 6px; }
+.rv .le-alta b { font-family: 'Figtree', system-ui, sans-serif; background: var(--le-panel-2); border: 1px solid var(--borde); border-radius: 6px; min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; color: var(--gris); }
+.rv .le-nombre { min-width: 0; display: flex; flex-direction: column; }
+.rv .le-nombre b { font-size: 14px; color: var(--tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv .le-nombre small { font-size: 11.5px; color: var(--gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv .le-nombre small a { color: inherit; text-decoration: none; }
+.rv .le-nombre small i { font-style: italic; color: #8FB8E8; }
+.rv[data-tema="claro"] .le-nombre small i { color: #2F80ED; }
+.rv .le-pax { font-size: 18px; font-weight: 700; color: var(--tinta); text-align: center; }
+.rv .le-pax-btn { background: none; border: 1px solid transparent; border-radius: 8px; padding: 2px 0; font-family: inherit; line-height: 1.2; cursor: pointer; }
+.rv .le-pax-btn:hover { border-color: var(--borde); background: var(--le-panel-2); }
+.rv .le-pref, .rv .le-zona { color: var(--gris); font-weight: 600; }
+.rv .le-est { font-weight: 700; color: #F0B64C; }
+.rv .le-est.ya { color: #5BE38A; }
+.rv[data-tema="claro"] .le-est { color: #B7791F; }
+.rv[data-tema="claro"] .le-est.ya { color: #2F7D46; }
+.rv .le-estado .chip { font-size: 10.5px; white-space: nowrap; }
+.rv .le-acc { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
+.rv .le-acc button, .rv .le-panel button, .rv .le-panel a { border: 1px solid var(--borde); background: var(--le-panel-2); color: var(--tinta); border-radius: 8px; padding: 8px 11px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; text-decoration: none; line-height: 1; display: inline-flex; align-items: center; }
+.rv .le-acc button:hover:not(:disabled), .rv .le-panel button:hover:not(:disabled) { border-color: var(--mar); }
+.rv .le-acc button:disabled, .rv .le-panel button:disabled { opacity: .5; cursor: default; }
+.rv .le-acc button.activo { border-color: var(--mar); box-shadow: inset 0 0 0 1px var(--mar); }
+.rv .le-acc .primaria, .rv .le-panel .primaria { background: var(--le-acento); border-color: var(--le-acento); color: #fff; }
+.rv .le-acc .peligro { color: var(--e-noshow); }
+.rv .le-panel .wa { border-color: #25D366; color: #128C4A; }
+.rv[data-tema="oscuro"] .le-panel .wa { color: #5BE38A; }
+
+/* ---- paneles desplegables (avisar / sentar) ---- */
+.rv .le-panel { border-top: 1px dashed var(--borde); padding: 10px 12px 12px; background: var(--le-panel-2); border-radius: 0 0 10px 10px; }
+.rv .le-panel-tit { font-size: 13.5px; color: var(--tinta); margin-bottom: 8px; }
+.rv .le-panel-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rv .le-panel-fila label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; }
+.rv .le-panel-fila input[type=time] { width: auto; padding: 7px 9px; font-size: 14px; border-radius: 8px; border: 1px solid var(--borde); }
+.rv .le-panel-fila .le-check input { width: auto; }
+.rv .le-panel-fila input[type=number], .rv .le-panel-fila select, .rv .le-edit-notas input { width: auto; padding: 7px 9px; font-size: 14px; border-radius: 8px; border: 1px solid var(--borde); background: var(--le-panel); color: var(--tinta); }
+.rv .le-panel-fila input[type=number] { width: 64px; }
+.rv .le-edit-notas { flex: 1 1 220px; }
+.rv .le-edit-notas input { flex: 1; min-width: 0; }
+.rv .le-panel-tit.le-sin-margen { margin: 0; }
+.rv .le-panel-dur { font-size: 12px; color: var(--gris); font-weight: 600; }
+.rv .le-panel-nota { font-size: 11.5px; color: var(--gris); margin-top: 8px; }
+.rv .le-panel .aviso { margin: 8px 0 0; }
+.rv .le-mesas { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.rv .le-sala-nombre { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gris); margin-bottom: 4px; }
+.rv .le-sala-mesas { display: flex; flex-wrap: wrap; gap: 6px; }
+.rv .le-mesa { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 76px; padding: 7px 9px; border-radius: 10px; border: 1.5px solid var(--borde); background: var(--le-panel); color: var(--tinta); cursor: pointer; line-height: 1.15; }
+.rv .le-mesa b { font-size: 16px; }
+.rv .le-mesa small { font-size: 10.5px; color: var(--gris); font-weight: 600; }
+.rv .le-mesa.libre { border-color: #2E9E5B; }
+.rv .le-mesa.libre .le-mesa-st { color: #5BE38A; }
+.rv[data-tema="claro"] .le-mesa.libre .le-mesa-st { color: #2F7D46; }
+.rv .le-mesa.ocupada { opacity: .7; }
+.rv .le-mesa.ocupada .le-mesa-st { color: #F0B64C; }
+.rv .le-mesa.nocabe { border-style: dashed; }
+.rv .le-mesa.elegida { border-color: var(--mar); box-shadow: 0 0 0 2px var(--mar); opacity: 1; }
+.rv .le-mesa:disabled { opacity: .35; cursor: default; }
+.rv .le-confirmar { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--borde); }
+
+/* ---- cerradas ---- */
+.rv .le-cerradas { margin-top: 14px; }
+.rv .le-ver { background: none; border: none; color: var(--gris); font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 6px 0; margin-bottom: 4px; }
+.rv .le-ver:hover { color: var(--mar); }
+
+/* ---- vista puerta (tablet en la entrada) ---- */
+.rv .le.puerta .le-alta-form input, .rv .le.puerta .le-alta-form select { font-size: 17px; padding: 12px; }
+.rv .le.puerta .le-alta-form .le-add { font-size: 16px; padding: 13px 18px; }
+.rv .le.puerta .le-fila { grid-template-columns: 56px minmax(0, 1.6fr) 70px 110px 130px auto; min-height: 72px; padding: 12px 14px; }
+.rv .le.puerta .le-pref, .rv .le.puerta .le-zona { display: none; }
+.rv .le.puerta .le-alta { font-size: 15px; }
+.rv .le.puerta .le-alta b { display: none; }
+.rv .le.puerta .le-nombre b { font-size: 22px; white-space: normal; }
+.rv .le.puerta .le-nombre small { font-size: 14px; }
+.rv .le.puerta .le-pax { font-size: 28px; }
+.rv .le.puerta .le-est { font-size: 18px; }
+.rv .le.puerta .le-estado .chip { font-size: 13px; padding: 6px 12px; }
+.rv .le.puerta .le-acc button { font-size: 15px; padding: 12px 16px; }
+.rv .le.puerta .le-panel-tit { font-size: 16px; }
+.rv .le.puerta .le-mesa { min-width: 96px; padding: 11px 12px; }
+.rv .le.puerta .le-mesa b { font-size: 21px; }
+.rv .le.puerta .le-mesa small { font-size: 12.5px; }
+.rv .le.puerta .le-panel button, .rv .le.puerta .le-panel a { font-size: 15px; padding: 12px 16px; }
+.rv .le.puerta .le-panel-fila input[type=time], .rv .le.puerta .le-panel-fila input[type=number], .rv .le.puerta .le-panel-fila select, .rv .le.puerta .le-edit-notas input { font-size: 17px; }
+
+/* ---- estrecho ---- */
+@media (max-width: 900px) {
+  .rv .le-alta-form { grid-template-columns: 1fr 1fr 64px 96px; }
+  .rv .le-alta-form select, .rv .le-alta-form .le-in-notas { grid-column: span 2; }
+  .rv .le-alta-form .le-add { grid-column: span 4; }
+  .rv .le-fila, .rv .le.puerta .le-fila { grid-template-columns: 56px minmax(0, 1fr) 52px 90px; }
+  .rv .le-fila.cab { display: none; }
+  .rv .le-pref, .rv .le-zona, .rv .le-estado { display: none; }
+  .rv .le-acc { grid-column: 1 / -1; justify-content: flex-start; }
+}

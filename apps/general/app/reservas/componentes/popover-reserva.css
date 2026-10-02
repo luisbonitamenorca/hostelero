@@ -1,0 +1,71 @@
+/* Popover de acciones rápidas (guía §4). Oscuro y claro. */
+
+.rv .pv-reserva {
+  position: fixed; z-index: 65;
+  background: var(--panel, #fff); color: var(--tinta);
+  border: 1px solid var(--borde); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  padding: 10px 10px 12px;
+  font-size: 13px;
+}
+.rv .pv-reserva .pv-flecha {
+  position: absolute; left: 50%; top: -7px; width: 12px; height: 12px;
+  background: var(--panel, #fff); border-left: 1px solid var(--borde); border-top: 1px solid var(--borde);
+  transform: translateX(-50%) rotate(45deg);
+}
+.rv .pv-reserva.arriba .pv-flecha { top: auto; bottom: -7px; transform: translateX(-50%) rotate(225deg); }
+
+.rv .pv-cab { margin-bottom: 8px; }
+.rv .pv-tit { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 14px; }
+.rv .pv-tit b { font-size: 15px; }
+.rv .pv-tit > span { color: var(--gris); }
+.rv .pv-estado { margin-left: auto; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .03em; }
+.rv .pv-meta { color: var(--gris); font-size: 12px; margin-top: 3px; line-height: 1.5; }
+.rv .pv-meta a { color: var(--mar); text-decoration: none; font-weight: 600; }
+.rv .pv-meta a:hover { text-decoration: underline; }
+.rv .pv-meta code { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+.rv .pv-alerg { margin-top: 4px; color: #F0B64C; font-weight: 600; font-size: 12px; }
+
+.rv .pv-fila { display: grid; gap: 6px; margin-top: 6px; }
+.rv .pv-fila.pv-3 { grid-template-columns: repeat(3, 1fr); }
+.rv .pv-fila.pv-4 { grid-template-columns: repeat(4, 1fr); }
+
+.rv .pv-btn {
+  height: 36px; border-radius: 8px; border: 1.5px solid transparent;
+  font: inherit; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+  cursor: pointer; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: filter .12s, transform .06s;
+}
+.rv .pv-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.rv .pv-btn:active:not(:disabled) { transform: scale(.98); }
+.rv .pv-btn:disabled { cursor: default; opacity: .55; }
+.rv .pv-btn.actual { opacity: 1; outline: 2px solid var(--tinta); outline-offset: 1px; }
+.rv .pv-btn.pv-oscuro { background: #1a1a1a; color: #fff; }
+.rv[data-tema="oscuro"] .pv-btn.pv-oscuro { background: #0f1113; }
+.rv .pv-btn.pv-liberar { background: #c9b227; color: #1a1a1a; }
+.rv .pv-btn.pv-neutro { background: var(--panel-2, #F1EDE2); color: var(--tinta); border-color: var(--borde); }
+.rv .pv-btn.pv-wa { background: #25D366; color: #0b2a17; }
+.rv .pv-ico { font-size: 10px; letter-spacing: -1px; }
+
+.rv .pv-confirmar { margin-top: 8px; padding: 10px; border-radius: 10px; background: var(--panel-2, #F1EDE2); font-size: 13px; }
+.rv .pv-confirmar-btns { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.rv .pv-confirmar-btns .pv-btn { flex: 1 1 auto; min-width: 90px; }
+.rv .pv-confirmar-btns.pv-pax { align-items: center; }
+.rv .pv-confirmar-btns.pv-pax .pv-btn.pv-neutro:first-child,
+.rv .pv-confirmar-btns.pv-pax .pv-btn.pv-neutro:nth-child(3) { flex: 0 0 40px; min-width: 40px; font-size: 18px; }
+.rv .pv-pax-num { font-size: 20px; font-weight: 700; min-width: 54px; text-align: center; }
+.rv .pv-pax-num small { font-size: 12px; color: var(--gris); font-weight: 600; }
+
+@media (max-width: 480px) {
+  .rv .pv-fila.pv-4 { grid-template-columns: repeat(2, 1fr); }
+  .rv .pv-btn { font-size: 11px; }
+}
+
+/* motivo de cancelación */
+.rv .pv-motivo {
+  width: 100%; margin-top: 8px; padding: 7px 9px; font: inherit; font-size: 13px;
+  border-radius: 8px; border: 1px solid var(--borde); background: var(--panel, #fff); color: var(--tinta);
+}
+.rv[data-tema="oscuro"] .pv-motivo { background: var(--fondo); border-color: var(--borde-fuerte, var(--borde)); }
+.rv .pv-motivo:focus { outline: 2px solid var(--mar); border-color: var(--mar); }
+.rv .pv-btn:focus-visible { outline: 2px solid var(--mar); outline-offset: 2px; }

@@ -1,1 +1,124 @@
-/* Estilos propios de la sección informes del panel de Reservas. Los comunes están en ../reservas.css. */
+/* Sección Informes del panel de Reservas (guía §10) y gráficas SVG (componentes/grafica.tsx).
+   Densidad de sala: controles de 36–38 px, texto 13–14 px, números grandes en los KPIs.
+   Oscuro por las variables de tema.css; en claro caen a los fallbacks de reservas.css. */
+
+.rsp .inf {
+  --inf-panel: var(--panel, #fff);
+  --inf-panel2: var(--panel-2, #F1EDE2);
+  --inf-acento: var(--acento, var(--mar));
+  --inf-hover: rgba(47, 168, 134, .08);
+  font-size: 13.5px;
+}
+.rsp .inf .mudo { color: var(--gris); font-weight: 500; }
+.rsp .inf .inf-mal { color: var(--e-noshow); font-weight: 700; }
+
+/* ---- barra de controles ---- */
+.rsp .inf-barra { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.rsp .inf-rest { width: auto; max-width: 260px; padding: 8px 10px; font-size: 13.5px; font-weight: 700; border: 1px solid var(--borde); border-radius: 9px; background: var(--inf-panel); color: var(--mar); font-family: inherit; min-height: 38px; }
+.rsp .inf-seg { display: inline-flex; border: 1px solid var(--borde); border-radius: 9px; overflow: hidden; background: var(--inf-panel); }
+.rsp .inf-seg button { border: none; background: transparent; color: var(--tinta); padding: 0 12px; min-height: 36px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; border-right: 1px solid var(--borde); white-space: nowrap; }
+.rsp .inf-seg button:last-child { border-right: none; }
+.rsp .inf-seg button:hover { color: var(--mar); }
+.rsp .inf-seg button.on { background: var(--inf-acento); color: #fff; }
+.rsp .inf-seg.mini button { min-height: 28px; padding: 0 10px; font-size: 11.5px; }
+.rsp .inf-seg-eti { display: inline-flex; align-items: center; padding: 0 8px 0 10px; font-size: 11.5px; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .04em; }
+.rsp .inf-fechas { display: inline-flex; align-items: center; gap: 6px; color: var(--gris); }
+.rsp .inf-fechas input[type=date] { width: auto; padding: 7px 9px; font-size: 13px; font-weight: 600; border: 1px solid var(--borde); border-radius: 8px; background: var(--inf-panel); color: var(--tinta); font-family: inherit; min-height: 36px; }
+.rsp .inf-btn { border: 1.5px solid var(--borde); background: var(--inf-panel); color: var(--tinta); border-radius: 9px; padding: 0 13px; min-height: 36px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.rsp .inf-btn:hover:not(:disabled) { border-color: var(--mar); color: var(--mar); }
+.rsp .inf-btn:disabled { opacity: .5; cursor: default; }
+.rsp .inf-btn.primario { background: var(--inf-acento); border-color: var(--inf-acento); color: #fff; }
+.rsp .inf-btn.primario:hover:not(:disabled) { color: #fff; filter: brightness(1.08); }
+.rsp .inf-recargar { font-size: 16px; padding: 0 10px; }
+.rsp .inf-resumen { font-size: 12.5px; color: var(--gris); margin: 0 2px 10px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.rsp .inf-resumen b { color: var(--tinta); }
+.rsp .inf-aviso-tipo { background: var(--mar-claro); color: var(--mar); border-radius: 999px; padding: 3px 10px; font-size: 11.5px; font-weight: 600; }
+
+/* ---- KPIs ---- */
+.rsp .inf-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0 0 10px; transition: opacity .15s; }
+.rsp .inf-kpis.cargando { opacity: .55; }
+.rsp .inf-kpi { background: var(--inf-panel); border: 1px solid var(--borde); border-radius: 12px; padding: 10px 12px 9px; display: flex; flex-direction: column; gap: 2px; min-height: 78px; border-left-width: 4px; }
+.rsp .inf-kpi.bien { border-left-color: #2E9E5B; }
+.rsp .inf-kpi.regular { border-left-color: #D99A1E; }
+.rsp .inf-kpi.mal { border-left-color: #E5484D; }
+.rsp .inf-kpi-eti { font-size: 11px; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rsp .inf-kpi b { font-size: 24px; line-height: 1.15; color: var(--mar); font-variant-numeric: tabular-nums; }
+.rsp .inf-kpi small { font-size: 11px; color: var(--gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rsp .inf-sin-cerrar { margin: 0 0 10px; }
+
+/* ---- gráficas ---- */
+.rsp .inf-graficas { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
+@media (min-width: 900px) { .rsp .inf-graficas { grid-template-columns: 1fr 1fr; } }
+.rsp .inf-tarjeta { background: var(--inf-panel); border: 1px solid var(--borde); border-radius: 12px; padding: 11px 13px 10px; min-width: 0; }
+.rsp .inf-tarjeta-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.rsp .inf-tarjeta-cab h4 { font-size: 14px; color: var(--vi); margin: 0; font-weight: 700; }
+.rsp .inf-tarjeta-cab .mudo { font-size: 11.5px; }
+.rsp .inf-tarjeta-acc { margin-left: auto; }
+.rsp .gf { width: 100%; min-width: 0; }
+.rsp .gf svg { display: block; max-width: 100%; overflow: visible; }
+.rsp .gf-vacio { color: var(--gris); font-size: 12.5px; padding: 18px 4px; text-align: center; }
+.rsp .gf-leyenda { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--gris); margin-top: 6px; font-weight: 600; }
+.rsp .gf-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+
+/* tabla pequeña (por turno) */
+.rsp .inf-mini { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.rsp .inf-mini th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--gris); padding: 4px 6px; border-bottom: 1px solid var(--borde); }
+.rsp .inf-mini td { padding: 6px; border-bottom: 1px solid var(--borde); }
+.rsp .inf-mini tr:last-child td { border-bottom: none; }
+.rsp .inf-mini .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---- tablas ---- */
+.rsp .inf-tablas { background: var(--inf-panel); border: 1px solid var(--borde); border-radius: 12px; padding: 0 12px 12px; }
+.rsp .inf-tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--borde); margin: 0 -12px 10px; padding: 0 8px; }
+.rsp .inf-tabs button { background: none; border: none; padding: 12px 12px 10px; color: var(--gris); font-weight: 700; font-size: 13px; border-bottom: 2.5px solid transparent; white-space: nowrap; cursor: pointer; font-family: inherit; }
+.rsp .inf-tabs button:hover { color: var(--tinta); }
+.rsp .inf-tabs button.on { color: var(--mar); border-bottom-color: var(--mar); }
+.rsp .inf-tabla-herr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.rsp .inf-cuenta { font-size: 12px; color: var(--gris); font-weight: 600; white-space: nowrap; }
+.rsp .inf-espacio { flex: 1; }
+.rsp .inf-filtro { width: auto; flex: 1 1 220px; max-width: 360px; padding: 7px 10px; font-size: 13px; border: 1px solid var(--borde); border-radius: 8px; background: var(--inf-panel2); color: var(--tinta); font-family: inherit; min-height: 36px; }
+.rsp .inf-horas { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--tinta); margin: 0; }
+.rsp .inf-horas input { width: 70px; padding: 6px 8px; font-size: 13px; font-weight: 700; border: 1px solid var(--borde); border-radius: 8px; background: var(--inf-panel2); color: var(--tinta); font-family: inherit; text-align: right; }
+.rsp .inf-nota { font-size: 11.5px; color: var(--gris); margin: -2px 0 8px; }
+.rsp .inf-tabla-env { overflow: auto; max-height: 560px; border: 1px solid var(--borde); border-radius: 10px; background: var(--inf-panel); }
+.rsp .inf-tabla { border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 100%; }
+.rsp .inf-tabla th { position: sticky; top: 0; z-index: 1; background: var(--inf-panel2); color: var(--gris); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+.rsp .inf-tabla td { padding: 6px 10px; border-bottom: 1px solid var(--borde); height: 40px; vertical-align: middle; white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; color: var(--tinta); }
+.rsp .inf-tabla tbody tr:hover td { background: var(--inf-hover); }
+.rsp .inf-tabla tbody tr:last-child td { border-bottom: none; }
+.rsp .inf-tabla th.num, .rsp .inf-tabla td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.rsp .inf-tabla tfoot td { position: sticky; bottom: 0; background: var(--inf-panel2); font-weight: 700; border-top: 1px solid var(--borde); border-bottom: none; }
+.rsp .inf-mas { margin-top: 8px; }
+.rsp .inf-tabla td.largo { white-space: normal; min-width: 260px; max-width: 460px; line-height: 1.35; height: auto; padding-top: 8px; padding-bottom: 8px; }
+.rsp .inf-estrellas { color: #D99A1E; letter-spacing: 1px; font-size: 13px; }
+.rsp .inf-estrellas i { font-style: normal; color: var(--borde); }
+.rsp .inf-estrellas.inf-mal { color: var(--e-noshow); }
+.rsp .inf-horas input:placeholder-shown { width: 170px; text-align: left; font-weight: 600; }
+
+/* ---- carga del tracking por tramos ---- */
+.rsp .inf-pedir { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 4px; color: var(--tinta); font-size: 13.5px; }
+.rsp .inf-pedir p { margin: 0; flex: 1 1 280px; }
+.rsp .inf-progreso { border: 1px solid var(--borde); border-radius: 10px; background: var(--inf-panel2); padding: 8px 10px 9px; margin-bottom: 10px; }
+.rsp .inf-progreso-txt { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 600; color: var(--tinta); margin-bottom: 7px; font-variant-numeric: tabular-nums; }
+.rsp .inf-progreso-barra { height: 5px; border-radius: 999px; background: var(--borde); overflow: hidden; }
+.rsp .inf-progreso-barra i { display: block; height: 100%; background: var(--inf-acento); transition: width .25s; }
+.rsp .inf-parada { margin: 0 0 10px; }
+.rsp .inf-error { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
+.rsp .inf-chip { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 3px 9px; letter-spacing: .02em; white-space: nowrap; }
+.rsp .inf-usuarios-graf { max-width: 640px; margin-bottom: 12px; }
+
+/* barra de ocupación dentro de celda */
+.rsp .inf-ocup { position: relative; display: inline-flex; align-items: center; justify-content: flex-end; min-width: 86px; height: 20px; border-radius: 5px; background: var(--inf-panel2); overflow: hidden; padding: 0 6px; font-weight: 700; font-size: 12px; }
+.rsp .inf-ocup i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(46, 158, 91, .35); }
+.rsp .inf-ocup.ambar i { background: rgba(217, 154, 30, .4); }
+.rsp .inf-ocup.rojo i { background: rgba(229, 72, 77, .4); }
+.rsp .inf-ocup span { position: relative; }
+
+@media (max-width: 760px) {
+  .rsp .inf-rest { max-width: 100%; flex: 1 1 100%; }
+  .rsp .inf-seg button { padding: 0 9px; font-size: 12px; }
+  .rsp .inf-kpis { grid-template-columns: repeat(2, 1fr); }
+  .rsp .inf-kpi b { font-size: 21px; }
+  .rsp .inf-tabla-env { max-height: 70vh; }
+  .rsp .inf-tabs button { padding: 10px 9px 8px; font-size: 12px; }
+}

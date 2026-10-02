@@ -1,0 +1,52 @@
+/* Página pública de pago / garantía de una reserva. Tema claro de la casa (como /reservar-mesa),
+   scoped .rvp; el color de marca del restaurante entra por --marca desde el servidor. */
+.rvp{
+  --calc:#F7F4EE; --marca:#0F4C5C; --tinta:#1A2226; --gris:#6B7280; --linea:#E7E2D8;
+  --ok:#2F7D46; --error:#B3261E; --ambar:#8A5A00; --ambar-fondo:#FBF3E0;
+  --radio:14px; --sombra:0 2px 12px rgba(26,34,38,.07);
+  font-family:'Figtree',system-ui,-apple-system,sans-serif;background:var(--calc);color:var(--tinta);
+  min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;
+}
+.rvp *{margin:0;padding:0;box-sizing:border-box}
+.rvp .wrap{max-width:520px;margin:0 auto;padding:0 18px 60px}
+.rvp header.top{padding:28px 0 6px;text-align:center}
+.rvp .logo{max-height:56px;max-width:200px;object-fit:contain;margin:0 auto 8px;display:block}
+.rvp .marca{font-family:Georgia,'Times New Roman',serif;font-size:24px;letter-spacing:.05em;color:var(--marca)}
+.rvp .marca small{display:block;font-family:inherit;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gris);margin-top:3px}
+.rvp h1{font-family:Georgia,serif;font-size:22px;font-weight:600;margin:22px 0 6px;color:var(--tinta)}
+.rvp p.sub{color:var(--gris);font-size:14px;margin-bottom:14px}
+.rvp .card{background:#fff;border:1px solid var(--linea);border-radius:var(--radio);box-shadow:var(--sombra);padding:18px;margin-bottom:12px}
+.rvp dl.ficha{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px}
+.rvp dl.ficha div.ancho{grid-column:1/-1}
+.rvp dt{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris)}
+.rvp dd{font-size:16px;font-weight:600;margin-top:2px}
+.rvp dd.loc{font-family:ui-monospace,Menlo,monospace;letter-spacing:.12em;color:var(--marca)}
+.rvp .importe{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 0 4px;border-top:1px dashed var(--linea);margin-top:14px}
+.rvp .importe .eti{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris)}
+.rvp .importe .n{font-size:30px;font-weight:700;color:var(--marca);font-variant-numeric:tabular-nums}
+.rvp .importe .d{font-size:13px;color:var(--gris);text-align:right}
+.rvp .politica{background:var(--ambar-fondo);color:var(--ambar);border-radius:10px;padding:12px 14px;font-size:14px;margin-top:12px}
+.rvp .politica strong{font-weight:700}
+.rvp .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;border:none;border-radius:12px;background:var(--marca);color:#fff;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;margin-top:18px;text-decoration:none}
+.rvp .btn:hover{filter:brightness(.92)}
+.rvp .btn:disabled{opacity:.55;cursor:default}
+.rvp .btn.sec{background:transparent;color:var(--marca);border:1.5px solid var(--marca);margin-top:10px}
+.rvp .btn.sec:hover{background:rgba(0,0,0,.03);filter:none}
+.rvp .candado{font-size:12px;color:var(--gris);text-align:center;margin-top:10px}
+.rvp .aviso{padding:13px 14px;border-radius:10px;font-size:14px;margin:12px 0}
+.rvp .aviso.err{background:#FBEAE9;color:var(--error)}
+.rvp .aviso.ok{background:#E8F3EC;color:var(--ok)}
+.rvp .aviso.info{background:#EEF3F5;color:var(--marca)}
+.rvp .icono{width:60px;height:60px;margin:6px auto 14px;border-radius:50%;display:grid;place-items:center;font-size:30px;color:#fff}
+.rvp .icono.ok{background:var(--ok)}
+.rvp .icono.ko{background:var(--error)}
+.rvp .icono.espera{background:var(--marca)}
+.rvp .centro{text-align:center}
+.rvp .cargando{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:rvp-gira .7s linear infinite}
+.rvp .cargando.oscuro{border-color:rgba(26,34,38,.2);border-top-color:var(--marca)}
+@keyframes rvp-gira{to{transform:rotate(360deg)}}
+.rvp .pie{margin-top:30px;text-align:center;font-size:13px;color:var(--gris)}
+.rvp .pie a{color:var(--marca)}
+.rvp a.enlace{color:var(--marca);font-weight:600;text-decoration:none}
+.rvp a.enlace:hover{text-decoration:underline}
+@media (prefers-reduced-motion:reduce){.rvp *{animation:none!important}}

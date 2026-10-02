@@ -1,1 +1,131 @@
-/* Estilos propios de la sección cronograma del panel de Reservas. Los comunes están en ../reservas.css. */
+/* Estilos propios de la sección cronograma del panel de Reservas. Los comunes están en ../reservas.css.
+   Funciona en oscuro (variables de tema.css) y en claro (fallbacks de reservas.css). */
+
+.rsp .cg { --cg-panel: var(--panel, #fff); --cg-panel2: var(--panel-2, #F1EDE2); --cg-fondo: var(--fondo, var(--calc)); }
+
+/* ---- controles ---- */
+.rsp .cg-controles { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.rsp .cg-titulo { font-size: 14px; color: var(--tinta); margin-right: auto; }
+.rsp .cg-titulo b { color: var(--vi); letter-spacing: .03em; }
+.rsp .cg-sub { color: var(--gris); font-size: 12.5px; }
+.rsp .cg-zoom { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--gris); }
+.rsp .cg-zoom button { width: 28px; height: 28px; border: 1px solid var(--borde); border-radius: 7px; background: var(--cg-panel); color: var(--tinta); font-size: 15px; cursor: pointer; }
+.rsp .cg-zoom button:disabled { opacity: .4; cursor: default; }
+.rsp .cg-btn { border: 1px solid var(--borde); background: var(--cg-panel); color: var(--tinta); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
+.rsp .cg-btn:hover { border-color: var(--mar); color: var(--mar); }
+.rsp .cg-btn.activo { background: var(--mar); border-color: var(--mar); color: #fff; }
+
+/* ---- contenedor con scroll en los dos ejes ---- */
+.rsp .cg-scroll { position: relative; overflow: auto; max-height: calc(100vh - 290px); min-height: 260px; border: 1px solid var(--borde); border-radius: 12px; background: var(--cg-panel); overscroll-behavior: contain; }
+.rsp .cg-scroll.arrastrando { cursor: grabbing; user-select: none; }
+
+/* cabecera de horas (fija arriba) */
+.rsp .cg-cab { position: sticky; top: 0; z-index: 3; display: flex; background: var(--cg-panel2); border-bottom: 1px solid var(--borde); }
+.rsp .cg-esquina { position: sticky; left: 0; z-index: 4; flex: none; display: flex; align-items: flex-end; padding: 0 10px 6px; font-size: 11px; font-weight: 700; color: var(--gris); background: var(--cg-panel2); border-right: 1px solid var(--borde); }
+.rsp .cg-cab-pista { position: relative; flex: none; height: 100%; }
+.rsp .cg-turno { position: absolute; top: 4px; height: 14px; border-radius: 4px; background: var(--mar); color: #fff; font-size: 10px; font-weight: 700; line-height: 14px; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; opacity: .8; }
+.rsp .cg-turno.foco { opacity: 1; outline: 2px solid #fff3; }
+.rsp .cg-hora { position: absolute; bottom: 4px; text-align: left; padding-left: 3px; font-size: 10px; color: var(--gris); border-left: 1px solid transparent; }
+.rsp .cg-hora.punto { font-size: 12.5px; font-weight: 700; color: var(--tinta); border-left-color: var(--borde); }
+.rsp .cg-ahora-eti { position: absolute; bottom: 2px; transform: translateX(-50%); background: #E5484D; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
+
+/* cuerpo: filas con etiqueta fija a la izquierda */
+.rsp .cg-cuerpo { position: relative; }
+.rsp .cg-fila { display: flex; border-bottom: 1px solid var(--borde); }
+.rsp .cg-fila.destino .cg-eti { color: var(--mar); background: var(--mar-claro); }
+.rsp .cg-fila.destino .cg-pista { background-color: color-mix(in srgb, var(--mar) 12%, transparent); }
+.rsp .cg-eti { position: sticky; left: 0; z-index: 2; flex: none; display: flex; align-items: center; gap: 5px; padding: 0 10px; font-size: 12.5px; background: var(--cg-panel); border-right: 1px solid var(--borde); color: var(--tinta); white-space: nowrap; overflow: hidden; }
+.rsp .cg-mesa-nombre { font-weight: 700; font-size: 13.5px; }
+.rsp .cg-mesa-cap { color: var(--gris); font-size: 11.5px; }
+.rsp .cg-mesa-web { font-size: 9.5px; font-weight: 700; text-transform: uppercase; color: var(--gris); border: 1px solid var(--borde); border-radius: 4px; padding: 0 4px; }
+.rsp .cg-eti.sala { width: 100%; border: none; border-right: 1px solid var(--borde); background: var(--cg-panel2); font-weight: 700; font-size: 12px; letter-spacing: .03em; cursor: pointer; color: var(--tinta); text-align: left; font-family: inherit; }
+.rsp .cg-flecha { color: var(--gris); width: 10px; }
+.rsp .cg-sala-nombre { text-transform: uppercase; }
+.rsp .cg-sala-n { margin-left: auto; color: var(--gris); font-weight: 600; font-size: 11px; }
+.rsp .cg-eti.sinmesa { color: var(--e-pendiente); font-weight: 700; background: var(--cg-panel); }
+.rsp .cg-badge { background: var(--e-pendiente); color: #fff; border-radius: 999px; font-size: 10px; padding: 1px 6px; }
+
+/* pista con rejilla de 15 min y línea de hora (según --sw) */
+.rsp .cg-pista { flex: none; height: 100%; background-image:
+  repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--sw) * 4 - 1px), var(--borde) calc(var(--sw) * 4 - 1px), var(--borde) calc(var(--sw) * 4)),
+  repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--sw) - 1px), color-mix(in srgb, var(--borde) 45%, transparent) calc(var(--sw) - 1px), color-mix(in srgb, var(--borde) 45%, transparent) var(--sw)); }
+.rsp .cg-pista.sala { background: var(--cg-panel2); }
+.rsp .cg-pista.sinmesa { background-color: color-mix(in srgb, var(--e-pendiente) 6%, transparent); }
+
+/* capa de dibujo encima de las filas */
+.rsp .cg-capa { position: absolute; top: 0; z-index: 1; pointer-events: none; }
+.rsp .cg-capa > * { pointer-events: auto; }
+.rsp .cg-fuera { position: absolute; top: 0; height: 100%; background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--gris) 10%, transparent) 6px 7px); pointer-events: none; }
+.rsp .cg-bloqueo { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 11px; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--gris) 28%, transparent) 0 5px, transparent 5px 10px); border-left: 2px solid var(--gris); border-right: 2px solid var(--gris); }
+.rsp .cg-ahora { position: absolute; top: 0; height: 100%; width: 2px; background: #E5484D; box-shadow: 0 0 6px #E5484D88; pointer-events: none; }
+
+/* barra de reserva */
+.rsp .cg-barra { position: absolute; display: flex; align-items: center; gap: 4px; padding: 0 6px 0 7px; border-radius: 5px; font-size: 12px; font-weight: 700; line-height: 1; cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,.35); border: 1.5px solid transparent; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: visible; }
+.rsp .cg-barra:hover { filter: brightness(1.08); z-index: 2; }
+.rsp .cg-barra.fantasma { opacity: .85; z-index: 5; cursor: grabbing; box-shadow: 0 6px 16px rgba(0,0,0,.45); outline: 2px solid #fff; }
+.rsp .cg-barra.secundaria { opacity: .75; border-style: dashed; border-color: #ffffff88; }
+.rsp .cg-barra.borde { border-color: #8A9199; }
+.rsp .cg-barra-txt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.rsp .cg-barra-ico { flex: none; font-size: 10.5px; display: inline-flex; gap: 2px; align-items: center; font-weight: 400; }
+.rsp .cg-lleva { font-style: normal; font-weight: 700; background: #0003; border-radius: 4px; padding: 1px 4px; margin-right: 2px; }
+.rsp .cg-asa { position: absolute; right: -2px; top: 0; width: 10px; height: 100%; cursor: ew-resize; border-right: 3px solid #ffffff55; border-radius: 0 5px 5px 0; }
+.rsp .cg-asa:hover { border-right-color: #fff; }
+/* barra con el popover abierto y barra resaltada desde «Desplazar» */
+.rsp .cg-barra.abierta { outline: 2px solid var(--tinta); outline-offset: 1px; z-index: 3; }
+.rsp .cg-barra.resaltada { z-index: 3; animation: cg-pulso 1s ease-in-out infinite; }
+@keyframes cg-pulso { 0%, 100% { box-shadow: 0 0 0 2px var(--mar); } 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--mar) 45%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .rsp .cg-barra.resaltada { animation: none; box-shadow: 0 0 0 3px var(--mar); } }
+/* con el dedo, el asa para estirar es más ancha */
+@media (pointer: coarse) {
+  .rsp .cg-asa { width: 20px; right: -4px; }
+}
+.rsp .cg-globo { position: absolute; left: 0; top: -22px; background: #1A2226; color: #fff; font-size: 11px; padding: 2px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+.rsp .cg-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* leyenda */
+.rsp .cg-leyenda { margin-top: 8px; align-items: center; }
+.rsp .cg-ayuda { margin-left: auto; font-style: italic; }
+
+/* pie: resumen por turno */
+.rsp .cg-pie { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; margin-top: 8px; }
+.rsp .cg-pie-turno { background: var(--cg-panel); border: 1px solid var(--borde); border-radius: 12px; padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.rsp .cg-pie-nombre { font-weight: 700; font-size: 13.5px; text-transform: uppercase; letter-spacing: .03em; color: var(--mar); }
+.rsp .cg-pie-nombre span { color: var(--gris); font-weight: 600; font-size: 11px; text-transform: none; margin-left: 6px; }
+.rsp .cg-pie-turno .cg-btn { grid-row: 1 / span 3; align-self: center; }
+.rsp .cg-pie-datos { font-size: 12.5px; color: var(--gris); }
+.rsp .cg-pie-datos b { color: var(--tinta); font-size: 14px; }
+.rsp .cg-pie-aviso { color: var(--e-pendiente); font-weight: 700; }
+.rsp .cg-ocup { position: relative; height: 14px; border-radius: 5px; background: var(--cg-panel2); overflow: hidden; font-size: 10px; font-weight: 700; }
+.rsp .cg-ocup i { display: block; height: 100%; border-radius: 5px; background: #2E9E5B; }
+.rsp .cg-ocup.ambar i { background: #D99A1E; }
+.rsp .cg-ocup.rojo i { background: #E5484D; }
+.rsp .cg-ocup span { position: absolute; right: 6px; top: 0; line-height: 14px; color: var(--tinta); }
+
+/* modales propios (confirmación y resumen) */
+.rsp-modal .modal.cg-modal-peq { max-width: 440px; }
+.rsp-modal .modal.cg-modal { max-width: 640px; }
+.rsp-modal .cg-avisos { margin: 10px 0 4px; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+.rsp-modal .cg-res-sub { color: var(--gris); font-size: 12.5px; margin-bottom: 10px; }
+.rsp-modal .cg-res-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin-bottom: 6px; }
+.rsp-modal .cg-res-kpis div { background: var(--panel-2, #fff); border: 1px solid var(--borde); border-radius: 10px; padding: 8px 10px; }
+.rsp-modal .cg-res-kpis b { display: block; font-size: 19px; color: var(--mar); line-height: 1.2; }
+.rsp-modal .cg-res-kpis span { font-size: 10.5px; color: var(--gris); }
+.rsp-modal .cg-res-kpis div.alerta b { color: var(--e-pendiente); }
+.rsp-modal .cg-modal h4 { font-size: 13px; color: var(--vi); margin: 14px 0 6px; font-weight: 700; }
+.rsp-modal .cg-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.rsp-modal .cg-tabla th { text-align: left; font-size: 10.5px; color: var(--gris); text-transform: uppercase; letter-spacing: .05em; padding: 3px 6px; border-bottom: 1px solid var(--borde); }
+.rsp-modal .cg-tabla td { padding: 5px 6px; border-bottom: 1px solid var(--borde); }
+.rsp-modal .cg-tabla tr.alerta td { color: var(--e-pendiente); font-weight: 700; }
+.rsp-modal .cg-horas .fila-bar .seg { background: var(--mar); border-radius: 4px; }
+.rsp-modal .cg-horas .fila-bar .val { width: 86px; }
+.rsp-modal .cg-horas .fila-bar .pista { background: var(--panel-2, #F1EDE2); }
+.rsp-modal .cg-item { cursor: pointer; flex-direction: column; align-items: flex-start; gap: 2px; }
+.rsp-modal .cg-item:hover .tit { color: var(--mar); }
+.rsp-modal .cg-aviso-txt { white-space: pre-wrap; }
+
+@media (max-width: 760px) {
+  .rsp .cg-scroll { max-height: calc(100vh - 250px); }
+  .rsp .cg-ayuda { display: none; }
+  .rsp .cg-pie-turno { grid-template-columns: 1fr; }
+  .rsp .cg-pie-turno .cg-btn { grid-row: auto; }
+}

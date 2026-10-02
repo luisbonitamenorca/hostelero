@@ -93,6 +93,17 @@ export function fmtFechaLarga(iso: string): string {
 }
 
 /** "13:30:00" → "13:30" */
+/** Nombre que se pinta para una reserva: el del cliente; sin ficha (walk-ins de Cover y comodines),
+    «Walk-in» si lo es y si no «Sin nombre». */
+export function nombreCliente(r: {
+  origen?: string | null;
+  reservas_clientes?: { nombre?: string | null; apellidos?: string | null } | null;
+}): { nombre: string; apellidos: string | null } {
+  const c = r.reservas_clientes;
+  if (c?.nombre) return { nombre: c.nombre, apellidos: c.apellidos ?? null };
+  return { nombre: r.origen === "walkin" ? "Walk-in" : "Sin nombre", apellidos: null };
+}
+
 export function fmtHora(t: string | null | undefined): string {
   return t ? t.slice(0, 5) : "";
 }
@@ -187,6 +198,57 @@ export function anunciarRestaurante(r: Restaurante): void {
   window.dispatchEvent(new CustomEvent<Restaurante>("rsv:restaurante", { detail: r }));
 }
 
+/* Catálogo de eventos window que entiende PanelReservas (la barra):
+   - "rsv:abrir-reserva"   detail = id de reserva → abre el modal de edición desde cualquier sección.
+   - "rsv:nueva-reserva"   detail = { clienteId?, mesaId?, hora?, fecha? } → abre el modal de alta prellenado.
+   - "rsv:ficha-cliente"   detail = id de cliente → abre la ficha de cliente (drawer).
+   - "rsv:turno"           detail = id de turno | null → turno activo de la barra (null = día completo).
+   - "rsv:inbox-contador"  detail = número → no leídos del Inbox (lo pinta la pestaña).
+   - "rsv:recargar"        sin detail → la sección activa y los contadores de la barra recargan.
+   - "rsv:tab" / "rsv:restaurante" → ver irATab / anunciarRestaurante. */
+
+export type DetalleNuevaReserva = { clienteId?: string; mesaId?: string; hora?: string; fecha?: string };
+
+/** Abre una reserva en el modal (desde cualquier sección). */
+export function abrirReserva(reservaId: string): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<string>("rsv:abrir-reserva", { detail: reservaId, cancelable: true }));
+}
+
+/** Pide el modal de reserva nueva, opcionalmente prellenado (cliente, mesa, hora, fecha). */
+export function nuevaReserva(detalle: DetalleNuevaReserva = {}): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<DetalleNuevaReserva>("rsv:nueva-reserva", { detail: detalle, cancelable: true }));
+}
+
+/** Abre la ficha de un cliente (drawer) desde cualquier sección. */
+export function abrirFichaCliente(clienteId: string): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<string>("rsv:ficha-cliente", { detail: clienteId, cancelable: true }));
+}
+
+/** Publica el turno activo (null = día completo). Lo emite la barra; una sección también puede hacerlo. */
+export function anunciarTurno(turnoId: string | null): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<string | null>("rsv:turno", { detail: turnoId }));
+}
+
+/** ¿El foco está en un campo de texto? (los atajos de teclado no actúan ahí). */
+export function enCampoDeTexto(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.tagName !== "string") return false;
+  const tag = el.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  return !!el.isContentEditable;
+}
+
+/** "2026-10-01" → "jueves 1/10/2026" (como la fecha de la barra). */
+export function fmtFechaBarra(iso: string): string {
+  const d = new Date(iso.slice(0, 10) + "T12:00");
+  const dia = d.toLocaleDateString("es-ES", { weekday: "long" });
+  return `${dia} ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
+
 /* ==================== Hooks ==================== */
 
 /** Selector de restaurante que recuerda el último usado ('rsv:restaurante'). */
@@ -236,4 +298,28 @@ export function useRecargaExterna(fn: () => void): void {
     window.addEventListener("rsv:recargar", h);
     return () => window.removeEventListener("rsv:recargar", h);
   }, [fn]);
+}
+
+/** Turno activo publicado por la barra ('rsv:turno'): id del turno o null (día completo).
+    Al montar se lee el último que anunció la barra, para no esperar al siguiente clic. */
+export function useTurnoActivo(): string | null {
+  const [turno, setTurno] = useState<string | null>(() => ultimoTurno);
+  useEffect(() => {
+    const h = (e: Event) => {
+      const id = (e as CustomEvent<string | null>).detail;
+      setTurno(typeof id === "string" && id ? id : null);
+    };
+    window.addEventListener("rsv:turno", h);
+    return () => window.removeEventListener("rsv:turno", h);
+  }, []);
+  return turno;
+}
+
+/* Último turno anunciado (memoria del módulo; vale mientras el panel esté cargado). */
+let ultimoTurno: string | null = null;
+if (typeof window !== "undefined") {
+  window.addEventListener("rsv:turno", (e) => {
+    const id = (e as CustomEvent<string | null>).detail;
+    ultimoTurno = typeof id === "string" && id ? id : null;
+  });
 }

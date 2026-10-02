@@ -23,6 +23,10 @@
     {
       "path": "/api/agentes/google-resenas",
       "schedule": "30 7 * * *"
+    },
+    {
+      "path": "/api/cron/reservas-mensajes",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

@@ -1,0 +1,68 @@
+/* Bloque «Pago» del modal de reserva. Solo variables de tema (reservas.css / tema.css):
+   se ve igual de bien en oscuro y en claro. Las clases .btn, .chip y .aviso son las comunes. */
+
+.bp {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--tinta);
+  padding: 10px 12px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.bp.bp-cargando { color: var(--gris); }
+.bp .aviso { margin: 8px 0 0; }
+
+.bp-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bp-tit { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--gris); }
+.bp-tarjeta { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--tinta); }
+.bp-importes { margin-left: auto; display: inline-flex; gap: 10px; color: var(--gris); font-size: 12.5px; }
+
+.bp-enlace { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; color: var(--gris); font-size: 12.5px; }
+
+.bp-lista { list-style: none; margin: 8px 0 0; padding: 0; border-top: 1px solid var(--borde); }
+.bp-fila { padding: 7px 0; border-bottom: 1px solid var(--borde); }
+.bp-fila.revisar { box-shadow: inset 3px 0 0 var(--peligro); padding-left: 8px; }
+.bp-fila.aviso-fila { box-shadow: inset 3px 0 0 var(--ambar); padding-left: 8px; }
+.bp-linea { display: grid; grid-template-columns: 92px 1fr auto auto; align-items: center; gap: 10px; min-height: 26px; }
+.bp-fecha { color: var(--gris); font-size: 12px; font-variant-numeric: tabular-nums; }
+.bp-tipo { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-imp { font-variant-numeric: tabular-nums; font-weight: 700; }
+.bp-estado { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--panel-3); color: var(--gris); white-space: nowrap; }
+.bp-estado.e-cobrado,
+.bp-estado.e-autorizado { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); color: var(--ok); }
+.bp-estado.e-devuelto { background: color-mix(in srgb, var(--info) 16%, var(--panel)); color: var(--info); }
+.bp-estado.e-fallido,
+.bp-estado.e-revisar { background: color-mix(in srgb, var(--peligro) 16%, var(--panel)); color: var(--peligro); }
+.bp-estado.e-iniciado { background: color-mix(in srgb, var(--ambar) 16%, var(--panel)); color: var(--ambar); }
+
+.bp-nota { margin-top: 4px; color: var(--ambar); font-size: 12px; font-weight: 600; }
+.bp-acc { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.bp-ayuda { color: var(--gris); font-size: 12px; }
+.bp-ayuda.bloque { flex-basis: 100%; margin: 4px 0 0; }
+.bp-vacio { margin: 8px 0 0; color: var(--gris); font-size: 12.5px; }
+
+.bp-campo { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.bp-campo > span { font-weight: 600; }
+.bp-campo em { font-style: normal; color: var(--gris); font-size: 12px; }
+.bp-campo input {
+  width: 84px; height: 32px; padding: 0 8px; text-align: right;
+  border: 1px solid var(--borde-fuerte); border-radius: 8px;
+  background: var(--panel); color: var(--tinta); font: inherit; font-variant-numeric: tabular-nums;
+}
+.bp-campo input:disabled { opacity: .55; }
+
+.bp-cobro { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borde); }
+
+.bp-confirmar {
+  margin-top: 10px; padding: 10px 12px; border-radius: 9px;
+  background: color-mix(in srgb, var(--ambar) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--ambar) 45%, var(--panel));
+}
+.bp-confirmar p { margin: 0; font-weight: 600; }
+
+@media (max-width: 520px) {
+  .bp-linea { grid-template-columns: 1fr auto; }
+  .bp-fecha { grid-column: 1 / -1; }
+  .bp-importes { margin-left: 0; flex-basis: 100%; }
+}

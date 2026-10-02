@@ -1,3 +1,75 @@
-/* Estilos propios de la sección mes del panel de Reservas. Los comunes están en ../reservas.css. */
+/* Estilos propios de la sección mes del panel de Reservas. Los comunes están en ../reservas.css.
+   Oscuro por variables de tema.css; claro por los fallbacks. */
 
-.rsp .mes-cab .mes-nav{width:38px;height:38px;border:1px solid var(--borde);background:#fff;border-radius:9px;font-size:17px;color:var(--mar);cursor:pointer}
+.rsp .ms { --ms-panel: var(--panel, #fff); --ms-panel2: var(--panel-2, #F1EDE2); }
+
+/* cabecera */
+.rsp .mes-cab .mes-nav { width: 38px; height: 38px; border: 1px solid var(--borde); background: var(--ms-panel); border-radius: 9px; font-size: 17px; color: var(--mar); cursor: pointer; }
+.rsp .ms-hoy { border: 1px solid var(--borde); background: var(--ms-panel); color: var(--mar); border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.rsp .ms-hoy.activo { background: var(--mar); border-color: var(--mar); color: #fff; }
+.rsp .ms-tot-turnos { font-weight: 600; font-size: 12px; }
+
+/* barra de acción masiva */
+.rsp .ms-accion { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: var(--mar-claro); border: 1px solid var(--mar); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+.rsp .ms-accion-txt { font-size: 12.5px; color: var(--tinta); margin-right: 6px; }
+.rsp .ms-accion-txt b { color: var(--mar); }
+.rsp .ms-accion select, .rsp .ms-accion input { width: auto; padding: 6px 8px; font-size: 13px; border-radius: 8px; border: 1px solid var(--borde); background: var(--ms-panel); color: var(--tinta); }
+.rsp .ms-accion input[type=number] { width: 110px; }
+.rsp .ms-accion input[type=text] { width: 180px; }
+.rsp .ms-sep { width: 1px; height: 22px; background: var(--borde); margin: 0 2px; }
+.rsp .ms-btn { border: 1px solid var(--borde); background: var(--ms-panel); color: var(--tinta); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.rsp .ms-btn:hover { border-color: var(--mar); color: var(--mar); }
+.rsp .ms-btn:disabled { opacity: .5; cursor: default; }
+.rsp .ms-btn.peligro { color: var(--e-noshow); }
+.rsp .ms-btn.sec { margin-left: auto; color: var(--gris); }
+.rsp .ms-ayuda { font-size: 11.5px; color: var(--gris); margin-bottom: 8px; }
+
+/* rejilla y celdas */
+.rsp .ms-grid { user-select: none; -webkit-user-select: none; }
+.rsp .ms-grid.modo-sel { touch-action: none; }
+.rsp .ms-grid.cargando { opacity: .5; pointer-events: none; }
+.rsp .ms-celda { background: var(--ms-panel); min-height: 92px; padding: 5px 6px 6px; display: flex; flex-direction: column; gap: 3px; outline: none; }
+.rsp .ms-celda:focus-visible { border-color: var(--mar); box-shadow: 0 0 0 2px var(--mar-claro); }
+.rsp .ms-celda.finde { background: color-mix(in srgb, var(--ms-panel) 85%, var(--ms-panel2)); }
+.rsp .ms-celda.pasado { opacity: .6; }
+.rsp .ms-celda.sel { border-color: var(--mar); box-shadow: inset 0 0 0 2px var(--mar); opacity: 1; }
+.rsp .ms-celda.cerrado .num { color: var(--gris); }
+.rsp .ms-celda .num { display: flex; align-items: center; gap: 4px; font-size: 12.5px; }
+.rsp .ms-iconos { margin-left: auto; display: inline-flex; gap: 4px; font-size: 10px; font-style: normal; color: var(--gris); font-weight: 600; }
+.rsp .ms-iconos i { font-style: normal; }
+.rsp .ms-espera { color: var(--e-pendiente); }
+.rsp .ms-sinturno { font-size: 11px; color: var(--gris); font-style: italic; margin-top: 2px; }
+.rsp .ms-turno { display: block; padding: 0; white-space: nowrap; }
+.rsp .ms-turno.cerrado { color: var(--gris); font-style: normal; }
+.rsp .ms-linea { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; font-size: 11.5px; }
+.rsp .ms-tn { font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.rsp .ms-tp { font-weight: 700; color: var(--tinta); }
+.rsp .ms-tp small { font-weight: 600; color: var(--gris); font-size: 10px; }
+.rsp .ms-barra { height: 6px; border-radius: 4px; background: var(--ms-panel2); overflow: hidden; margin-top: 2px; }
+.rsp .ms-barra i { display: block; height: 100%; border-radius: 4px; background: #2E9E5B; }
+.rsp .ms-barra.ambar i { background: #D99A1E; }
+.rsp .ms-barra.rojo i { background: #E5484D; }
+.rsp .ms-turno.cerrado .ms-barra i { background: var(--gris); }
+.rsp .ms-nota { margin-top: auto; font-size: 10.5px; color: var(--gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px dashed var(--borde); padding-top: 3px; }
+
+/* confirmación */
+.rsp-modal .modal.ms-modal { max-width: 440px; }
+.rsp-modal .ms-confirm-txt { font-size: 14px; line-height: 1.45; margin: 8px 0 4px; }
+
+@media (max-width: 760px) {
+  .rsp .ms-celda { min-height: 74px; padding: 4px 5px; }
+  .rsp .ms-tn { font-size: 10.5px; }
+  .rsp .ms-tp small { display: none; }
+  .rsp .ms-nota { display: none; }
+  .rsp .ms-iconos { font-size: 9px; }
+  .rsp .ms-ayuda { display: none; }
+  .rsp .ms-accion input[type=text] { width: 100%; }
+  .rsp .ms-btn.sec { margin-left: 0; }
+}
+
+/* mesas ocupadas/total por turno (solo cuando hay sitio) y aviso de la confirmación */
+.rsp .ms-mesas { font-size: 10px; color: var(--gris); font-weight: 600; margin-top: 1px; }
+.rsp-modal .ms-confirm-aviso { font-size: 13px; line-height: 1.4; margin: 6px 0 4px; padding: 6px 8px; border-radius: 8px; color: var(--tinta); background: color-mix(in srgb, var(--e-pendiente) 14%, transparent); border: 1px solid color-mix(in srgb, var(--e-pendiente) 45%, transparent); }
+@media (max-width: 759px) {
+  .rsp .ms-mesas { display: none; }
+}

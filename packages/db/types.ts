@@ -12889,6 +12889,13 @@ export type Database = {
         Returns: string
       }
       reservas_url_base: { Args: { p_restaurante: string }; Returns: string }
+      reservas_usuarios_anotadores: {
+        Args: never
+        Returns: {
+          id: string
+          nombre: string
+        }[]
+      }
       rrhh_centros_gestionados: { Args: never; Returns: string[] }
       rrhh_codigo_centro_ratios: { Args: { p_nombre: string }; Returns: string }
       rrhh_color_departamento: {
