@@ -1,10 +1,9 @@
 /**
- * Carga del «Tracking de reservas» de CoverManager y, opcionalmente, del «Listado de clientes»
- * en el módulo Reservas de Hostelero (el mismo camino que Skello → Personal: hasta el corte,
- * Sonia y compañía siguen en Cover y aquí se carga el informe; Ratios lee en vivo del módulo).
+ * Carga del «Tracking de reservas» de CoverManager en el módulo Reservas de Hostelero (el mismo
+ * camino que Skello → Personal: hasta el corte, Sonia y compañía siguen en Cover y aquí se carga
+ * el informe; Ratios lee en vivo del módulo).
  *
- *   node scripts/cargar-cover-tracking.mjs <tracking.csv> [--clientes=<clientes.tsv>] [--dry-run]
- *                                          [--solo-clientes] [--solo-reservas]
+ *   node scripts/cargar-cover-tracking.mjs <tracking.csv> --clientes=<clientes.tsv> [--dry-run]
  *
  * Ficheros (Analytics › Informes de Cover):
  *   · Tracking de reservas → «Descargar CSV» con «Incluir otros establecimientos», «Ampliar con
@@ -12,15 +11,18 @@
  *     Pedir TODAS las reservas (todos los estados), no solo «las que fueron».
  *   · Clientes › Listado de clientes → TSV (ID, Nombre, Apellidos, Código, Teléfono, Email, …).
  *
- * Idempotente: una segunda ejecución no duplica nada.
- *   · reservas por localizador (= «Token» de Cover, 8 caracteres) y cover_id.
- *   · clientes por cover_id, o por teléfono / email normalizados (misma regla que reservas_norm_tel).
- *   · mesas por (sala, nombre), etiquetas por (ámbito, nombre), prescriptores por nombre.
- * Solo se actualizan las filas que cambian (no se ensucia reservas_reservas_historial).
+ * Qué hace:
+ *   1. Reservas (y mesas, etiquetas de reserva, prescriptores que falten). Idempotente: reservas
+ *      por localizador (= «Token» de Cover) y solo se escriben las que cambian.
+ *   2. Clientes: este script NO crea ni modifica fichas de cliente. Las reservas nuevas se enlazan
+ *      a la ficha que ya exista (ID de Cover → teléfono → email → nombre) y al final se ejecuta
+ *      scripts/sincronizar-clientes-cover.mjs, que deja una ficha por persona con los datos de
+ *      Cover y reasigna cada reserva a la suya. (La primera versión actualizaba clientes con un
+ *      upsert por lotes de columnas distintas y vaciaba campos: ver ese script.)
  *
  * Mensajería: las filas importadas llevan notificar = false y cover_id; el trigger
  * reservas_encolar_email no programa mensajes para filas con cover_id escritas por el service
- * role (ver migración 20261001130000). Ningún cliente real recibe correos por esta carga.
+ * role. Ningún cliente real recibe correos por esta carga.
  *
  * Claves en .env.local (raíz del repo): HOSTELERO_URL y HOSTELERO_SERVICE_KEY (service role).
  * PII: todo en memoria; no escribe ficheros intermedios; el informe final no imprime datos
@@ -29,6 +31,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
 /* ================= parámetros ================= */
@@ -38,11 +41,9 @@ const args = process.argv.slice(2);
 const FICHERO = args.find((a) => !a.startsWith("--"));
 const CLIENTES = (args.find((a) => a.startsWith("--clientes=")) || "").split("=")[1] || null;
 const DRY = args.includes("--dry-run");
-const SOLO_CLIENTES = args.includes("--solo-clientes");
-const SOLO_RESERVAS = args.includes("--solo-reservas");
 const LOTE = 500;
 
-if (!FICHERO && !CLIENTES) {
+if (!FICHERO) {
   console.error("Uso: node scripts/cargar-cover-tracking.mjs <tracking.csv> [--clientes=<clientes.tsv>] [--dry-run]");
   process.exit(1);
 }
@@ -128,16 +129,17 @@ function leerTabla(ruta, sep) {
   return { cab, ix, datos, get: (f, col) => (ix[col] == null ? "" : (f[ix[col]] ?? "").trim()) };
 }
 
-/** Misma regla que reservas_norm_tel: solo dígitos; 0034… / 34… de 11-13 cifras → 9 cifras. */
+/** Teléfono normalizado: misma regla que sincronizar-clientes-cover.mjs (España a 9 cifras,
+    resto con prefijo internacional delante sin duplicarlo). */
 function normTel(prefijo, tel) {
   let d = String(tel || "").replace(/\D/g, "");
   const p = String(prefijo || "").replace(/\D/g, "");
   if (!d) return null;
-  if (p && p !== "34") d = p + d;
-  else if (p === "34" && d.length === 9) d = d;
+  if (d.startsWith("00")) d = d.slice(2);
+  if (p && p !== "34" && !(d.startsWith(p) && d.length - p.length >= 9)) d = p + d;
   if (d.length === 13 && d.startsWith("0034")) d = d.slice(4);
   else if (d.length === 11 && d.startsWith("34")) d = d.slice(2);
-  return d || null;
+  return d.length >= 6 ? d : null;
 }
 const normEmail = (e) => {
   const x = String(e || "").trim().toLowerCase();
@@ -314,20 +316,17 @@ function resolverPrescriptor(nombre) {
   return p;
 }
 
-/* ================= clientes existentes ================= */
+/* ================= clientes existentes (solo lectura) ================= */
 
-const clientesBD = await todas("reservas_clientes", "id,nombre,apellidos,telefono,email,telefono_norm,email_norm,etiquetas,vip,lista_negra,cover_id,cover_meta,pais,codigo_postal,empresa,idioma,consentimiento_marketing,fecha_nacimiento,telefono_adicional,numero_socio,alergias,notas");
-const porTel = new Map(), porEmail = new Map(), porCover = new Map();
-// Clientes sin teléfono ni email (walk-ins con solo nombre): se casan por nombre para no
-// duplicarlos en cada pasada.
-const clientesPorNombre = new Map(); // nombre|apellidos (minúsculas) → cliente
+const clientesBD = await todas("reservas_clientes", "id,nombre,apellidos,telefono,email,telefono_norm,email_norm,cover_id");
+const porTel = new Map(), porEmail = new Map();
+const clientesPorNombre = new Map(); // walk-ins sin contacto: nombre|apellidos → cliente
 const nombreKey = (n, a) => `${String(n || "").trim().toLowerCase()}|${String(a || "").trim().toLowerCase()}`;
 for (const c of clientesBD) {
   const t = c.telefono_norm || normTel("", c.telefono);
   const e = c.email_norm || normEmail(c.email);
   if (t && !porTel.has(t)) porTel.set(t, c);
   if (e && !porEmail.has(e)) porEmail.set(e, c);
-  if (c.cover_id) porCover.set(c.cover_id, c);
   if (!t && !e) {
     const k = nombreKey(c.nombre, c.apellidos);
     if (!clientesPorNombre.has(k)) clientesPorNombre.set(k, c);
@@ -335,129 +334,12 @@ for (const c of clientesBD) {
 }
 console.log(`Base: ${restaurantes.length} restaurantes, ${salas.length} salas, ${mesas.length} mesas, ${clientesBD.length} clientes, ${etiquetas.length} etiquetas, ${prescriptores.length} prescriptores`);
 
-const clientesNuevos = []; // filas a insertar
-const clientesCambios = new Map(); // id → campos a actualizar
-
-function separarNombre(nombre, apellidos) {
-  let n = String(nombre || "").trim(), a = String(apellidos || "").trim();
-  if (!a && n.includes(" ")) { /* Cover ya separa; si no, dejamos todo en nombre */ }
-  return [n, a];
-}
-
-/** Devuelve el cliente (existente o nuevo en memoria) para unos datos de contacto; acumula cambios. */
-function resolverCliente(d) {
+/** Ficha existente para un contacto del tracking (no crea ni modifica nada). */
+function buscarCliente(d) {
   const tel = normTel(d.prefijo, d.telefono);
   const email = normEmail(d.email);
-  let c = (d.cover_id && porCover.get(d.cover_id)) || (tel && porTel.get(tel)) || (email && porEmail.get(email)) || null;
-  const [nombre, apellidos] = separarNombre(d.nombre, d.apellidos);
-  if (!c && !tel && !email) {
-    if (!nombre && !apellidos) return null;
-    c = clientesPorNombre.get(nombreKey(nombre, apellidos));
-    if (c) return c;
-  }
-  if (!c) {
-    c = {
-      _nuevo: true,
-      cuenta_id: CUENTA_ID,
-      nombre: nombre || apellidos || "Sin nombre",
-      apellidos: nombre ? apellidos || null : null,
-      telefono: tel,
-      email,
-      pais: d.pais || "ES",
-      codigo_postal: d.cp || null,
-      empresa: d.empresa || null,
-      idioma: d.idioma || "es",
-      consentimiento_marketing: !!d.consentimiento,
-      vip: false,
-      lista_negra: false,
-      etiquetas: [],
-      alergias: d.alergias || null,
-      notas: d.notas || null,
-      fecha_nacimiento: d.fecha_nacimiento || null,
-      telefono_adicional: d.telefono_adicional || null,
-      numero_socio: d.numero_socio || null,
-      cover_id: d.cover_id || null,
-      cover_meta: d.cover_meta || null,
-      creado_en: d.creado_en || undefined,
-    };
-    clientesNuevos.push(c);
-    if (tel) porTel.set(tel, c);
-    if (email) porEmail.set(email, c);
-    if (d.cover_id) porCover.set(d.cover_id, c);
-    if (!tel && !email && !d.cover_id) clientesPorNombre.set(nombreKey(nombre, apellidos), c);
-  } else {
-    // completar huecos del existente (sin pisar lo que ya hay)
-    const cambios = clientesCambios.get(c.id) || {};
-    const pon = (campo, valor) => { if (!vacio(valor) && vacio(c[campo]) && !igualJson(c[campo], valor)) { cambios[campo] = valor; c[campo] = valor; } };
-    if (apellidos && vacio(c.apellidos)) {
-      const n = String(c.nombre || "").trim();
-      if (n.toLowerCase().endsWith(" " + apellidos.toLowerCase())) {
-        cambios.nombre = n.slice(0, n.length - apellidos.length).trim(); c.nombre = cambios.nombre;
-      }
-      cambios.apellidos = apellidos; c.apellidos = apellidos;
-    }
-    if (tel && vacio(c.telefono) && (!porTel.has(tel) || porTel.get(tel) === c)) { pon("telefono", tel); porTel.set(tel, c); }
-    pon("email", email);
-    if (d.pais && (vacio(c.pais) || c.pais === "ES") && d.pais !== c.pais) { cambios.pais = d.pais; c.pais = d.pais; }
-    pon("codigo_postal", d.cp);
-    pon("empresa", d.empresa);
-    if (d.idioma && d.idioma !== "es" && (vacio(c.idioma) || c.idioma === "es")) { cambios.idioma = d.idioma; c.idioma = d.idioma; }
-    if (d.consentimiento && !c.consentimiento_marketing) { cambios.consentimiento_marketing = true; c.consentimiento_marketing = true; }
-    pon("alergias", d.alergias);
-    pon("notas", d.notas);
-    pon("fecha_nacimiento", d.fecha_nacimiento);
-    pon("telefono_adicional", d.telefono_adicional);
-    pon("numero_socio", d.numero_socio);
-    pon("cover_id", d.cover_id);
-    pon("cover_meta", d.cover_meta);
-    if (Object.keys(cambios).length) clientesCambios.set(c.id, cambios);
-    // El mismo ID de Cover puede venir en varias filas (un cliente por restaurante): que todas
-    // casen con este cliente aunque el cover_id guardado sea otro. Lo mismo con el email.
-    if (d.cover_id && !porCover.has(d.cover_id)) porCover.set(d.cover_id, c);
-    if (email && !porEmail.has(email)) porEmail.set(email, c);
-  }
-  // etiquetas, VIP, lista negra (unión)
-  if (d.etiquetas && d.etiquetas.length) c._etq = [...(c._etq || []), ...d.etiquetas];
-  if (d.etiquetas?.some((e) => /\bvip\b/i.test(e.nombre))) c._vip = true;
-  if (d.etiquetas?.some((e) => /black[\s-]?list/i.test(e.nombre))) c._negra = true;
-  return c;
-}
-
-/* ================= 1. listado de clientes ================= */
-
-if (CLIENTES && !SOLO_RESERVAS) {
-  const t = leerTabla(CLIENTES, "\t");
-  console.log(`\nClientes de Cover: ${t.datos.length} filas (${t.cab.length} columnas)`);
-  let n = 0;
-  for (const f of t.datos) {
-    const g = (c) => t.get(f, c);
-    const notas = [g("Notas del cliente"), g("Preferencia de mesa") && `Mesa: ${g("Preferencia de mesa")}`, g("Preferencia de camarero") && `Camarero: ${g("Preferencia de camarero")}`, g("Preferencia alimentarias") && `Preferencias: ${g("Preferencia alimentarias")}`, g("Campo Adicional")].filter(Boolean).join(" · ") || null;
-    const reg = g("Fecha registro");
-    resolverCliente({
-      cover_id: g("ID") || null,
-      nombre: g("Nombre"),
-      apellidos: g("Apellidos"),
-      prefijo: g("Código"),
-      telefono: g("Teléfono"),
-      email: g("Email"),
-      pais: g("País") || null,
-      cp: g("Código Postal") || null,
-      empresa: g("Empresa") || null,
-      idioma: IDIOMAS[g("Idioma").toLowerCase()] || null,
-      consentimiento: siNo(g("Subscrito")),
-      alergias: g("Restricciones alimentarias") || null,
-      notas,
-      fecha_nacimiento: /^\d{4}-\d{2}-\d{2}$/.test(g("Fecha de nacimiento")) ? g("Fecha de nacimiento") : null,
-      telefono_adicional: g("Teléfono 2") ? normTel("", g("Teléfono 2")) : null,
-      numero_socio: g("Número de socio") && g("Número de socio") !== "0" ? g("Número de socio") : null,
-      etiquetas: resolverEtiquetas("cliente", g("Etiquetas de cliente")),
-      rest: g("Origen del cliente"),
-      creado_en: /^\d{4}-\d{2}-\d{2}$/.test(reg) ? tsMadrid(reg, "12:00:00") : null,
-      cover_meta: { origen: g("Origen del cliente") || null, reservas_cover: Number(g("Reservas")) || 0, direccion: g("Dirección") || null },
-    });
-    if (++n % 10000 === 0) process.stdout.write(`\r  procesados ${n}`);
-  }
-  console.log(`\r  procesados ${n}`);
+  return (tel && porTel.get(tel)) || (email && porEmail.get(email))
+    || (!tel && !email ? clientesPorNombre.get(nombreKey(d.nombre, d.apellidos)) : null) || null;
 }
 
 /* ================= 2. tracking de reservas ================= */
@@ -468,7 +350,7 @@ const mesasExtra = []; // {reserva (obj o id), mesa}
 const stats = { filas: 0, sinRestaurante: 0, estadoDesconocido: new Map(), sinMesa: 0, nuevas: 0, cambiadas: 0, iguales: 0, sinCliente: 0 };
 let reservasBD = [];
 
-if (FICHERO && !SOLO_CLIENTES) {
+if (FICHERO) {
   const t = leerTabla(FICHERO, ";");
   console.log(`\nTracking de Cover: ${t.datos.length} filas (${t.cab.length} columnas)`);
   reservasBD = await todas("reservas_reservas", "id,localizador,cliente_id,restaurante_id,turno_id,mesa_id,zona_id,fecha,hora,pax,estado,origen,canal,notas_cliente,notas_internas,creado_en,tipo,estado_pago,cancelada_por,cancelada_en,llegada_en,sentada_en,salida_en,reconfirmada_en,pais,empresa,prescriptor_id,etiquetas,cover_id,cover_meta,notificar,consentimiento_marketing");
@@ -528,7 +410,7 @@ if (FICHERO && !SOLO_CLIENTES) {
     }
 
     const etq = resolverEtiquetas("reserva", g("Etiquetas de reserva"));
-    const cliente = resolverCliente({
+    const cliente = buscarCliente({
       nombre: g("Nombre"),
       apellidos: g("Apellidos"),
       prefijo: g("Prefijo"),
@@ -606,27 +488,56 @@ console.log(`\nResumen previo:`);
 console.log(`  mesas nuevas: ${nuevasMesas.length}${nuevasMesas.length ? " → " + nuevasMesas.map((m) => `${salas.find((s) => s.id === m.sala_id)?.nombre}/${m.nombre}`).join(", ") : ""}`);
 console.log(`  etiquetas nuevas: ${nuevasEtq.length}${nuevasEtq.length ? " → " + nuevasEtq.map((e) => `${e.ambito}:${e.nombre}`).join(", ") : ""}`);
 console.log(`  prescriptores nuevos: ${nuevosPresc.length}${nuevosPresc.length ? " → " + nuevosPresc.map((p) => p.nombre).join(", ") : ""}`);
-console.log(`  clientes nuevos: ${clientesNuevos.length} · existentes con datos nuevos: ${clientesCambios.size}`);
-{
-  const tipos = { con_cover_id: 0, con_telefono: 0, con_email: 0, solo_nombre: 0 };
-  for (const c of clientesNuevos) {
-    if (c.cover_id) tipos.con_cover_id++; else if (c.telefono) tipos.con_telefono++; else if (c.email) tipos.con_email++; else tipos.solo_nombre++;
-  }
-  const campos = new Map();
-  for (const cambios of clientesCambios.values()) for (const k of Object.keys(cambios)) campos.set(k, (campos.get(k) || 0) + 1);
-  console.log(`    nuevos por tipo: ${JSON.stringify(tipos)} · campos completados: ${JSON.stringify(Object.fromEntries(campos))}`);
-  if (process.env.DEBUG_COVER) {
-    console.log(`    ids de Cover de 3 nuevos: ${clientesNuevos.filter((c) => c.cover_id).slice(0, 3).map((c) => c.cover_id).join(", ")}`);
-    const muestra = [...clientesCambios.entries()].filter(([id]) => id).slice(0, 3).map(([id, ch]) => `${id}:${Object.keys(ch).join("+")}`);
-    console.log(`    muestra de cambios en existentes: ${muestra.join(" | ")}`);
-  }
-}
-if (FICHERO && !SOLO_CLIENTES) {
+if (FICHERO) {
   console.log(`  reservas: ${stats.filas} filas · nuevas ${stats.nuevas} · ya existentes ${reservasCambios.length} · sin restaurante ${stats.sinRestaurante} · sin mesa ${stats.sinMesa} · sin cliente ${stats.sinCliente}`);
   if (stats.estadoDesconocido.size) console.log(`  ESTADOS DESCONOCIDOS (no cargados): ${[...stats.estadoDesconocido].map(([k, v]) => `${k || "(vacío)"}×${v}`).join(", ")}`);
 }
 
-if (DRY) { console.log("\nSimulación: no se ha escrito nada."); process.exit(0); }
+// 3.4 reservas
+const limpiar = (f) => {
+  const { _cliente, _mesas, _presc, _etq, _id, _existente, creado_en, ...x } = f;
+  x.cliente_id = _cliente?.id ?? null;
+  x.mesa_id = _mesas[0]?.id ?? null;
+  x.prescriptor_id = _presc?.id ?? null;
+  x.etiquetas = _etq.map((e) => e.id).filter(Boolean);
+  if (creado_en) x.creado_en = creado_en;
+  return x;
+};
+// cambios de las reservas existentes (se calculan también en simulación)
+const filasReservas = [];
+{
+  const CAMPOS = ["restaurante_id", "turno_id", "zona_id", "fecha", "hora", "pax", "estado", "cancelada_por", "cancelada_en", "llegada_en", "sentada_en", "salida_en", "origen", "canal", "tipo", "estado_pago", "notas_cliente", "notas_internas", "pais", "empresa", "consentimiento_marketing", "notificar", "cover_id", "cover_meta", "mesa_id", "prescriptor_id", "etiquetas"];
+  const filas = [];
+  for (const f of reservasCambios) {
+    const x = limpiar(f);
+    const e = f._existente;
+    const cambios = {};
+    for (const k of CAMPOS) {
+      let nuevo = x[k], viejo = e[k];
+      if (k === "hora") { nuevo = String(nuevo).slice(0, 8); viejo = String(viejo).slice(0, 8); }
+      if (k === "mesa_id" && !nuevo && viejo) continue; // Cover sin mesa: dejamos la que hay
+      if (k === "notas_internas" && !nuevo && viejo) continue;
+      if (k === "etiquetas" && igualJson([...(nuevo || [])].sort(), [...(viejo || [])].sort())) continue;
+      if ((k === "cancelada_en" || k === "llegada_en" || k === "sentada_en" || k === "salida_en") && nuevo && viejo && Math.abs(new Date(nuevo) - new Date(viejo)) < 1000) continue;
+      if (!igualJson(nuevo, viejo)) cambios[k] = nuevo;
+    }
+    // El upsert por id necesita la fila completa (las columnas not null sin default se evalúan en el
+    // INSERT aunque luego gane el ON CONFLICT): fila existente + cambios.
+    if (Object.keys(cambios).length) { filas.push({ ...e, ...cambios, cuenta_id: CUENTA_ID }); stats.cambiadas++; } else stats.iguales++;
+    for (const m of f._mesas.slice(1)) if (m.id) mesasExtra.push({ cuenta_id: CUENTA_ID, reserva_id: f._id, mesa_id: m.id });
+  }
+  filasReservas.push(...filas);
+}
+console.log(`  reservas existentes con cambios: ${filasReservas.length} · sin cambios: ${stats.iguales}`);
+
+if (DRY) {
+  console.log("\nSimulación de reservas: no se ha escrito nada.");
+  if (CLIENTES) {
+    console.log("\nSimulación de clientes:\n");
+    spawnSync(process.execPath, [resolve("scripts/sincronizar-clientes-cover.mjs"), FICHERO, CLIENTES, "--dry-run"], { stdio: "inherit" });
+  }
+  process.exit(0);
+}
 
 // 3.1 catálogos
 if (nuevasMesas.length) {
@@ -642,73 +553,7 @@ if (nuevosPresc.length) {
   for (const p of ins) { const o = prescNuevos.get(p.nombre.trim().toLowerCase()); if (o) o.id = p.id; }
 }
 
-// 3.2 clientes nuevos (etiquetas/VIP/lista negra resueltas ya)
-const idsEtq = (c) => [...new Set([...(c.etiquetas || []), ...((c._etq || []).map((e) => e.id).filter(Boolean))])];
-if (clientesNuevos.length) {
-  const filas = clientesNuevos.map((c) => {
-    const { _nuevo, _etq, _vip, _negra, creado_en, ...x } = c;
-    const fila = { ...x, etiquetas: idsEtq(c), vip: !!_vip, lista_negra: !!_negra };
-    if (creado_en) fila.creado_en = creado_en;
-    return fila;
-  });
-  // Inserción por lotes; si un lote choca con el índice único de teléfono (cuenta_id, telefono)
-  // —teléfonos que ya estaban en la base con otro formato—, ese lote va fila a fila y la fila
-  // que choca se casa con el cliente existente en vez de crear uno nuevo.
-  const ins = [];
-  let casados = 0;
-  for (let i = 0; i < filas.length; i += LOTE) {
-    const lote = filas.slice(i, i + LOTE);
-    const { data, error } = await sb.from("reservas_clientes").insert(lote, { defaultToNull: false }).select("id,telefono_norm,email_norm,cover_id");
-    if (!error) { ins.push(...(data || [])); }
-    else if (/tel_unico|duplicate key/i.test(error.message)) {
-      for (const fila of lote) {
-        const r1 = await sb.from("reservas_clientes").insert(fila, { defaultToNull: false }).select("id,telefono_norm,email_norm,cover_id").single();
-        if (!r1.error) { ins.push(r1.data); continue; }
-        if (process.env.DEBUG_COVER) console.log(`\n    fila rechazada (${fila.cover_id || "sin cover_id"}): ${r1.error.message}`);
-        const r2 = await sb.from("reservas_clientes").select("id,telefono_norm,email_norm,cover_id")
-          .eq("cuenta_id", CUENTA_ID).eq("telefono", fila.telefono).limit(1).maybeSingle();
-        if (r2.error || !r2.data) throw new Error(`insert reservas_clientes: ${r1.error.message}`);
-        ins.push({ ...r2.data, telefono_norm: fila.telefono, cover_id: fila.cover_id || r2.data.cover_id });
-        casados++;
-      }
-    } else throw new Error(`insert reservas_clientes: ${error.message}`);
-    if (process.env.DEBUG_COVER && error) console.log(`\n    lote ${i / LOTE + 1} con conflicto: ${error.message}`);
-    process.stdout.write(`\r  reservas_clientes: insertadas ${Math.min(i + LOTE, filas.length)}/${filas.length}   `);
-  }
-  console.log(casados ? `\n  (${casados} teléfonos ya existían con otro formato: casados con el cliente existente)` : "");
-  // casar ids devueltos con los objetos en memoria (mismo orden de inserción)
-  if (ins.length === clientesNuevos.length) clientesNuevos.forEach((c, i) => { c.id = ins[i].id; });
-  else {
-    const byTel = new Map(ins.filter((x) => x.telefono_norm).map((x) => [x.telefono_norm, x.id]));
-    const byEmail = new Map(ins.filter((x) => x.email_norm).map((x) => [x.email_norm, x.id]));
-    const byCover = new Map(ins.filter((x) => x.cover_id).map((x) => [x.cover_id, x.id]));
-    for (const c of clientesNuevos) c.id = (c.cover_id && byCover.get(c.cover_id)) || (c.telefono && byTel.get(c.telefono)) || (c.email && byEmail.get(c.email)) || c.id;
-  }
-}
-// 3.3 clientes existentes: huecos + etiquetas/VIP/lista negra
-{
-  const filas = [];
-  for (const c of clientesBD) {
-    const cambios = { ...(clientesCambios.get(c.id) || {}) };
-    const etq = idsEtq(c);
-    if (!igualJson([...etq].sort(), [...(c.etiquetas || [])].sort())) cambios.etiquetas = etq;
-    if (c._vip && !c.vip) cambios.vip = true;
-    if (c._negra && !c.lista_negra) cambios.lista_negra = true;
-    if (Object.keys(cambios).length) filas.push({ id: c.id, cuenta_id: CUENTA_ID, ...cambios });
-  }
-  if (filas.length) await upsertLotes("reservas_clientes", filas, "id");
-}
-
-// 3.4 reservas
-const limpiar = (f) => {
-  const { _cliente, _mesas, _presc, _etq, _id, _existente, creado_en, ...x } = f;
-  x.cliente_id = _cliente?.id ?? null;
-  x.mesa_id = _mesas[0]?.id ?? null;
-  x.prescriptor_id = _presc?.id ?? null;
-  x.etiquetas = _etq.map((e) => e.id).filter(Boolean);
-  if (creado_en) x.creado_en = creado_en;
-  return x;
-};
+// 3.2 reservas
 if (reservasNuevas.length) {
   const ins = await insertarLotes("reservas_reservas", reservasNuevas.map(limpiar), "id,localizador");
   const porLoc = new Map(ins.map((r) => [String(r.localizador).toUpperCase(), r.id]));
@@ -717,30 +562,7 @@ if (reservasNuevas.length) {
     for (const m of f._mesas.slice(1)) if (id && m.id) mesasExtra.push({ cuenta_id: CUENTA_ID, reserva_id: id, mesa_id: m.id });
   }
 }
-{
-  const CAMPOS = ["restaurante_id", "turno_id", "zona_id", "fecha", "hora", "pax", "estado", "cancelada_por", "cancelada_en", "llegada_en", "sentada_en", "salida_en", "origen", "canal", "tipo", "estado_pago", "notas_cliente", "notas_internas", "pais", "empresa", "consentimiento_marketing", "notificar", "cover_id", "cover_meta", "cliente_id", "mesa_id", "prescriptor_id", "etiquetas"];
-  const filas = [];
-  for (const f of reservasCambios) {
-    const x = limpiar(f);
-    const e = f._existente;
-    const cambios = {};
-    for (const k of CAMPOS) {
-      let nuevo = x[k], viejo = e[k];
-      if (k === "hora") { nuevo = String(nuevo).slice(0, 8); viejo = String(viejo).slice(0, 8); }
-      if (k === "cliente_id" && !nuevo) continue; // no quitamos un cliente ya enlazado
-      if (k === "mesa_id" && !nuevo && viejo) continue; // Cover sin mesa: dejamos la que hay
-      if (k === "notas_internas" && !nuevo && viejo) continue;
-      if (k === "etiquetas" && igualJson([...(nuevo || [])].sort(), [...(viejo || [])].sort())) continue;
-      if ((k === "cancelada_en" || k === "llegada_en" || k === "sentada_en" || k === "salida_en") && nuevo && viejo && Math.abs(new Date(nuevo) - new Date(viejo)) < 1000) continue;
-      if (!igualJson(nuevo, viejo)) cambios[k] = nuevo;
-    }
-    // El upsert por id necesita la fila completa (las columnas not null sin default se evalúan en el
-    // INSERT aunque luego gane el ON CONFLICT): fila existente + cambios.
-    if (Object.keys(cambios).length) { filas.push({ ...e, ...cambios, cuenta_id: CUENTA_ID }); stats.cambiadas++; } else stats.iguales++;
-    for (const m of f._mesas.slice(1)) if (m.id) mesasExtra.push({ cuenta_id: CUENTA_ID, reserva_id: f._id, mesa_id: m.id });
-  }
-  if (filas.length) await upsertLotes("reservas_reservas", filas, "id");
-}
+if (filasReservas.length) await upsertLotes("reservas_reservas", filasReservas, "id");
 if (mesasExtra.length) await upsertLotes("reservas_reserva_mesas", mesasExtra, "reserva_id,mesa_id", true);
 
 /* ================= 4. informe ================= */
@@ -754,6 +576,15 @@ const contar = async (tabla, filtro) => {
 };
 console.log(`\nHecho.`);
 console.log(`  reservas: nuevas ${stats.nuevas} · actualizadas ${stats.cambiadas} · sin cambios ${stats.iguales}`);
-console.log(`  clientes: nuevos ${clientesNuevos.length} · actualizados ${clientesCambios.size}`);
 console.log(`  mesas creadas ${nuevasMesas.length} · etiquetas ${nuevasEtq.length} · prescriptores ${nuevosPresc.length} · mesas extra ${mesasExtra.length}`);
 console.log(`  en la base ahora: ${await contar("reservas_reservas")} reservas (${await contar("reservas_reservas", (q) => q.not("cover_id", "is", null))} con cover_id), ${await contar("reservas_clientes")} clientes, ${await contar("reservas_mensajes", (q) => q.eq("estado", "pendiente"))} mensajes pendientes (debe ser 0 tras una carga)`);
+
+/* ================= 5. clientes ================= */
+
+if (CLIENTES) {
+  console.log(`\nSincronizando clientes con Cover…\n`);
+  const r = spawnSync(process.execPath, [resolve("scripts/sincronizar-clientes-cover.mjs"), FICHERO, CLIENTES], { stdio: "inherit" });
+  if (r.status !== 0) process.exit(r.status ?? 1);
+} else {
+  console.log("\nAviso: sin --clientes=<listado.tsv> no se sincronizan las fichas de cliente.");
+}
