@@ -64,10 +64,24 @@ export default async function EmpleadoPage() {
     (c): c is { id: string; nombre: string } => !!c && !vistos.has(c.id) && !!vistos.add(c.id),
   );
 
+  // Pedidos a proveedores: un empleado solo entra con concesión expresa del módulo
+  // (Usuarios), contratado por su cuenta y sin veto. Mismo criterio que exigirModulo.
+  const { data: miPerfil } = await sb.from("perfiles").select("id, cuenta_id").eq("id", user.id).maybeSingle();
+  let conPedidos = false;
+  if (miPerfil) {
+    const [{ data: contratado }, { data: concedido }, { data: vetado }] = await Promise.all([
+      sb.from("modulos_contratados").select("activo").eq("cuenta_id", miPerfil.cuenta_id).eq("modulo_id", "pedidos").maybeSingle(),
+      sb.from("modulos_concedidos").select("modulo_id").eq("perfil_id", miPerfil.id).eq("modulo_id", "pedidos").maybeSingle(),
+      sb.from("modulos_vetados").select("modulo_id").eq("perfil_id", miPerfil.id).eq("modulo_id", "pedidos").maybeSingle(),
+    ]);
+    conPedidos = contratado?.activo === true && !!concedido && !vetado;
+  }
+
   return (
     <EmpleadoApp
       empleado={{ id: emp.id, nombre: emp.nombre, fichajeMovil: !!emp.fichaje_movil, centroPrincipal: emp.centro_principal_id }}
       centros={centros}
+      conPedidos={conPedidos}
     />
   );
 }

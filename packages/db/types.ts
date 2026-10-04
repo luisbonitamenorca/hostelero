@@ -1808,6 +1808,63 @@ export type Database = {
         }
         Relationships: []
       }
+      compras_catalogo_import: {
+        Row: {
+          actualizados: number
+          archivo: string | null
+          creado_en: string
+          creado_por: string | null
+          creados: number
+          cuenta_id: string
+          detalle: Json | null
+          errores: number
+          filas: number
+          id: string
+          proveedor_id: string
+        }
+        Insert: {
+          actualizados?: number
+          archivo?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          creados?: number
+          cuenta_id?: string
+          detalle?: Json | null
+          errores?: number
+          filas?: number
+          id?: string
+          proveedor_id: string
+        }
+        Update: {
+          actualizados?: number
+          archivo?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          creados?: number
+          cuenta_id?: string
+          detalle?: Json | null
+          errores?: number
+          filas?: number
+          id?: string
+          proveedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_catalogo_import_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_catalogo_import_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "compras_proveedor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras_centro_coste: {
         Row: {
           activo: boolean
@@ -2605,39 +2662,419 @@ export type Database = {
           },
         ]
       }
+      compras_pedido: {
+        Row: {
+          actualizado_en: string
+          albaran_doc_id: string | null
+          canal_envio: string | null
+          centro_id: string
+          cotejado_en: string | null
+          cotejo_detalle: Json | null
+          cotejo_estado: string
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          enviado_en: string | null
+          enviado_por: string | null
+          estado: string
+          factura_doc_id: string | null
+          fecha_entrega: string | null
+          id: string
+          idioma: string | null
+          interpretacion: Json | null
+          notas: string | null
+          numero: string
+          origen: string
+          proveedor_id: string | null
+          total_estimado: number | null
+          transcripcion: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          albaran_doc_id?: string | null
+          canal_envio?: string | null
+          centro_id: string
+          cotejado_en?: string | null
+          cotejo_detalle?: Json | null
+          cotejo_estado?: string
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          enviado_en?: string | null
+          enviado_por?: string | null
+          estado?: string
+          factura_doc_id?: string | null
+          fecha_entrega?: string | null
+          id?: string
+          idioma?: string | null
+          interpretacion?: Json | null
+          notas?: string | null
+          numero?: string
+          origen?: string
+          proveedor_id?: string | null
+          total_estimado?: number | null
+          transcripcion?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          albaran_doc_id?: string | null
+          canal_envio?: string | null
+          centro_id?: string
+          cotejado_en?: string | null
+          cotejo_detalle?: Json | null
+          cotejo_estado?: string
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          enviado_en?: string | null
+          enviado_por?: string | null
+          estado?: string
+          factura_doc_id?: string | null
+          fecha_entrega?: string | null
+          id?: string
+          idioma?: string | null
+          interpretacion?: Json | null
+          notas?: string | null
+          numero?: string
+          origen?: string
+          proveedor_id?: string | null
+          total_estimado?: number | null
+          transcripcion?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_pedido_albaran_doc_id_fkey"
+            columns: ["albaran_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_albaran_doc_id_fkey"
+            columns: ["albaran_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_albaran_doc_id_fkey"
+            columns: ["albaran_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_albaran_doc_id_fkey"
+            columns: ["albaran_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_factura_doc_id_fkey"
+            columns: ["factura_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_cabecera"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_factura_doc_id_fkey"
+            columns: ["factura_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_a3_export_preview"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_factura_doc_id_fkey"
+            columns: ["factura_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_factura_doc_id_fkey"
+            columns: ["factura_doc_id"]
+            isOneToOne: false
+            referencedRelation: "compras_doc_reparto_cuadre"
+            referencedColumns: ["doc_id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "compras_proveedor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_pedido_alias: {
+        Row: {
+          centro_id: string | null
+          creado_en: string
+          creado_por: string | null
+          cuenta_id: string
+          frase: string
+          frase_norm: string
+          id: string
+          idioma: string | null
+          producto_id: string
+          proveedor_id: string | null
+          ultimo_uso: string
+          unidad: string | null
+          usos: number
+        }
+        Insert: {
+          centro_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          frase: string
+          frase_norm: string
+          id?: string
+          idioma?: string | null
+          producto_id: string
+          proveedor_id?: string | null
+          ultimo_uso?: string
+          unidad?: string | null
+          usos?: number
+        }
+        Update: {
+          centro_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuenta_id?: string
+          frase?: string
+          frase_norm?: string
+          id?: string
+          idioma?: string | null
+          producto_id?: string
+          proveedor_id?: string | null
+          ultimo_uso?: string
+          unidad?: string | null
+          usos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_pedido_alias_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_alias_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_alias_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "compras_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_alias_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "compras_proveedor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_pedido_linea: {
+        Row: {
+          cantidad: number
+          cantidad_albaran: number | null
+          cantidad_factura: number | null
+          confianza: number | null
+          creado_en: string
+          cuenta_id: string
+          descripcion: string | null
+          estado_cotejo: string | null
+          id: string
+          nota: string | null
+          orden: number
+          pedido_id: string
+          precio_albaran: number | null
+          precio_estimado: number | null
+          precio_factura: number | null
+          producto_id: string | null
+          texto_original: string | null
+          unidad: string | null
+        }
+        Insert: {
+          cantidad: number
+          cantidad_albaran?: number | null
+          cantidad_factura?: number | null
+          confianza?: number | null
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          estado_cotejo?: string | null
+          id?: string
+          nota?: string | null
+          orden?: number
+          pedido_id: string
+          precio_albaran?: number | null
+          precio_estimado?: number | null
+          precio_factura?: number | null
+          producto_id?: string | null
+          texto_original?: string | null
+          unidad?: string | null
+        }
+        Update: {
+          cantidad?: number
+          cantidad_albaran?: number | null
+          cantidad_factura?: number | null
+          confianza?: number | null
+          creado_en?: string
+          cuenta_id?: string
+          descripcion?: string | null
+          estado_cotejo?: string | null
+          id?: string
+          nota?: string | null
+          orden?: number
+          pedido_id?: string
+          precio_albaran?: number | null
+          precio_estimado?: number | null
+          precio_factura?: number | null
+          producto_id?: string | null
+          texto_original?: string | null
+          unidad?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_pedido_linea_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_linea_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "compras_pedido"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_linea_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "compras_producto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_pedido_numerador: {
+        Row: {
+          anio: number
+          cuenta_id: string
+          ultimo: number
+        }
+        Insert: {
+          anio: number
+          cuenta_id: string
+          ultimo?: number
+        }
+        Update: {
+          anio?: number
+          cuenta_id?: string
+          ultimo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_pedido_numerador_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras_producto: {
         Row: {
+          activo: boolean
+          alias: string[]
+          catalogo_en: string | null
+          categoria: string | null
+          codigo_barras: string | null
           codigo_interno: string | null
           created_at: string
           cuenta_id: string
+          formato: string | null
           id: string
           nombre: string | null
+          origen: string
+          pedible: boolean
+          precio_catalogo: number | null
           proveedor_id: string | null
           proveedor_nombre: string | null
           ref_proveedor: string | null
           ultimo_precio: number | null
+          unidad: string | null
+          unidades_formato: number | null
         }
         Insert: {
+          activo?: boolean
+          alias?: string[]
+          catalogo_en?: string | null
+          categoria?: string | null
+          codigo_barras?: string | null
           codigo_interno?: string | null
           created_at?: string
           cuenta_id?: string
+          formato?: string | null
           id?: string
           nombre?: string | null
+          origen?: string
+          pedible?: boolean
+          precio_catalogo?: number | null
           proveedor_id?: string | null
           proveedor_nombre?: string | null
           ref_proveedor?: string | null
           ultimo_precio?: number | null
+          unidad?: string | null
+          unidades_formato?: number | null
         }
         Update: {
+          activo?: boolean
+          alias?: string[]
+          catalogo_en?: string | null
+          categoria?: string | null
+          codigo_barras?: string | null
           codigo_interno?: string | null
           created_at?: string
           cuenta_id?: string
+          formato?: string | null
           id?: string
           nombre?: string | null
+          origen?: string
+          pedible?: boolean
+          precio_catalogo?: number | null
           proveedor_id?: string | null
           proveedor_nombre?: string | null
           ref_proveedor?: string | null
           ultimo_precio?: number | null
+          unidad?: string | null
+          unidades_formato?: number | null
         }
         Relationships: [
           {
@@ -2658,8 +3095,10 @@ export type Database = {
       }
       compras_proveedor: {
         Row: {
+          albaranes_por_email: boolean
           alias: string | null
           autorizado: boolean | null
+          catalogo_actualizado_en: string | null
           categoria: string | null
           codigo_a3: string | null
           created_at: string
@@ -2677,14 +3116,25 @@ export type Database = {
           nombre_norm: string | null
           pauta_factura: string | null
           pautas: string | null
+          pedible: boolean
+          pedido_canal: string
+          pedido_dias_reparto: number[] | null
+          pedido_email: string | null
+          pedido_hora_corte: string | null
+          pedido_minimo: number | null
+          pedido_notas: string | null
+          pedido_telefono: string | null
+          pedido_whatsapp: string | null
           regimen_iva: string | null
           retencion_modelo: string | null
           retencion_pct: number | null
           tipo_iva_autorep: string | null
         }
         Insert: {
+          albaranes_por_email?: boolean
           alias?: string | null
           autorizado?: boolean | null
+          catalogo_actualizado_en?: string | null
           categoria?: string | null
           codigo_a3?: string | null
           created_at?: string
@@ -2702,14 +3152,25 @@ export type Database = {
           nombre_norm?: string | null
           pauta_factura?: string | null
           pautas?: string | null
+          pedible?: boolean
+          pedido_canal?: string
+          pedido_dias_reparto?: number[] | null
+          pedido_email?: string | null
+          pedido_hora_corte?: string | null
+          pedido_minimo?: number | null
+          pedido_notas?: string | null
+          pedido_telefono?: string | null
+          pedido_whatsapp?: string | null
           regimen_iva?: string | null
           retencion_modelo?: string | null
           retencion_pct?: number | null
           tipo_iva_autorep?: string | null
         }
         Update: {
+          albaranes_por_email?: boolean
           alias?: string | null
           autorizado?: boolean | null
+          catalogo_actualizado_en?: string | null
           categoria?: string | null
           codigo_a3?: string | null
           created_at?: string
@@ -2727,6 +3188,15 @@ export type Database = {
           nombre_norm?: string | null
           pauta_factura?: string | null
           pautas?: string | null
+          pedible?: boolean
+          pedido_canal?: string
+          pedido_dias_reparto?: number[] | null
+          pedido_email?: string | null
+          pedido_hora_corte?: string | null
+          pedido_minimo?: number | null
+          pedido_notas?: string | null
+          pedido_telefono?: string | null
+          pedido_whatsapp?: string | null
           regimen_iva?: string | null
           retencion_modelo?: string | null
           retencion_pct?: number | null
@@ -12536,6 +13006,76 @@ export type Database = {
       norm_nom: { Args: { t: string }; Returns: string }
       norm_nom_compacto: { Args: { t: string }; Returns: string }
       norm_telefono: { Args: { t: string }; Returns: string }
+      pedidos_aprender_alias: {
+        Args: {
+          p_centro?: string
+          p_frase: string
+          p_idioma?: string
+          p_producto: string
+          p_unidad?: string
+        }
+        Returns: string
+      }
+      pedidos_catalogo_centro: {
+        Args: { p_centro: string; p_dias?: number; p_proveedor?: string }
+        Returns: {
+          alias: string[]
+          cantidad_total: number
+          categoria: string
+          codigo_interno: string
+          formato: string
+          nombre: string
+          precio_catalogo: number
+          producto_id: string
+          proveedor_id: string
+          proveedor_nombre: string
+          ref_proveedor: string
+          ultima_cantidad: number
+          ultima_fecha: string
+          ultimo_precio: number
+          unidad: string
+          unidades_formato: number
+          veces: number
+        }[]
+      }
+      pedidos_cotejar: { Args: { p_pedido: string }; Returns: Json }
+      pedidos_cotejo_casar: {
+        Args: {
+          p_clave: string
+          p_doc: string
+          p_producto: string
+          p_ref: string
+          p_usadas: string[]
+        }
+        Returns: {
+          cantidad: number
+          ids: string[]
+          importe: number
+          metodo: string
+          precio: number
+        }[]
+      }
+      pedidos_norm: { Args: { t: string }; Returns: string }
+      pedidos_norm_num: { Args: { t: string }; Returns: string }
+      pedidos_sugerir_documentos: {
+        Args: { p_pedido: string }
+        Returns: {
+          canal: string
+          doc_id: string
+          fecha: string
+          incluye_albaran: boolean
+          mismo_centro: boolean
+          motivo: string
+          n_coinciden: number
+          n_lineas: number
+          num_documento: string
+          puntuacion: number
+          tipo: string
+          total: number
+          vinculado_a: string
+        }[]
+      }
+      pedidos_unidad_norm: { Args: { t: string }; Returns: string }
       perfil_es_de_cuenta: {
         Args: { p_cuenta: string; p_perfil: string }
         Returns: boolean

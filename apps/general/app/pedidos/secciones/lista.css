@@ -1,0 +1,120 @@
+/* Pestaña «Pedidos» (lista). Prefijo pedl-. Usa tokens de globals.css y, de pedidos.css (B),
+   solo .ped-tarjeta, .ped-chip(--estado / --cotejo-estado) y .ped-vacio, sin redefinirlas. */
+
+.pedl {
+  --pedc-verde: var(--verde, #0F6E56);
+  --pedc-coral: var(--coral, #D85A30);
+  --pedc-borde: var(--borde, #DDE2DF);
+  --pedc-gris: var(--gris, #5F6B65);
+  --pedc-gris-claro: var(--gris-claro, #8A9490);
+  display: grid;
+  gap: 12px;
+}
+
+.pedl-filtros { display: grid; gap: 10px; }
+
+/* En dos filas si no caben (a 360 px): todos los filtros a la vista, también el marcado. */
+.pedl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pedl-chip {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 22px;
+  border: 1px solid var(--pedc-borde);
+  background: var(--blanco, #fff);
+  color: var(--tinta, #1B2420);
+  font-family: var(--sans);
+  font-size: 15px;
+  cursor: pointer;
+}
+.pedl-chip--activo {
+  background: var(--grafito, #22282B);
+  border-color: var(--grafito, #22282B);
+  color: var(--blanco, #fff);
+  font-weight: 500;
+}
+
+.pedl-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pedl-select { display: grid; gap: 4px; min-width: 0; }
+.pedl-select span { font-size: 12px; color: var(--pedc-gris); }
+.pedl-select select {
+  min-height: 44px;
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 16px; /* < 16 px: Safari de iPhone amplía la página al tocarlo */
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--pedc-borde);
+  background: var(--blanco, #fff);
+  color: var(--tinta, #1B2420);
+}
+
+.pedl-error { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0; }
+.pedl-reintentar {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pedl-vacio { padding: 36px 16px; text-align: center; color: var(--pedc-gris); }
+.pedl-cuenta { font-family: var(--mono); font-size: 12px; color: var(--pedc-gris-claro); }
+
+.pedl-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pedl-lista > li { min-width: 0; }
+
+.pedl .pedl-tarjeta {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--pedc-borde);
+  border-left: 4px solid var(--pedc-borde);
+  border-radius: 10px;
+  background: var(--blanco, #fff);
+  color: var(--tinta, #1B2420);
+  font-family: var(--sans);
+  font-size: 14px;
+  cursor: pointer;
+}
+.pedl .pedl-tarjeta:hover { border-color: var(--pedc-verde); }
+.pedl .pedl-tarjeta:focus-visible { outline: 2px solid var(--pedc-verde); outline-offset: 2px; }
+.pedl .pedl-tarjeta--borrador { border-left-color: var(--pedc-gris-claro); }
+.pedl .pedl-tarjeta--enviado,
+.pedl .pedl-tarjeta--confirmado { border-left-color: #3B6FB6; }
+.pedl .pedl-tarjeta--recibido_parcial { border-left-color: #BA7517; }
+.pedl .pedl-tarjeta--recibido { border-left-color: var(--pedc-verde); }
+.pedl .pedl-tarjeta--cancelado { border-left-color: var(--pedc-borde); opacity: 0.7; }
+
+.pedl-arriba, .pedl-abajo { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.pedl-numero { font-family: var(--mono); font-size: 13px; color: var(--pedc-gris); }
+.pedl-proveedor {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.pedl-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--pedc-gris); font-size: 14px; }
+.pedl-total { font-family: var(--mono); color: var(--tinta, #1B2420); }
+.pedl-alerta { color: var(--pedc-coral); font-weight: 500; }
+.pedl-cuando { font-size: 12px; color: var(--pedc-gris-claro); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pedl-mas { justify-self: center; min-height: 44px; padding: 0 20px; font-size: 15px; }
+.pedl-nota { font-size: 13px; color: var(--pedc-gris); text-align: center; margin: 4px 0 0; }
+
+@media (min-width: 720px) {
+  .pedl-filtros { grid-template-columns: 1fr auto; align-items: end; }
+  .pedl-selects { grid-template-columns: repeat(2, minmax(180px, 240px)); }
+  .pedl-lista { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}

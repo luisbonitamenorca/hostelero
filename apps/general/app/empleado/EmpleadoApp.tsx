@@ -215,9 +215,11 @@ function useCentroFichaje(centros: Centro[], centroPrincipal: string | null): [s
   return [centroId, setCentroId];
 }
 
-export default function EmpleadoApp({ empleado, centros }: {
+export default function EmpleadoApp({ empleado, centros, conPedidos = false }: {
   empleado: { id: string; nombre: string; fichajeMovil: boolean; centroPrincipal: string | null };
   centros: Centro[];
+  /** Tiene concesión del módulo Pedidos (se la da dirección en Usuarios). */
+  conPedidos?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("turnos");
   const [toast, setToast] = useState<string | null>(null);
@@ -243,6 +245,7 @@ export default function EmpleadoApp({ empleado, centros }: {
         <div className="quien">
           {empleado.nombre}
           <Link href="/cuenta/clave" className="mi-clave">Mi contraseña</Link>
+          {conPedidos ? <Link href="/pedidos" className="mi-clave">Pedidos</Link> : null}
         </div>
         <button className="salir" onClick={() => cerrarSesion()} aria-label="Salir">↩</button>
       </header>

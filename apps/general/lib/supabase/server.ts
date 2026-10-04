@@ -56,8 +56,8 @@ export async function exigirPerfil() {
 /** Módulos visibles por rol. null = todos. Pasará a tabla cuando haya más roles en uso. */
 export const ACCESO_POR_ROL: Record<string, string[] | null> = {
   direccion: null,
-  responsable_area: ["ratios", "rrhh", "tpv", "compras", "crm", "docs", "reservas"],
-  jefe_sala: ["reservas", "visitas", "tpv", "rrhh"],
+  responsable_area: ["ratios", "rrhh", "tpv", "compras", "crm", "docs", "reservas", "pedidos"],
+  jefe_sala: ["reservas", "visitas", "tpv", "rrhh", "pedidos"],
   administracion: ["compras", "docs", "crm", "curso"],
   empleado: [],
 };

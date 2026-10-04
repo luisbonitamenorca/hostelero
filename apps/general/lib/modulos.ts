@@ -30,6 +30,8 @@ export const RUTAS_MODULO: Record<string, string> = {
   // Autogestion del dueño: alta de usuarios y vetos por modulo (solo direccion).
   usuarios: "/usuarios",
   contabilidad: "/finanzas",
+  // Pedidos a proveedores (04-10-2026): dictado/catálogo → borradores → envío → cotejo.
+  pedidos: "/pedidos",
 };
 
 /**
