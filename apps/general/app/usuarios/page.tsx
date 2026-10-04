@@ -18,6 +18,8 @@ const ERRORES: Record<string, string> = {
   datos: "Faltan datos o el correo no es válido.",
   clave: "La contraseña temporal necesita al menos 8 caracteres.",
   existe: "Ya hay un usuario con ese correo.",
+  "clave-debil":
+    "Esa contraseña es demasiado fácil o aparece en filtraciones conocidas. Pon otra más larga (por ejemplo, tres palabras y un número).",
   auth: "No se pudo crear el usuario. Vuelve a intentarlo.",
   perfil: "No se pudo crear el perfil; el alta se ha deshecho entera.",
   configuracion: "Falta configuración en el servidor (clave de servicio).",

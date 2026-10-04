@@ -44,7 +44,15 @@ export async function crearUsuario(formData: FormData) {
     user_metadata: { nombre },
   });
   if (errorAuth || !creado.user) {
-    redirect(`/usuarios?error=${errorAuth?.code === "email_exists" ? "existe" : "auth"}`);
+    // Supabase rechaza contraseñas filtradas o demasiado fáciles (weak_password):
+    // decirlo claro, que el genérico «vuelve a intentarlo» confunde.
+    const motivo =
+      errorAuth?.code === "email_exists"
+        ? "existe"
+        : errorAuth?.code === "weak_password"
+          ? "clave-debil"
+          : "auth";
+    redirect(`/usuarios?error=${motivo}`);
   }
 
   const { error: errorPerfil } = await servicio.from("perfiles").insert({
