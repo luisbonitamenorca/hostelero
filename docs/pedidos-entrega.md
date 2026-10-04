@@ -3,9 +3,10 @@
 Para Luis. Qué es el módulo **Pedidos** (`/pedidos`), cómo se usa, qué hay que conseguir de los
 proveedores, qué tienes que configurar tú y qué queda pendiente.
 
-**Estado:** el módulo está terminado y compila sin errores (`tsc` y `next build`). La base de datos
-ya está preparada. Pero **todavía no está subido** (no hay commit) y **la IA no se ha probado de
-verdad**, porque su clave solo está en Vercel.
+**Estado:** desplegado en producción el 04-10-2026 (commit `6aaa2d5`), en beta. La base de datos está
+aplicada y probada con datos reales, y las pantallas se probaron en local con un usuario de prueba.
+**La interpretación con la IA real falta por probar**, porque su clave solo está en Vercel: hay que
+dictar el primer pedido en producción.
 
 ## 1. Qué es
 
@@ -163,7 +164,10 @@ Conviene empezar por los 10 o 15 proveedores a los que más se pide.
 **Claves IMAP de Infotelecom.** Para que los PDF de los proveedores entren solos en Compras, el
 buzón de `PEDIDOS_BUZON_ALBARANES` tiene que ser el mismo que lee la ingesta de correo de Compras.
 Faltan sus claves en Vercel: `IMAP_HOST`, `IMAP_PORT` (993), `IMAP_USER` e `IMAP_PASS`. La
-ingesta pasa una vez al día, de madrugada. Sin esas claves, los albaranes llegan al buzón pero
+ingesta pasa cada 15 minutos (GitHub Actions) y además a las 05:00 (Vercel). Desde el 04-10-2026 Compras
+carga los albaranes que llegan por correo **solo** de los proveedores con «Envía albaranes por email»
+marcado en Pedidos › Ajustes; los demás se siguen descartando (regla del 18-08: al buzón llegan
+albaranes que no son compras nuestras). Sin las claves IMAP, los albaranes llegan al buzón pero
 alguien tiene que subirlos a Compras a mano.
 
 **Resend.** El dominio del remitente tiene que estar verificado (en verde en Resend). Si no lo está,
@@ -181,8 +185,7 @@ el correo no sale y la app ofrece mandarlo desde el correo de cada uno.
 - Ajustes, importar catálogos, pedir catálogos y borrar lo aprendido: solo dirección y responsables
   de área.
 - Si en Usuarios se le quita el módulo a alguien (veto), no entra aunque su rol lo tenga.
-- Ojo: los empleados todavía **no tienen el botón** en su app (`/empleado`). De momento entran con el
-  enlace directo a `/pedidos` (se puede guardar en la pantalla de inicio del móvil).
+- Los empleados con el permiso tienen el botón «Pedidos» en la cabecera de su app (`/empleado`).
 
 ## 6. La IA
 
@@ -256,7 +259,6 @@ el correo no sale y la app ofrece mandarlo desde el correo de cada uno.
 
 Pendiente técnico (para Code, en sesiones aparte):
 
-- Botón «Pedidos» en la app del empleado (`/empleado`) para quien tenga el permiso.
 - Que la base de datos también exija el rol. Hoy el rol y el módulo los comprueban las pantallas y
   las acciones del servidor; la base solo comprueba la cuenta (igual que en Compras). Necesita una
   migración nueva.
