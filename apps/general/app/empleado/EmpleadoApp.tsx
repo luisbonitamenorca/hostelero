@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./acciones";
 import type { ArchivoTurno, Ausencia, Cambio, Companero, Disponibilidad, Fichaje, JornadaConfirmada, TareaTurno, Turno } from "./acciones";
@@ -239,7 +240,10 @@ export default function EmpleadoApp({ empleado, centros }: {
     <div className="emp">
       <header className="cab">
         <div className="brand">Bonita Equipo</div>
-        <div className="quien">{empleado.nombre}</div>
+        <div className="quien">
+          {empleado.nombre}
+          <Link href="/cuenta/clave" className="mi-clave">Mi contraseña</Link>
+        </div>
         <button className="salir" onClick={() => cerrarSesion()} aria-label="Salir">↩</button>
       </header>
       <main>

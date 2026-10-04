@@ -240,6 +240,7 @@ table.tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   justify-self: start;
 }
 .boton:hover { opacity: 0.92; }
+.boton:disabled, .boton-secundario:disabled { opacity: 0.55; cursor: default; }
 .boton-secundario {
   font-family: var(--sans);
   font-size: 13px;

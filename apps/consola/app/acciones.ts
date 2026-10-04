@@ -17,10 +17,15 @@ export async function iniciarSesion(formData: FormData) {
   if (!correo || !clave) redirect("/login?error=datos");
 
   const supabase = await crearClienteServidor();
-  const { error } = await supabase.auth.signInWithPassword({
+  let { error } = await supabase.auth.signInWithPassword({
     email: correo,
     password: clave,
   });
+  // Al copiar la contraseña de un WhatsApp o un correo en el móvil se suele colar
+  // un espacio al principio o al final: si falla tal cual, se prueba sin ellos.
+  if (error && clave.trim() !== clave && clave.trim()) {
+    ({ error } = await supabase.auth.signInWithPassword({ email: correo, password: clave.trim() }));
+  }
 
   if (error) redirect("/login?error=credenciales");
 

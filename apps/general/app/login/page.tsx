@@ -59,6 +59,9 @@ export default async function PaginaLogin({
             Entrar
           </button>
         </form>
+        <p style={{ margin: "16px 0 0", fontSize: 13, color: "var(--gris)" }}>
+          ¿No la recuerdas? Pide a dirección de tu empresa una contraseña temporal nueva.
+        </p>
       </div>
     </main>
   );

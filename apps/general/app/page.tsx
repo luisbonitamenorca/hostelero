@@ -75,10 +75,18 @@ export default async function Portada() {
             <span className="marca">{cuenta.nombre}</span>
             <span className="pildora-rol">Hostelero</span>
           </div>
-          <div className="cabecera-derecha">
+          {/* Con «Mi contraseña» la fila ya no cabe en un móvil con un correo
+              largo: se deja partir en dos líneas en vez de desbordar. */}
+          <div className="cabecera-derecha" style={{ flexWrap: "wrap", rowGap: 6 }}>
             <span>
               {perfil.correo} · {ROLES[perfil.rol] ?? perfil.rol}
             </span>
+            <Link
+              href="/cuenta/clave"
+              style={{ textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}
+            >
+              Mi contraseña
+            </Link>
             <form action={cerrarSesion}>
               <button
                 className="boton-secundario"

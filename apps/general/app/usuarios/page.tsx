@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirModulo, rolIncluye } from "@/lib/supabase/server";
-import { crearUsuario, cambiarVeto, cambiarConcesion } from "./acciones";
+import { crearClienteServicio } from "@/lib/supabase/servicio";
+import { cambiarVeto, cambiarConcesion } from "./acciones";
+import { ERRORES } from "./errores";
 import FilaAcciones from "./fila-acciones";
+import FormAlta from "./form-alta";
 
 export const dynamic = "force-dynamic";
 
@@ -13,20 +16,6 @@ const ROLES: { id: string; nombre: string; pista: string }[] = [
   { id: "jefe_sala", nombre: "Jefe de sala", pista: "reservas, visitas, TPV, personal" },
   { id: "empleado", nombre: "Empleado", pista: "solo la app de empleado (fichar)" },
 ];
-
-const ERRORES: Record<string, string> = {
-  datos: "Faltan datos o el correo no es válido.",
-  clave: "La contraseña temporal necesita al menos 8 caracteres.",
-  existe: "Ya hay un usuario con ese correo.",
-  "clave-debil":
-    "Esa contraseña es demasiado fácil o aparece en filtraciones conocidas. Pon otra más larga (por ejemplo, tres palabras y un número).",
-  auth: "No se pudo crear el usuario. Vuelve a intentarlo.",
-  perfil: "No se pudo crear el perfil; el alta se ha deshecho entera.",
-  configuracion: "Falta configuración en el servidor (clave de servicio).",
-  propio: "No puedes vetarte a ti mismo el módulo de Usuarios: te quedarías fuera de esta pantalla.",
-  "propio-rol": "Tu propio rol no se cambia desde aquí: la única dirección podría degradarse y dejar la cuenta sin gestión.",
-  "propio-borrado": "No puedes borrarte a ti mismo.",
-};
 
 export default async function Usuarios({
   searchParams,
@@ -61,6 +50,18 @@ export default async function Usuarios({
   const vetado = new Set((vetos ?? []).map((v) => `${v.perfil_id}|${v.modulo_id}`));
   const concedido = new Set((concesiones ?? []).map((c) => `${c.perfil_id}|${c.modulo_id}`));
 
+  // Operadores de Hostelero entre la gente de la cuenta: en su fila no se
+  // ofrecen cambio de rol, «Nueva contraseña» ni «Borrar» (las acciones los
+  // rechazan de todos modos). operadores no es legible con la sesión de una cuenta, por
+  // eso va con la service key y limitado a los ids de esta cuenta.
+  const servicio = crearClienteServicio();
+  const idsGente = (gente ?? []).map((g) => g.id);
+  const { data: operadores } =
+    servicio && idsGente.length > 0
+      ? await servicio.from("operadores").select("id").in("id", idsGente)
+      : { data: [] as { id: string }[] };
+  const esOperador = new Set((operadores ?? []).map((o) => o.id));
+
   return (
     <>
       <header className="cabecera">
@@ -80,53 +81,14 @@ export default async function Usuarios({
       <main className="contenido">
         {sp.error && <p className="aviso-error">{ERRORES[sp.error] ?? "Algo ha fallado."}</p>}
         {sp.borrado && (
-          <div className="tarjeta" style={{ marginBottom: 20 }}>
-            <p>Usuario borrado: su acceso, su perfil y sus vetos han desaparecido a la vez.</p>
-          </div>
-        )}
-        {sp.creado && (
-          <div className="tarjeta" style={{ marginBottom: 20, borderColor: "var(--verde, #0F6E56)" }}>
-            <p>
-              <strong>{sp.creado}</strong> ya puede entrar con su correo y la contraseña
-              temporal. Pídele que la cambie desde «¿Has olvidado tu contraseña?» en el login.
-            </p>
+          <div className="tarjeta" style={{ marginBottom: 20, padding: "0 16px" }}>
+            <p>Usuario borrado: su acceso, su perfil y todo lo vinculado a su usuario han desaparecido.</p>
           </div>
         )}
 
         <section style={{ marginBottom: 30 }}>
           <h2 className="rotulo">Dar de alta a alguien</h2>
-          <div className="tarjeta">
-            <form
-              action={crearUsuario}
-              style={{ display: "grid", gap: 14, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", alignItems: "end" }}
-            >
-              <label className="campo" style={{ margin: 0 }}>
-                <span>Nombre</span>
-                <input name="nombre" type="text" required placeholder="Sonia" />
-              </label>
-              <label className="campo" style={{ margin: 0 }}>
-                <span>Correo</span>
-                <input name="correo" type="email" required placeholder="sonia@bonitamenorca.com" />
-              </label>
-              <label className="campo" style={{ margin: 0 }}>
-                <span>Contraseña temporal (mín. 8)</span>
-                <input name="clave" type="password" required minLength={8} autoComplete="new-password" />
-              </label>
-              <label className="campo" style={{ margin: 0 }}>
-                <span>Rol</span>
-                <select name="rol" defaultValue="direccion">
-                  {ROLES.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.nombre} — {r.pista}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button className="boton" type="submit" style={{ width: "auto" }}>
-                Crear usuario
-              </button>
-            </form>
-          </div>
+          <FormAlta roles={ROLES} />
         </section>
 
         <section>
@@ -142,7 +104,7 @@ export default async function Usuarios({
               <thead>
                 <tr>
                   <th style={{ textAlign: "left", padding: "12px 16px" }}>Usuario</th>
-                  <th style={{ textAlign: "left", padding: "12px 16px" }}>Rol · borrar</th>
+                  <th style={{ textAlign: "left", padding: "12px 16px" }}>Rol · acciones</th>
                   {modulosDeLaCuenta.map((m) => (
                     <th key={m.id} style={{ padding: "12px 8px", fontSize: 11, textAlign: "center" }}>
                       {m.nombre}
@@ -163,6 +125,9 @@ export default async function Usuarios({
                         rol={g.rol ?? "empleado"}
                         nombre={g.nombre ?? g.correo ?? "este usuario"}
                         esYo={g.id === perfil.id}
+                        esOperador={esOperador.has(g.id)}
+                        gestionaUsuarios={concedido.has(`${g.id}|usuarios`)}
+                        soyOperador={esOperador.has(perfil.id)}
                         roles={ROLES.map((r) => ({ id: r.id, nombre: r.nombre }))}
                       />
                     </td>
@@ -231,7 +196,9 @@ export default async function Usuarios({
           <p style={{ color: "var(--gris, #5F6B65)", fontSize: 13, marginTop: 12 }}>
             El veto siempre manda: un módulo vetado no se ve aunque esté concedido. Al
             cambiar a alguien de rol, vetos y concesiones se limpian y arranca con los
-            permisos por defecto del rol nuevo. Las bajas de usuarios, de momento, pídemelas.
+            permisos por defecto del rol nuevo. Si alguien no puede entrar, usa «Nueva
+            contraseña» en su fila en vez de borrarlo: al borrar se pierde todo lo vinculado a su
+            usuario.
           </p>
         </section>
       </main>
