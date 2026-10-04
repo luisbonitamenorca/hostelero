@@ -33,6 +33,23 @@ export const RUTAS_MODULO: Record<string, string> = {
 };
 
 /**
+ * Accesos directos a aplicaciones EXTERNAS por cuenta, mientras no se integran en el esqueleto.
+ * La ficha de la portada abre /m/<modulo> en una pestaña nueva; /m/<modulo> revalida el acceso
+ * (contratado + rol + vetos) y redirige aquí. Las demás cuentas siguen viendo «Próximamente».
+ */
+const ENLACES_EXTERNOS: Record<string, Record<string, string>> = {
+  // Bonita Menorca · TPV de Joan (JS Technology), 04-10-2026, hasta integrarlo.
+  "082c5366-d9ae-49b9-a8b8-8caad73985bd": {
+    tpv: "http://jstechnologymenorcasl.ddns.net:7870/",
+  },
+};
+
+/** URL externa del módulo para esta cuenta, o null si no tiene acceso directo. */
+export function enlaceExterno(moduloId: string, cuentaId: string): string | null {
+  return ENLACES_EXTERNOS[cuentaId]?.[moduloId] ?? null;
+}
+
+/**
  * Módulos que se sirven desde UNA sola aplicación. La portada pinta una ficha
  * por grupo, no una por módulo contratado.
  *

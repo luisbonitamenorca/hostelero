@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
-import { RUTAS_MODULO, GRUPOS_PORTADA, grupoDe } from "@/lib/modulos";
+import { RUTAS_MODULO, GRUPOS_PORTADA, grupoDe, enlaceExterno } from "@/lib/modulos";
 import { cerrarSesion } from "./acciones";
 
 export const dynamic = "force-dynamic";
@@ -154,6 +154,13 @@ export default async function Portada() {
                         <span className="nombre-modulo">{m.nombre}</span>
                         <span className="etiqueta-sin-acceso">Sin acceso</span>
                       </div>
+                    ) : enlaceExterno(m.id, cuenta.id) ? (
+                      // Aplicación externa (p. ej. el TPV de Joan): pestaña nueva, pasando por /m/
+                      // para revalidar el acceso.
+                      <a key={m.id} href={`/m/${m.id}`} target="_blank" rel="noopener noreferrer" className="tarjeta-modulo">
+                        <span className="nombre-modulo">{m.nombre} ↗</span>
+                        {esBeta(m) && <span className="etiqueta-beta">Versión beta</span>}
+                      </a>
                     ) : RUTAS_MODULO[m.id] ? (
                       <Link key={m.id} href={`/m/${m.id}`} className="tarjeta-modulo">
                         <span className="nombre-modulo">{m.nombre}</span>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
-import { RUTAS_MODULO } from "@/lib/modulos";
+import { RUTAS_MODULO, enlaceExterno } from "@/lib/modulos";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +43,10 @@ export default async function PaginaModulo({
     !veto;
 
   if (!conAcceso) notFound();
+
+  // Acceso directo a una aplicación externa de esta cuenta (aún sin integrar).
+  const externo = enlaceExterno(modulo, cuenta.id);
+  if (externo) redirect(externo);
 
   // Módulo ya portado: su tarjeta lleva a su propia app (que revalida el acceso).
   if (RUTAS_MODULO[modulo]) redirect(RUTAS_MODULO[modulo]);
