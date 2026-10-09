@@ -49,6 +49,8 @@ function extraerEventos(cuerpo) {
       const campo = cambio.field || "";
       const valor = cambio.value ?? {};
       if (objeto === "whatsapp_business_account" && campo === "messages") {
+        // Los «statuses» (enviado/entregado/leído) vienen por este mismo campo
+        // sin «messages»: no generan fila.
         const contactos = new Map((valor.contacts ?? []).map((c) => [c.wa_id, c.profile?.name]));
         for (const msj of valor.messages ?? []) {
           filas.push({
@@ -64,6 +66,12 @@ function extraerEventos(cuerpo) {
         }
       } else if (campo === "comments" || campo === "feed" || campo === "mentions" || campo === "mention") {
         const esComentario = campo !== "mentions" && campo !== "mention";
+        // «feed» trae de todo (publicaciones, reacciones, compartidos…): solo
+        // nos interesan los comentarios nuevos (09-10-2026).
+        if (campo === "feed" && !(valor.item === "comment" && valor.verb === "add")) continue;
+        // Los comentarios de la propia página o cuenta (nuestras respuestas)
+        // no son correo entrante.
+        if (esComentario && String(valor.from?.id ?? "") === pagina) continue;
         filas.push({
           canal: objeto === "instagram" ? "instagram" : "facebook",
           tipo: esComentario ? "comentario" : "mencion",
