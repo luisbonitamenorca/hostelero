@@ -17,8 +17,8 @@
   --gris-claro: #7f868e;
   /* acento de la casa: el verde oscuro para rellenos, el claro para texto sobre fondo oscuro */
   --acento: #2F3A45;
-  --acento-claro: #2FA886;
-  --acento-suave: #1e3a33;
+  --acento-claro: #8FAE8B;
+  --acento-suave: #2C3A2A;
   --acento-texto: #FFFFFF;
   /* semáforo (versiones legibles sobre oscuro) */
   --peligro: #E5484D;
@@ -46,7 +46,7 @@
 /* ---- cabecera de la app (layout.tsx): en oscuro, el verde de la casa apagado para no deslumbrar ---- */
 .rsv-capa:has(.rv[data-tema="oscuro"]) { background: #1f2227; }
 .rsv-capa:has(.rv[data-tema="oscuro"]) .rsv-cabecera { background: #16191d; border-bottom: 1px solid #2f343a; }
-.rsv-capa:has(.rv[data-tema="oscuro"]) .rsv-cabecera .marca { color: #2FA886; }
+.rsv-capa:has(.rv[data-tema="oscuro"]) .rsv-cabecera .marca { color: #8FAE8B; }
 .rsv-capa:has(.rv[data-tema="oscuro"]) .rsv-cabecera .rsv-boton { border-color: #4b5158; color: #e6e6e6; }
 .rsv-capa:has(.rv[data-tema="oscuro"]) .rsv-cabecera .rsv-boton:hover { background: #2a2e33; }
 
@@ -115,7 +115,7 @@
 .rv[data-tema="oscuro"] *::-webkit-scrollbar-track { background: transparent; }
 
 /* ---- tema claro: scroll igual de fino ---- */
-.rv[data-tema="claro"] * { scrollbar-color: #C6CECA transparent; scrollbar-width: thin; }
+.rv[data-tema="claro"] * { scrollbar-color: #C8CCC9 transparent; scrollbar-width: thin; }
 .rv[data-tema="claro"] *::-webkit-scrollbar { width: 8px; height: 8px; }
-.rv[data-tema="claro"] *::-webkit-scrollbar-thumb { background: #C6CECA; border-radius: 999px; }
+.rv[data-tema="claro"] *::-webkit-scrollbar-thumb { background: #C8CCC9; border-radius: 999px; }
 .rv[data-tema="claro"] *::-webkit-scrollbar-track { background: transparent; }

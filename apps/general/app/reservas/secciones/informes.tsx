@@ -268,7 +268,7 @@ function TablaInforme<T>(props: {
 const ChipEstado = ({ estado }: { estado: string | null }) => {
   if (!estado) return null;
   const e = estadoDe(estado);
-  return <span className="inf-chip" style={{ background: e.color, color: e.id === "tarjeta_pendiente" ? "#1a1a1a" : "#fff", border: e.borde ? `1px solid ${e.borde}` : undefined }}>{e.texto}</span>;
+  return <span className="inf-chip" style={{ background: e.color, color: e.id === "tarjeta_pendiente" ? "#242D36" : "#fff", border: e.borde ? `1px solid ${e.borde}` : undefined }}>{e.texto}</span>;
 };
 
 const COLS_TRACKING: Col<FilaTracking>[] = [

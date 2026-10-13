@@ -64,7 +64,7 @@
 .rh .plan-cuadrante tfoot td.es-hoy{background:#E6F3EE}
 
 /* ---------- chips ---------- */
-.rh .plan-chip{--c:#888;position:relative;border-radius:6px;padding:3px 16px 3px 6px;margin-bottom:3px;font-size:11px;line-height:1.25;cursor:grab;min-width:0;
+.rh .plan-chip{--c:#7A848C;position:relative;border-radius:6px;padding:3px 16px 3px 6px;margin-bottom:3px;font-size:11px;line-height:1.25;cursor:grab;min-width:0;
   background:color-mix(in srgb,var(--c) 14%,#fff);border:1.5px solid color-mix(in srgb,var(--c) 55%,#fff);border-left:4px solid var(--c);user-select:none}
 .rh .plan-chip:active{cursor:grabbing}
 .rh .plan-chip.borrador{background:#fff;border-style:dashed;border-left-style:solid}
@@ -92,7 +92,7 @@
 .rh .plan-chip.cerrado:active{cursor:default}
 .rh .plan-chip.ajeno{--c:#bbb;background:#f1f1f0;border:1px dashed #c9c9c6;border-left:4px solid #c9c9c6;color:var(--tinta-suave);cursor:default;padding-right:6px}
 .rh .plan-chip.ajeno .plan-chip-h{color:var(--tinta-suave);font-weight:500}
-.rh .plan-aus{--c:#888;font-size:10.5px;font-weight:600;border-radius:6px;padding:2px 6px;margin-bottom:3px;background:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh .plan-aus{--c:#7A848C;font-size:10.5px;font-weight:600;border-radius:6px;padding:2px 6px;margin-bottom:3px;background:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- selección y menú ---------- */
 .rh .plan-flotante{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--linea);box-shadow:0 8px 24px rgba(0,0,0,.14);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;z-index:45}
@@ -119,13 +119,13 @@
 .rh .plan-dia-cob .plan-dia-pista span{font-weight:600;color:var(--green)}
 .rh .plan-dia-cob .plan-dia-pista span.cero{color:var(--linea);font-weight:400}
 .rh .plan-cob-hueco{font-size:9px;color:var(--amber);margin-left:1px}
-.rh .plan-barra{--c:#888;position:absolute;top:8px;height:28px;border-radius:6px;background:var(--c);padding:0 8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.rh .plan-barra{--c:#7A848C;position:absolute;top:8px;height:28px;border-radius:6px;background:var(--c);padding:0 8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .rh .plan-barra small{font-weight:400;opacity:.85}
 .rh .plan-barra.borrador{background:color-mix(in srgb,var(--c) 18%,#fff);color:var(--tinta)!important;border:1.5px dashed var(--c)}
 .rh .plan-barra.ajeno{background:#e4e4e2;color:var(--tinta-suave)!important;cursor:default;border:1px dashed #c9c9c6}
 .rh .plan-barra.conflicto{outline:2px solid var(--red)}
 .rh .plan-barra.sel{outline:2px solid var(--blue)}
-.rh .plan-dia-aus{--c:#888;position:absolute;inset:6px 0;border-radius:6px;background:color-mix(in srgb,var(--c) 20%,#fff);border:1px solid var(--c);color:var(--tinta);font-size:11.5px;font-weight:600;display:flex;align-items:center;padding:0 10px}
+.rh .plan-dia-aus{--c:#7A848C;position:absolute;inset:6px 0;border-radius:6px;background:color-mix(in srgb,var(--c) 20%,#fff);border:1px solid var(--c);color:var(--tinta);font-size:11.5px;font-weight:600;display:flex;align-items:center;padding:0 10px}
 .rh .plan-dia-libres{padding:10px 14px;font-size:12px;color:var(--tinta-suave);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .rh .plan-libre{background:#fff;border:1px solid var(--linea);border-radius:20px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer;color:var(--tinta)}
 .rh .plan-libre:hover{border-color:var(--green);color:var(--green)}
@@ -152,10 +152,10 @@
 .rh .plan-mes td.plan-mes-celda.es-festivo{background:#F3F1FB}
 .rh .plan-mes td.plan-mes-celda.es-hoy{background:#EAF6F1}
 .rh .plan-mes td.plan-mes-celda.ausencia{background:var(--arena)}
-.rh .plan-mes-barra{--c:#888;background:var(--c);border-radius:4px;font-size:9.5px;font-weight:700;line-height:1.3;padding:1px 2px;margin-bottom:2px;text-align:center;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums}
+.rh .plan-mes-barra{--c:#7A848C;background:var(--c);border-radius:4px;font-size:9.5px;font-weight:700;line-height:1.3;padding:1px 2px;margin-bottom:2px;text-align:center;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums}
 .rh .plan-mes-barra.borrador{background:color-mix(in srgb,var(--c) 18%,#fff);border:1.5px dashed var(--c);color:var(--tinta);padding:0 1px}
 .rh .plan-mes-barra.hueco{opacity:.75}
-.rh .plan-mes-aus{--c:#888;background:var(--c);border-radius:4px;font-size:9.5px;font-weight:700;line-height:1.3;padding:1px 2px;margin-bottom:2px;text-align:center;white-space:nowrap;overflow:hidden;letter-spacing:.3px}
+.rh .plan-mes-aus{--c:#7A848C;background:var(--c);border-radius:4px;font-size:9.5px;font-weight:700;line-height:1.3;padding:1px 2px;margin-bottom:2px;text-align:center;white-space:nowrap;overflow:hidden;letter-spacing:.3px}
 .rh .plan-mes tfoot td.plan-mes-total{padding:5px 1px;font-size:10.5px;font-variant-numeric:tabular-nums}
 .rh .plan-mes tfoot td.plan-mes-total .plan-sub{font-size:10px}
 .rh .plan-mes th.plan-th-horas{font-size:11px;white-space:normal;line-height:1.15}
@@ -169,27 +169,27 @@
 .rh-modal .plan-confirmar{max-width:400px}
 .rh-modal .plan-confirmar p{margin:10px 0 0;color:#555;line-height:1.45}
 .rh-modal .plan-plantillas{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 2px}
-.rh-modal .plan-plantilla{background:#fff;border:1px solid #e0e0e0;border-radius:20px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;color:#1a1a1a}
-.rh-modal .plan-plantilla:hover{border-color:#1D9E75;color:#1D9E75;background:#E1F5EE}
-.rh-modal .plan-modal-resumen{display:flex;align-items:center;gap:14px;margin-top:14px;padding:10px 12px;background:#f8f8f6;border-radius:9px}
-.rh-modal .plan-modal-horas{font-size:18px;font-weight:700;color:#1D9E75}
+.rh-modal .plan-plantilla{background:#fff;border:1px solid #DEDFE1;border-radius:20px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;color:#242D36}
+.rh-modal .plan-plantilla:hover{border-color:#5E7D5A;color:#5E7D5A;background:#E7EEE5}
+.rh-modal .plan-modal-resumen{display:flex;align-items:center;gap:14px;margin-top:14px;padding:10px 12px;background:#F3F4F0;border-radius:9px}
+.rh-modal .plan-modal-horas{font-size:18px;font-weight:700;color:#5E7D5A}
 .rh-modal .plan-modal-puesto{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#555}
 .rh-modal .plan-modal-puesto i{width:10px;height:10px;border-radius:50%;display:inline-block}
-.rh-modal .plan-sub{font-size:11px;color:#888;font-weight:400}
+.rh-modal .plan-sub{font-size:11px;color:#7A848C;font-weight:400}
 .rh-modal .plan-resumen{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.rh-modal .plan-resumen div{background:#f8f8f6;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column}
-.rh-modal .plan-resumen b{font-size:20px;color:#1D9E75}
-.rh-modal .plan-resumen span{font-size:11.5px;color:#888}
+.rh-modal .plan-resumen div{background:#F3F4F0;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column}
+.rh-modal .plan-resumen b{font-size:20px;color:#5E7D5A}
+.rh-modal .plan-resumen span{font-size:11.5px;color:#7A848C}
 .rh-modal .plan-aviso-linea{margin-top:12px;font-size:12.5px;color:#BA7517;background:#FAEEDA;border-radius:8px;padding:8px 10px}
-.rh-modal .plan-ok-linea{margin-top:12px;font-size:12.5px;color:#1D9E75}
-.rh-modal .plan-avisos-modal{margin-top:12px;background:#FAEEDA;border-radius:8px;padding:8px 10px;font-size:12px;color:#1a1a1a;max-height:180px;overflow-y:auto}
+.rh-modal .plan-ok-linea{margin-top:12px;font-size:12.5px;color:#5E7D5A}
+.rh-modal .plan-avisos-modal{margin-top:12px;background:#FAEEDA;border-radius:8px;padding:8px 10px;font-size:12px;color:#242D36;max-height:180px;overflow-y:auto}
 .rh-modal .plan-avisos-modal b{display:block;color:#BA7517;margin-bottom:4px}
 .rh-modal .plan-avisos-modal div{margin:2px 0}
 .rh-modal .plan-modelo-nuevo{display:flex;gap:8px}
 .rh-modal .plan-modelo-nuevo input{flex:1}
 .rh-modal .plan-modelo-nuevo .btn{flex:none}
 .rh-modal .plan-modelos{display:flex;flex-direction:column;gap:6px}
-.rh-modal .plan-modelo{display:flex;align-items:center;gap:10px;border:1px solid #e0e0e0;border-radius:9px;padding:8px 10px}
+.rh-modal .plan-modelo{display:flex;align-items:center;gap:10px;border:1px solid #DEDFE1;border-radius:9px;padding:8px 10px}
 .rh-modal .plan-modelo > div{flex:1;min-width:0}
 
 /* ---------- tareas y archivos del turno (chip y modal) ---------- */
@@ -198,16 +198,16 @@
 .rh-modal .plan-extras{margin-top:14px;border-top:1px solid #eee;padding-top:4px}
 .rh-modal .plan-extras-cab{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .rh-modal .plan-extras-cab label{margin-bottom:6px}
-.rh-modal .plan-extras-nuevo{margin-top:14px;font-size:12px;color:#888;border-top:1px solid #eee;padding-top:10px}
+.rh-modal .plan-extras-nuevo{margin-top:14px;font-size:12px;color:#7A848C;border-top:1px solid #eee;padding-top:10px}
 .rh-modal .plan-tarea{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f3f3f1;font-size:13px}
-.rh-modal .plan-tarea input[type=checkbox]{width:16px;height:16px;margin:0;flex:none;accent-color:#1D9E75}
-.rh-modal .plan-tarea.hecha .plan-tarea-texto{text-decoration:line-through;color:#888}
+.rh-modal .plan-tarea input[type=checkbox]{width:16px;height:16px;margin:0;flex:none;accent-color:#5E7D5A}
+.rh-modal .plan-tarea.hecha .plan-tarea-texto{text-decoration:line-through;color:#7A848C}
 .rh-modal .plan-tarea-texto{flex:1;min-width:0;overflow-wrap:anywhere}
 .rh-modal .plan-tarea-edit{flex:1;padding:4px 8px;font-size:13px}
 .rh-modal .plan-tarea-acc{display:inline-flex;gap:2px;flex:none}
-.rh-modal .plan-tarea-acc button{background:none;border:1px solid transparent;border-radius:5px;width:24px;height:24px;font:inherit;font-size:12px;line-height:1;cursor:pointer;color:#888;padding:0}
+.rh-modal .plan-tarea-acc button{background:none;border:1px solid transparent;border-radius:5px;width:24px;height:24px;font:inherit;font-size:12px;line-height:1;cursor:pointer;color:#7A848C;padding:0}
 .rh-modal .plan-tarea-acc button[title=Ver]{width:auto;padding:0 6px}
-.rh-modal .plan-tarea-acc button:hover:not(:disabled){border-color:#e0e0e0;color:#1a1a1a;background:#f8f8f6}
+.rh-modal .plan-tarea-acc button:hover:not(:disabled){border-color:#DEDFE1;color:#242D36;background:#F3F4F0}
 .rh-modal .plan-tarea-acc button:disabled{opacity:.3;cursor:default}
 .rh-modal .plan-tarea-acc button.peligro:hover{color:#A32D2D;border-color:#A32D2D}
 .rh-modal .plan-tarea-nueva{display:flex;gap:8px;margin-top:8px}

@@ -279,7 +279,7 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
               <ul className="hoy-lista">
                 {trabajan.map((t) => {
                   const est = ESTADO[t.estado];
-                  const col = t.puestoColor || "#888";
+                  const col = t.puestoColor || "#7A848C";
                   return (
                     <li key={t.turnoId} className={"hoy-fila " + est.cls}>
                       <span className="hoy-hora">
@@ -321,7 +321,7 @@ export default function SecHoy({ ctx, avisar }: SecProps) {
             ) : (
               <ul className="hoy-lista">
                 {d.ausentes.map((a) => {
-                  const col = a.color || "#888";
+                  const col = a.color || "#7A848C";
                   return (
                     <li key={a.id} className="hoy-fila">
                       <span className="hoy-np">{a.nombre}</span>
@@ -495,7 +495,7 @@ function FeedNovedades({ nov, ahora, mostrarCentro }: { nov: Novedades | null; a
 /* ---------- Filas de «Pendiente de ti» ---------- */
 
 function FilaSolicitud({ s, ocupado, onAprobar, onRechazar }: { s: SolicitudAusencia; ocupado: string | null; onAprobar: () => void; onRechazar: () => void }) {
-  const col = s.color || "#888";
+  const col = s.color || "#7A848C";
   return (
     <li className="hoy-fila hoy-pend">
       <span className="hoy-np">{s.nombre}</span>

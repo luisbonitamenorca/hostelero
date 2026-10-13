@@ -9,23 +9,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Presupuesto — Bonita Menorca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f8f8f6;--surface:#fff;--panel:#f3f3f0;--hdr:#fafaf8;
-  --border:#e0e0e0;--border-med:#d6d6d0;--text:#1a1a1a;--muted:#888;
-  --green:#1D9E75;--green-dark:#085041;--green-bg:#E1F5EE;
+  --bg:#F3F4F0;--surface:#fff;--panel:#EAECE8;--hdr:#F8F9F6;
+  --border:#DEDFE1;--border-med:#CDD0CC;--text:#242D36;--muted:#7A848C;
+  --green:#5E7D5A;--green-dark:#2F3A45;--green-bg:#E7EEE5;
   --blue:#185FA5;--blue-bg:#E6F1FB;--purple:#534AB7;--purple-bg:#EEEDFE;
   --amber:#BA7517;--amber-bg:#FAEEDA;--red:#A32D2D;--red-bg:#FCEBEB;
-  --acc:#eaf5f0;--acc-cell:#eef7f3;--acc-total:#cfe9de;
+  --acc:#E7EEE5;--acc-cell:#F1F5EF;--acc-total:#D4E2D1;
   --radius:8px;--radius-lg:10px;--shadow:0 1px 3px rgba(0,0,0,.06);
 }
-body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+body{font-family:'Plus Jakarta Sans', system-ui, sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
 
 /* layout */
 #app-screen{display:flex;align-items:flex-start;min-height:100vh}
-.side-nav{width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#fdfdfc;border-right:0.5px solid var(--border);padding:18px 10px 18px 14px;display:flex;flex-direction:column}
+.side-nav{width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#F8F9F6;border-right:0.5px solid var(--border);padding:18px 10px 18px 14px;display:flex;flex-direction:column}
 .side-brand{padding:0 4px 14px;border-bottom:0.5px solid var(--border);margin-bottom:12px}
 .app-title{font-size:18px;font-weight:500;letter-spacing:-.2px}
 .app-title span{color:var(--green)}
@@ -139,7 +141,7 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
 #loading p{color:var(--muted);font-size:13px}
 .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:1000;max-width:90vw}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#242D36;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:1000;max-width:90vw}
 #toast.on{opacity:1}
 #toast.err{background:var(--red)}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}

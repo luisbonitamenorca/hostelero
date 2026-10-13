@@ -674,7 +674,7 @@ export function ModalReserva(props: {
           <div className="rvm-titulo">
             <h2>{esEdicion ? "Editar reserva" : "Nueva reserva"} <span>en {rest.nombre}</span></h2>
             {localizador ? <span className="rvm-loc" title="Localizador">{localizador}</span> : null}
-            {esEdicion ? <span className="rvm-estado-chip" style={{ background: estadoDef.color, color: estadoDef.borde ? "#1a1a1a" : colorTexto(estadoDef.color), borderColor: estadoDef.borde ?? "transparent" }}>{estadoDef.texto}</span> : null}
+            {esEdicion ? <span className="rvm-estado-chip" style={{ background: estadoDef.color, color: estadoDef.borde ? "#242D36" : colorTexto(estadoDef.color), borderColor: estadoDef.borde ?? "transparent" }}>{estadoDef.texto}</span> : null}
           </div>
           <label className="rvm-anotado">
             <span>Anotado por</span>

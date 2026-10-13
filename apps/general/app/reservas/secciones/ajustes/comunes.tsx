@@ -140,14 +140,14 @@ const HEX = /^#[0-9A-Fa-f]{6}$/;
 export const esHex = (s: string) => HEX.test(s);
 
 /** Paleta rápida para etiquetas, turnos, camareros… (los mismos tonos que los estados). */
-export const PALETA = ["#2E9E5B", "#16A34A", "#1D6B3E", "#2F80ED", "#1F4E9E", "#7C3AED", "#D64D8A", "#D32F2F", "#F26B1D", "#D99A1E", "#8A9199", "#4B5057", "#2F3A45", "#2FA886", "#6b3d2e", "#4db6ac"];
+export const PALETA = ["#2E9E5B", "#16A34A", "#1D6B3E", "#2F80ED", "#1F4E9E", "#7C3AED", "#D64D8A", "#D32F2F", "#F26B1D", "#D99A1E", "#8A9199", "#4B5057", "#2F3A45", "#8FAE8B", "#6b3d2e", "#4db6ac"];
 
 /** Texto legible sobre un fondo hex. */
-export function textoSobre(hex: string): "#fff" | "#1a1a1a" {
+export function textoSobre(hex: string): "#fff" | "#242D36" {
   const h = (hex || "").replace("#", "");
-  if (h.length !== 6) return "#1a1a1a";
+  if (h.length !== 6) return "#242D36";
   const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#1a1a1a" : "#fff";
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#242D36" : "#fff";
 }
 
 /* ==================== Hooks ==================== */

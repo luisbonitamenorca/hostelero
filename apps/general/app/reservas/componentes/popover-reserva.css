@@ -40,9 +40,9 @@
 .rv .pv-btn:active:not(:disabled) { transform: scale(.98); }
 .rv .pv-btn:disabled { cursor: default; opacity: .55; }
 .rv .pv-btn.actual { opacity: 1; outline: 2px solid var(--tinta); outline-offset: 1px; }
-.rv .pv-btn.pv-oscuro { background: #1a1a1a; color: #fff; }
+.rv .pv-btn.pv-oscuro { background: #242D36; color: #fff; }
 .rv[data-tema="oscuro"] .pv-btn.pv-oscuro { background: #0f1113; }
-.rv .pv-btn.pv-liberar { background: #c9b227; color: #1a1a1a; }
+.rv .pv-btn.pv-liberar { background: #c9b227; color: #242D36; }
 .rv .pv-btn.pv-neutro { background: var(--panel-2, #F1EDE2); color: var(--tinta); border-color: var(--borde); }
 .rv .pv-btn.pv-wa { background: #25D366; color: #0b2a17; }
 .rv .pv-ico { font-size: 10px; letter-spacing: -1px; }

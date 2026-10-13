@@ -4,7 +4,7 @@
 .peda,
 .peda-imp {
   --pedc-verde: var(--verde, #2F3A45);
-  --pedc-verde-suave: #E7F1EC;
+  --pedc-verde-suave: #E7EEE5;
   --pedc-coral-suave: #FBEDE7;
   --pedc-rojo: #A32D2D;
   --pedc-ambar: #8F5A0A;

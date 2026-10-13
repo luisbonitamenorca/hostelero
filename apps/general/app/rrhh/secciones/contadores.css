@@ -18,7 +18,7 @@
 .rh table.cont-tabla th,.rh table.cont-tabla td{border-bottom:1px solid var(--fondo);border-right:1px solid var(--fondo);vertical-align:top}
 .rh table.cont-tabla thead th{background:var(--arena);font-size:12px;font-weight:600;padding:8px 6px;text-align:center;white-space:nowrap}
 .rh table.cont-tabla thead th.cont-th-hoy{background:var(--green);color:#fff}
-.rh table.cont-tabla thead th.cont-th-hoy .cont-th-sub{color:#E1F5EE}
+.rh table.cont-tabla thead th.cont-th-hoy .cont-th-sub{color:#E7EEE5}
 .rh .cont-th-sub{font-weight:400;font-size:11px;color:var(--tinta-suave);margin-top:1px}
 .rh .cont-th-total{background:#e8e7e3 !important}
 .rh tr.cont-th-leyenda th{font-weight:400;font-size:11px;color:var(--tinta-suave);padding:3px 10px;text-align:left;text-transform:none}
@@ -63,7 +63,7 @@
 .rh .cont-ajv-menos{color:var(--red);font-weight:700}
 .rh .cont-resumen-aj,.rh-modal .cont-resumen-aj{margin-top:8px;font-size:12.5px;background:var(--green-light);color:var(--green-dark);border-radius:8px;padding:8px 10px}
 .rh-modal .cont-aviso-val{margin:0 0 10px;font-size:12.5px;background:var(--amber-light);color:var(--amber);border-radius:8px;padding:8px 10px}
-.rh-modal .cont-nota-prev{margin-top:10px;font-size:12px;color:var(--tinta-suave);white-space:pre-wrap;background:#f8f8f6;border-radius:8px;padding:8px 10px;max-height:120px;overflow-y:auto}
+.rh-modal .cont-nota-prev{margin-top:10px;font-size:12px;color:var(--tinta-suave);white-space:pre-wrap;background:#F3F4F0;border-radius:8px;padding:8px 10px;max-height:120px;overflow-y:auto}
 
 /* panel lateral de detalle */
 .rh .cont-drawer-fondo{position:fixed;inset:0;background:rgba(28,43,51,.35);z-index:45}

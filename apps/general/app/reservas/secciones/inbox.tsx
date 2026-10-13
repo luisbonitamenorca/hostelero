@@ -371,7 +371,7 @@ export default function SecInbox({ ctx, rest, setFecha, avisar }: SecProps) {
                       <span>·</span><b>{r.pax} pax</b>
                       <span>·</span><span>{fmtFechaCorta(r.fecha)} {fmtHora(r.hora)}</span>
                       {r.localizador ? <><span>·</span><code>{r.localizador}</code></> : null}
-                      <span className="chip estado" style={{ background: estadoDe(r.estado).color, color: estadoDe(r.estado).color === "#FFFFFF" ? "#1a1a1a" : "#fff", border: estadoDe(r.estado).borde ? `1px solid ${estadoDe(r.estado).borde}` : undefined }}>
+                      <span className="chip estado" style={{ background: estadoDe(r.estado).color, color: estadoDe(r.estado).color === "#FFFFFF" ? "#242D36" : "#fff", border: estadoDe(r.estado).borde ? `1px solid ${estadoDe(r.estado).borde}` : undefined }}>
                         {estadoDe(r.estado).texto}
                       </span>
                       {r.mesa_id ? null : n.tipo === "nueva" || n.tipo === "grupo" ? <span className="chip sinmesa">Sin mesa</span> : null}

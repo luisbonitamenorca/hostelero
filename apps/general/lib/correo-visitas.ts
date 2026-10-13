@@ -78,7 +78,7 @@ export async function correoConfirmacionVisita(d: DatosConfirmacion): Promise<bo
     `<tr><td style="padding:6px 16px 6px 0;color:#5C6872;">${k}</td><td style="padding:6px 0;${negrita ? "font-weight:700;" : ""}">${v}</td></tr>`;
 
   const html = `
-  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1E2A25;">
+  <div style="font-family:'Plus Jakarta Sans', system-ui, sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1E2A25;">
     <h1 style="font-size:20px;margin:0 0 4px;">Bodegas Binifadet</h1>
     <p style="margin:16px 0 6px;">${escapa(t.hola(d.nombre))}</p>
     <p style="margin:0 0 18px;">${t.intro}</p>

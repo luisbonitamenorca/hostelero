@@ -8,6 +8,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PyG Pruebas — Bonita Menorca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
@@ -17,12 +19,12 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   /* Superficies */
-  --bg:#f8f8f6;--surface:#fff;--panel:#f3f3f0;--hdr:#fafaf8;
-  --border:#e0e0e0;--border-med:#d6d6d0;
-  --text:#1a1a1a;--muted:#888;
+  --bg:#F3F4F0;--surface:#fff;--panel:#EAECE8;--hdr:#F8F9F6;
+  --border:#DEDFE1;--border-med:#CDD0CC;
+  --text:#242D36;--muted:#7A848C;
 
   /* Paleta Ratios */
-  --green:#1D9E75;--green-dark:#085041;--green-bg:#E1F5EE;
+  --green:#5E7D5A;--green-dark:#2F3A45;--green-bg:#E7EEE5;
   --blue:#185FA5;--blue-bg:#E6F1FB;
   --purple:#534AB7;--purple-bg:#EEEDFE;
   --amber:#BA7517;--amber-bg:#FAEEDA;
@@ -30,15 +32,15 @@
   --coral:#993C1D;--coral-bg:#FAECE7;
 
   /* Tonos funcionales de la tabla PyG */
-  --acc-strong:#d9ede5;   /* cabecera columnas acumuladas */
-  --acc:#eaf5f0;          /* cabecera diferencia / filas de grupo */
-  --acc-cell:#eef7f3;     /* columna acumulada en celdas */
-  --acc-total:#cfe9de;    /* celda acumulada en filas de total */
+  --acc-strong:#DCE7D9;   /* cabecera columnas acumuladas */
+  --acc:#E7EEE5;          /* cabecera diferencia / filas de grupo */
+  --acc-cell:#F1F5EF;     /* columna acumulada en celdas */
+  --acc-total:#D4E2D1;    /* celda acumulada en filas de total */
 
   --radius:8px;--radius-lg:10px;
   --shadow:0 1px 3px rgba(0,0,0,.06);
 }
-body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+body{font-family:'Plus Jakarta Sans', system-ui, sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
 
 /* ── LOGIN ─────────────────────────────────────────────── */
 #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
@@ -73,7 +75,7 @@ input[type=file]{display:none}
 
 .side-nav{
   width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
-  background:#fdfdfc;border-right:0.5px solid var(--border);
+  background:#F8F9F6;border-right:0.5px solid var(--border);
   padding:18px 10px 18px 14px;display:flex;flex-direction:column;
 }
 .side-brand{padding:0 4px 14px;border-bottom:0.5px solid var(--border);margin-bottom:12px}
@@ -151,8 +153,8 @@ table.pyg td{padding:5px 7px;text-align:right;border-bottom:0.5px solid var(--bo
 table.pyg td:first-child{text-align:left}
 table.pyg td:nth-child(2){background:var(--acc-cell);font-weight:500}
 table.pyg tr:last-child td{border-bottom:none}
-table.pyg tr.r-ing td{background:#f5fbf8}
-table.pyg tr.r-ing td:nth-child(2){background:#dff0e8}
+table.pyg tr.r-ing td{background:#F1F5EF}
+table.pyg tr.r-ing td:nth-child(2){background:#DCE7D9}
 table.pyg tr.r-gto td{background:#fdfaf8}
 table.pyg tr.r-gto td:nth-child(2){background:#f5ede8}
 table.pyg tr.r-grp td{background:var(--acc);font-weight:500;color:var(--text)}
@@ -363,7 +365,7 @@ select,input[type=password],input[type=text]{font-family:inherit}
         <div class="card-title">Ingresos vs Gastos mensual</div>
         <div class="card-sub">Real vs Presupuesto</div>
         <div class="legend">
-          <div class="leg-item"><div class="leg-dot" style="background:#1D9E75"></div>Ingresos real</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#5E7D5A"></div>Ingresos real</div>
           <div class="leg-item"><div class="leg-dot" style="background:#A32D2D"></div>Gastos real</div>
           <div class="leg-item"><div class="leg-dot" style="background:#B5D4F4;border:1px dashed #185FA5"></div>Ingresos presup.</div>
         </div>
@@ -397,7 +399,7 @@ select,input[type=password],input[type=text]{font-family:inherit}
         <div class="card-title">Resultado mensual — Real vs Presupuesto</div>
         <div class="card-sub">Resultado neto cada mes y acumulado</div>
         <div class="legend">
-          <div class="leg-item"><div class="leg-dot" style="background:#1D9E75"></div>Resultado real</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#5E7D5A"></div>Resultado real</div>
           <div class="leg-item"><div class="leg-dot" style="background:#FAC775;border:1px dashed #BA7517"></div>Resultado presup.</div>
         </div>
         <div style="position:relative;height:240px"><canvas id="c-resultado" role="img" aria-label="Resultado mensual"></canvas></div>
@@ -2252,7 +2254,7 @@ function minCuentaGrupo(rs, grupo, tipo) {
 // Usa SIEMPRE el dataset global (D.pyg/D.pre), no el filtrado por canal,
 // porque queremos ver el desglose por centro.
 function buildCentrosRows(cuenta, favDir, indent) {
-  const sty = `style="text-align:left;position:sticky;left:0;background:#fbfbf9;padding-left:${indent}px;color:var(--muted);font-style:italic;font-size:11px"`;
+  const sty = `style="text-align:left;position:sticky;left:0;background:#F8F9F6;padding-left:${indent}px;color:var(--muted);font-style:italic;font-size:11px"`;
   // Agrupamos las filas brutas de D.pyg por canal para esa cuenta
   // Si canal != TODOS, sólo mostramos ese canal (no tiene sentido desglosar uno solo, pero respetamos consistencia)
   const filas = D.pyg.filter(r => r.cuenta === cuenta && (canal === 'TODOS' || r.canal === canal));
@@ -2305,7 +2307,7 @@ function buildCentrosRows(cuenta, favDir, indent) {
 // Construye filas de detalle por PROVEEDOR de una cuenta y un centro (drill-down nivel 4).
 // Reparte la Base imponible por mes de fecha de factura. No lleva presupuesto.
 function buildProveedoresRows(cuenta, canalC, favDir, indent) {
-  const sty = `style="text-align:left;position:sticky;left:0;background:#fafaf8;padding-left:${indent}px;color:#8c8c88;font-size:11px"`;
+  const sty = `style="text-align:left;position:sticky;left:0;background:#F8F9F6;padding-left:${indent}px;color:#8c8c88;font-size:11px"`;
   if (!D.prov) return '';
   const filas = D.prov
     .filter(p => p.cuenta === cuenta && p.canal === canalC)
@@ -2365,7 +2367,7 @@ function buildGroupedRows(rows, rowsP) {
         });
       }
       const cls = tipo==='ingreso'?'r-ing':'r-gto';
-      const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#f5fbf8':'#fdfaf8'};cursor:pointer;user-select:none"`;
+      const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#F1F5EF':'#fdfaf8'};cursor:pointer;user-select:none"`;
       const isOpen = !!expanded[grp];
       const caret = isOpen ? '▼' : '▶';
       const grpEsc = grp.replace(/"/g,'&quot;');
@@ -2383,7 +2385,7 @@ function buildGroupedRows(rows, rowsP) {
         cuentasGrp.forEach(r => {
           const pRow = rowsP ? rowsP.find(x=>x.cuenta===r.cuenta) : null;
           const ctaValsP = pRow ? pRow.mensual : null;
-          const ctaSticky = `style="text-align:left;position:sticky;left:0;background:#fafafa;padding-left:24px;cursor:pointer;user-select:none"`;
+          const ctaSticky = `style="text-align:left;position:sticky;left:0;background:#F8F9F6;padding-left:24px;cursor:pointer;user-select:none"`;
           const isOpenCta = !!expandedCta[r.cuenta];
           const caretCta = isOpenCta ? '▼' : '▶';
           html += `<tr class="r-det" onclick="toggleCuenta('${r.cuenta}')">
@@ -2421,7 +2423,7 @@ function buildDetailRows(rows, rowsP) {
     const pRow = rowsP ? rowsP.find(x=>x.cuenta===r.cuenta) : null;
     const svalsP = pRow ? pRow.mensual : null;
     const cls = r.tipo==='ingreso'?'r-ing':'r-gto';
-    const sticky = `style="text-align:left;position:sticky;left:0;background:${r.tipo==='ingreso'?'#f5fbf8':'#fdfaf8'};cursor:pointer;user-select:none"`;
+    const sticky = `style="text-align:left;position:sticky;left:0;background:${r.tipo==='ingreso'?'#F1F5EF':'#fdfaf8'};cursor:pointer;user-select:none"`;
     const isOpenCta = !!expandedCta[r.cuenta];
     const caretCta = isOpenCta ? '▼' : '▶';
     html += `<tr class="${cls}" onclick="toggleCuenta('${r.cuenta}')" title="${r.cuenta}">
@@ -2586,7 +2588,7 @@ function buildNegocioTable() {
   document.getElementById('pyg-title').textContent = 'Vista por negocio';
   document.getElementById('pyg-sub').textContent = `Columnas: 4 totalizadoras + ${canales.join(' · ')}${usePresup ? ' · vs presupuesto' : ''}`;
 
-  const CANAL_COLS = ['#185FA5','#1D9E75','#BA7517','#7F77DD','#A32D2D','#0F6E56','#D4537E','#5B6770'];
+  const CANAL_COLS = ['#185FA5','#5E7D5A','#BA7517','#7F77DD','#A32D2D','#2F3A45','#D4537E','#5B6770'];
   let html = `<thead><tr>
     <th style="text-align:left;min-width:240px;position:sticky;left:0;z-index:2;background:var(--bg)">Concepto</th>
     <th style="background:var(--acc-strong);color:var(--green-dark);font-weight:600">REAL ENE-${monthLabel}</th>
@@ -2654,7 +2656,7 @@ function buildNegocioTable() {
         const mensTotalP = rowsPTotal ? sumMensRowsGrp(rowsPTotal, tipo, grp) : null;
 
         const cls = tipo==='ingreso'?'r-ing':'r-gto';
-        const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#f5fbf8':'#fdfaf8'};cursor:pointer;user-select:none"`;
+        const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#F1F5EF':'#fdfaf8'};cursor:pointer;user-select:none"`;
         const isOpen = !!expanded[grp];
         const caret = isOpen ? '▼' : '▶';
         const grpEsc = grp.replace(/"/g,'&quot;').replace(/'/g,"\\'");
@@ -2675,7 +2677,7 @@ function buildNegocioTable() {
           cuentasGrp.forEach(r => {
             const pRow = rowsPTotal ? rowsPTotal.find(x=>x.cuenta===r.cuenta) : null;
             const mensP = pRow ? pRow.mensual : null;
-            const ctaSticky = `style="text-align:left;position:sticky;left:0;background:#fafafa;padding-left:24px"`;
+            const ctaSticky = `style="text-align:left;position:sticky;left:0;background:#F8F9F6;padding-left:24px"`;
             html += `<tr class="r-det">
               <td ${ctaSticky}>${r.cuenta} · ${r.desc}</td>
               ${negTotCells(r.mensual, mensP, favDir)}
@@ -2699,7 +2701,7 @@ function buildNegocioTable() {
         const pRow = rowsPTotal ? rowsPTotal.find(x=>x.cuenta===r.cuenta) : null;
         const mensP = pRow ? pRow.mensual : null;
         const cls = tipo==='ingreso'?'r-ing':'r-gto';
-        const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#f5fbf8':'#fdfaf8'}"`;
+        const sticky = `style="text-align:left;position:sticky;left:0;background:${tipo==='ingreso'?'#F1F5EF':'#fdfaf8'}"`;
         html += `<tr class="${cls}" title="${r.cuenta}">
           <td ${sticky}>${r.cuenta} · ${r.desc}</td>
           ${negTotCells(r.mensual, mensP, favDir)}
@@ -2812,7 +2814,7 @@ function buildEvolucionCharts(rows, rowsP) {
   charts['acumulado'] = new Chart(document.getElementById('c-acumulado').getContext('2d'),{
     type:'line',
     data:{labels:MS,datasets:[
-      {label:'Real',data:acumR,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.07)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#1D9E75'},
+      {label:'Real',data:acumR,borderColor:'#5E7D5A',backgroundColor:'rgba(29,158,117,0.07)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#5E7D5A'},
       ...(acumP?[{label:'Presup.',data:acumP,borderColor:'#BA7517',borderDash:[4,3],backgroundColor:'transparent',tension:.3,pointRadius:3}]:[])
     ]},
     options:{...baseOpts}
@@ -3059,8 +3061,8 @@ function buildBalance() {
 
       subs.forEach(([sub, info]) => {
         const cls = tblId === 'tbl-activo' ? 'r-ing' : 'r-gto';
-        const bgSub = tblId === 'tbl-activo' ? '#f5fbf8' : '#fdfaf8';
-        const subBg = tblId === 'tbl-activo' ? '#dff0e8' : '#f5ede8';
+        const bgSub = tblId === 'tbl-activo' ? '#F1F5EF' : '#fdfaf8';
+        const subBg = tblId === 'tbl-activo' ? '#DCE7D9' : '#f5ede8';
         html += `<tr class="${cls}">
           <td style="background:${bgSub};padding-left:18px">${sub}</td>
           <td style="background:${subBg};font-weight:600">${fmt(info.total)}</td>

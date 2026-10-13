@@ -33,7 +33,7 @@ const SUGERENCIAS: Omit<CamposPregunta, "orden" | "activa">[] = [
 function Vista({ texto, tipo, opciones, obligatoria }: { texto: string; tipo: string; opciones: string[]; obligatoria: boolean }) {
   const t = texto.trim() || "Texto de la pregunta";
   const ops = opciones.map((o) => o.trim()).filter(Boolean);
-  const caja: React.CSSProperties = { background: "#fff", color: "#1a1a1a", border: "1px solid #E2DDD2", borderRadius: 12, padding: "12px 14px", fontSize: 14 };
+  const caja: React.CSSProperties = { background: "#fff", color: "#242D36", border: "1px solid #E2DDD2", borderRadius: 12, padding: "12px 14px", fontSize: 14 };
   const etiqueta = <span style={{ fontWeight: 600 }}>{t}{obligatoria ? <span style={{ color: "#D32F2F" }}> *</span> : null}</span>;
   return (
     <div style={caja} aria-label="Vista previa en el widget">

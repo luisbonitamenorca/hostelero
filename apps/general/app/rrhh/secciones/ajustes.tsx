@@ -31,8 +31,8 @@ const esSub = (v: string): v is Sub => SUBS.some((s) => s[0] === v);
 
 /** Color por departamento (plan 1.1) para proponer al crear un puesto. */
 const COLOR_DEPTO: Record<string, string> = {
-  cocina: "#E8590C", sala: "#1D9E75", recepcion: "#185FA5", visitas: "#534AB7", tienda: "#BA7517",
-  bodega: "#7B1FA2", campo: "#2E7D32", mantenimiento: "#607D8B", administracion: "#455A64", direccion: "#1a1a1a",
+  cocina: "#E8590C", sala: "#5E7D5A", recepcion: "#185FA5", visitas: "#534AB7", tienda: "#BA7517",
+  bodega: "#7B1FA2", campo: "#5E7D5A", mantenimiento: "#607D8B", administracion: "#455A64", direccion: "#242D36",
 };
 const sinAcentos = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const colorDeDepto = (nombre: string | null | undefined) => (nombre ? COLOR_DEPTO[sinAcentos(nombre)] : undefined) ?? "#888888";

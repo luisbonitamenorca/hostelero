@@ -987,7 +987,7 @@ function ModalFichajes({ fila, fecha, centroId, modoInicial, onCerrar, onCambio 
             </div>
             <div><label>Hora</label><input type="time" required value={cHora} onChange={(e) => setCHora(e.target.value)} /></div>
           </div>
-          {cTipo !== "entrada" ? <p className="fichajes-texto" style={{ fontSize: 12, color: "#888" }}>Una salida o pausa antes de las 06:00 se entiende de la madrugada siguiente (cierre).</p> : null}
+          {cTipo !== "entrada" ? <p className="fichajes-texto" style={{ fontSize: 12, color: "#7A848C" }}>Una salida o pausa antes de las 06:00 se entiende de la madrugada siguiente (cierre).</p> : null}
           <label>Motivo (obligatorio, queda en el registro)</label>
           <textarea rows={2} required value={cMotivo} onChange={(e) => setCMotivo(e.target.value)} placeholder="Ej.: olvidó fichar la salida al cerrar" style={{ width: "100%" }} />
           <div className="aviso-modal">{cError}</div>

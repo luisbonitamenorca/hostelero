@@ -64,8 +64,8 @@ function leerVideo(fichero: File): Promise<string> {
 const hoy = () => new Date().toISOString().slice(0, 10);
 
 const estiloCampo = {
-  width: "100%", padding: "12px", border: "1px solid #D9D3C6", borderRadius: 8,
-  fontSize: 16, background: "#FDFCF9", fontFamily: "inherit",
+  width: "100%", padding: "12px", border: "1px solid #DEDFE1", borderRadius: 8,
+  fontSize: 16, background: "#F8F9F6", fontFamily: "inherit",
 } as const;
 
 export default function FormularioParte() {
@@ -133,15 +133,15 @@ export default function FormularioParte() {
 
   return (
     <main style={{ maxWidth: 480, margin: "0 auto", padding: "24px 16px 48px",
-      fontFamily: "system-ui, sans-serif", background: "#F6F3ED", minHeight: "100vh" }}>
+      fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", background: "#F3F4F0", minHeight: "100vh" }}>
       <AvisoVersion />
-      <h1 style={{ fontSize: 22, marginBottom: 2, color: "#1E1B16" }}>Parte de mantenimiento</h1>
-      <p style={{ color: "#6B6456", fontSize: 14, marginBottom: 20 }}>
+      <h1 style={{ fontSize: 22, marginBottom: 2, color: "#242D36" }}>Parte de mantenimiento</h1>
+      <p style={{ color: "#5C6872", fontSize: 14, marginBottom: 20 }}>
         Bonita Menorca. Cuéntanos qué hay que revisar o reparar: le llega a Marcos al momento.
       </p>
 
       <div style={{ display: "grid", gap: 14 }}>
-        <label style={{ fontSize: 13, color: "#1E1B16" }}>
+        <label style={{ fontSize: 13, color: "#242D36" }}>
           <span style={{ display: "block", marginBottom: 4 }}>¿Quién eres? (se guarda para la próxima)</span>
           <select value={responsable} onChange={(e) => setResponsable(e.target.value)} style={estiloCampo}>
             <option value="">— Selecciona —</option>
@@ -178,10 +178,10 @@ export default function FormularioParte() {
               <button key={u} type="button" onClick={() => setUrgencia(u)}
                 style={{
                   flex: 1, padding: "12px 4px", borderRadius: 8, fontSize: 14, cursor: "pointer",
-                  border: urgencia === u ? "2px solid #4A5A3E" : "1px solid #D9D3C6",
+                  border: urgencia === u ? "2px solid #2F3A45" : "1px solid #DEDFE1",
                   background: urgencia === u
-                    ? (u === "Crítico" ? "#F8EBEB" : u === "Urgente" ? "#FBF4E0" : "#EBF0E6")
-                    : "#FDFCF9",
+                    ? (u === "Crítico" ? "#F8EBEB" : u === "Urgente" ? "#FBF4E0" : "#E7EEE5")
+                    : "#F8F9F6",
                   fontWeight: urgencia === u ? 600 : 400,
                 }}>
                 {u}
@@ -199,7 +199,7 @@ export default function FormularioParte() {
         <input ref={entrada} type="file" multiple accept="image/*,video/*"
           onChange={(e) => anadirFicheros(e.target.files)} style={{ display: "none" }} />
         <button type="button" onClick={() => entrada.current?.click()}
-          style={{ ...estiloCampo, cursor: "pointer", textAlign: "center", color: "#6B6456", borderStyle: "dashed" }}>
+          style={{ ...estiloCampo, cursor: "pointer", textAlign: "center", color: "#5C6872", borderStyle: "dashed" }}>
           📷 Añadir fotos o un vídeo corto (opcional)
         </button>
 
@@ -215,7 +215,7 @@ export default function FormularioParte() {
                 )}
                 <button type="button" onClick={() => setMedios((x) => x.filter((_, j) => j !== i))}
                   style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%",
-                    border: "none", background: "#1E1B16", color: "#fff", cursor: "pointer", fontSize: 12 }}>
+                    border: "none", background: "#242D36", color: "#fff", cursor: "pointer", fontSize: 12 }}>
                   ✕
                 </button>
               </div>
@@ -225,14 +225,14 @@ export default function FormularioParte() {
 
         <button type="button" disabled={enviando} onClick={enviar}
           style={{ padding: "16px", fontSize: 17, fontWeight: 600, border: "none", borderRadius: 10,
-            background: enviando ? "#8a9480" : "#4A5A3E", color: "#fff", cursor: "pointer" }}>
+            background: enviando ? "#8a9480" : "#2F3A45", color: "#fff", cursor: "pointer" }}>
           {enviando ? "Enviando…" : "Enviar parte"}
         </button>
 
         {aviso && (
           <p style={{ padding: "12px 14px", borderRadius: 8, fontSize: 14,
-            background: aviso.error ? "#F8EBEB" : "#EBF0E6",
-            color: aviso.error ? "#A83232" : "#4A5A3E" }}>
+            background: aviso.error ? "#F8EBEB" : "#E7EEE5",
+            color: aviso.error ? "#A83232" : "#2F3A45" }}>
             {aviso.texto}
           </p>
         )}

@@ -64,13 +64,13 @@ export function fmtFechaCorta(iso: string): string {
 }
 
 /** Color de texto legible sobre un fondo hex. */
-export function colorTexto(hex: string): "#fff" | "#1a1a1a" {
+export function colorTexto(hex: string): "#fff" | "#242D36" {
   const h = (hex || "").replace("#", "");
-  if (h.length !== 6 && h.length !== 3) return "#1a1a1a";
+  if (h.length !== 6 && h.length !== 3) return "#242D36";
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
   const r = parseInt(full.slice(0, 2), 16), g = parseInt(full.slice(2, 4), 16), b = parseInt(full.slice(4, 6), 16);
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return lum > 0.6 ? "#1a1a1a" : "#fff";
+  return lum > 0.6 ? "#242D36" : "#fff";
 }
 
 /* ==================== Preferencias locales ==================== */

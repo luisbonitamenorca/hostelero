@@ -40,9 +40,9 @@
   cursor: pointer;
 }
 .docs-tab.activa {
-  background: #1a2332;
+  background: #242D36;
   color: #fff;
-  border-color: #1a2332;
+  border-color: #242D36;
   font-weight: 500;
 }
 
@@ -61,9 +61,9 @@
   cursor: pointer;
 }
 .docs-pildora.activa {
-  background: #1a1a1a;
+  background: #242D36;
   color: #fff;
-  border-color: #1a1a1a;
+  border-color: #242D36;
 }
 
 .docs-tabla-envoltorio {
@@ -84,7 +84,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--gris, #6b7280);
+  color: var(--gris, #5C6872);
   white-space: nowrap;
 }
 .docs-tabla td {
@@ -94,8 +94,8 @@
 }
 .docs-tabla tr:last-child td { border-bottom: none; }
 .docs-tabla .tr { text-align: right; }
-.docs-suave { color: var(--gris, #6b7280); font-size: 12px; }
-.docs-vacio { text-align: center; color: var(--gris, #6b7280); padding: 40px; }
+.docs-suave { color: var(--gris, #5C6872); font-size: 12px; }
+.docs-vacio { text-align: center; color: var(--gris, #5C6872); padding: 40px; }
 
 .docs-boton-mini {
   background: transparent;
@@ -106,7 +106,7 @@
   font-size: 12px;
 }
 .docs-boton-mini:hover { background: #f5f5f2; }
-.docs-rojo { color: #a64729; }
+.docs-rojo { color: #4A6647; }
 
 .docs-aviso {
   padding: 10px 12px;
@@ -114,7 +114,7 @@
   margin: 10px 0;
   font-size: 13px;
   background: rgba(196, 89, 58, 0.1);
-  color: #a64729;
+  color: #4A6647;
   border: 1px solid rgba(196, 89, 58, 0.3);
 }
 
@@ -133,7 +133,7 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--gris, #6b7280);
+  color: var(--gris, #5C6872);
   margin-bottom: 8px;
 }
 .docs-gestion-fila {
@@ -173,7 +173,7 @@
 .docs-modal label {
   display: block;
   font-size: 12px;
-  color: var(--gris, #6b7280);
+  color: var(--gris, #5C6872);
   margin: 12px 0 4px;
 }
 .docs-modal input[type="text"],
@@ -196,9 +196,9 @@
   margin-top: 20px;
 }
 .docs-primario {
-  background: #1a2332 !important;
+  background: #242D36 !important;
   color: #fff !important;
-  border-color: #1a2332 !important;
+  border-color: #242D36 !important;
 }
 
 @media (max-width: 700px) {

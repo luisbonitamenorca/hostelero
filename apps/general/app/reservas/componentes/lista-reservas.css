@@ -21,7 +21,7 @@
 .rv .lr-cabecera {
   padding: 4px 8px 4px 11px; font-size: 11px; font-weight: 700; color: var(--gris); text-transform: none;
   border-bottom: 1px solid var(--borde); position: sticky; top: 0; z-index: 1;
-  background: var(--fondo, #F7F4EE);
+  background: var(--fondo, #F3F4F0);
 }
 .rv .lr-cab-btn { border: none; background: none; color: inherit; font: inherit; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 3px; }
 .rv .lr-cab-btn.activo { color: var(--tinta); }

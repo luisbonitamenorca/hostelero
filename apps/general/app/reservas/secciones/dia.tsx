@@ -653,7 +653,7 @@ export default function SecDia({ rest, fecha, setFecha, avisar }: SecProps) {
               <>
                 <div className="dia-leyenda-fila">
                   {ESTADOS.map((e) => (
-                    <span key={e.id} className="dia-leyenda-pill" style={{ background: e.color, color: e.borde ? "#1a1a1a" : colorTexto(e.color), borderColor: e.borde ?? e.color }}>{e.texto}</span>
+                    <span key={e.id} className="dia-leyenda-pill" style={{ background: e.color, color: e.borde ? "#242D36" : colorTexto(e.color), borderColor: e.borde ?? e.color }}>{e.texto}</span>
                   ))}
                 </div>
                 <div className="dia-leyenda-fila iconos">
@@ -870,7 +870,7 @@ function MenuMesa(props: {
         return (
           <button key={r.id} type="button" role="menuitem" onClick={() => elegir(r)}>
             <b>{fmtHora(r.hora)}</b> {nombreCliente(r).nombre} · {r.pax} pax
-            <span className="dia-elegir-estado" style={{ background: e?.color, color: e?.borde ? "#1a1a1a" : colorTexto(e?.color ?? "#888") }}>{e?.texto ?? r.estado}</span>
+            <span className="dia-elegir-estado" style={{ background: e?.color, color: e?.borde ? "#242D36" : colorTexto(e?.color ?? "#7A848C") }}>{e?.texto ?? r.estado}</span>
           </button>
         );
       })}

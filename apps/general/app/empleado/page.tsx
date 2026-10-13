@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: "Bonita Equipo",
   description: "Tus turnos, fichajes y vacaciones en Bonita Menorca",
   manifest: "/empleado-manifest.json",
-  themeColor: "#0E7C86",
+  themeColor: "#2F3A45",
   icons: { apple: "/empleado-icon-192.png" },
 };
 

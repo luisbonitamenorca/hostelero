@@ -406,7 +406,7 @@ function ListaSolicitudes({ lista, emps, centros, tipoDe, centroDe, esGestor, pu
             return (
               <tr key={a.id} className={`aus-fila ${a.estado} ${esGestor || borrable ? "" : "quieta"}`} onClick={() => onEditar(a)}>
                 <td className="np">{nombreCompleto(e)}{e?.fecha_baja ? <span className="aus-baja"> baja</span> : null}</td>
-                <td><span className="aus-punto" style={{ background: t.color || "#888" }} />{t.nombre}</td>
+                <td><span className="aus-punto" style={{ background: t.color || "#7A848C" }} />{t.nombre}</td>
                 <td>{fmtFecha(a.fecha_inicio)}</td>
                 <td>{fmtFecha(a.fecha_fin)}</td>
                 <td className="r" title="Días naturales; medio día = 0,5">{dur}</td>
@@ -491,7 +491,7 @@ function Calendario({ filas, dias, festivos, porEmpDia, tipos, tipoDe, onCeldaVa
                     const fuera = (e.fecha_alta && d.iso < e.fecha_alta) || (e.fecha_baja && d.iso > e.fecha_baja);
                     if (a) {
                       const t = tipoDe(a);
-                      const bg = t.color || "#888";
+                      const bg = t.color || "#7A848C";
                       return (
                         <td key={d.iso} className={`aus-celda con ${a.estado === "solicitada" ? "pendiente" : ""} ${esHoy ? "hoy" : ""}`}
                           style={{ background: bg, color: colorTexto(bg) }}
@@ -514,7 +514,7 @@ function Calendario({ filas, dias, festivos, porEmpDia, tipos, tipoDe, onCeldaVa
         </table>
       </div>
       <div className="leyenda aus-leyenda">
-        {leyenda.map((t) => <span key={t.id}><i className="muestra" style={{ background: t.color || "#888" }} />{t.nombre}</span>)}
+        {leyenda.map((t) => <span key={t.id}><i className="muestra" style={{ background: t.color || "#7A848C" }} />{t.nombre}</span>)}
         <span><i className="muestra aus-m-pend" />Pendiente de aprobar</span>
         <span><i className="muestra aus-m-fest" />Festivo</span>
         <span><i className="muestra aus-m-finde" />Fin de semana</span>
@@ -651,7 +651,7 @@ function ModalAusencia({ id, inicial, base, centros, esGestor, ausencia, onCerra
         </select>
         {tipo ? (
           <div className="aus-ayuda">
-            <i className="aus-punto" style={{ background: tipo.color || "#888" }} />
+            <i className="aus-punto" style={{ background: tipo.color || "#7A848C" }} />
             {CATEGORIA[tipo.categoria] || tipo.categoria}
             {tipo.computa_vacaciones ? " · descuenta vacaciones" : ""}
             {tipo.computa_contador ? " · cuenta en el contador de horas" : " · no cuenta en el contador"}

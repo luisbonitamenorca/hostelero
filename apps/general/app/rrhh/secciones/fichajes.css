@@ -68,9 +68,9 @@
 
 /* modales */
 .rh-modal .fichajes-texto{margin:10px 0 0;line-height:1.5}
-.rh-modal .fichajes-resumen-modal{background:#f8f8f6;border-radius:8px;padding:10px 12px;font-size:12.5px;margin-top:8px}
+.rh-modal .fichajes-resumen-modal{background:#F3F4F0;border-radius:8px;padding:10px 12px;font-size:12.5px;margin-top:8px}
 .rh-modal .fichajes-resumen-modal div{display:flex;gap:10px;padding:2px 0}
-.rh-modal .fichajes-resumen-modal span{color:#888;min-width:84px;font-weight:600}
+.rh-modal .fichajes-resumen-modal span{color:#7A848C;min-width:84px;font-weight:600}
 
 @media (max-width:760px){
   .rh .fichajes-acciones{margin-left:0;width:100%}

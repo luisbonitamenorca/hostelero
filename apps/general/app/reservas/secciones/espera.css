@@ -2,7 +2,7 @@
    Cuelga de .rv (oscuro por defecto); en claro se usan los fallback de las variables.
    .le.puerta = vista para la tablet de la entrada: letras grandes, menos columnas. */
 
-.rv .le { --le-panel: var(--panel, #fff); --le-panel-2: var(--panel-2, #F7F4EE); --le-acento: var(--acento, var(--mar)); }
+.rv .le { --le-panel: var(--panel, #fff); --le-panel-2: var(--panel-2, #F3F4F0); --le-acento: var(--acento, var(--mar)); }
 
 /* ---- cabecera ---- */
 .rv .le-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -29,7 +29,7 @@
 .rv .le-item.avisado { border-left-color: #7C3AED; }
 .rv .le-item.cerrada { border-left-color: var(--borde); opacity: .75; }
 .rv .le-alta { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; font-weight: 600; color: var(--mar); display: flex; align-items: center; gap: 6px; }
-.rv .le-alta b { font-family: 'Figtree', system-ui, sans-serif; background: var(--le-panel-2); border: 1px solid var(--borde); border-radius: 6px; min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; color: var(--gris); }
+.rv .le-alta b { font-family:'Plus Jakarta Sans', system-ui, sans-serif; background: var(--le-panel-2); border: 1px solid var(--borde); border-radius: 6px; min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; color: var(--gris); }
 .rv .le-nombre { min-width: 0; display: flex; flex-direction: column; }
 .rv .le-nombre b { font-size: 14px; color: var(--tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rv .le-nombre small { font-size: 11.5px; color: var(--gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -43,7 +43,7 @@
 .rv .le-est { font-weight: 700; color: #F0B64C; }
 .rv .le-est.ya { color: #5BE38A; }
 .rv[data-tema="claro"] .le-est { color: #B7791F; }
-.rv[data-tema="claro"] .le-est.ya { color: #2F7D46; }
+.rv[data-tema="claro"] .le-est.ya { color: #5E7D5A; }
 .rv .le-estado .chip { font-size: 10.5px; white-space: nowrap; }
 .rv .le-acc { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
 .rv .le-acc button, .rv .le-panel button, .rv .le-panel a { border: 1px solid var(--borde); background: var(--le-panel-2); color: var(--tinta); border-radius: 8px; padding: 8px 11px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; text-decoration: none; line-height: 1; display: inline-flex; align-items: center; }
@@ -78,7 +78,7 @@
 .rv .le-mesa small { font-size: 10.5px; color: var(--gris); font-weight: 600; }
 .rv .le-mesa.libre { border-color: #2E9E5B; }
 .rv .le-mesa.libre .le-mesa-st { color: #5BE38A; }
-.rv[data-tema="claro"] .le-mesa.libre .le-mesa-st { color: #2F7D46; }
+.rv[data-tema="claro"] .le-mesa.libre .le-mesa-st { color: #5E7D5A; }
 .rv .le-mesa.ocupada { opacity: .7; }
 .rv .le-mesa.ocupada .le-mesa-st { color: #F0B64C; }
 .rv .le-mesa.nocabe { border-style: dashed; }

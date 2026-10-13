@@ -874,11 +874,11 @@ export async function publicarSemanaPlan(centroId: string, desde: string, hasta:
           para: e.email as string,
           asunto: `Tu horario de la semana del ${fmtDdMm(desde)}`,
           html:
-            `<div style="font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a">` +
+            `<div style="font-family:'Plus Jakarta Sans', system-ui, sans-serif;font-size:14px;color:#242D36">` +
             `<p>Hola ${esc(e.nombre)},</p>` +
             `<p>Ya está publicado tu horario${nombreCentro ? ` en ${esc(nombreCentro)}` : ""} para la semana del ${fmtDdMm(desde)} al ${fmtDdMm(hasta)}:</p>` +
             `<table style="border-collapse:collapse">${filas || "<tr><td>Sin turnos esta semana.</td></tr>"}</table>` +
-            `<p style="color:#888;font-size:12px">Puedes verlo siempre actualizado en la app del empleado.</p></div>`,
+            `<p style="color:#7A848C;font-size:12px">Puedes verlo siempre actualizado en la app del empleado.</p></div>`,
         };
       });
     nCorreos = correos.length;

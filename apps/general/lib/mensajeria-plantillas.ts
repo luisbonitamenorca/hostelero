@@ -416,11 +416,11 @@ export function htmlEmail(d: {
     ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapaHtml(d.preencabezado)}</div>`
     : "";
   const condiciones = rest.url_condiciones
-    ? ` <a href="${escapaHtml(rest.url_condiciones)}" style="color:#6b7280;">${idioma === "es" ? "Condiciones" : idioma === "ca" ? "Condicions" : idioma === "fr" ? "Conditions" : idioma === "de" ? "Bedingungen" : "Terms"}</a>`
+    ? ` <a href="${escapaHtml(rest.url_condiciones)}" style="color:#5C6872;">${idioma === "es" ? "Condiciones" : idioma === "ca" ? "Condicions" : idioma === "fr" ? "Conditions" : idioma === "de" ? "Bedingungen" : "Terms"}</a>`
     : "";
 
   const contacto = d.responderA
-    ? ` <a href="mailto:${escapaHtml(d.responderA)}" style="color:#6b7280;">${escapaHtml(d.responderA)}</a>`
+    ? ` <a href="mailto:${escapaHtml(d.responderA)}" style="color:#5C6872;">${escapaHtml(d.responderA)}</a>`
     : "";
 
   return `<!doctype html>
@@ -429,11 +429,11 @@ export function htmlEmail(d: {
 ${pre}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f3f2;padding:24px 12px;">
 <tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1e2a25;font-size:15px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:'Plus Jakarta Sans', system-ui, sans-serif;color:#1e2a25;font-size:15px;">
   <tr><td style="background:${color};padding:22px 24px;text-align:center;">${cabecera}</td></tr>
   <tr><td style="padding:26px 24px 8px;">${cuerpoHtml(d.cuerpo, color)}</td></tr>
   ${botones ? `<tr><td style="padding:4px 24px 20px;">${botones}</td></tr>` : ""}
-  <tr><td style="padding:16px 24px 22px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;line-height:1.5;">
+  <tr><td style="padding:16px 24px 22px;border-top:1px solid #e5e7eb;color:#5C6872;font-size:12px;line-height:1.5;">
     <div style="font-weight:600;color:#374151;">${escapaHtml(rest.nombre)}</div>
     ${direccion ? `<div>${escapaHtml(direccion)}</div>` : ""}
     <div style="margin-top:8px;">${escapaHtml(t.legal.replace("{{titular}}", titular))}${contacto}${condiciones}</div>

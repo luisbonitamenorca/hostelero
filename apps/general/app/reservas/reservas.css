@@ -24,10 +24,10 @@
   /* superficies */
   --fondo: #F3F4F0;
   --panel: #FFFFFF;
-  --panel-2: #F4F6F5;
-  --panel-3: #E9EDEB;
+  --panel-2: #EEF0EC;
+  --panel-3: #E4E7E2;
   --borde: #DEDFE1;
-  --borde-fuerte: #C6CECA;
+  --borde-fuerte: #C8CCC9;
   /* texto */
   --tinta: #242D36;
   --gris: #5C6872;
@@ -35,20 +35,20 @@
   /* acento de la casa */
   --acento: #2F3A45;
   --acento-claro: #2F3A45;
-  --acento-suave: #E3F1EC;
+  --acento-suave: #E7EEE5;
   --acento-texto: #FFFFFF;
   /* semáforo */
   --peligro: #C62828;
   --ambar: #B7791F;
-  --ok: #2E7D32;
+  --ok: #5E7D5A;
   --info: #2F80ED;
   /* nombres heredados que usan las secciones */
   --calc: var(--fondo);
   --mar: var(--acento);
-  --mar-osc: #0B5443;
+  --mar-osc: #242D36;
   --mar-claro: var(--acento-suave);
   --vi: #7C2D3E;
-  --arena: #EFE7D6;
+  --arena: #EAECE8;
   --sombra: 0 2px 8px rgba(0, 0, 0, .08);
   --sombra-alta: 0 10px 30px rgba(0, 0, 0, .18);
   --radio: 10px;
@@ -273,7 +273,7 @@
 .rsp .pildora.e-no_show { background: var(--e-no_show); }
 .rsp .pildora.e-cancelada { background: var(--e-cancelada); }
 .rsp .pildora.e-a_revisar { background: var(--e-a_revisar); }
-.rsp .pildora.e-tarjeta_pendiente { background: var(--e-tarjeta_pendiente); color: #1a1a1a; border-color: var(--e-tarjeta_pendiente-borde); }
+.rsp .pildora.e-tarjeta_pendiente { background: var(--e-tarjeta_pendiente); color: #242D36; border-color: var(--e-tarjeta_pendiente-borde); }
 .rsp .pildora.e-lista_espera { background: var(--e-lista_espera); }
 
 /* Chips pequeños (etiquetas, avisos en la fila) */

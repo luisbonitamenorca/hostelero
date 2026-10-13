@@ -6,7 +6,7 @@ export const metadata = { title: "Política de privacidad · Jano" };
 
 export default function Privacidad() {
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px", fontFamily: "system-ui, sans-serif", lineHeight: 1.6, color: "#2A3B36" }}>
+    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px", fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", lineHeight: 1.6, color: "#2A3B36" }}>
       <h1 style={{ fontSize: 28, marginBottom: 8 }}>Política de privacidad</h1>
       <p style={{ color: "#5C6872", marginBottom: 24 }}>Jano · Bonita Menorca SL · última revisión: octubre de 2026</p>
 

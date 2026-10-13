@@ -79,7 +79,7 @@
 @media (pointer: coarse) {
   .rsp .cg-asa { width: 20px; right: -4px; }
 }
-.rsp .cg-globo { position: absolute; left: 0; top: -22px; background: #1A2226; color: #fff; font-size: 11px; padding: 2px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+.rsp .cg-globo { position: absolute; left: 0; top: -22px; background: #242D36; color: #fff; font-size: 11px; padding: 2px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
 .rsp .cg-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 /* leyenda */

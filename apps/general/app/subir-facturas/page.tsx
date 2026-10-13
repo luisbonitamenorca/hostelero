@@ -165,7 +165,7 @@ export default function SubirFacturas() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: "0 auto", padding: "24px 16px 48px", fontFamily: "system-ui, sans-serif" }}>
+    <main style={{ maxWidth: 480, margin: "0 auto", padding: "24px 16px 48px", fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
       <AvisoVersion />
       <h1 style={{ fontSize: 22, marginBottom: 2 }}>Subir facturas</h1>
       <p style={{ color: "#666", fontSize: 14, marginBottom: 20 }}>
@@ -221,7 +221,7 @@ export default function SubirFacturas() {
       )}
 
       {correctas > 0 && !ocupado && (
-        <p style={{ marginTop: 16, padding: "12px 14px", background: "#E1F5EE", borderRadius: 10, fontSize: 14 }}>
+        <p style={{ marginTop: 16, padding: "12px 14px", background: "#E7EEE5", borderRadius: 10, fontSize: 14 }}>
           {correctas === 1 ? "1 fichero" : `${correctas} ficheros`} en la bandeja de
           Compras. <strong>Puedes cerrar esta página tranquilamente</strong>: quedan en
           cola y se procesan en cuanto alguien tiene abierta la app de Compras. Si la

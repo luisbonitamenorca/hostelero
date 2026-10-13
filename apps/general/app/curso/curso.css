@@ -14,9 +14,9 @@
   cursor: pointer;
 }
 .curso-pestana.activa {
-  background: #1a2332;
+  background: #242D36;
   color: #fff;
-  border-color: #1a2332;
+  border-color: #242D36;
   font-weight: 500;
 }
 
@@ -43,7 +43,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--gris, #6b7280);
+  color: var(--gris, #5C6872);
   margin-bottom: 4px;
 }
 .curso-stat .num {
@@ -51,7 +51,7 @@
   font-weight: 600;
 }
 .curso-stat.ok .num { color: #3d6b35; }
-.curso-stat.aviso .num { color: #a64729; }
+.curso-stat.aviso .num { color: #4A6647; }
 
 .curso-filtros {
   display: flex;
@@ -87,7 +87,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--gris, #6b7280);
+  color: var(--gris, #5C6872);
 }
 .curso-tabla td {
   padding: 10px 10px;
@@ -96,8 +96,8 @@
   overflow-wrap: anywhere;
 }
 .curso-tabla tr:last-child td { border-bottom: none; }
-.curso-suave { color: var(--gris, #6b7280); font-size: 12px; }
-.curso-vacio { text-align: center; color: var(--gris, #6b7280); padding: 40px !important; }
+.curso-suave { color: var(--gris, #5C6872); font-size: 12px; }
+.curso-vacio { text-align: center; color: var(--gris, #5C6872); padding: 40px !important; }
 
 .curso-badge {
   display: inline-block;
@@ -107,10 +107,10 @@
   font-weight: 500;
   white-space: nowrap;
 }
-.curso-badge.iniciado { background: #eef2f7; color: #3d4a5c; }
+.curso-badge.iniciado { background: #eef2f7; color: #5C6872; }
 .curso-badge.aprobado { background: rgba(107, 122, 63, 0.14); color: #3d6b35; }
 .curso-badge.suspenso_intento { background: rgba(200, 155, 74, 0.16); color: #8a6420; }
-.curso-badge.suspenso_definitivo { background: rgba(196, 89, 58, 0.14); color: #a64729; }
+.curso-badge.suspenso_definitivo { background: rgba(196, 89, 58, 0.14); color: #4A6647; }
 
 .curso-boton-mini {
   background: transparent;
@@ -121,7 +121,7 @@
   font-size: 12px;
 }
 .curso-boton-mini:hover { background: #f5f5f2; }
-.curso-rojo { color: #a64729; }
+.curso-rojo { color: #4A6647; }
 
 @media (max-width: 800px) {
   .curso-stats { grid-template-columns: repeat(2, 1fr); }

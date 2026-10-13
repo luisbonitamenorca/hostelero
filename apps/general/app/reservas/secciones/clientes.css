@@ -67,7 +67,7 @@
 .rsp .cl-sub span + span::before { content: "· "; }
 .rsp .cl-tabla td.tel { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rsp .cl-tabla td.email { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cl-gris); font-size: 12.5px; }
-.rsp .cl-ok { font-style: normal; color: #2FA886; font-weight: 700; }
+.rsp .cl-ok { font-style: normal; color: #8FAE8B; font-weight: 700; }
 .rsp .cl-tabla td.num { font-variant-numeric: tabular-nums; font-weight: 700; width: 70px; }
 .rsp .cl-tabla td.num.mal { color: #E5484D; }
 .rsp .cl-tabla td.fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }

@@ -1138,7 +1138,7 @@ export async function enviarPruebaPlantilla(restId: string, asunto: string | nul
     const vista = await previsualizarPlantilla(restId, asunto, cuerpo);
     if (!vista.ok || !vista.data) return { ok: false, error: vista.error };
     const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;white-space:pre-wrap">${esc(vista.data.cuerpo)}</div>`;
+    const html = `<div style="font-family:'Plus Jakarta Sans', system-ui, sans-serif;font-size:15px;line-height:1.5;white-space:pre-wrap">${esc(vista.data.cuerpo)}</div>`;
     const enviado = await enviarCorreo({ para: perfil.correo, asunto: `[Prueba] ${vista.data.asunto || "Plantilla de reservas"}`, html });
     if (!enviado) return { ok: false, error: "No se ha podido enviar: falta el proveedor de correo (RESEND_API_KEY) o ha fallado el envío." };
     void sb;

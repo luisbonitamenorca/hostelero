@@ -69,7 +69,7 @@ const COLORES: Record<Tema, Record<PlanoMesaEstado, Colores>> = {
     libre: { fondo: "#6b3d2e", borde: "#4e2b20", texto: "#ffffff" },
     web: { fondo: "#8a8f94", borde: "#6c7176", texto: "#ffffff" },
     reservada: { fondo: "#8bc34a", borde: "#6f9f33", texto: "#1a2a10" },
-    sentada: { fondo: "#2e7d32", borde: "#1f5a22", texto: "#ffffff" },
+    sentada: { fondo: "#5E7D5A", borde: "#1f5a22", texto: "#ffffff" },
     en_sala: { fondo: "#1f4e9e", borde: "#163a78", texto: "#ffffff" },
     bloqueada: { fondo: "#4b5057", borde: "#6b7178", texto: "#d7dbe0" },
     inactiva: { fondo: "#3a3f45", borde: "#4b5057", texto: "#8a9199" },
@@ -79,7 +79,7 @@ const COLORES: Record<Tema, Record<PlanoMesaEstado, Colores>> = {
     libre: { fondo: "#7a4a35", borde: "#5a3426", texto: "#ffffff" },
     web: { fondo: "#9aa0a6", borde: "#7c8288", texto: "#ffffff" },
     reservada: { fondo: "#8bc34a", borde: "#6f9f33", texto: "#1a2a10" },
-    sentada: { fondo: "#2e7d32", borde: "#1f5a22", texto: "#ffffff" },
+    sentada: { fondo: "#5E7D5A", borde: "#1f5a22", texto: "#ffffff" },
     en_sala: { fondo: "#1f4e9e", borde: "#163a78", texto: "#ffffff" },
     bloqueada: { fondo: "#d9d4c9", borde: "#9aa0a6", texto: "#4b5057" },
     inactiva: { fondo: "#e6e1d6", borde: "#cfc8ba", texto: "#9aa0a6" },
@@ -94,7 +94,7 @@ export function colorMesa(estado: PlanoMesaEstado, tema: Tema): Colores {
 
 const OBJ: Record<Tema, Record<string, string>> = {
   oscuro: { planta: "#4db6ac", pared: "#3a3f45", barra: "#3a3f45", barraLinea: "#4b5057", cocina: "#2f3338", textoFondo: "rgba(230,180,60,.22)", texto: "#e6b43c", linea: "#a3aab3", columna: "#555b63", columnaBorde: "#6b7178", ventana: "rgba(142,197,255,.25)", ventanaBorde: "#8ec5ff", etiqueta: "#c9ced4" },
-  claro: { planta: "#3aa394", pared: "#c9c3b6", barra: "#cfc8ba", barraLinea: "#b8b0a0", cocina: "#d8d3c8", textoFondo: "rgba(230,180,60,.32)", texto: "#7a5410", linea: "#6b7280", columna: "#9aa0a6", columnaBorde: "#7c8288", ventana: "rgba(31,78,158,.15)", ventanaBorde: "#1f4e9e", etiqueta: "#4b5057" },
+  claro: { planta: "#3aa394", pared: "#c9c3b6", barra: "#cfc8ba", barraLinea: "#b8b0a0", cocina: "#d8d3c8", textoFondo: "rgba(230,180,60,.32)", texto: "#7a5410", linea: "#5C6872", columna: "#9aa0a6", columnaBorde: "#7c8288", ventana: "rgba(31,78,158,.15)", ventanaBorde: "#1f4e9e", etiqueta: "#4b5057" },
 };
 
 /* ==================== Geometría ==================== */

@@ -1,19 +1,19 @@
 /* Página pública de pago / garantía de una reserva. Tema claro de la casa (como /reservar-mesa),
    scoped .rvp; el color de marca del restaurante entra por --marca desde el servidor. */
 .rvp{
-  --calc:#F7F4EE; --marca:#0F4C5C; --tinta:#1A2226; --gris:#6B7280; --linea:#E7E2D8;
-  --ok:#2F7D46; --error:#B3261E; --ambar:#8A5A00; --ambar-fondo:#FBF3E0;
+  --calc:#F3F4F0; --marca:#2F3A45; --tinta:#242D36; --gris:#5C6872; --linea:#DEDFE1;
+  --ok:#5E7D5A; --error:#B3261E; --ambar:#8A5A00; --ambar-fondo:#FBF3E0;
   --radio:14px; --sombra:0 2px 12px rgba(26,34,38,.07);
-  font-family:'Figtree',system-ui,-apple-system,sans-serif;background:var(--calc);color:var(--tinta);
+  font-family:'Plus Jakarta Sans', system-ui, sans-serif;background:var(--calc);color:var(--tinta);
   min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;
 }
 .rvp *{margin:0;padding:0;box-sizing:border-box}
 .rvp .wrap{max-width:520px;margin:0 auto;padding:0 18px 60px}
 .rvp header.top{padding:28px 0 6px;text-align:center}
 .rvp .logo{max-height:56px;max-width:200px;object-fit:contain;margin:0 auto 8px;display:block}
-.rvp .marca{font-family:Georgia,'Times New Roman',serif;font-size:24px;letter-spacing:.05em;color:var(--marca)}
+.rvp .marca{font-family:'Plus Jakarta Sans', system-ui, sans-serif;font-size:24px;letter-spacing:.05em;color:var(--marca)}
 .rvp .marca small{display:block;font-family:inherit;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gris);margin-top:3px}
-.rvp h1{font-family:Georgia,serif;font-size:22px;font-weight:600;margin:22px 0 6px;color:var(--tinta)}
+.rvp h1{font-family:'Plus Jakarta Sans', system-ui, sans-serif;font-size:22px;font-weight:600;margin:22px 0 6px;color:var(--tinta)}
 .rvp p.sub{color:var(--gris);font-size:14px;margin-bottom:14px}
 .rvp .card{background:#fff;border:1px solid var(--linea);border-radius:var(--radio);box-shadow:var(--sombra);padding:18px;margin-bottom:12px}
 .rvp dl.ficha{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px}
@@ -35,7 +35,7 @@
 .rvp .candado{font-size:12px;color:var(--gris);text-align:center;margin-top:10px}
 .rvp .aviso{padding:13px 14px;border-radius:10px;font-size:14px;margin:12px 0}
 .rvp .aviso.err{background:#FBEAE9;color:var(--error)}
-.rvp .aviso.ok{background:#E8F3EC;color:var(--ok)}
+.rvp .aviso.ok{background:#E7EEE5;color:var(--ok)}
 .rvp .aviso.info{background:#EEF3F5;color:var(--marca)}
 .rvp .icono{width:60px;height:60px;margin:6px auto 14px;border-radius:50%;display:grid;place-items:center;font-size:30px;color:#fff}
 .rvp .icono.ok{background:var(--ok)}

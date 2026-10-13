@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   icons: { apple: "/parte-icon-192.png" },
 };
 
-export const viewport: Viewport = { themeColor: "#4A5A3E" };
+export const viewport: Viewport = { themeColor: "#2F3A45" };
 
 export default function Parte() {
   return <FormularioParte />;

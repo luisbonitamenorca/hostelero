@@ -29,7 +29,7 @@ const nombreMes = (f: string) => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 const MSG_CERRADO = "Día cerrado en Fichajes: reábrelo para cambiar turnos";
-const GRIS = "#888";
+const GRIS = "#7A848C";
 const ENUM_AUS: Record<string, string> = { vacaciones: "Vacaciones", baja: "Baja", permiso: "Permiso", otro: "Ausencia" };
 const H0 = 6 * 60; // vista día: 06:00
 const H1 = 26 * 60; // … hasta 02:00
@@ -877,8 +877,8 @@ export default function SecPlanificacion({ ctx, avisar }: SecProps) {
 
       {vista === "mes" ? null : (
       <div className="leyenda plan-leyenda">
-        <span><span className="muestra" style={{ border: "1.5px dashed #888", background: "#fff" }} /> Borrador (solo lo ves tú)</span>
-        <span><span className="muestra" style={{ borderLeft: "4px solid #1D9E75", background: "#E1F5EE" }} /> Publicado · color del puesto</span>
+        <span><span className="muestra" style={{ border: "1.5px dashed #7A848C", background: "#fff" }} /> Borrador (solo lo ves tú)</span>
+        <span><span className="muestra" style={{ borderLeft: "4px solid #5E7D5A", background: "#E7EEE5" }} /> Publicado · color del puesto</span>
         <span><span className="muestra" style={{ background: "#eee", border: "1px dashed #bbb" }} /> En otro centro</span>
         <span><span className="muestra" style={{ background: "var(--arena)", border: "1px solid var(--linea)" }} /> Ausencia aprobada</span>
         <span>★ Festivo</span>

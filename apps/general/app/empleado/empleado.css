@@ -1,10 +1,10 @@
 /* App del empleado (Bonita Equipo). Portada de docs/legado/planifica-empleado.html, scoped .emp */
 .emp{
-  --fondo:#FAFAF7; --tinta:#1C2B33; --tinta-suave:#5A6B73;
-  --mar:#0E7C86; --mar-oscuro:#0A5C64; --arena:#E9E4D8; --linea:#DDD6C7;
-  --ok:#2F855A; --ok-f:#E8F3EC; --error:#B03A2E; --error-f:#F9ECEA;
+  --fondo:#F3F4F0; --tinta:#242D36; --tinta-suave:#5C6872;
+  --mar:#2F3A45; --mar-oscuro:#242D36; --arena:#EAECE8; --linea:#DEDFE1;
+  --ok:#5E7D5A; --ok-f:#E7EEE5; --error:#B03A2E; --error-f:#F9ECEA;
   --pausa-f:#EFF1F0; --aviso:#B7791F; --aviso-f:#FBF3E0; --correccion-f:#F1EDF7; --correccion:#7A5CA8;
-  background:var(--fondo); color:var(--tinta); font-family:system-ui,-apple-system,sans-serif; font-size:15px;
+  background:var(--fondo); color:var(--tinta); font-family:'Plus Jakarta Sans', system-ui, sans-serif; font-size:15px;
   min-height:100vh; padding-bottom:calc(70px + env(safe-area-inset-bottom));
 }
 .emp *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}

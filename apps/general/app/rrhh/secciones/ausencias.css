@@ -70,12 +70,12 @@
 .rh-modal .aus-emp-fijo{padding:8px 11px;border:1px solid var(--linea);border-radius:8px;background:var(--arena);font-weight:600}
 .rh-modal .aus-busca{position:relative}
 .rh-modal .aus-sugerencias{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;margin-top:4px;max-height:260px;overflow-y:auto}
-.rh-modal .aus-sugerencias button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--fondo);padding:8px 12px;cursor:pointer;font-family:inherit;font-size:13px;color:#1a1a1a}
+.rh-modal .aus-sugerencias button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--fondo);padding:8px 12px;cursor:pointer;font-family:inherit;font-size:13px;color:#242D36}
 .rh-modal .aus-sugerencias button:hover{background:#F6F9F8}
 .rh-modal .aus-sugerencias .np{font-weight:600}
-.rh-modal .aus-sub{font-size:11.5px;color:#888}
+.rh-modal .aus-sub{font-size:11.5px;color:#7A848C}
 .rh-modal .aus-punto{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px}
-.rh-modal .aus-ayuda{font-size:12px;color:#888;margin-top:5px;min-height:14px}
+.rh-modal .aus-ayuda{font-size:12px;color:#7A848C;margin-top:5px;min-height:14px}
 .rh-modal .aus-check{display:flex;align-items:center;gap:8px;font-weight:400;margin:0;padding:8px 0}
 .rh-modal .aus-check input{width:auto;margin:0}
 .rh-modal .aus-saldo{margin-top:16px;background:#F6F9F8;border:1px solid #CFE8DF;border-radius:10px;padding:12px 14px}

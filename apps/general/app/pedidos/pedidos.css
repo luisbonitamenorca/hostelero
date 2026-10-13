@@ -8,8 +8,8 @@
 .ped {
   --ped-verde: var(--verde, #2F3A45);
   --ped-verde-oscuro: #242D36;
-  --ped-verde-claro: #E7F1EC;
-  --ped-verde-borde: #C5DED4;
+  --ped-verde-claro: #E7EEE5;
+  --ped-verde-borde: #DCE7D9;
   --ped-coral: var(--coral, #D85A30);
   --ped-coral-claro: #FBEDE7;
   --ped-coral-borde: #F2C9B8;

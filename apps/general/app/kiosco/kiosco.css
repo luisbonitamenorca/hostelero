@@ -1,9 +1,9 @@
 /* Kiosco de fichaje (tablet). Portado de docs/legado/planifica-kiosco.html, scoped .kio */
 .kio{
-  --mar:#0E7C86; --tinta:#1C2B33; --tinta-suave:#5A6B73; --fondo:#FAFAF7; --linea:#DDD6C7;
-  --ok:#2F855A; --error:#B03A2E; --arena:#E9E4D8;
+  --mar:#2F3A45; --tinta:#242D36; --tinta-suave:#5C6872; --fondo:#F3F4F0; --linea:#DEDFE1;
+  --ok:#5E7D5A; --error:#B03A2E; --arena:#EAECE8;
   background:var(--fondo); color:var(--tinta); min-height:100vh;
-  font-family:system-ui,-apple-system,sans-serif; display:flex; flex-direction:column;
+  font-family:'Plus Jakarta Sans', system-ui, sans-serif; display:flex; flex-direction:column;
   user-select:none; -webkit-tap-highlight-color:transparent;
 }
 .kio *{box-sizing:border-box}

@@ -9,7 +9,7 @@
   --ple-tinta: #e6e6e6;
   --ple-gris: #a3aab3;
   --ple-acento: #2F3A45;
-  --ple-acento-claro: #2FA886;
+  --ple-acento-claro: #8FAE8B;
   --ple-peligro: #E5484D;
   --ple-ambar: #F0B64C;
 
@@ -19,17 +19,17 @@
   min-height: 520px;
   height: 100%;
   color: var(--ple-tinta);
-  font-family: 'Figtree', system-ui, sans-serif;
+  font-family:'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 13px;
   outline: none;
 }
 .ple[data-tema="claro"] {
-  --ple-fondo: #F7F4EE;
+  --ple-fondo: #F3F4F0;
   --ple-panel: #ffffff;
   --ple-panel-2: #F1ECE3;
   --ple-borde: #E2DCCE;
-  --ple-tinta: #1A2226;
-  --ple-gris: #6B7280;
+  --ple-tinta: #242D36;
+  --ple-gris: #5C6872;
   --ple-acento: #2F3A45;
   --ple-acento-claro: #2F3A45;
   --ple-peligro: #B3261E;

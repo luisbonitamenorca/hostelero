@@ -103,7 +103,7 @@ function SecPanel({ canales, refresco }: { canales: Canal[]; refresco: number })
         )}
       </div>
       <div className="tarjeta carta-borde">
-        <h2 style={{ fontSize: 18, marginBottom: 10, fontFamily: "Georgia,serif" }}>Canales</h2>
+        <h2 style={{ fontSize: 18, marginBottom: 10, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Canales</h2>
         {CANALES.map((c) => {
           const info = canales.find((x) => x.canal === c.id);
           const est = info?.estado || "sin_conectar";
@@ -672,7 +672,7 @@ function FichaLista({ lista, cerrar, cambiada }: { lista: Lista; cerrar: () => v
             <div className="mini">Vacía todavía: busca arriba y añade.</div>
           ) : (
             miembros.map((m) => (
-              <div key={m.cliente_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid #E3E7E1" }}>
+              <div key={m.cliente_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid #DEDFE1" }}>
                 <div className="mini" style={{ color: "inherit" }}>
                   <b>{m.clientes?.nombre || m.clientes?.email || m.clientes?.telefono}</b>
                   <div className="mini">{[m.clientes?.email, m.clientes?.telefono].filter(Boolean).join(" · ")}</div>

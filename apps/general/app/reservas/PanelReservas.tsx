@@ -760,7 +760,7 @@ function BuscadorGlobal(props: {
                         {r.telefono ? ` · ${r.telefono}` : ""}
                       </small>
                     </span>
-                    <span className="res-estado" style={{ background: e.color, color: e.borde ? "#1a1a1a" : "#fff", borderColor: e.borde ?? e.color }}>
+                    <span className="res-estado" style={{ background: e.color, color: e.borde ? "#242D36" : "#fff", borderColor: e.borde ?? e.color }}>
                       {EST[r.estado]?.txt ?? e.texto}
                     </span>
                     <code className="res-loc">{r.localizador}</code>

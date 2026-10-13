@@ -135,7 +135,7 @@ export function PopoverReserva(props: PopoverReservaProps) {
   const BotonEstado = ({ estado, texto, icono, onClick }: { estado: string; texto?: string; icono?: React.ReactNode; onClick?: () => void }) => {
     const def = ESTADO[estado];
     const actual = r.estado === estado;
-    const txt = def.borde ? "#1a1a1a" : colorTexto(def.color);
+    const txt = def.borde ? "#242D36" : colorTexto(def.color);
     return (
       <button
         type="button"
@@ -165,7 +165,7 @@ export function PopoverReserva(props: PopoverReservaProps) {
         <div className="pv-tit">
           <b>{nombreCliente(r).nombre}{nombreCliente(r).apellidos ? ` ${nombreCliente(r).apellidos}` : ""}</b>
           <span> · {fmtHora(r.hora)} · {r.pax} pax{mesas > 1 ? ` · ${mesas} mesas` : ""}</span>
-          <span className="pv-estado" style={{ background: ESTADO[r.estado]?.color ?? "#8A9199", color: ESTADO[r.estado]?.borde ? "#1a1a1a" : colorTexto(ESTADO[r.estado]?.color ?? "#8A9199") }}>
+          <span className="pv-estado" style={{ background: ESTADO[r.estado]?.color ?? "#8A9199", color: ESTADO[r.estado]?.borde ? "#242D36" : colorTexto(ESTADO[r.estado]?.color ?? "#8A9199") }}>
             {ESTADO[r.estado]?.texto ?? r.estado}
           </span>
         </div>

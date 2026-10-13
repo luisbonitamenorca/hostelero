@@ -122,7 +122,7 @@
 .rsp .aj-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .rsp .aj-chip-mesa { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--aj-borde); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 700; background: var(--aj-panel2); cursor: pointer; font-family: inherit; color: var(--aj-tinta); }
 .rsp .aj-chip-mesa.on { background: var(--aj-acento); border-color: var(--aj-acento); color: #fff; }
-.rsp-modal .aj-chip-mesa { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--aj-borde); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 700; background: var(--aj-panel2, #F3F0E8); cursor: pointer; font-family: inherit; color: var(--aj-tinta, #1A2226); }
+.rsp-modal .aj-chip-mesa { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--aj-borde); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 700; background: var(--aj-panel2, #F3F0E8); cursor: pointer; font-family: inherit; color: var(--aj-tinta, #242D36); }
 .rsp-modal .aj-chip-mesa.on { background: var(--acento, var(--mar)); border-color: var(--acento, var(--mar)); color: #fff; }
 
 /* ---- tabla ---- */

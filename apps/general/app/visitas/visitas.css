@@ -1,11 +1,11 @@
 /* Estilos del backoffice de Visitas. Portados del legado (docs/legado/visitas-index.html)
    y acotados bajo .vis para no filtrar al resto de la app general. */
 .vis {
-  --bg:#faf7f2; --surface:#ffffff; --ink:#211d19; --muted:#8c8377;
-  --line:#e9e2d6; --line-strong:#d9cfc0;
-  --wine:#6e1423; --wine-2:#8a1c30; --wine-soft:#f5e8ea;
+  --bg:#F3F4F0; --surface:#ffffff; --ink:#242D36; --muted:#5C6872;
+  --line:#DEDFE1; --line-strong:#CDD0CC;
+  --wine:#2F3A45; --wine-2:#242D36; --wine-soft:#f5e8ea;
   --gold:#b0863a; --gold-soft:#f6efe1;
-  --green:#2f7d4f; --green-soft:#e7f3ec;
+  --green:#5E7D5A; --green-soft:#E7EEE5;
   --red:#b3261e; --red-soft:#fbeae9;
   --amber:#9a6b16; --amber-soft:#fbf2dd;
   --blue:#2f5fa6; --blue-soft:#e8eef7;
@@ -98,7 +98,7 @@
 .vis .mes{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .vis .mes .dow{background:#fcfaf6;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:9px 0}
 .vis .mes .cell{background:#fff;min-height:120px;padding:6px 6px 8px;display:flex;flex-direction:column;gap:3px}
-.vis .mes .cell.out{background:#fafaf7}
+.vis .mes .cell.out{background:#F3F4F0}
 .vis .mes .cell .dn{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:2px}
 .vis .mes .cell.today .dn{color:var(--wine)}
 .vis .mes .cell.today{box-shadow:inset 0 0 0 2px var(--gold-soft)}

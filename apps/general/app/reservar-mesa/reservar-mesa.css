@@ -5,7 +5,7 @@
   --acento:#2F3A45; --acento-osc:#0B533F; --acento-suave:#E6F2EE;
   --papel:#F3F4F2; --blanco:#FFFFFF; --tinta:#242D36; --gris:#5C6872; --gris-claro:#8A949C;
   --borde:#DEDFE1; --borde-fuerte:#C5CCC8; --ambar:#B86E00; --ambar-suave:#FFF3DF;
-  --ok:#2F7D46; --ok-suave:#E8F3EC; --error:#B3261E; --error-suave:#FBEAE9;
+  --ok:#5E7D5A; --ok-suave:#E7EEE5; --error:#B3261E; --error-suave:#FBEAE9;
   --radio:14px; --sombra:0 2px 12px rgba(27,36,32,.06);
   font-family:var(--sans,'Plus Jakarta Sans',system-ui,sans-serif);background:var(--papel);color:var(--tinta);min-height:100vh;line-height:1.5;
   -webkit-font-smoothing:antialiased;

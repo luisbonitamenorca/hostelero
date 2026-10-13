@@ -158,7 +158,7 @@ export default async function Usuarios({
                                   border: "1px dashed " + (tieneExtra ? "#2F3A45" : "#DEDFE1"),
                                   cursor: "pointer", fontSize: 14,
                                   color: tieneExtra ? "inherit" : "#B8C2BC",
-                                  background: tieneExtra ? "#E1F5EE" : "transparent",
+                                  background: tieneExtra ? "#E7EEE5" : "transparent",
                                 }}
                               >
                                 {tieneExtra ? "✓" : "–"}
@@ -179,7 +179,7 @@ export default async function Usuarios({
                               style={{
                                 width: 30, height: 30, borderRadius: 6, border: "1px solid #DEDFE1",
                                 cursor: "pointer", fontSize: 14,
-                                background: estaVetado ? "#FCEBEB" : "#E1F5EE",
+                                background: estaVetado ? "#FCEBEB" : "#E7EEE5",
                               }}
                             >
                               {estaVetado ? "✕" : "✓"}

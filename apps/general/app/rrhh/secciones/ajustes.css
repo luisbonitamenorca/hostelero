@@ -42,7 +42,7 @@
   .rh .aj-tabla-aus .aj-th-corto{display:inline}
 }
 .rh .aj-uso{background:var(--arena);border-radius:9px;padding:10px 12px;font-size:12.5px;margin:6px 0 4px}
-.rh-modal .aj-uso{background:#f0efec;border-radius:9px;padding:10px 12px;font-size:12.5px;margin:6px 0 4px}
+.rh-modal .aj-uso{background:#EAECE8;border-radius:9px;padding:10px 12px;font-size:12.5px;margin:6px 0 4px}
 .rh-modal .aj-aviso-fusion{margin-top:12px;background:#FAEEDA;border:1px solid #EAD9AF;color:#BA7517;border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.45}
 .rh .aj-leyenda-cat{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:12px;color:var(--tinta-suave);margin:10px 2px 4px}
 .rh .aj-leyenda-cat b{color:var(--tinta)}

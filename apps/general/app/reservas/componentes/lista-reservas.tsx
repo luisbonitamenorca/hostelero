@@ -217,7 +217,7 @@ export function ListaReservas<T extends ReservaLista>(props: ListaReservasProps<
         filas.map((r) => {
           const c = r.reservas_clientes;
           const def = estadoDe(r.estado);
-          const txtPill = def.borde ? "#1a1a1a" : colorTexto(def.color);
+          const txtPill = def.borde ? "#242D36" : colorTexto(def.color);
           const ids = mesasDeReserva(r);
           const nombresMesas = ids.map((id) => nombreMesa[id] ?? "?");
           const resaltadaMesa = !!mesaResaltada && ids.includes(mesaResaltada);

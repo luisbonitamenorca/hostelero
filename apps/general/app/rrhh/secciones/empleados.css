@@ -68,7 +68,7 @@
 .rh-modal .emp-modal-ancho{max-width:640px}
 .rh-modal .emp-fila-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .rh-modal .emp-texto{margin:8px 0 0;font-size:13px;line-height:1.5}
-.rh-modal .emp-resumen{background:var(--arena, #f0efec);border-radius:9px;padding:10px 12px;margin-top:12px;font-size:12.5px;line-height:1.6}
+.rh-modal .emp-resumen{background:var(--arena, #EAECE8);border-radius:9px;padding:10px 12px;margin-top:12px;font-size:12.5px;line-height:1.6}
 .rh-modal .btn-peligro{background:var(--red, #A32D2D);color:#fff}
 .rh-modal .btn-peligro:hover{background:#7f1f1f}
 

@@ -59,7 +59,7 @@ export function EtiquetaChip({ nombre, color, mini }: { nombre: string; color: s
   const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
   const claro = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62;
   return (
-    <span className={"fc-eti" + (mini ? " mini" : "")} style={{ background: color, color: claro ? "#1a1a1a" : "#fff" }} title={nombre}>
+    <span className={"fc-eti" + (mini ? " mini" : "")} style={{ background: color, color: claro ? "#242D36" : "#fff" }} title={nombre}>
       {nombre}
     </span>
   );
@@ -416,7 +416,7 @@ export function FichaCliente(props: {
                         <small>{r.pax} pax{r.reservas_mesas?.nombre ? ` · mesa ${r.reservas_mesas.nombre}` : ""}{r.localizador ? ` · ${r.localizador}` : ""}</small>
                       </span>
                       {r.valoracion != null ? <span className="fc-res-val">{r.valoracion} ★</span> : null}
-                      <span className="fc-res-estado" style={{ background: e.color, color: e.borde ? "#1a1a1a" : "#fff", borderColor: e.borde ?? e.color }}>{e.texto}</span>
+                      <span className="fc-res-estado" style={{ background: e.color, color: e.borde ? "#242D36" : "#fff", borderColor: e.borde ?? e.color }}>{e.texto}</span>
                     </button>
                   );
                 })}
