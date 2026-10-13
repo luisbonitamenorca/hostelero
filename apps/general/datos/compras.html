@@ -250,12 +250,17 @@
   .modal .close{border:none;background:none;font-size:26px;line-height:1;color:var(--muted);cursor:pointer}
   .modal .close:hover{color:var(--wine)}
   .modal .body{display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:auto}
-  .modal .imgcol{background:#242D36;display:flex;align-items:center;justify-content:center;padding:14px;min-height:300px;position:relative;overflow:hidden}
-  .modal .imgcol img{max-width:100%;max-height:78vh;border-radius:6px;transition:transform .08s ease-out;cursor:zoom-in;transform-origin:center center;user-select:none;-webkit-user-drag:none}
+  .modal .imgcol{background:#242D36;display:flex;align-items:center;justify-content:center;padding:14px 14px 66px;min-height:300px;position:relative;overflow:hidden}
+  .modal .imgcol img{max-width:100%;max-height:72vh;border-radius:6px;transition:transform .08s ease-out;cursor:zoom-in;transform-origin:center center;user-select:none;-webkit-user-drag:none}
   .modal .imgcol img.zoomed{cursor:grab}
-  .modal .imgcol iframe{width:100%;height:78vh;border:none;border-radius:6px;background:#fff}
+  .modal .imgcol iframe{width:100%;height:72vh;border:none;border-radius:6px;background:#fff}
   .modal .imgcol .noimg{color:#7A848C;font-family:inherit}
-  .zoomctl{position:absolute;bottom:12px;right:12px;display:flex;gap:6px;z-index:2}
+  /* Faldón del visor (13-10-2026, Luis): fotos y zoom abajo, en una banda propia que no se superpone al documento */
+.faldon{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:rgba(36,45,54,.97);border-top:1px solid rgba(255,255,255,.1);z-index:2;flex-wrap:wrap}
+.faldon .fotobtns{display:flex;gap:6px;flex-wrap:wrap}
+.faldon .fotobtns button{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.45);border-radius:8px;padding:5px 10px;font-size:12px;font-family:inherit;cursor:pointer}
+.faldon .fotobtns button:hover{background:rgba(255,255,255,.12)}
+.zoomctl{display:flex;gap:6px}
   .zoomctl button,.zoomctl a{width:34px;height:34px;border-radius:8px;border:none;background:rgba(255,255,255,.92);color:#242D36;
     font-size:18px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .zoomctl button:hover,.zoomctl a:hover{background:#fff}
@@ -3354,12 +3359,12 @@ function adjuntarImagenDoc(modo){
   inp.click();
 }
 // Barra sobre el visor: cambiar la foto o añadir un folio sin pasar por el OCR.
-function barraFoto(){
-  if(!revisarDoc)return '';
-  return `<div class="fotobar" style="position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:6px">
-    <button class="btn ghost" style="padding:3px 8px;font-size:11px" onclick="adjuntarImagenDoc('sustituir')" title="Cambiar la foto o el PDF de este documento (no se relee nada)">🔁 Sustituir foto</button>
-    <button class="btn ghost" style="padding:3px 8px;font-size:11px" onclick="adjuntarImagenDoc('anadir')" title="Añadir otro folio a este documento">＋ Añadir página</button>
-  </div>`;
+function faldon(ctl){
+  const fotos=revisarDoc?`<div class="fotobtns">
+    <button onclick="adjuntarImagenDoc('sustituir')" title="Cambiar la foto o el PDF de este documento (no se relee nada)">🔁 Sustituir foto</button>
+    <button onclick="adjuntarImagenDoc('anadir')" title="Añadir otro folio a este documento">＋ Añadir página</button>
+  </div>`:'<span></span>';
+  return `<div class="faldon">${fotos}${ctl||''}</div>`;
 }
 function pintaImagen(i){
   const ic=document.getElementById('mImg');
@@ -3394,7 +3399,7 @@ function pintaImagen(i){
     // las fotos (22-09-2026, Luis: «todos los albaranes y facturas con zoom»).
     // Cada página del PDF pasa a ser una foto más de la galería; la descarga
     // sigue apuntando al PDF original. Si pdf.js falla, cae al visor del navegador.
-    ic.innerHTML=barraFoto()+tabs+`<div class="noimg">Preparando el PDF…</div>`;
+    ic.innerHTML=tabs+`<div class="noimg">Preparando el PDF…</div>`+faldon('');
     pdfAImagenes(url).then(pags=>{
       if(!pags||!pags.length)throw new Error('sin páginas');
       const fila=imgsDoc[idx];
@@ -3403,11 +3408,11 @@ function pintaImagen(i){
       pintaImagen(idx);
     }).catch(e=>{
       console.warn('pdf.js no pudo rasterizar:',e&&e.message);
-      ic.innerHTML=barraFoto()+tabs+`<iframe src="${url}"></iframe>`
-        +`<div class="zoomctl"><a href="${dl}" title="Descargar el PDF" style="text-decoration:none">⤓</a></div>`;
+      ic.innerHTML=tabs+`<iframe src="${url}"></iframe>`
+        +faldon(`<div class="zoomctl"><a href="${dl}" title="Descargar el PDF" style="text-decoration:none">⤓</a></div>`);
     });
   }else{
-    ic.innerHTML=barraFoto()+tabs+`<img id="zimg" src="${url}" alt="documento">`+ctl;
+    ic.innerHTML=tabs+`<img id="zimg" src="${url}" alt="documento">`+faldon(ctl);
     setupZoom();
   }
 }
