@@ -109,7 +109,7 @@ const restPorSlug = new Map(rests.map((r) => [r.slug, r.id]));
 const { data: existentes, error: eE } = await sb.from("reservas_valoraciones").select("huella, reserva_id").eq("cuenta_id", CUENTA_ID).range(0, 99999);
 if (eE && !(DRY && /reservas_valoraciones/.test(eE.message))) {
   if (/reservas_valoraciones/.test(eE.message)) {
-    console.error("La tabla reservas_valoraciones no existe: aplica la migración 20261013140000 antes de cargar.");
+    console.error("La tabla reservas_valoraciones no existe: aplica la migración 20261013204406 antes de cargar.");
     process.exit(1);
   }
   throw new Error(eE.message);

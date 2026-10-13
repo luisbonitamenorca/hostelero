@@ -1,4 +1,4 @@
--- PROPUESTA 13-10-2026 · Valoraciones de clientes (informe de satisfacción de Cover) para Ratios
+-- APLICADA 13-10-2026 (registrada como 20261013204406) · Valoraciones de clientes (informe de satisfacción de Cover) para Ratios
 --
 -- Cover pide al cliente, tras la visita, una nota de 0 a 10 en Cocina, Servicio y
 -- Ambiente (y en Binifadet también Vinos y Visita y cata) más una opinión libre.
