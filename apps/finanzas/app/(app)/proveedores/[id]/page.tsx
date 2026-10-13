@@ -78,7 +78,7 @@ export default async function FichaProveedor({
       {aviso === "contacto" && (
         <p className="aviso-texto">
           Se guardaron pago y observaciones. Teléfono, correo y persona de contacto necesitan la migración
-          20261013130000 en la base.
+          20261013202351 en la base.
         </p>
       )}
 

@@ -15,7 +15,7 @@ function limpio(v: FormDataEntryValue | null): string | null {
 /**
  * Ficha del proveedor en Contabilidad (13-10-2026). Solo escribe en
  * fin_proveedor_condiciones: el maestro (nombre, NIF, cuentas, departamento)
- * es de Compras y se edita allí. Si la migración 20261013130000 aún no está
+ * es de Compras y se edita allí. Si la migración 20261013202351 aún no está
  * aplicada, se guardan los campos que existen y se avisa.
  */
 export async function guardarFichaProveedor(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
@@ -97,7 +97,7 @@ export async function guardarAjustes(_previo: EstadoAccion, formData: FormData):
   const { error } = await supabase.from("fin_ajustes").upsert({ cuenta_id: cuenta.id, ajustes }, { onConflict: "cuenta_id" });
   if (error) {
     if (/fin_ajustes/.test(error.message)) {
-      return { error: "Los ajustes necesitan la migración 20261013130000 en la base. Hasta entonces el listado usa las columnas de siempre." };
+      return { error: "Los ajustes necesitan la migración 20261013202351 en la base. Hasta entonces el listado usa las columnas de siempre." };
     }
     return { error: `No se pudieron guardar los ajustes: ${error.message}` };
   }

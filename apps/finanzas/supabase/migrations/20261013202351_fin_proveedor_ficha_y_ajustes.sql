@@ -1,4 +1,4 @@
--- PROPUESTA 13-10-2026 · Ficha de proveedor en Contabilidad y ajustes del módulo (Luis)
+-- APLICADA 13-10-2026 (registrada como 20261013202351) · Ficha de proveedor en Contabilidad y ajustes del módulo (Luis)
 --
 -- 1) La ficha del proveedor en Contabilidad necesita datos de contacto y
 --    observaciones. El maestro (compras_proveedor) es del módulo de Compras y

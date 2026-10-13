@@ -21,7 +21,7 @@ export default async function Ajustes() {
       </div>
       {error && (
         <p className="aviso-texto">
-          Los ajustes aún no se pueden guardar: falta la migración 20261013130000 en la base. Se muestran las columnas de defecto.
+          Los ajustes aún no se pueden guardar: falta la migración 20261013202351 en la base. Se muestran las columnas de defecto.
         </p>
       )}
       <FormularioAjustes columnas={columnas} />
