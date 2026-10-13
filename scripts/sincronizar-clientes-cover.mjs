@@ -35,6 +35,42 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
+// País (13-10-2026): el CSV «Exportar clientes» de Cover trae el nombre en inglés («Spain»),
+// no el código. La ficha guarda ISO-2. Nombres que no se reconocen → null (se conserva lo que
+// hubiera). Vaticano, Islas Vírgenes y Afganistán son artefactos del prefijo telefónico que
+// Cover adivina mal: no se escriben.
+const PAISES = {
+  spain: "ES", "united kingdom": "GB", france: "FR", germany: "DE", switzerland: "CH", netherlands: "NL",
+  belgium: "BE", portugal: "PT", brazil: "BR", austria: "AT", australia: "AU", ireland: "IE", argentina: "AR",
+  andorra: "AD", luxembourg: "LU", sweden: "SE", denmark: "DK", "united arab emirates": "AE", mexico: "MX",
+  norway: "NO", romania: "RO", poland: "PL", "hong kong": "HK", singapore: "SG", slovenia: "SI", uruguay: "UY",
+  peru: "PE", "new zealand": "NZ", chile: "CL", latvia: "LV", hungary: "HU", finland: "FI", greece: "GR",
+  "czech republic": "CZ", czechia: "CZ", malta: "MT", israel: "IL", "saint martin": "MF", kuwait: "KW",
+  "french guiana": "GF", "south africa": "ZA", morocco: "MA", lithuania: "LT", albania: "AL",
+  "russian federation": "RU", russia: "RU", egypt: "EG", turkey: "TR", ukraine: "UA", "cote d'ivoire": "CI",
+  lebanon: "LB", ghana: "GH", iceland: "IS", indonesia: "ID", slovakia: "SK", india: "IN", "saudi arabia": "SA",
+  japan: "JP", italy: "IT", "united states": "US", "united states of america": "US", canada: "CA", china: "CN",
+  colombia: "CO", venezuela: "VE", cuba: "CU", "dominican republic": "DO", ecuador: "EC", bulgaria: "BG",
+  croatia: "HR", serbia: "RS", estonia: "EE", cyprus: "CY", monaco: "MC", qatar: "QA", thailand: "TH",
+  philippines: "PH", korea: "KR", "south korea": "KR", "republic of korea": "KR", taiwan: "TW", vietnam: "VN",
+  pakistan: "PK", nigeria: "NG", kenya: "KE", tunisia: "TN", algeria: "DZ", senegal: "SN", paraguay: "PY",
+  bolivia: "BO", "costa rica": "CR", panama: "PA", guatemala: "GT", honduras: "HN", "el salvador": "SV",
+  nicaragua: "NI", "puerto rico": "PR", jamaica: "JM", bahamas: "BS", gibraltar: "GI", jersey: "JE",
+  guernsey: "GG", "isle of man": "IM", liechtenstein: "LI", "san marino": "SM", moldova: "MD", georgia: "GE",
+  armenia: "AM", azerbaijan: "AZ", kazakhstan: "KZ", belarus: "BY", "bosnia and herzegovina": "BA",
+  montenegro: "ME", "north macedonia": "MK", macedonia: "MK", kosovo: "XK", malaysia: "MY", "sri lanka": "LK",
+  nepal: "NP", bangladesh: "BD", oman: "OM", bahrain: "BH", jordan: "JO", iraq: "IQ", iran: "IR",
+  ethiopia: "ET", tanzania: "TZ", uganda: "UG", mozambique: "MZ", angola: "AO", "cape verde": "CV",
+  mauritius: "MU", madagascar: "MG", "new caledonia": "NC", "french polynesia": "PF", reunion: "RE",
+  guadeloupe: "GP", martinique: "MQ", "faroe islands": "FO", greenland: "GL",
+};
+function normPais(v) {
+  const t = String(v || "").trim();
+  if (!t) return null;
+  if (/^[A-Za-z]{2}$/.test(t)) return t.toUpperCase();
+  return PAISES[t.toLowerCase()] || null;
+}
+
 const CUENTA_ID = "082c5366-d9ae-49b9-a8b8-8caad73985bd"; // Bonita Menorca
 const args = process.argv.slice(2);
 const [TRACKING, CLIENTES] = args.filter((a) => !a.startsWith("--"));
@@ -190,9 +226,13 @@ function clavePara(tel, email, nombre, apellidos, coverId) {
 }
 
 {
-  // El TSV lo generamos nosotros desde la tabla de Cover: tabuladores, sin comillas.
-  const lineas = leerTexto(CLIENTES).split("\n").filter((l) => l.length);
-  const t = tabla(lineas.map((l) => l.split("\t")));
+  // Dos formatos (13-10-2026): el TSV que generamos desde la tabla de Cover (tabuladores, sin
+  // comillas) o el CSV «Exportar clientes» que Cover manda por correo (punto y coma, con comillas).
+  const textoClientes = leerTexto(CLIENTES);
+  const primeraLinea = textoClientes.split("\n")[0] || "";
+  const t = primeraLinea.includes("\t")
+    ? tabla(textoClientes.split("\n").filter((l) => l.length).map((l) => l.split("\t")))
+    : tabla(parseCsv(textoClientes, ";"));
   for (const f of t.datos) {
     const g = (c) => t.get(f, c);
     const coverId = g("ID");
@@ -208,7 +248,7 @@ function clavePara(tel, email, nombre, apellidos, coverId) {
       coverId,
       nombre: g("Nombre"), apellidos: g("Apellidos"), email,
       tel2: normTel("", g("Teléfono 2")),
-      pais: g("País") || null, cp: g("Código Postal") || null, empresa: g("Empresa") || null,
+      pais: normPais(g("País")), cp: g("Código Postal") || null, empresa: g("Empresa") || null,
       etiquetas: idsEtiquetas(g("Etiquetas de cliente")),
       subscrito: siNo(g("Subscrito")),
       registro: g("Fecha registro"),
@@ -254,7 +294,7 @@ const contactoReserva = new Map(); // token (localizador) → clave de persona
       if (!p) { p = { clave, tel, filas: [], tracking: [] }; personas.set(clave, p); if (email && !porEmail.has(email)) porEmail.set(email, clave); }
       p.tracking.push({
         fecha: g("Fecha Añadida"), nombre: g("Nombre"), apellidos: g("Apellidos"), email,
-        pais: g("País") || null, cp: g("Código Postal") || null, empresa: g("Empresa") || null,
+        pais: normPais(g("País")), cp: g("Código Postal") || null, empresa: g("Empresa") || null,
         subscrito: siNo(g("Subscrito")), etiquetas: idsEtiquetas(g("Etiquetas de cliente")),
       });
     }
@@ -439,6 +479,7 @@ for (const d of duplicados) {
 }
 
 const actualizar = []; // {base, fila}
+const camposQueCambian = {};
 const insertar = []; // {clave, fila}
 for (const [k, p] of personas) {
   const base = canonica.get(k) || null;
@@ -449,7 +490,16 @@ for (const [k, p] of personas) {
     if (c === "creado_en") return fila.creado_en && new Date(fila.creado_en).getTime() !== new Date(base.creado_en).getTime();
     return !igual(fila[c], base[c]);
   });
-  if (cambia) actualizar.push({ base, fila });
+  if (cambia) {
+    actualizar.push({ base, fila });
+    // Histograma de campos que cambian (solo recuentos: nada personal en el informe).
+    for (const c of CAMPOS) {
+      const dif = c === "etiquetas" ? !igualConjunto(fila.etiquetas, base.etiquetas)
+        : c === "creado_en" ? (fila.creado_en && new Date(fila.creado_en).getTime() !== new Date(base.creado_en).getTime())
+        : !igual(fila[c], base[c]);
+      if (dif) camposQueCambian[c] = (camposQueCambian[c] || 0) + 1;
+    }
+  }
 }
 
 // reservas: cada una a la canónica de su contacto
@@ -508,6 +558,7 @@ const borrar = [...duplicados.map((d) => d.id), ...basura.map((c) => c.id)];
 console.log(`\nPlan:`);
 console.log(`  personas: ${personas.size} · con ficha: ${canonica.size} · sin ficha (se crean): ${insertar.length}`);
 console.log(`  fichas a corregir: ${actualizar.length} · ya correctas: ${canonica.size - actualizar.length}`);
+if (actualizar.length) console.log(`    campos que cambian: ${Object.entries(camposQueCambian).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(" · ")}`);
 console.log(`  duplicados a fusionar y eliminar: ${duplicados.length}`);
 console.log(`  fichas vacías sin persona ni referencias (eliminar): ${basura.length}`);
 console.log(`  fichas sin persona pero con reservas (se respetan): ${huerfanasConRefs.length}`);

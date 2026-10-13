@@ -521,6 +521,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
       <button class="tab-btn" onclick="showTab('rrhh',this)">👥 Fichajes</button>
       <button class="tab-btn" onclick="showTab('visitas',this)">🎫 Visitas</button>
       <button class="tab-btn" onclick="showTab('comensales',this)">🍽️ Comensales</button>
+      <button class="tab-btn" onclick="showTab('valoraciones',this)">⭐ Valoraciones</button>
       <button class="tab-btn" onclick="showTab('clasif',this)">🏷️ Clasificación</button>
       <button class="tab-btn" onclick="showTab('inventarios',this)">📦 Inventarios</button>
       <button class="tab-btn" onclick="showTab('ecommerce',this)">🛍️ Ecommerce</button>
@@ -1024,6 +1025,37 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
           <tbody id="tb-co"></tbody>
           <tfoot id="co-tbl-foot"></tfoot>
         </table></div>
+      </div>
+    </div>
+
+    <!-- ══════════════ VALORACIONES (Cover · satisfacción) ══════════════ -->
+    <div id="tab-valoraciones" class="tab-pane">
+      <div class="fbar">
+        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'va-centro','',renderValoraciones)">Todos</button><button class="fbtn" onclick="fset(this,'va-centro','BINIFADET',renderValoraciones)">Binifadet</button><button class="fbtn" onclick="fset(this,'va-centro','TAMARINDOS',renderValoraciones)">Tamarindos</button><button class="fbtn" onclick="fset(this,'va-centro','TIRANT',renderValoraciones)">Casa Tirant</button><button class="fbtn" onclick="fset(this,'va-centro','TAMARINDOS BAR',renderValoraciones)">Bar Tamarindos</button>
+        <span class="fbar-label">Servicio</span><button class="fbtn active" onclick="fset(this,'va-serv','',renderValoraciones)">Ambos</button><button class="fbtn" onclick="fset(this,'va-serv','Comida',renderValoraciones)">Comida</button><button class="fbtn" onclick="fset(this,'va-serv','Cena',renderValoraciones)">Cena</button>
+        <span class="fbar-label">Año</span><button class="fbtn active" onclick="fset(this,'va-anio','2026',renderValoraciones)">2026</button><button class="fbtn" onclick="fset(this,'va-anio','2025',renderValoraciones)">2025</button><button class="fbtn" onclick="fset(this,'va-anio','2024',renderValoraciones)">2024</button><button class="fbtn" onclick="fset(this,'va-anio','2023',renderValoraciones)">2023</button><button class="fbtn" onclick="fset(this,'va-anio','todos',renderValoraciones)">Todos</button>
+        <span class="fbar-label">Opiniones</span><button class="fbtn active" onclick="fset(this,'va-op','',renderValoraciones)">Todas</button><button class="fbtn" onclick="fset(this,'va-op','bajas',renderValoraciones)">Solo bajas (≤ 6)</button><button class="fbtn" onclick="fset(this,'va-op','texto',renderValoraciones)">Con comentario</button>
+      </div>
+      <div id="va-metrics" class="metrics-row"></div>
+      <div class="g2" style="margin-top:12px">
+        <div class="card"><div class="card-t" id="va-chart-t">Nota media por mes</div><div class="chart-wrap" style="height:260px"><canvas id="ch-va-mes"></canvas></div></div>
+        <div class="card"><div class="card-t">Nota media por centro y apartado</div><div class="chart-wrap" style="height:260px"><canvas id="ch-va-centro"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-t" id="va-tbl-t">Por mes</div>
+        <div class="tbl-wrap"><table>
+          <thead id="va-tbl-head"></thead>
+          <tbody id="tb-va"></tbody>
+          <tfoot id="va-tbl-foot"></tfoot>
+        </table></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-t" id="va-op-t">Opiniones</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Centro</th><th>Servicio</th><th class="tr">Pax</th><th class="tr">Cocina</th><th class="tr">Servicio</th><th class="tr">Ambiente</th><th class="tr">Vinos</th><th class="tr">Visita</th><th>Opinión</th></tr></thead>
+          <tbody id="tb-va-op"></tbody>
+        </table></div>
+        <div class="hint" id="va-op-hint" style="margin-top:8px"></div>
       </div>
     </div>
 
@@ -1645,6 +1677,7 @@ const DB = {
   nominas_reparto_horas: [],
   visitas:             [],
   comensales:          [],
+  valoraciones:        [],
   ingresos_historico:  [],
   productos_agora:     [],
   productos_dijit:     [],
@@ -2337,6 +2370,7 @@ function renderAll() {
     'dash': renderDashboard, 'semanal': renderSemanal,
     'subfamilia': renderSubfamilia,
     'comensales': renderComensales,
+    'valoraciones': renderValoraciones,
     'rrhh': renderRRHH,
     'visitas': renderVisitas,
     'resumen-vino': renderVino,
@@ -2363,6 +2397,7 @@ function showTab(id, btn) {
     'rrhh':            renderRRHH,
     'visitas':         renderVisitas,
     'comensales':      renderComensales,
+    'valoraciones':    renderValoraciones,
     'clasif':          renderClasif,
     'inventarios':     renderInventarios,
     'ecommerce':       renderEcommerce,
@@ -6886,6 +6921,8 @@ async function loadFromStorage() {
     });
     // compras_producto no depende de nada: sale YA, a la vez que el resto (30-09-2026)
     const comprasCatProm = safeLoad('compras_producto');
+    // Valoraciones de Cover (vista valoraciones_ratios, 13-10-2026): sin datos personales.
+    const valoracionesProm = safeLoad('valoraciones_ratios');
     const [ingresos, gastos, presupuesto, rrhh, nominas, presupuesto_nominas, nominas_reparto, nominas_reparto_horas, visitas, comensales, ingresos_historico, productos_agora, productos_dijit, familias, subfamilias, ratios_objetivo, productos_controlados, inventarios, rrhh_excepciones, rrhh_puestos, ecommerce, ecommerce_historico, doc_departamentos, doc_subcategorias, doc_documentos] = await Promise.all([
       loadIngresosRapido(loadAll),
       loadGastosRapido(loadAll),
@@ -6941,6 +6978,7 @@ async function loadFromStorage() {
     DB.nominas_reparto_horas= nominas_reparto_horas|| [];
     DB.visitas              = visitas              || [];
     DB.comensales           = comensales           || [];
+    DB.valoraciones         = (await valoracionesProm) || [];
     DB.ingresos_historico   = ingresos_historico   || [];
     DB.productos_agora      = productos_agora      || [];
     DB.productos_dijit      = productos_dijit      || [];
@@ -9859,6 +9897,100 @@ function renderVisitas() {
     const totGen  = totSubs.reduce((s,v)=>s+v,0);
     foot.innerHTML = `<tr class="tr-tot"><td>TOTAL</td>${totSubs.map(v=>`<td class="tr">${fmt(v)}</td>`).join('')}<td class="tr">${fmt(totGen)}</td></tr>`;
   }
+}
+
+// ── VALORACIONES (Cover · satisfacción) ───────────────────────────
+// Notas 0-10 por apartado (cocina, servicio, ambiente; en Binifadet también vinos
+// y visita y cata). «Media» es la media de los apartados que tenga cada valoración.
+function renderValoraciones() {
+  const centro = fget('va-centro') || '';
+  const serv   = fget('va-serv')   || '';
+  const anioF  = fget('va-anio')   || '2026';
+  const op     = fget('va-op')     || '';
+  const {desde, hasta} = gd();
+
+  let all = (DB.valoraciones||[]);
+  if (centro) all = all.filter(r => r.centro === centro);
+  if (serv)   all = all.filter(r => r.servicio === serv);
+  if (anioF !== 'todos') all = all.filter(r => String(r.anio) === anioF);
+  if (desde)  all = all.filter(r => r.fecha >= desde);
+  if (hasta)  all = all.filter(r => r.fecha <= hasta);
+
+  const APART = [['cocina','Cocina'],['servicio_nota','Servicio'],['ambiente','Ambiente'],['vinos','Vinos'],['visita_cata','Visita y cata']];
+  const media = (rows, k) => { const v = rows.map(r=>r[k]).filter(x=>x!=null); return v.length ? v.reduce((s,x)=>s+x,0)/v.length : null; };
+  const f1 = v => v==null ? '—' : v.toFixed(1);
+  const color = v => v==null ? '' : v>=8.5 ? 'var(--green-dark)' : v>=7 ? 'var(--amber)' : 'var(--red)';
+
+  // ── KPIs ──
+  const mGlobal = media(all, 'media');
+  const bajas = all.filter(r => r.media != null && r.media <= 6).length;
+  const conTexto = all.filter(r => (r.opinion||'').trim()).length;
+  const promotores = all.filter(r => r.media != null && r.media >= 9).length;
+  const detractores = bajas;
+  const nps = all.length ? Math.round((promotores - detractores) / all.length * 100) : null;
+  document.getElementById('va-metrics').innerHTML = `
+    <div class="mc"><div class="lbl">Valoraciones</div><div class="val">${fmtN(all.length)}</div></div>
+    <div class="mc"><div class="lbl">Nota media</div><div class="val" style="color:${color(mGlobal)}">${f1(mGlobal)}</div></div>
+    ${APART.slice(0,3).map(([k,l]) => `<div class="mc"><div class="lbl">${l}</div><div class="val" style="color:${color(media(all,k))}">${f1(media(all,k))}</div></div>`).join('')}
+    <div class="mc"><div class="lbl">Bajas (≤ 6)</div><div class="val" style="color:${bajas?'var(--red)':''}">${fmtN(bajas)}</div></div>
+    <div class="mc"><div class="lbl">Con comentario</div><div class="val">${fmtN(conTexto)}</div></div>
+    <div class="mc"><div class="lbl">NPS aprox. (≥9 − ≤6)</div><div class="val">${nps==null?'—':nps}</div></div>
+  `;
+
+  // ── Gráfico por mes (nota media y nº de valoraciones) ──
+  const porMes = {};
+  all.forEach(r => { const k = anioF==='todos' ? `${r.anio}-${String(r.mes).padStart(2,'0')}` : String(r.mes).padStart(2,'0'); (porMes[k] = porMes[k]||[]).push(r); });
+  const meses = Object.keys(porMes).sort();
+  const lblMes = k => anioF==='todos' ? k : (MESES[+k]||k).slice(0,3);
+  destroyChart('vaMes');
+  charts.vaMes = new Chart(document.getElementById('ch-va-mes'), {
+    data:{ labels: meses.map(lblMes), datasets:[
+      { type:'line', label:'Nota media', data: meses.map(k=>media(porMes[k],'media')), borderColor:'#2F3A45', backgroundColor:'#2F3A45', tension:.25, yAxisID:'y' },
+      { type:'bar', label:'Valoraciones', data: meses.map(k=>porMes[k].length), backgroundColor:'rgba(143,174,139,.55)', borderRadius:3, yAxisID:'y1' } ] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:true, position:'top', labels:{boxWidth:12, boxHeight:12, font:{size:11}, padding:12}} },
+      scales:{ y:{min:5, max:10, position:'left', grid:{color:'rgba(128,128,128,.08)'}}, y1:{beginAtZero:true, position:'right', grid:{display:false}}, x:{grid:{display:false}} } }
+  });
+
+  // ── Gráfico por centro y apartado (ignora el filtro de centro para comparar) ──
+  let allCt = (DB.valoraciones||[]);
+  if (serv) allCt = allCt.filter(r => r.servicio === serv);
+  if (anioF !== 'todos') allCt = allCt.filter(r => String(r.anio) === anioF);
+  if (desde) allCt = allCt.filter(r => r.fecha >= desde);
+  if (hasta) allCt = allCt.filter(r => r.fecha <= hasta);
+  const centros = [...new Set(allCt.map(r=>r.centro))].sort();
+  const colores = ['#2F3A45','#5E7D5A','#8FAE8B','#BA7517','#534AB7'];
+  destroyChart('vaCentro');
+  charts.vaCentro = new Chart(document.getElementById('ch-va-centro'), {
+    type:'bar',
+    data:{ labels: centros, datasets: APART.map(([k,l],i) => ({ label:l, data: centros.map(c => media(allCt.filter(r=>r.centro===c), k)), backgroundColor: colores[i], borderRadius:3 })) },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:true, position:'top', labels:{boxWidth:12, boxHeight:12, font:{size:11}, padding:12}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y==null?'—':ctx.parsed.y.toFixed(2)}`}} },
+      scales:{ y:{min:5, max:10, grid:{color:'rgba(128,128,128,.08)'}}, x:{grid:{display:false}} } }
+  });
+
+  // ── Tabla por mes ──
+  document.getElementById('va-tbl-head').innerHTML = `<tr><th>Mes</th><th class="tr">Valoraciones</th><th class="tr">Media</th>${APART.map(([,l])=>`<th class="tr">${l}</th>`).join('')}<th class="tr">Bajas</th></tr>`;
+  document.getElementById('tb-va').innerHTML = meses.map(k => { const rows = porMes[k]; return `<tr><td>${lblMes(k)}</td><td class="tr">${fmtN(rows.length)}</td><td class="tr" style="color:${color(media(rows,'media'))}"><b>${f1(media(rows,'media'))}</b></td>${APART.map(([a])=>`<td class="tr">${f1(media(rows,a))}</td>`).join('')}<td class="tr">${fmtN(rows.filter(r=>r.media!=null&&r.media<=6).length)}</td></tr>`; }).join('') || '<tr><td colspan="9" class="hint">Sin valoraciones en este rango.</td></tr>';
+  document.getElementById('va-tbl-foot').innerHTML = all.length ? `<tr class="tr-tot"><td>TOTAL</td><td class="tr">${fmtN(all.length)}</td><td class="tr">${f1(mGlobal)}</td>${APART.map(([a])=>`<td class="tr">${f1(media(all,a))}</td>`).join('')}<td class="tr">${fmtN(bajas)}</td></tr>` : '';
+
+  // ── Opiniones (las más recientes primero; filtro: bajas / con comentario) ──
+  let ops = all.slice();
+  if (op === 'bajas') ops = ops.filter(r => r.media != null && r.media <= 6);
+  else if (op === 'texto') ops = ops.filter(r => (r.opinion||'').trim());
+  else ops = ops.filter(r => (r.opinion||'').trim() || (r.media != null && r.media <= 6));
+  ops.sort((a,b) => (b.fecha > a.fecha ? 1 : b.fecha < a.fecha ? -1 : 0));
+  const MAX = 300;
+  const fFecha = f => f ? `${f.slice(8,10)}/${f.slice(5,7)}/${f.slice(0,4)}` : '';
+  const escHtml = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const n = v => v==null ? '<td class="tr">—</td>' : `<td class="tr" style="color:${v<=6?'var(--red)':''}">${v}</td>`;
+  document.getElementById('tb-va-op').innerHTML = ops.slice(0, MAX).map(r => `<tr>
+      <td style="white-space:nowrap">${fFecha(r.fecha)}</td><td>${r.centro}</td><td>${r.servicio||''}</td><td class="tr">${r.pax??''}</td>
+      ${n(r.cocina)}${n(r.servicio_nota)}${n(r.ambiente)}${n(r.vinos)}${n(r.visita_cata)}
+      <td style="max-width:520px;white-space:normal">${escHtml(r.opinion||'')}</td></tr>`).join('') || '<tr><td colspan="10" class="hint">Nada que enseñar con este filtro.</td></tr>';
+  document.getElementById('va-op-t').textContent = op==='bajas' ? `Valoraciones bajas (≤ 6)` : op==='texto' ? `Opiniones con comentario` : `Opiniones: con comentario o nota baja`;
+  document.getElementById('va-op-hint').textContent = ops.length > MAX ? `Se muestran las ${MAX} más recientes de ${fmtN(ops.length)}. Acota con los filtros o el rango de fechas.` : `${fmtN(ops.length)} opiniones.`;
 }
 
 // ── COMENSALES ─────────────────────────────────────────────────────
