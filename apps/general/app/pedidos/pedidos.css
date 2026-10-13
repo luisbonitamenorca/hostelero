@@ -57,9 +57,9 @@
 .ped-cabecera { align-items: center; }
 .ped-cabecera-izq { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
 .ped-cabecera-der { align-items: center; }
-.ped-cabecera-boton { padding: 6px 10px; font-size: 12px; text-decoration: none; }
+.ped-cabecera .cabecera-boton { padding: 6px 10px; font-size: 12px; text-decoration: none; }
 @media (max-width: 640px) {
-  .ped-cabecera-correo { display: none; }
+  .ped-cabecera .cabecera-correo { display: none; }
   .ped-cabecera-der { gap: 8px; }
 }
 

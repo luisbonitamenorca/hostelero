@@ -45,7 +45,7 @@ a { color: inherit; text-decoration: none; }
   margin: 0 auto;
   padding: 14px 24px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
@@ -66,7 +66,7 @@ a { color: inherit; text-decoration: none; }
 }
 .cabecera-derecha {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
   font-family: var(--mono);
   font-size: 12px;
@@ -447,3 +447,20 @@ details.pliegue > summary:hover { background: var(--papel); }
   color: var(--blanco);
   opacity: 0.85;
 }
+
+/* ---- Cabecera única de módulo (app/cabecera-modulo.tsx) ----
+   Logo · módulo · cuenta a la izquierda; correo · extras · Inicio · Salir a la
+   derecha. Los HTML heredados replican esto en lib/banda-jano.ts. */
+.cabecera-izq { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.cabecera-logo { display: inline-flex; align-items: center; color: var(--blanco); }
+.cabecera-modulo { font-weight: 700; font-size: 15px; padding-left: 12px; border-left: 1px solid rgba(255, 255, 255, 0.25); white-space: nowrap; }
+.cabecera-cuenta { font-family: var(--mono); font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+.cabecera-correo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.cabecera-boton { padding: 5px 10px; font-size: 12px; text-decoration: none; white-space: nowrap; }
+@media (max-width: 640px) {
+  .cabecera-correo { display: none; }
+  .cabecera-cuenta { display: none; }
+  .cabecera-derecha { gap: 8px; }
+}
+.cabecera-enlace { text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; font-size: 12px; }
+.cabecera-enlace { text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; font-size: 12px; }

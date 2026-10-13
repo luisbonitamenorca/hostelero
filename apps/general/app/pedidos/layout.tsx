@@ -1,8 +1,7 @@
 import "./pedidos.css";
+import { CabeceraModulo } from "@/app/cabecera-modulo";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { exigirModulo } from "@/lib/supabase/server";
-import { cerrarSesion } from "../acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -20,25 +19,7 @@ export default async function PedidosLayout({
 
   return (
     <>
-      <header className="cabecera">
-        <div className="cabecera-interior ped-cabecera">
-          <div className="ped-cabecera-izq">
-            <span className="marca">{cuenta.nombre}</span>
-            <span className="pildora-rol">Pedidos</span>
-          </div>
-          <div className="cabecera-derecha ped-cabecera-der">
-            <span className="ped-cabecera-correo">{perfil.correo}</span>
-            <Link href="/" className="boton-secundario ped-cabecera-boton">
-              ← Inicio
-            </Link>
-            <form action={cerrarSesion}>
-              <button className="boton-secundario ped-cabecera-boton" type="submit">
-                Salir
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <CabeceraModulo modulo="Pedidos" cuenta={cuenta.nombre} correo={perfil.correo} claseInterior="ped-cabecera" />
       {children}
     </>
   );

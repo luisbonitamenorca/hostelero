@@ -10,13 +10,13 @@
 .rsv-cabecera { flex: 0 0 auto; }
 .rsv-cabecera-interior { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 14px; min-height: 36px; }
 .rsv-cabecera-izq { display: flex; align-items: baseline; gap: 10px; }
-.rsv-cabecera .marca { font-size: 15px; }
-.rsv-cabecera .pildora-rol { font-family: var(--mono, ui-monospace, monospace); font-size: 10px; text-transform: uppercase; letter-spacing: .12em; opacity: .85; }
+.rsv-cabecera .cabecera-modulo { font-size: 14px; }
+.rsv-cabecera .cabecera-logo .logo-jano { font-size: 18px !important; }
 .rsv-cabecera-der { align-items: center; gap: 10px; }
-.rsv-cabecera .rsv-correo { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rsv-cabecera .rsv-boton { padding: 3px 9px; font-size: 11.5px; line-height: 1.4; border: 1px solid rgba(255, 255, 255, .45); border-radius: 7px; background: transparent; color: #fff; cursor: pointer; font-family: inherit; text-decoration: none; }
-.rsv-cabecera .rsv-boton:hover { background: rgba(255, 255, 255, .12); }
-@media (max-width: 760px) { .rsv-cabecera .rsv-correo { display: none; } }
+.rsv-cabecera .cabecera-correo { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rsv-cabecera .cabecera-boton { padding: 3px 9px; font-size: 11.5px; line-height: 1.4; border: 1px solid rgba(255, 255, 255, .45); border-radius: 7px; background: transparent; color: #fff; cursor: pointer; font-family: inherit; text-decoration: none; }
+.rsv-cabecera .cabecera-boton:hover { background: rgba(255, 255, 255, .12); }
+@media (max-width: 760px) { .rsv-cabecera .cabecera-correo { display: none; } }
 
 /* ==================== Variables: tema claro ==================== */
 

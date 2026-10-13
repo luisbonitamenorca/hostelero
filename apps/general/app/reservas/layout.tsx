@@ -1,8 +1,7 @@
 import "./reservas.css";
+import { CabeceraModulo } from "@/app/cabecera-modulo";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { exigirModulo } from "@/lib/supabase/server";
-import { cerrarSesion } from "../acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -22,25 +21,7 @@ export default async function ReservasLayout({
 
   return (
     <div className="rsv-capa">
-      <header className="cabecera rsv-cabecera">
-        <div className="rsv-cabecera-interior">
-          <div className="rsv-cabecera-izq">
-            <span className="marca">{cuenta.nombre}</span>
-            <span className="pildora-rol">Reservas</span>
-          </div>
-          <div className="cabecera-derecha rsv-cabecera-der">
-            <span className="rsv-correo">{perfil.correo}</span>
-            <Link href="/" className="boton-secundario rsv-boton">
-              ← Inicio
-            </Link>
-            <form action={cerrarSesion}>
-              <button className="boton-secundario rsv-boton" type="submit">
-                Salir
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <CabeceraModulo modulo="Reservas" cuenta={cuenta.nombre} correo={perfil.correo} clase="rsv-cabecera" claseInterior="rsv-cabecera-interior" />
       {children}
     </div>
   );

@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * la app antigua y se traerán con una pasada delta al cortar.
  */
 export async function GET() {
-  const { supabase, cuenta } = await exigirModulo("compras");
+  const { supabase, perfil, cuenta } = await exigirModulo("compras");
 
   const {
     data: { session },
@@ -26,5 +26,5 @@ export async function GET() {
     "__SUPABASE_ANON__": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
     "__SB_TOKEN__": session?.access_token ?? "",
     "__CUENTA_ID__": cuenta.id,
-  });
+  }, { modulo: "Compras", cuenta: cuenta.nombre, correo: perfil.correo });
 }

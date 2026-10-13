@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * va esto. El Supabase y el Vercel antiguos ya no pintan nada.
  */
 export async function GET() {
-  const { supabase } = await exigirModulo("agentes");
+  const { supabase, perfil, cuenta } = await exigirModulo("agentes");
 
   const {
     data: { session },
@@ -23,5 +23,5 @@ export async function GET() {
     "__SUPABASE_URL__": process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
     "__SUPABASE_ANON__": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
     "__SB_TOKEN__": session?.access_token ?? "",
-  });
+  }, { modulo: "Agentes", cuenta: cuenta.nombre, correo: perfil.correo });
 }

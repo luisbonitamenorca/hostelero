@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CabeceraModulo } from "@/app/cabecera-modulo";
 import { redirect } from "next/navigation";
 import { exigirModulo, rolIncluye } from "@/lib/supabase/server";
 import { crearClienteServicio } from "@/lib/supabase/servicio";
@@ -64,19 +64,7 @@ export default async function Usuarios({
 
   return (
     <>
-      <header className="cabecera">
-        <div className="cabecera-interior">
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-            <span className="marca">{cuenta.nombre}</span>
-            <span className="pildora-rol">Usuarios</span>
-          </div>
-          <div className="cabecera-derecha">
-            <Link href="/" className="boton-secundario" style={{ padding: "5px 10px", fontSize: 12 }}>
-              ← Inicio
-            </Link>
-          </div>
-        </div>
-      </header>
+      <CabeceraModulo modulo="Usuarios" cuenta={cuenta.nombre} correo={perfil.correo} />
 
       <main className="contenido">
         {sp.error && <p className="aviso-error">{ERRORES[sp.error] ?? "Algo ha fallado."}</p>}

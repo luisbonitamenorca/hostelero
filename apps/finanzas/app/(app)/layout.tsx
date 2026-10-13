@@ -1,6 +1,6 @@
-import { LogoJano } from "@/app/logo-jano";
 import { exigirFacturacion, exigirPerfil } from "@/lib/supabase/server";
 import BotonSalir from "./boton-salir";
+import { LogoJano } from "@/app/logo-jano";
 import Navegacion from "./navegacion";
 
 /** Cada entrada declara de qué módulo depende: si la cuenta no lo tiene
@@ -82,29 +82,34 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .filter((g) => g.items.length > 0);
 
   return (
-    <div className="aplicacion">
-      <aside className="lateral">
-        <div className="marca">
-          <span className="marca-nombre"><LogoJano tamano={22} /></span>
-          <span className="marca-modulo">Finanzas</span>
-        </div>
-        <Navegacion grupos={gruposVisibles} enCamino={enCamino} />
-        <div className="lateral-pie">
-          <p className="usuario" title={perfil.correo ?? undefined}>
-            {perfil.correo}
-          </p>
-          <div className="lateral-botones">
-            {/* <a> y no <Link>: hay que salir del basePath /finanzas para volver
-                a la portada, que es la raíz del mismo dominio. Mismo sitio y
-                mismo peso visual que el «← Inicio» del resto de módulos. */}
-            <a className="boton-fantasma" href="/">
+    <>
+      {/* Cabecera única de la plataforma: la misma banda que apps/general
+          (app/cabecera-modulo.tsx): logo · módulo · cuenta · correo · Inicio · Salir. */}
+      <header className="cabecera">
+        <div className="cabecera-interior">
+          <div className="cabecera-izq">
+            <a href="/" className="cabecera-logo" title="Inicio" aria-label="Jano · Inicio">
+              <LogoJano tamano={20} />
+            </a>
+            <span className="cabecera-modulo">Finanzas</span>
+            <span className="cabecera-cuenta">{cuenta.nombre}</span>
+          </div>
+          <div className="cabecera-derecha">
+            <span className="cabecera-correo" title={perfil.correo ?? undefined}>{perfil.correo}</span>
+            {/* <a> y no <Link>: hay que salir del basePath /finanzas. */}
+            <a className="boton-secundario cabecera-boton" href="/">
               ← Inicio
             </a>
             <BotonSalir />
           </div>
         </div>
+      </header>
+    <div className="aplicacion">
+      <aside className="lateral">
+        <Navegacion grupos={gruposVisibles} enCamino={enCamino} />
       </aside>
       <main className="contenido">{children}</main>
     </div>
+    </>
   );
 }

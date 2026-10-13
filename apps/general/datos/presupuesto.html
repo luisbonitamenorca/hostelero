@@ -27,7 +27,7 @@ body{font-family:'Plus Jakarta Sans', system-ui, sans-serif;background:var(--bg)
 
 /* layout */
 #app-screen{display:flex;align-items:flex-start;min-height:100vh}
-.side-nav{width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#F8F9F6;border-right:0.5px solid var(--border);padding:18px 10px 18px 14px;display:flex;flex-direction:column}
+.side-nav{width:200px;flex-shrink:0;position:sticky;top:48px;height:calc(100vh - 48px);overflow-y:auto;background:#F8F9F6;border-right:0.5px solid var(--border);padding:18px 10px 18px 14px;display:flex;flex-direction:column}
 .side-brand{padding:0 4px 14px;border-bottom:0.5px solid var(--border);margin-bottom:12px}
 .app-title{font-size:18px;font-weight:500;letter-spacing:-.2px}
 .app-title span{color:var(--green)}
@@ -40,7 +40,7 @@ body{font-family:'Plus Jakarta Sans', system-ui, sans-serif;background:var(--bg)
 .status-dot.ok{background:var(--green)}.status-dot.loading{background:var(--amber)}.status-dot.err{background:var(--red)}
 .main-col{flex:1;min-width:0;padding:0 16px 40px}
 .main-inner{max-width:1500px;margin:0 auto}
-.app-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:20}
+.app-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:0.5px solid var(--border);position:sticky;top:48px;background:var(--bg);z-index:20}
 .header-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .header-label{font-size:11px;color:var(--muted)}
 .content{padding-top:14px}
@@ -191,7 +191,6 @@ table.g td.acc{background:var(--acc-cell);font-weight:500}
     </nav>
     <div class="side-foot">
       <div class="side-status"><div class="status-dot ok" id="status-dot"></div><span id="status-label">—</span></div>
-      <a class="btn-sm" href="/" style="text-align:center;text-decoration:none;display:block">← Inicio</a>
       <div class="side-version">Presupuesto · v1</div>
     </div>
   </aside>

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { bandaJano, type CabeceraHtml } from "./banda-jano";
 
 /**
  * Sirve los HTML de módulo (datos/*.html) con dos garantías contra el mal
@@ -45,12 +46,16 @@ const VIGILANTE = `
 export async function servirHtmlModulo(
   fichero: string,
   reemplazos: Record<string, string> = {},
+  cabecera?: CabeceraHtml,
 ) {
   let html = await readFile(path.join(process.cwd(), "datos", fichero), "utf8");
   for (const [marca, valor] of Object.entries(reemplazos)) {
     html = html.replace(marca, valor);
   }
   html = html.replace("</body>", VIGILANTE);
+  // Banda de Jano (logo · módulo · cuenta · Inicio · Salir), la misma que la
+  // cabecera de los módulos React, justo al abrir el body.
+  if (cabecera) html = html.replace(/<body[^>]*>/, (m) => m + bandaJano(cabecera));
   return new Response(html, {
     headers: {
       "content-type": "text/html; charset=utf-8",

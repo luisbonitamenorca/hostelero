@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CabeceraModulo } from "@/app/cabecera-modulo";
 import { notFound, redirect } from "next/navigation";
 import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
 import { RUTAS_MODULO, enlaceExterno } from "@/lib/modulos";
@@ -53,23 +53,9 @@ export default async function PaginaModulo({
 
   return (
     <>
-      <header className="cabecera">
-        <div className="cabecera-interior">
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-            <span className="marca">{cuenta.nombre}</span>
-            <span className="pildora-rol">Jano</span>
-          </div>
-          <div className="cabecera-derecha">
-            <span>{perfil.correo}</span>
-          </div>
-        </div>
-      </header>
+      <CabeceraModulo modulo={definicion.nombre} cuenta={cuenta.nombre} correo={perfil.correo} />
 
       <main className="contenido">
-        <Link href="/" className="migas">
-          ← Inicio
-        </Link>
-
         <h1 className="titulo">{definicion.nombre}</h1>
         <p className="subtitulo">{definicion.area}</p>
 

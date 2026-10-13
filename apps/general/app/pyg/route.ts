@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * de PyG queda repuntada, no apagada, hasta verificar.
  */
 export async function GET() {
-  const { supabase, cuenta } = await exigirModulo("pyg");
+  const { supabase, perfil, cuenta } = await exigirModulo("pyg");
 
   const {
     data: { session },
@@ -21,5 +21,5 @@ export async function GET() {
     "__SUPABASE_ANON__": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
     "__SB_TOKEN__": session?.access_token ?? "",
     "__CUENTA_ID__": cuenta.id,
-  });
+  }, { modulo: "PyG", cuenta: cuenta.nombre, correo: perfil.correo });
 }

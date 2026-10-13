@@ -83,8 +83,8 @@ body {
   width: 200px;
   flex-shrink: 0;
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 48px;
+  height: calc(100vh - 48px);
   overflow-y: auto;
   background: #F8F9F6;
   border-right: var(--border);
@@ -526,7 +526,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
       <button class="tab-btn" onclick="showTab('ecommerce',this)">🛍️ Ecommerce</button>
       <button class="tab-btn" onclick="showTab('documentos',this)">📁 Documentos</button>
     </nav>
-    <a class="side-version" href="/" style="text-decoration:none;display:block">← Inicio</a>
     <div class="side-version" id="app-version" style="margin-top:0"></div>
   </aside>
 

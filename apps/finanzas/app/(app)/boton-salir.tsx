@@ -10,7 +10,7 @@ export default function BotonSalir() {
 
   return (
     <button
-      className="boton-fantasma"
+      className="boton-secundario cabecera-boton"
       disabled={pendiente}
       onClick={() =>
         iniciar(async () => {

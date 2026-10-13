@@ -1,4 +1,5 @@
 import { LogoJano } from "@/app/logo-jano";
+import { CabeceraModulo } from "@/app/cabecera-modulo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
@@ -70,36 +71,17 @@ export default async function Portada() {
 
   return (
     <>
-      <header className="cabecera">
-        <div className="cabecera-interior">
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-            <span className="marca">{cuenta.nombre}</span>
-            <span className="pildora-rol">Jano</span>
-          </div>
-          {/* Con «Mi contraseña» la fila ya no cabe en un móvil con un correo
-              largo: se deja partir en dos líneas en vez de desbordar. */}
-          <div className="cabecera-derecha" style={{ flexWrap: "wrap", rowGap: 6 }}>
-            <span>
-              {perfil.correo} · {ROLES[perfil.rol] ?? perfil.rol}
-            </span>
-            <Link
-              href="/cuenta/clave"
-              style={{ textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}
-            >
-              Mi contraseña
-            </Link>
-            <form action={cerrarSesion}>
-              <button
-                className="boton-secundario"
-                type="submit"
-                style={{ padding: "5px 10px", fontSize: 12 }}
-              >
-                Salir
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <CabeceraModulo
+        modulo="Inicio"
+        cuenta={cuenta.nombre}
+        correo={`${perfil.correo} · ${ROLES[perfil.rol] ?? perfil.rol}`}
+        inicio={false}
+        extra={
+          <Link href="/cuenta/clave" className="cabecera-enlace">
+            Mi contraseña
+          </Link>
+        }
+      />
 
       <main className="contenido">
         {error ? (
