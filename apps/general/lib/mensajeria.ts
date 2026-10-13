@@ -932,7 +932,7 @@ export async function reenviarRespuestaEntrante(
       to: [destino],
       subject: `${via} de ${nombre}${reserva ? ` · ${reserva.localizador}` : ""} · ${rest.nombre}`,
       text: texto,
-      html: `<div style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;color:#1e2a25;max-width:560px;">${cuerpoHtml(texto, "#0F6E56")}</div>`,
+      html: `<div style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;color:#1e2a25;max-width:560px;">${cuerpoHtml(texto, "#2F3A45")}</div>`,
       tags: [{ name: "tipo", value: "respuesta_cliente" }],
     }),
   });

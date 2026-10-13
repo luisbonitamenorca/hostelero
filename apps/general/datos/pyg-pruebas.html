@@ -509,7 +509,7 @@ const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO'
 const MS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const GRID = 'rgba(0,0,0,0.05)';
 const TC = '#999';
-// Datos en la casa de Hostelero (24-08-2026): el Excel vive en el bucket
+// Datos en la casa de Jano (24-08-2026): el Excel vive en el bucket
 // privado 'pyg' de ESTA casa y se lee con el token de sesión inyectado al
 // servir la página. Recarga sola al caducar el token (~50 min) o al 401.
 const SUPABASE_URL = '__SUPABASE_URL__';
@@ -803,7 +803,7 @@ function buildComparar() {
   if (!A3.length) { sub.textContent = 'No hay Sumas y Saldos de A3 en el servidor (datos.xlsx). Súbelo desde PyG Socios.'; return; }
   const excl = canal === 'TODOS';
   const rC = aggregate(D.pyg, canal, excl) || [], rA = aggregate(A3, canal, excl) || [];
-  sub.textContent = `Hasta ${MESES[mesHasta-1].toLowerCase()}. Contabilidad = Hostelero (ventas de Ágora, Compras, nóminas de Ratios, bancos). A3 = Sumas y Saldos que sube Lucía. En TODOS se excluye el mercado interno en ambos.`;
+  sub.textContent = `Hasta ${MESES[mesHasta-1].toLowerCase()}. Contabilidad = Jano (ventas de Ágora, Compras, nóminas de Ratios, bancos). A3 = Sumas y Saldos que sube Lucía. En TODOS se excluye el mercado interno en ambos.`;
   const byG = {};
   const add = (rows, who) => rows.forEach(r => { const g = r.grupoId + ' · ' + r.grupo; const o = (byG[g] ||= { tipo: r.tipo, C: mensual0(), A: mensual0() }); r.mensual.forEach((v,i) => o[who][i] += v); });
   add(rC, 'C'); add(rA, 'A');
@@ -3306,7 +3306,7 @@ function resetApp() {
   autoLoad();
 }
 
-// La sesión la valida Hostelero en el servidor: se arranca directamente.
+// La sesión la valida Jano en el servidor: se arranca directamente.
 autoLoad();
 </script>
 </div><!-- /main-app -->

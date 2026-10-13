@@ -237,7 +237,7 @@ export default async function Cartera({
           name="q"
           defaultValue={qCrudo}
           placeholder="Buscar por cliente, proveedor o número de documento…"
-          style={{ width: "100%", maxWidth: 420, padding: "8px 12px", border: "1px solid #DDE2DF", borderRadius: 8 }}
+          style={{ width: "100%", maxWidth: 420, padding: "8px 12px", border: "1px solid #DEDFE1", borderRadius: 8 }}
         />
       </form>
 

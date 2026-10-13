@@ -1,5 +1,5 @@
 /**
- * Carga del «Tracking de reservas» de CoverManager en el módulo Reservas de Hostelero (el mismo
+ * Carga del «Tracking de reservas» de CoverManager en el módulo Reservas de Jano (el mismo
  * camino que Skello → Personal: hasta el corte, Sonia y compañía siguen en Cover y aquí se carga
  * el informe; Ratios lee en vivo del módulo).
  *

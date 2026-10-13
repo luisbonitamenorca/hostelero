@@ -326,7 +326,7 @@ export default async function Conciliacion({
         <a
           href={ruta(`/bancos/todos/conciliacion`)}
           className="boton-secundario"
-          style={{ padding: "5px 12px", fontSize: 13, ...(esTodos ? { background: "#1B2420", color: "#fff", borderColor: "#1B2420" } : {}) }}
+          style={{ padding: "5px 12px", fontSize: 13, ...(esTodos ? { background: "#242D36", color: "#fff", borderColor: "#242D36" } : {}) }}
         >
           Todos los bancos
         </a>
@@ -335,7 +335,7 @@ export default async function Conciliacion({
             key={b.id}
             href={ruta(`/bancos/${b.id}/conciliacion`)}
             className="boton-secundario"
-            style={{ padding: "5px 12px", fontSize: 13, ...(b.id === id ? { background: "#1B2420", color: "#fff", borderColor: "#1B2420" } : {}) }}
+            style={{ padding: "5px 12px", fontSize: 13, ...(b.id === id ? { background: "#242D36", color: "#fff", borderColor: "#242D36" } : {}) }}
           >
             {b.nombre}
           </a>
@@ -355,8 +355,8 @@ export default async function Conciliacion({
             ["Saldo contable 572", resumen.saldo_contable != null ? euros(Number(resumen.saldo_contable)) : "—"],
             ["Diferencia", dif != null ? euros(dif) : "—"],
           ].map(([k, v]) => (
-            <div key={k} style={{ background: "#fff", border: "1px solid #DDE2DF", borderRadius: 8, padding: "10px 14px" }}>
-              <div style={{ fontSize: 12, color: "#5F6B65" }}>{k}</div>
+            <div key={k} style={{ background: "#fff", border: "1px solid #DEDFE1", borderRadius: 8, padding: "10px 14px" }}>
+              <div style={{ fontSize: 12, color: "#5C6872" }}>{k}</div>
               <div style={{ fontWeight: 700, fontSize: 16, color: k === "Diferencia" && dif ? "#B4423A" : undefined }}>{v}</div>
             </div>
           ))}
@@ -376,7 +376,7 @@ export default async function Conciliacion({
               key={t}
               href={enlace({ sentido: v, pag: "" })}
               className="boton-secundario"
-              style={{ padding: "5px 12px", fontSize: 13, ...(sentido === v ? { background: "#1B2420", color: "#fff", borderColor: "#1B2420" } : {}) }}
+              style={{ padding: "5px 12px", fontSize: 13, ...(sentido === v ? { background: "#242D36", color: "#fff", borderColor: "#242D36" } : {}) }}
             >
               {t}
             </a>
@@ -386,7 +386,7 @@ export default async function Conciliacion({
               key={e}
               href={enlace({ estado: e, pag: "" })}
               className="boton-secundario"
-              style={{ padding: "5px 12px", fontSize: 13, ...(estadoFiltro === e ? { background: "#0F6E56", color: "#fff", borderColor: "#0F6E56" } : {}) }}
+              style={{ padding: "5px 12px", fontSize: 13, ...(estadoFiltro === e ? { background: "#2F3A45", color: "#fff", borderColor: "#2F3A45" } : {}) }}
             >
               {e === "todos" ? "Todos" : e[0].toUpperCase() + e.slice(1) + "s"}
             </a>
@@ -395,7 +395,7 @@ export default async function Conciliacion({
         <form method="get" style={{ display: "flex", gap: 6, flex: "1 1 300px" }}>
           <input type="hidden" name="estado" value={estadoFiltro} />
           <SelectorMes meses={MESES_EXTRACTO} valor={mes} />
-          <input name="q" defaultValue={q} placeholder="Buscar en concepto o detalle…" style={{ flex: 1, padding: "6px 10px", border: "1px solid #DDE2DF", borderRadius: 6 }} />
+          <input name="q" defaultValue={q} placeholder="Buscar en concepto o detalle…" style={{ flex: 1, padding: "6px 10px", border: "1px solid #DEDFE1", borderRadius: 6 }} />
           <button className="boton-secundario" type="submit">Buscar</button>
         </form>
         {!esTodos && (
@@ -461,7 +461,7 @@ export default async function Conciliacion({
                       {m.concepto}
                       {m.detalle && <span className="secundario">{m.detalle}</span>}
                     </td>
-                    <td className="numero" style={{ color: m.importe < 0 ? "#B4423A" : "#0F6E56" }}>
+                    <td className="numero" style={{ color: m.importe < 0 ? "#B4423A" : "#2F3A45" }}>
                       {euros(Number(m.importe))}
                     </td>
                     <td>
@@ -482,7 +482,7 @@ export default async function Conciliacion({
                           <form action={conciliarManual} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                             <input type="hidden" name="banco" value={idBanco} />
                             <input type="hidden" name="mov" value={m.id} />
-                            <select name="apunte" style={{ maxWidth: 240, padding: "4px 6px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 13 }}>
+                            <select name="apunte" style={{ maxWidth: 240, padding: "4px 6px", border: "1px solid #DEDFE1", borderRadius: 6, fontSize: 13 }}>
                               {sug.map((s) => (
                                 <option key={s.ap_id} value={s.ap_id}>
                                   {euros(Number(s.importe))} · nº {s.asiento_numero} · {fecha(s.asiento_fecha)} · {s.descripcion.slice(0, 36)}

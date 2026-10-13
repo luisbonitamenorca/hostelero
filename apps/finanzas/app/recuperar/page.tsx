@@ -35,7 +35,7 @@ export default function Recuperar() {
         <div className="tarjeta-login">
           <h1>Revisa tu correo</h1>
           <p className="sub">
-            Si <strong>{correo.trim().toLowerCase()}</strong> tiene cuenta en Hostelero, le hemos
+            Si <strong>{correo.trim().toLowerCase()}</strong> tiene cuenta en Jano, le hemos
             enviado un enlace para poner una contraseña nueva. Caduca en una hora y solo sirve una vez.
           </p>
           <p className="pista">

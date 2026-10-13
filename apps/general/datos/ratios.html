@@ -4496,10 +4496,10 @@ function savePpto() {
   closeM('m-ppto'); saveToStorage('presupuesto', { nuevas: [nueva] }); renderTblPpto();
 }
 
-// La sesión la valida Hostelero en el servidor antes de entregar este HTML.
+// La sesión la valida Jano en el servidor antes de entregar este HTML.
 
 // ── SUPABASE ────────────────────────────────────────────────────────
-// Datos en la casa de Hostelero (24-08-2026): URL, clave publicable y TOKEN
+// Datos en la casa de Jano (24-08-2026): URL, clave publicable y TOKEN
 // DE SESIÓN inyectados al servir la página. Al primer 401 (token caducado,
 // ~1h) o pasados 50 minutos, la página se recarga sola y llega token fresco.
 const SB_URL = '__SUPABASE_URL__';
@@ -6346,7 +6346,7 @@ function renderProdDijit() {
   if (search) {
     rows = rows.filter(p => (p.id_interno||'').toLowerCase().includes(search) || (p.descripcion||'').toLowerCase().includes(search) || (p._prov||'').toLowerCase().includes(search));
   }
-  // Origen: DIJIT es el histórico (se borrará), COMPRAS es lo que va a Hostelero
+  // Origen: DIJIT es el histórico (se borrará), COMPRAS es lo que va a Jano
   const origenFilter = (document.getElementById('pd-origen-filter')||{}).value || '';
   if (origenFilter) rows = rows.filter(p => (p.origen || 'DIJIT') === origenFilter);
 
@@ -7686,7 +7686,7 @@ async function handleXlFile(file, opts) {
   const compRows = [];
   let compFueraCorte = 0, compSinCanal = 0, compSinCodigo = 0;
   if (hojaCompras) {
-    // Desde el port a Hostelero (24-08-2026) las compras entran EN VIVO desde
+    // Desde el port a Jano (24-08-2026) las compras entran EN VIVO desde
     // el módulo Compras (vista SQL 'gastos'): la hoja se ignora a propósito
     // para no duplicar. El guard del servidor también las rechaza.
     document.getElementById('xl-comp-count').textContent = 'Ya es automática: las compras entran solas desde el módulo Compras (hoja ignorada)';
@@ -8291,7 +8291,7 @@ async function handleXlFile(file, opts) {
       return f.length ? { desde: f[0], hasta: f[f.length-1] } : null;
     };
     // GASTOS: ya no se trunca la tabla entera. Conviven dos orígenes (DIJIT
-    // histórico y COMPRAS, que es lo que se integrará en Hostelero) y cada hoja
+    // histórico y COMPRAS, que es lo que se integrará en Jano) y cada hoja
     // reemplaza solo lo suyo. Así Dakota puede subir una hoja, las dos, o
     // repetir la misma carga sin duplicar ni borrar el otro origen.
     // La columna origen nunca es nula: las filas históricas se rellenaron en la

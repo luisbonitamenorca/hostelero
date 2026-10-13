@@ -149,7 +149,7 @@ function Marco({ r, idioma, children }: { r: ReservaPago | null; idioma: Idioma;
             <img className="logo" src={rest.logo_url} alt={rest.nombre} />
           ) : null}
           <div className="marca">
-            {rest?.nombre ?? "Hostelero"}
+            {rest?.nombre ?? "Jano"}
             <small>{t.marca}</small>
           </div>
         </header>

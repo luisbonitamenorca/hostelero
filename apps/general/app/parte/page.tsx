@@ -6,7 +6,7 @@ import FormularioParte from "./formulario";
  * ligera: manifest + iconos, «Añadir a pantalla de inicio»). Es la mitad
  * «pedir» de la app de Mantenimiento: el mismo formulario, escribiendo en la
  * misma tabla `partes` del Supabase de mantenimiento. La mitad «gestionar»
- * (el panel de Marcos) vive en /mantenimiento dentro de Hostelero.
+ * (el panel de Marcos) vive en /mantenimiento dentro de Jano.
  */
 export const metadata: Metadata = {
   title: "Partes · Bonita Menorca",

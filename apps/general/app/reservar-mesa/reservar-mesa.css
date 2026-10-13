@@ -2,12 +2,12 @@
    móvil primero, ámbito .rme. El acento (--acento) lo puede sobrescribir el color de marca del
    restaurante desde el componente. Sin dependencias: las fuentes vienen de globals.css. */
 .rme{
-  --acento:#0F6E56; --acento-osc:#0B533F; --acento-suave:#E6F2EE;
-  --papel:#F3F4F2; --blanco:#FFFFFF; --tinta:#1B2420; --gris:#5F6B65; --gris-claro:#8A9490;
-  --borde:#DDE2DF; --borde-fuerte:#C5CCC8; --ambar:#B86E00; --ambar-suave:#FFF3DF;
+  --acento:#2F3A45; --acento-osc:#0B533F; --acento-suave:#E6F2EE;
+  --papel:#F3F4F2; --blanco:#FFFFFF; --tinta:#242D36; --gris:#5C6872; --gris-claro:#8A949C;
+  --borde:#DEDFE1; --borde-fuerte:#C5CCC8; --ambar:#B86E00; --ambar-suave:#FFF3DF;
   --ok:#2F7D46; --ok-suave:#E8F3EC; --error:#B3261E; --error-suave:#FBEAE9;
   --radio:14px; --sombra:0 2px 12px rgba(27,36,32,.06);
-  font-family:var(--sans,'IBM Plex Sans',system-ui,sans-serif);background:var(--papel);color:var(--tinta);min-height:100vh;line-height:1.5;
+  font-family:var(--sans,'Plus Jakarta Sans',system-ui,sans-serif);background:var(--papel);color:var(--tinta);min-height:100vh;line-height:1.5;
   -webkit-font-smoothing:antialiased;
 }
 .rme *{margin:0;padding:0;box-sizing:border-box}
@@ -16,7 +16,7 @@
 
 /* cabecera */
 .rme header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 0 10px}
-.rme .marca{display:flex;align-items:center;gap:10px;font-family:var(--display,'Bricolage Grotesque',sans-serif);font-size:22px;font-weight:600;color:var(--tinta);letter-spacing:-.01em;min-width:0}
+.rme .marca{display:flex;align-items:center;gap:10px;font-family:var(--display,'Plus Jakarta Sans',sans-serif);font-size:22px;font-weight:600;color:var(--tinta);letter-spacing:-.01em;min-width:0}
 .rme .marca span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rme .marca small{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--gris-claro)}
 .rme .marca .logo{height:34px;width:auto;border-radius:6px}
@@ -35,7 +35,7 @@
 .rme .pasos li .n{position:relative;z-index:1}
 
 /* tipografía */
-.rme h2.paso{font-family:var(--display,'Bricolage Grotesque',sans-serif);font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--tinta);margin:10px 0 4px}
+.rme h2.paso{font-family:var(--display,'Plus Jakarta Sans',sans-serif);font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--tinta);margin:10px 0 4px}
 .rme p.sub{color:var(--gris);font-size:14px;margin-bottom:14px}
 .rme .texto{font-size:15px;margin-bottom:10px}
 .rme .nota{font-size:13px;color:var(--gris);margin:10px 0 0}
@@ -74,7 +74,7 @@
 /* restaurantes */
 .rme .locales{display:grid;gap:8px;margin-bottom:12px}
 .rme .local{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--blanco);border:1.5px solid var(--borde);border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer;color:var(--tinta);position:relative}
-.rme .local strong{font-family:var(--display,'Bricolage Grotesque',sans-serif);font-size:17px;font-weight:600}
+.rme .local strong{font-family:var(--display,'Plus Jakarta Sans',sans-serif);font-size:17px;font-weight:600}
 .rme .local span{font-size:13px;color:var(--gris)}
 .rme .local::after{content:'›';position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--acento);font-size:20px}
 .rme .local:hover{border-color:var(--acento)}
@@ -110,7 +110,7 @@
 /* horas */
 .rme .turno-bloque{margin:14px 0 6px}
 .rme .turno-cab{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
-.rme .turno-nombre{font-family:var(--display,'Bricolage Grotesque',sans-serif);font-size:16px;font-weight:600;color:var(--tinta)}
+.rme .turno-nombre{font-family:var(--display,'Plus Jakarta Sans',sans-serif);font-size:16px;font-weight:600;color:var(--tinta)}
 .rme .turno-etq{font-size:12px;color:var(--gris);background:#EAECEA;border-radius:999px;padding:2px 9px}
 .rme .turno-vacio{font-size:13px;color:var(--gris-claro);padding:6px 0}
 .rme .horas{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -156,7 +156,7 @@
 /* ticket */
 .rme .ticket{background:var(--blanco);border-radius:var(--radio);box-shadow:var(--sombra);margin-top:16px;overflow:hidden;border:1px solid var(--borde)}
 .rme .ticket .cab{background:var(--acento);color:#fff;padding:18px;text-align:center}
-.rme .ticket .cab .t{font-family:var(--display,'Bricolage Grotesque',sans-serif);font-size:20px;font-weight:600}
+.rme .ticket .cab .t{font-family:var(--display,'Plus Jakarta Sans',sans-serif);font-size:20px;font-weight:600}
 .rme .ticket .cab .s{font-size:13px;opacity:.9;margin-top:2px}
 .rme .ticket .cuerpo{padding:18px;text-align:center}
 .rme .perfo{height:0;border-top:2px dashed var(--borde-fuerte);position:relative;margin:14px 8px}
@@ -187,7 +187,7 @@
 .rme .acciones .btn{margin-top:0}
 .rme .contacto{display:grid;gap:6px;font-size:14px}
 .rme .contacto a{color:var(--acento);font-weight:600}
-.rme h3.sec{font-family:var(--display,'Bricolage Grotesque',sans-serif);font-size:16px;font-weight:600;margin:4px 0 6px}
+.rme h3.sec{font-family:var(--display,'Plus Jakarta Sans',sans-serif);font-size:16px;font-weight:600;margin:4px 0 6px}
 
 /* valoración */
 .rme .estrellas{display:flex;gap:6px}
@@ -216,14 +216,14 @@
 .rme .inv-fila{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px}
 .rme .inv-quitar{width:46px;border:1.5px solid var(--borde-fuerte);border-radius:10px;background:var(--blanco);color:var(--gris);font-size:20px;cursor:pointer}
 .rme .inv-quitar:hover{border-color:var(--error);color:var(--error)}
-.rme .invitar .btn .cargando{border-color:rgba(15,110,86,.25);border-top-color:var(--acento)}
+.rme .invitar .btn .cargando{border-color:rgba(47, 58, 69,.25);border-top-color:var(--acento)}
 
 /* página de privacidad */
 .rme .legal section+section{margin-top:14px}
 .rme .legal .texto{font-size:14px;color:var(--tinta)}
 
 /* varios */
-.rme .cargando{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(15,110,86,.25);border-top-color:var(--acento);border-radius:50%;animation:rme-gira .7s linear infinite;vertical-align:-3px;margin-right:8px}
+.rme .cargando{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(47, 58, 69,.25);border-top-color:var(--acento);border-radius:50%;animation:rme-gira .7s linear infinite;vertical-align:-3px;margin-right:8px}
 .rme .cargando.inv{border-color:rgba(255,255,255,.35);border-top-color:#fff}
 @keyframes rme-gira{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.rme *{animation:none!important;transition:none!important}}

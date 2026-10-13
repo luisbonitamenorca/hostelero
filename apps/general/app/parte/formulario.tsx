@@ -7,7 +7,7 @@ import AvisoVersion from "../aviso-version";
  * El mismo formulario «Nueva petición» de la app de mantenimiento, en versión
  * móvil y pública. Desde el port al esqueleto (18-08-2026) NO toca la base:
  * envía a /api/publico/parte, que valida y escribe en mant_partes del
- * Supabase de Hostelero con la service key — el patrón de la casa para
+ * Supabase de Jano con la service key — el patrón de la casa para
  * fronts sin sesión. Para Marcos, un parte del móvil y uno del panel son
  * indistinguibles. Las fotos van comprimidas en base64 dentro de `medios`.
  */

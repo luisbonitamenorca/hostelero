@@ -1,3 +1,4 @@
+import { LogoJano } from "@/app/logo-jano";
 import Link from "next/link";
 import { exigirOperador } from "@/lib/supabase/server";
 import { crearCuenta } from "../../acciones";
@@ -22,7 +23,7 @@ export default async function NuevaCuenta({
       <header className="cabecera">
         <div className="cabecera-interior">
           <div>
-            <span className="marca">Consola Hostelero</span>
+            <span className="marca"><LogoJano tamano={22} sufijo="Consola" /></span>
             <span className="etiqueta-interno">Interno</span>
           </div>
         </div>
@@ -31,7 +32,7 @@ export default async function NuevaCuenta({
       <main className="contenido">
         <Link href="/" className="migas">← Cuentas</Link>
         <h1 className="titulo">Nueva cuenta</h1>
-        <p className="subtitulo">El cliente que contrata Hostelero</p>
+        <p className="subtitulo">El cliente que contrata Jano</p>
 
         {error && ERRORES[error] && <p className="aviso-error">{ERRORES[error]}</p>}
 

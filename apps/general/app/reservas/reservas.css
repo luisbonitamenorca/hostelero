@@ -22,19 +22,19 @@
 
 .rsp {
   /* superficies */
-  --fondo: #F0F2F1;
+  --fondo: #F3F4F0;
   --panel: #FFFFFF;
   --panel-2: #F4F6F5;
   --panel-3: #E9EDEB;
-  --borde: #DDE2DF;
+  --borde: #DEDFE1;
   --borde-fuerte: #C6CECA;
   /* texto */
-  --tinta: #1B2420;
-  --gris: #5F6B65;
-  --gris-claro: #8A9490;
+  --tinta: #242D36;
+  --gris: #5C6872;
+  --gris-claro: #8A949C;
   /* acento de la casa */
-  --acento: #0F6E56;
-  --acento-claro: #0F6E56;
+  --acento: #2F3A45;
+  --acento-claro: #2F3A45;
   --acento-suave: #E3F1EC;
   --acento-texto: #FFFFFF;
   /* semáforo */
@@ -72,7 +72,7 @@
   background: var(--fondo);
   color: var(--tinta);
   color-scheme: light;
-  font-family: var(--sans, 'IBM Plex Sans', system-ui, sans-serif);
+  font-family: var(--sans, 'Plus Jakarta Sans', system-ui, sans-serif);
   font-size: 13.5px;
   line-height: 1.4;
   display: flex;
@@ -391,10 +391,10 @@
 
 .rsp-modal {
   position: fixed; inset: 0; background: rgba(0, 0, 0, .5); z-index: 60; display: flex; align-items: flex-end; justify-content: center;
-  font-family: var(--sans, 'IBM Plex Sans', system-ui, sans-serif); color: var(--tinta, #1B2420);
+  font-family: var(--sans, 'Plus Jakarta Sans', system-ui, sans-serif); color: var(--tinta, #242D36);
 }
 @media (min-width: 640px) { .rsp-modal { align-items: center; } }
-.rsp-modal .modal { position: relative; background: var(--panel, #fff); border: 1px solid var(--borde, #DDE2DF); width: 100%; max-width: 560px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 16px 16px 22px; box-shadow: var(--sombra-alta); }
+.rsp-modal .modal { position: relative; background: var(--panel, #fff); border: 1px solid var(--borde, #DEDFE1); width: 100%; max-width: 560px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 16px 16px 22px; box-shadow: var(--sombra-alta); }
 @media (min-width: 640px) { .rsp-modal .modal { border-radius: 16px; } }
 .rsp-modal h2 { font-size: 17px; color: var(--mar); margin: 0 0 6px; font-weight: 700; padding-right: 36px; }
 .rsp-modal .cerrar { position: absolute; top: 12px; right: 12px; background: var(--panel-2); border: 1px solid var(--borde); width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer; color: var(--gris); display: flex; align-items: center; justify-content: center; }

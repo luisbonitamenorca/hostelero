@@ -78,14 +78,14 @@ export default function AsientoManual({
     );
   }
 
-  const celda: React.CSSProperties = { padding: "4px 6px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 13 };
+  const celda: React.CSSProperties = { padding: "4px 6px", border: "1px solid #DEDFE1", borderRadius: 6, fontSize: 13 };
 
   return (
-    <form action={conciliarAsientoManual} style={{ border: "1px solid #DDE2DF", borderRadius: 8, padding: 12, background: "#fff", marginTop: 8 }}>
+    <form action={conciliarAsientoManual} style={{ border: "1px solid #DEDFE1", borderRadius: 8, padding: 12, background: "#fff", marginTop: 8 }}>
       <input type="hidden" name="banco" value={bancoId} />
       <input type="hidden" name="mov" value={movId} />
       <input type="hidden" name="lineas" value={payload} />
-      <p style={{ margin: "0 0 8px", fontSize: 13, color: "#5F6B65" }}>
+      <p style={{ margin: "0 0 8px", fontSize: 13, color: "#5C6872" }}>
         La línea del banco ({euros(Math.abs(objetivo))} al {objetivo > 0 ? "debe" : "haber"}) se añade sola. Escribe las contrapartidas:
       </p>
       <input

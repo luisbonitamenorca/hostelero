@@ -7,7 +7,7 @@ import { cerrarSesion } from "../acciones";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Reservas · Hostelero",
+  title: "Reservas · Jano",
   description: "Panel de sala: reservas, plano, cronograma, clientes y lista de espera.",
   // El panel está pensado para tablet y ordenador; sin zoom accidental al tocar un campo.
   other: { "apple-mobile-web-app-capable": "yes" },

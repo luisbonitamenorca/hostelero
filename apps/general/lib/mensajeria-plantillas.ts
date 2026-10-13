@@ -148,7 +148,7 @@ export function icsReserva(d: {
   const lineas = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Hostelero//Reservas//ES",
+    "PRODID:-//Jano//Reservas//ES",
     "CALSCALE:GREGORIAN",
     `METHOD:${r.estado === "cancelada" ? "CANCEL" : "PUBLISH"}`,
     "BEGIN:VEVENT",
@@ -398,7 +398,7 @@ export function htmlEmail(d: {
   const rest = d.restaurante;
   const idioma = d.idioma || "es";
   const t = TXT[idioma];
-  const color = /^#[0-9a-f]{6}$/i.test(rest.color_marca || "") ? (rest.color_marca as string) : "#0F6E56";
+  const color = /^#[0-9a-f]{6}$/i.test(rest.color_marca || "") ? (rest.color_marca as string) : "#2F3A45";
   const titular = d.titular || rest.nombre;
   const direccion = [rest.direccion || rest.ubicacion || "", rest.telefono || ""].filter(Boolean).join(" · ");
   const cabecera = rest.logo_url

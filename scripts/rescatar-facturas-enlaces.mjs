@@ -44,7 +44,7 @@ for (const c of candidatos) {
   let ok = false;
   for (const url of enlaces.slice(0, 3)) {
     try {
-      const r = await fetch(url, { redirect: "follow", headers: { "User-Agent": "Mozilla/5.0 (compatible; Hostelero-Compras/1.0)" } });
+      const r = await fetch(url, { redirect: "follow", headers: { "User-Agent": "Mozilla/5.0 (compatible; Jano-Compras/1.0)" } });
       if (!r.ok) continue;
       const buf = Buffer.from(await r.arrayBuffer());
       const esPdf = (r.headers.get("content-type") || "").includes("pdf") || buf.subarray(0, 5).toString("latin1") === "%PDF-";

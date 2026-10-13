@@ -137,11 +137,11 @@ export default async function Facturas({
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "0 0 14px" }}>
         <div style={{ flex: "1 1 160px", background: "#fff", border: "1px solid var(--linea, #DDE3E0)", borderRadius: 8, padding: "10px 14px" }}>
           <div className="secundario" style={{ fontSize: 12 }}>Facturas de ingreso</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56" }}>{totalFilas}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#2F3A45" }}>{totalFilas}</div>
         </div>
         <div style={{ flex: "1 1 160px", background: "#fff", border: "1px solid var(--linea, #DDE3E0)", borderRadius: 8, padding: "10px 14px" }}>
           <div className="secundario" style={{ fontSize: 12 }}>Importe total</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56" }}>{euros(sumaTotal)}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#2F3A45" }}>{euros(sumaTotal)}</div>
         </div>
       </div>
 
@@ -159,7 +159,7 @@ export default async function Facturas({
               key={t}
               href={enlace({ cobro: v, pag: "" })}
               className="boton-secundario"
-              style={{ padding: "5px 12px", fontSize: 13, ...(filtroCobro === v ? { background: "#0F6E56", color: "#fff", borderColor: "#0F6E56" } : {}) }}
+              style={{ padding: "5px 12px", fontSize: 13, ...(filtroCobro === v ? { background: "#2F3A45", color: "#fff", borderColor: "#2F3A45" } : {}) }}
             >
               {t}
             </a>
@@ -171,7 +171,7 @@ export default async function Facturas({
             name="q"
             defaultValue={sp.q ?? ""}
             placeholder="Buscar por número o cliente…"
-            style={{ width: "100%", maxWidth: 420, padding: "8px 12px", border: "1px solid #DDE2DF", borderRadius: 8 }}
+            style={{ width: "100%", maxWidth: 420, padding: "8px 12px", border: "1px solid #DEDFE1", borderRadius: 8 }}
           />
         </form>
       </div>
@@ -238,9 +238,9 @@ export default async function Facturas({
                       ) : f.estado === "pendiente de cobro" ? (
                         <span style={{ color: "#B4831A" }}>pendiente de cobro</span>
                       ) : f.estado.startsWith("cobrada") ? (
-                        <span style={{ color: "#0F6E56" }}>✓ {f.estado}</span>
+                        <span style={{ color: "#2F3A45" }}>✓ {f.estado}</span>
                       ) : f.estado.startsWith("rectifica") || f.estado.startsWith("anulada por") ? (
-                        <span style={{ color: "#5F6B65" }}>⇄ {f.estado}</span>
+                        <span style={{ color: "#5C6872" }}>⇄ {f.estado}</span>
                       ) : (
                         f.estado
                       )}

@@ -190,7 +190,7 @@ tr:last-child td{border-bottom:none}
     <button data-view="agentes">Agentes</button>
     <button data-view="actividad">Actividad</button>
     <button data-view="ajustes">Ajustes</button>
-    <button onclick="location.href='/'" title="Volver a Hostelero">← Inicio</button>
+    <button onclick="location.href='/'" title="Volver a Jano">← Inicio</button>
   </nav>
 </header>
 
@@ -256,7 +256,7 @@ function money(v){ return "$"+Number(v).toFixed(4); }
 function initials(name){ return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
 
 /* ================= AUTH =================
-   Sin login propio (19-08-2026): la puerta es la sesión de Hostelero, que el
+   Sin login propio (19-08-2026): la puerta es la sesión de Jano, que el
    route handler valida (módulo y veto incluidos) antes de servir esta página
    con el token del puente ya dentro. */
 async function init(){

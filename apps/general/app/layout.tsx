@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Hostelero",
-  description: "La gestión de tu negocio de hostelería, en un solo sitio",
+  title: "Jano",
+  description: "Las dos caras de tu negocio, a la vista",
 };
 
 export default function RootLayout({

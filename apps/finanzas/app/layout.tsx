@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Hostelero · Finanzas",
+  title: "Jano · Finanzas",
   description: "Facturación, contabilidad, bancos e impuestos",
 };
 

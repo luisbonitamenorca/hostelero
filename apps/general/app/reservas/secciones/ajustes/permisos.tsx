@@ -176,7 +176,7 @@ export default function AjPermisos({ ctx, avisar, esDireccion }: AjProps) {
                     ) : null}
                     <td className="acc">
                       {dir ? (
-                        <Chip color="#0F6E56">todo</Chip>
+                        <Chip color="#2F3A45">todo</Chip>
                       ) : fila ? (
                         <>
                           <Chip color="#D99A1E" title="Tiene permisos propios">propios</Chip>

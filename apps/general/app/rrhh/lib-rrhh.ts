@@ -99,7 +99,7 @@ export function guardarPref(clave: string, valor: unknown): void {
 
 /* ==================== Skello ==================== */
 
-/** Nombre de centro en Hostelero → código de centro en Skello / Ratios (plan 1.6). */
+/** Nombre de centro en Jano → código de centro en Skello / Ratios (plan 1.6). */
 export const CENTRO_SKELLO: Record<string, string> = {
   "Binifadet Restaurante": "BINIFADET",
   "Binifadet Bodega": "BODEGA",

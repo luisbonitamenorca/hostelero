@@ -30,7 +30,7 @@ const VIGILANTE = `
     if(document.getElementById('aviso-version-nueva'))return;
     var b=document.createElement('div');
     b.id='aviso-version-nueva';
-    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#0F6E56;color:#fff;padding:10px 14px;font:14px system-ui,sans-serif;text-align:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#2F3A45;color:#fff;padding:10px 14px;font:14px system-ui,sans-serif;text-align:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)';
     b.textContent='🔄 Hay una versión nueva de la app — toca aquí para actualizar';
     b.onclick=function(){location.reload();};
     document.body.appendChild(b);

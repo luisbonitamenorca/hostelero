@@ -112,7 +112,7 @@ export default function AjExperiencias({ rest, turnos, avisar, puedeEditar }: Aj
               <div className="cuerpo">
                 <div className="tit">
                   {x.nombre}
-                  {x.precio_pax != null ? <Chip color="#0F6E56">{fmtEuros(x.precio_pax)} / pers.</Chip> : null}
+                  {x.precio_pax != null ? <Chip color="#2F3A45">{fmtEuros(x.precio_pax)} / pers.</Chip> : null}
                   {x.requiere_prepago ? <Chip color="#2F80ED">prepago</Chip> : null}
                   {!x.activa ? <Chip color="#8A9199">inactiva</Chip> : null}
                 </div>

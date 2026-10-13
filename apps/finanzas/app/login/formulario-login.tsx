@@ -1,5 +1,6 @@
 "use client";
 
+import { LogoJano } from "@/app/logo-jano";
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -17,8 +18,8 @@ export default function FormularioLogin() {
 
   return (
     <form className="tarjeta-login" action={accion}>
-      <h1>Hostelero · Finanzas</h1>
-      <p className="sub">Entra con tu usuario de Hostelero</p>
+      <h1><LogoJano tamano={26} sufijo="Finanzas" /></h1>
+      <p className="sub">Entra con tu usuario de Jano</p>
 
       <label className="campo">
         <span>Correo</span>

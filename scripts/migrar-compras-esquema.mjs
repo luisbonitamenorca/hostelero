@@ -3,7 +3,7 @@
  * secuencias, constraints, índices, 35 funciones, vistas y triggers) lo
  * ensambló el propio Postgres de origen en la tabla _ddl_export; este script
  * lo trae, lo adapta a la casa y lo aplica vía la función ejecutar_ddl
- * (service-role) del Supabase de Hostelero. Los datos van en otro paso.
+ * (service-role) del Supabase de Jano. Los datos van en otro paso.
  *
  * Adaptaciones: extensiones de búsqueda difusa, cuenta_id con DEFAULT Bonita
  * en cada tabla (para no tocar el código de la app), RLS patrón de la casa

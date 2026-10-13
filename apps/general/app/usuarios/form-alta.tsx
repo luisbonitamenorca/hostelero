@@ -44,7 +44,7 @@ export default function FormAlta({ roles }: { roles: { id: string; nombre: strin
 
   if (vigente && "ok" in vigente) {
     return (
-      <div className="tarjeta" style={{ borderColor: "var(--verde, #0F6E56)" }}>
+      <div className="tarjeta" style={{ borderColor: "var(--verde, #2F3A45)" }}>
         <div className="form-bloque">
           <p className="aviso-ok" role="status" style={{ margin: 0 }}>
             <strong>{vigente.nombre}</strong> ya puede entrar con su correo y la contraseña temporal.

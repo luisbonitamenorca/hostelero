@@ -6,7 +6,7 @@ import AvisoVersion from "../aviso-version";
 /**
  * Carga de facturas y albaranes desde el móvil — el segundo camino de entrada
  * a Compras (el primero es la propia app, que no cambia). Público como los
- * fronts de reservas y visitas: Dakota no tiene usuario de Hostelero todavía
+ * fronts de reservas y visitas: Dakota no tiene usuario de Jano todavía
  * y esta página no enseña ningún dato, solo deja ficheros.
  *
  * Cómo encaja con la app de Compras SIN que Lucía note nada distinto: cada
@@ -198,7 +198,7 @@ export default function SubirFacturas() {
         onClick={() => entrada.current?.click()}
         style={{
           width: "100%", padding: "22px 16px", fontSize: 18, fontWeight: 600,
-          background: ocupado ? "#9bb5ac" : "#0F6E56", color: "#fff",
+          background: ocupado ? "#9bb5ac" : "#2F3A45", color: "#fff",
           border: "none", borderRadius: 12, cursor: "pointer",
         }}
       >
@@ -213,7 +213,7 @@ export default function SubirFacturas() {
               <li key={i} style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "8px 2px", borderBottom: "1px solid #eee", fontSize: 14 }}>
                 <span>{b.icono}</span>
                 <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.nombre}</span>
-                <span style={{ color: s.estado === "error" ? "#B42318" : "#5F6B65", fontSize: 12, maxWidth: "45%" }}>{b.texto}</span>
+                <span style={{ color: s.estado === "error" ? "#B42318" : "#5C6872", fontSize: 12, maxWidth: "45%" }}>{b.texto}</span>
               </li>
             );
           })}

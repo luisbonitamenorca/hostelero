@@ -1,7 +1,7 @@
 /**
  * Mudanza de Mantenimiento: copia TODOS los partes del Supabase del proyecto
  * mantenimiento-bonita (abierto con su clave publicable) a la tabla
- * mant_partes del Supabase de Hostelero, conservando los id originales.
+ * mant_partes del Supabase de Jano, conservando los id originales.
  * Idempotente: on_conflict sobre id no duplica si se relanza.
  *
  * Los medios (fotos/vídeos en base64) viajan tal cual dentro del jsonb, así

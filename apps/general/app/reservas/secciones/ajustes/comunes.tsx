@@ -140,7 +140,7 @@ const HEX = /^#[0-9A-Fa-f]{6}$/;
 export const esHex = (s: string) => HEX.test(s);
 
 /** Paleta rápida para etiquetas, turnos, camareros… (los mismos tonos que los estados). */
-export const PALETA = ["#2E9E5B", "#16A34A", "#1D6B3E", "#2F80ED", "#1F4E9E", "#7C3AED", "#D64D8A", "#D32F2F", "#F26B1D", "#D99A1E", "#8A9199", "#4B5057", "#0F6E56", "#2FA886", "#6b3d2e", "#4db6ac"];
+export const PALETA = ["#2E9E5B", "#16A34A", "#1D6B3E", "#2F80ED", "#1F4E9E", "#7C3AED", "#D64D8A", "#D32F2F", "#F26B1D", "#D99A1E", "#8A9199", "#4B5057", "#2F3A45", "#2FA886", "#6b3d2e", "#4db6ac"];
 
 /** Texto legible sobre un fondo hex. */
 export function textoSobre(hex: string): "#fff" | "#1a1a1a" {

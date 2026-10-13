@@ -1,3 +1,4 @@
+import { LogoJano } from "@/app/logo-jano";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigirOperador } from "@/lib/supabase/server";
@@ -65,7 +66,7 @@ export default async function DetalleCuenta({
       <header className="cabecera">
         <div className="cabecera-interior">
           <div>
-            <span className="marca">Consola Hostelero</span>
+            <span className="marca"><LogoJano tamano={22} sufijo="Consola" /></span>
             <span className="etiqueta-interno">Interno</span>
           </div>
           <div className="cabecera-derecha">
@@ -348,7 +349,7 @@ export default async function DetalleCuenta({
 
       <footer className="pie">
         <div className="pie-interior">
-          Consola interna de Hostelero · solo operadores
+          Consola interna de Jano · solo operadores
         </div>
       </footer>
     </>

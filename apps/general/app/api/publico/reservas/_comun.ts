@@ -138,7 +138,7 @@ export function generarIcs(ev: {
   const lineas = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Hostelero//Reservas//ES",
+    "PRODID:-//Jano//Reservas//ES",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VTIMEZONE",

@@ -73,7 +73,7 @@ async function leerLegado(tabla, orden) {
 }
 
 /** Inserta en hostelero por lotes, añadiendo cuenta_id a cada fila. */
-async function escribirHostelero(tabla, filas, { ignorarDuplicados = false, onConflict = "" } = {}) {
+async function escribirJano(tabla, filas, { ignorarDuplicados = false, onConflict = "" } = {}) {
   const prefer = ignorarDuplicados
     ? "resolution=ignore-duplicates,return=minimal"
     : "return=minimal";
@@ -95,7 +95,7 @@ async function escribirHostelero(tabla, filas, { ignorarDuplicados = false, onCo
   console.log();
 }
 
-async function contarHostelero(tabla) {
+async function contarJano(tabla) {
   const res = await fetch(`${HOSTELERO_URL}/rest/v1/${tabla}?select=*`, {
     method: "HEAD",
     headers: cab(HOSTELERO_KEY, { Prefer: "count=exact", Range: "0-0" }),
@@ -110,17 +110,17 @@ console.log("T1 · Carga Reservas — legado → hostelero\n");
 // 1. clientes
 console.log("1/3 clientes");
 const clientes = await leerLegado("clientes", "id");
-await escribirHostelero("reservas_clientes", clientes);
+await escribirJano("reservas_clientes", clientes);
 
 // 2. reservas (dispara triggers de emails y de mesa principal: previsto)
 console.log("2/3 reservas");
 const reservas = await leerLegado("reservas", "id");
-await escribirHostelero("reservas_reservas", reservas);
+await escribirJano("reservas_reservas", reservas);
 
 // 3. reserva_mesas (choca con lo auto-insertado por el trigger → se ignora el duplicado)
 console.log("3/3 reserva_mesas");
 const reservaMesas = await leerLegado("reserva_mesas", "reserva_id,mesa_id");
-await escribirHostelero("reservas_reserva_mesas", reservaMesas, {
+await escribirJano("reservas_reserva_mesas", reservaMesas, {
   ignorarDuplicados: true,
   onConflict: "reserva_id,mesa_id",
 });
@@ -143,7 +143,7 @@ for (const [tabla, esperado] of [
   ["reservas_reserva_mesas", reservaMesas.length],
   ["reservas_emails_salientes", 0],
 ]) {
-  const n = await contarHostelero(tabla);
+  const n = await contarJano(tabla);
   const ok = n === esperado ? "✓" : `✗ (esperaba ${esperado})`;
   console.log(`  ${tabla}: ${n} ${ok}`);
 }

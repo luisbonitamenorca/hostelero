@@ -3,17 +3,17 @@
 
 .peda,
 .peda-imp {
-  --pedc-verde: var(--verde, #0F6E56);
+  --pedc-verde: var(--verde, #2F3A45);
   --pedc-verde-suave: #E7F1EC;
   --pedc-coral-suave: #FBEDE7;
   --pedc-rojo: #A32D2D;
   --pedc-ambar: #8F5A0A;
   --pedc-ambar-suave: #FAEEDA;
-  --pedc-gris: var(--gris, #5F6B65);
-  --pedc-gris-claro: var(--gris-claro, #8A9490);
-  --pedc-gris-suave: #F0F2F1;
-  --pedc-borde: var(--borde, #DDE2DF);
-  --pedc-tinta: var(--tinta, #1B2420);
+  --pedc-gris: var(--gris, #5C6872);
+  --pedc-gris-claro: var(--gris-claro, #8A949C);
+  --pedc-gris-suave: #F3F4F0;
+  --pedc-borde: var(--borde, #DEDFE1);
+  --pedc-tinta: var(--tinta, #242D36);
   --pedc-blanco: var(--blanco, #FFFFFF);
 }
 
@@ -68,7 +68,7 @@
   padding: 0 20px;
   border-radius: 10px;
   border: 1px solid transparent;
-  background: var(--grafito, #22282B);
+  background: var(--grafito, #2F3A45);
   color: var(--pedc-blanco);
   font-family: var(--sans);
   font-size: 16px;
@@ -108,7 +108,7 @@
   font-size: 15px;
   cursor: pointer;
 }
-.peda-vista--activa { background: var(--grafito, #22282B); border-color: var(--grafito, #22282B); color: var(--pedc-blanco); font-weight: 500; }
+.peda-vista--activa { background: var(--grafito, #2F3A45); border-color: var(--grafito, #2F3A45); color: var(--pedc-blanco); font-weight: 500; }
 
 /* ── filtros ── */
 .peda-filtros { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }

@@ -131,7 +131,7 @@ export type SalidaIA = z.infer<typeof EsquemaSalidaIA>;
 
 /* ═══════════════════════ Instrucciones (bloque estable, cacheado) ═══════════════════════ */
 
-const INSTRUCCIONES = `Eres el asistente de pedidos de Hostelero, el programa de gestión de un grupo de restaurantes, bodegas y tiendas de Menorca. Cocineros, camareros y encargados dictan o escriben lo que hay que pedir a los proveedores, en castellano, en menorquín (catalán de Menorca) o mezclando los dos. Tu trabajo es convertir ese texto en líneas de pedido usando SOLO los productos del catálogo que te damos. Después, el empleado revisa tus líneas antes de enviar nada.
+const INSTRUCCIONES = `Eres el asistente de pedidos de Jano, el programa de gestión de un grupo de restaurantes, bodegas y tiendas de Menorca. Cocineros, camareros y encargados dictan o escriben lo que hay que pedir a los proveedores, en castellano, en menorquín (catalán de Menorca) o mezclando los dos. Tu trabajo es convertir ese texto en líneas de pedido usando SOLO los productos del catálogo que te damos. Después, el empleado revisa tus líneas antes de enviar nada.
 
 ## Qué recibes
 - Bloque CONTEXTO, con tres listas:

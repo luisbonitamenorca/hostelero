@@ -1,3 +1,4 @@
+import { LogoJano } from "@/app/logo-jano";
 import { iniciarSesion } from "../acciones";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export default async function PaginaLogin({
     <main className="pantalla-login">
       <div className="caja-login">
         <div style={{ marginBottom: 20 }}>
-          <span className="marca">Consola Hostelero</span>
+          <span className="marca"><LogoJano tamano={22} sufijo="Consola" /></span>
           <span className="etiqueta-interno">Interno</span>
         </div>
 

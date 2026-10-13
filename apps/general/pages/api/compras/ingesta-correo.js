@@ -26,7 +26,7 @@
 //   INGESTA_CARPETAS_EXCLUIR  (opcional, lista separada por comas)
 // ============================================================================
 
-// PORTADO a la casa de Hostelero (25-08-2026) desde compras-bonita/api/ingesta-correo.js
+// PORTADO a la casa de Jano (25-08-2026) desde compras-bonita/api/ingesta-correo.js
 // (port literal; solo cambian las credenciales, ahora por variables de entorno, y
 // la guarda del cron). Escribe en el Supabase de HOSTELERO con la service key.
 import { ImapFlow } from "imapflow";
@@ -155,7 +155,7 @@ async function descargarEnlaces(enlaces, asunto) {
       const t = setTimeout(() => ctrl.abort(), 20000);
       const r = await fetch(url, {
         redirect: "follow", signal: ctrl.signal,
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; Hostelero-Compras/1.0)", Accept: "application/pdf,*/*" },
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Jano-Compras/1.0)", Accept: "application/pdf,*/*" },
       });
       clearTimeout(t);
       if (!r.ok) continue;

@@ -689,20 +689,20 @@ export function textoPedido(d: DatosTextoPedido): string {
 /** HTML del email del pedido: tabla con código del proveedor, producto, cantidad y nota. */
 export function htmlPedido(d: DatosTextoPedido): string {
   const e = escaparHtml;
-  const td = "padding:8px 10px;border-bottom:1px solid #DDE2DF;vertical-align:top;";
-  const th = "padding:8px 10px;border-bottom:2px solid #22282B;text-align:left;font-size:12px;color:#5F6B65;";
+  const td = "padding:8px 10px;border-bottom:1px solid #DEDFE1;vertical-align:top;";
+  const th = "padding:8px 10px;border-bottom:2px solid #2F3A45;text-align:left;font-size:12px;color:#5C6872;";
   const filas = d.lineas
     .map(
       (l) =>
         `<tr><td style="${td}font-family:monospace;">${e(l.ref ?? "")}</td><td style="${td}">${e(l.nombre)}</td>` +
         `<td style="${td}text-align:right;white-space:nowrap;"><b>${e(formatoNumero(l.cantidad))}</b></td>` +
-        `<td style="${td}">${e(nombreUnidad(l.unidad, l.cantidad))}</td><td style="${td}color:#5F6B65;">${e(l.nota ?? "")}</td></tr>`,
+        `<td style="${td}">${e(nombreUnidad(l.unidad, l.cantidad))}</td><td style="${td}color:#5C6872;">${e(l.nota ?? "")}</td></tr>`,
     )
     .join("");
   const pie = pieAlbaran(d.buzon_albaranes);
   const f = firma(d.contacto);
   return [
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1B2420;max-width:680px;">`,
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#242D36;max-width:680px;">`,
     `<p>Hola, somos <b>${e(d.cuenta_nombre)}</b> (${e(d.centro_nombre)}).</p>`,
     `<p style="font-size:16px;"><b>Pedido ${e(d.numero)}</b>${d.fecha_entrega ? ` · entrega el <b>${e(formatoFechaLarga(d.fecha_entrega))}</b>` : ""}</p>`,
     `<table style="border-collapse:collapse;width:100%;"><thead><tr>`,
@@ -710,9 +710,9 @@ export function htmlPedido(d: DatosTextoPedido): string {
     `</tr></thead><tbody>${filas}</tbody></table>`,
     d.notas ? `<p><b>Notas:</b> ${e(d.notas).replace(/\n/g, "<br>")}</p>` : "",
     d.centro_direccion ? `<p><b>Entregar en:</b> ${e(d.centro_direccion)}</p>` : "",
-    pie ? `<p style="background:#F0F2F1;padding:10px 12px;border-radius:6px;">${e(pie)}</p>` : "",
+    pie ? `<p style="background:#F3F4F0;padding:10px 12px;border-radius:6px;">${e(pie)}</p>` : "",
     `<p>Gracias.</p>`,
-    f ? `<p style="color:#5F6B65;">${e(f)}</p>` : "",
+    f ? `<p style="color:#5C6872;">${e(f)}</p>` : "",
     `</div>`,
   ].join("");
 }
@@ -750,7 +750,7 @@ export function peticionProveedor(d: {
   if (f) parrafos.push(f);
   const texto = parrafos.join("\n\n");
   const html =
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1B2420;max-width:680px;">` +
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#242D36;max-width:680px;">` +
     parrafos.map((p) => `<p>${escaparHtml(p)}</p>`).join("") +
     `</div>`;
   return { asunto, texto, html };

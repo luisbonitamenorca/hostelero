@@ -159,7 +159,7 @@ export default function AjMensajes({ rest, avisar, puedeEditar, puedeEditarCuent
             <Panel className="aj-msj-editor">
               <div className="aj-msj-origen">
                 <b>{tipoDef.texto}</b> · {CANALES.find((c) => c.id === canal)?.texto} · {nombreIdioma(idioma)} ·{" "}
-                {propia ? <Chip color="#0F6E56">propia de {rest.nombre}</Chip> : cuenta ? <Chip color="#4B5057">plantilla de la cuenta</Chip> : <Chip color="#D99A1E">sin plantilla: no se envía</Chip>}
+                {propia ? <Chip color="#2F3A45">propia de {rest.nombre}</Chip> : cuenta ? <Chip color="#4B5057">plantilla de la cuenta</Chip> : <Chip color="#D99A1E">sin plantilla: no se envía</Chip>}
                 {vigente && !vigente.activa ? <Chip color="#8A9199">desactivada</Chip> : null}
               </div>
               <div className="aj-msj-vars">

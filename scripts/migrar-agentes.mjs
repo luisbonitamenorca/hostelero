@@ -1,6 +1,6 @@
 /**
  * Mudanza de Agentes: copia las 13 tablas agent_* del Supabase del proyecto
- * agentes-bonita al de Hostelero, conservando claves. Idempotente
+ * agentes-bonita al de Jano, conservando claves. Idempotente
  * (ignore-duplicates sobre la PK). El origen tiene RLS de solo-autenticados,
  * así que se lee con el usuario puente (credencial en plataforma_secretos,
  * que este script consulta con la service key de .env.local).
@@ -28,7 +28,7 @@ if (!env.HOSTELERO_URL || !env.HOSTELERO_SERVICE_KEY) {
   console.error("Faltan HOSTELERO_URL o HOSTELERO_SERVICE_KEY en .env.local");
   process.exit(1);
 }
-const cabecerasHostelero = {
+const cabecerasJano = {
   apikey: env.HOSTELERO_SERVICE_KEY,
   Authorization: `Bearer ${env.HOSTELERO_SERVICE_KEY}`,
   "Content-Type": "application/json",
@@ -37,7 +37,7 @@ const cabecerasHostelero = {
 // 1) credencial del puente y sesión en el origen
 const rSecreto = await fetch(
   `${env.HOSTELERO_URL}/rest/v1/plataforma_secretos?clave=eq.agentes_puente&select=valor`,
-  { headers: cabecerasHostelero },
+  { headers: cabecerasJano },
 );
 const [fila] = await rSecreto.json();
 if (!fila) throw new Error("no está el secreto agentes_puente");
@@ -61,7 +61,7 @@ for (const tabla of TABLAS) {
     const pk = PK[tabla] ?? "id";
     const w = await fetch(`${env.HOSTELERO_URL}/rest/v1/${tabla}?on_conflict=${pk}`, {
       method: "POST",
-      headers: { ...cabecerasHostelero, Prefer: "return=minimal,resolution=ignore-duplicates" },
+      headers: { ...cabecerasJano, Prefer: "return=minimal,resolution=ignore-duplicates" },
       body: JSON.stringify(filas),
     });
     if (!w.ok) throw new Error(`${tabla} escritura: ${w.status} ${(await w.text()).slice(0, 200)}`);

@@ -63,7 +63,7 @@ async function leerOrigen(tabla) {
 }
 
 /** Un único POST = una transacción en el destino. */
-async function escribirHostelero(tabla, filas) {
+async function escribirJano(tabla, filas) {
   const res = await fetch(`${HOSTELERO_URL}/rest/v1/${tabla}`, {
     method: "POST",
     headers: cab(HOSTELERO_KEY, { Prefer: "return=minimal" }),
@@ -104,11 +104,11 @@ const filasInscripciones = inscripciones.map(
     actualizado_en: fecha_actualizacion,
   })
 );
-await escribirHostelero("curso_inscripciones", filasInscripciones);
+await escribirJano("curso_inscripciones", filasInscripciones);
 
 console.log("2/2 intentos");
 const intentos = await leerOrigen("intentos_examen");
-await escribirHostelero(
+await escribirJano(
   "curso_intentos",
   intentos.map((f) => ({ ...f, cuenta_id: CUENTA_ID }))
 );

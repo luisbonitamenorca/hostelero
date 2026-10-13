@@ -75,7 +75,7 @@ export async function correoConfirmacionVisita(d: DatosConfirmacion): Promise<bo
   });
 
   const fila = (k: string, v: string, negrita = false) =>
-    `<tr><td style="padding:6px 16px 6px 0;color:#5F6B65;">${k}</td><td style="padding:6px 0;${negrita ? "font-weight:700;" : ""}">${v}</td></tr>`;
+    `<tr><td style="padding:6px 16px 6px 0;color:#5C6872;">${k}</td><td style="padding:6px 0;${negrita ? "font-weight:700;" : ""}">${v}</td></tr>`;
 
   const html = `
   <div style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1E2A25;">
@@ -90,7 +90,7 @@ export async function correoConfirmacionVisita(d: DatosConfirmacion): Promise<bo
       ${fila(t.personas, String(d.personas))}
       ${fila(t.importe, euros, true)}
     </table>
-    <p style="margin:20px 0 0;color:#5F6B65;font-size:14px;">${t.pie}</p>
+    <p style="margin:20px 0 0;color:#5C6872;font-size:14px;">${t.pie}</p>
   </div>`;
 
   return enviarCorreo({ para: d.para, asunto: t.asunto(d.codigo), html });

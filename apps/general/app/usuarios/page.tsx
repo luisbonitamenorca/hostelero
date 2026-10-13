@@ -50,7 +50,7 @@ export default async function Usuarios({
   const vetado = new Set((vetos ?? []).map((v) => `${v.perfil_id}|${v.modulo_id}`));
   const concedido = new Set((concesiones ?? []).map((c) => `${c.perfil_id}|${c.modulo_id}`));
 
-  // Operadores de Hostelero entre la gente de la cuenta: en su fila no se
+  // Operadores de Jano entre la gente de la cuenta: en su fila no se
   // ofrecen cambio de rol, «Nueva contraseña» ni «Borrar» (las acciones los
   // rechazan de todos modos). operadores no es legible con la sesión de una cuenta, por
   // eso va con la service key y limitado a los ids de esta cuenta.
@@ -93,13 +93,13 @@ export default async function Usuarios({
 
         <section>
           <h2 className="rotulo">Quién ve qué</h2>
-          <p style={{ color: "var(--gris, #5F6B65)", fontSize: 13, margin: "0 0 12px" }}>
+          <p style={{ color: "var(--gris, #5C6872)", fontSize: 13, margin: "0 0 12px" }}>
             El rol es la base; aquí se afina persona a persona. Verde = lo ve (pulsa para
             vetarlo, y al revés). Guion apagado = el rol no lo incluye: pulsa para concedérselo
             como extra, y el ✓ con borde discontinuo marca ese extra. Los cambios valen desde
             su siguiente carga de página.
           </p>
-          <div className="tabla-envoltura" style={{ background: "#fff", border: "1px solid #DDE2DF", borderRadius: 8, overflowX: "auto" }}>
+          <div className="tabla-envoltura" style={{ background: "#fff", border: "1px solid #DEDFE1", borderRadius: 8, overflowX: "auto" }}>
             <table className="tabla" style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr>
@@ -114,10 +114,10 @@ export default async function Usuarios({
               </thead>
               <tbody>
                 {(gente ?? []).map((g) => (
-                  <tr key={g.id} style={{ borderTop: "1px solid #DDE2DF" }}>
+                  <tr key={g.id} style={{ borderTop: "1px solid #DEDFE1" }}>
                     <td style={{ padding: "10px 16px" }}>
                       <strong>{g.nombre}</strong>
-                      <span style={{ color: "#5F6B65", display: "block", fontSize: 12 }}>{g.correo}</span>
+                      <span style={{ color: "#5C6872", display: "block", fontSize: 12 }}>{g.correo}</span>
                     </td>
                     <td style={{ padding: "10px 16px" }}>
                       <FilaAcciones
@@ -155,7 +155,7 @@ export default async function Usuarios({
                                 }
                                 style={{
                                   width: 30, height: 30, borderRadius: 6,
-                                  border: "1px dashed " + (tieneExtra ? "#0F6E56" : "#DDE2DF"),
+                                  border: "1px dashed " + (tieneExtra ? "#2F3A45" : "#DEDFE1"),
                                   cursor: "pointer", fontSize: 14,
                                   color: tieneExtra ? "inherit" : "#B8C2BC",
                                   background: tieneExtra ? "#E1F5EE" : "transparent",
@@ -177,7 +177,7 @@ export default async function Usuarios({
                               type="submit"
                               title={estaVetado ? `Vetado — pulsar para que ${g.nombre} lo vea` : `Lo ve — pulsar para vetar`}
                               style={{
-                                width: 30, height: 30, borderRadius: 6, border: "1px solid #DDE2DF",
+                                width: 30, height: 30, borderRadius: 6, border: "1px solid #DEDFE1",
                                 cursor: "pointer", fontSize: 14,
                                 background: estaVetado ? "#FCEBEB" : "#E1F5EE",
                               }}
@@ -193,7 +193,7 @@ export default async function Usuarios({
               </tbody>
             </table>
           </div>
-          <p style={{ color: "var(--gris, #5F6B65)", fontSize: 13, marginTop: 12 }}>
+          <p style={{ color: "var(--gris, #5C6872)", fontSize: 13, marginTop: 12 }}>
             El veto siempre manda: un módulo vetado no se ve aunque esté concedido. Al
             cambiar a alguien de rol, vetos y concesiones se limpian y arranca con los
             permisos por defecto del rol nuevo. Si alguien no puede entrar, usa «Nueva

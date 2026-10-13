@@ -1,12 +1,12 @@
-# Hostelero
+# Jano
 
-Monorepo del producto Hostelero. Una base de datos común en Supabase (proyecto
+Monorepo del producto Jano. Una base de datos común en Supabase (proyecto
 `hostelero`), aplicaciones por audiencia, paquetes compartidos.
 
 ## Estructura
 
     apps/
-      consola/     Consola interna de Hostelero (solo operadores)
+      consola/     Consola interna de Jano (solo operadores)
       general/     App del cliente (login de cuenta, lanzadera de módulos)
     packages/
       db/          Tipos TypeScript generados del esquema de Supabase
@@ -24,7 +24,7 @@ solo los módulos contratados y permitidos por rol.
 
 | Proyecto | Root Directory | Audiencia |
 |---|---|---|
-| hostelero-consola | `apps/consola` | Operadores de Hostelero |
+| hostelero-consola | `apps/consola` | Operadores de Jano |
 | hostelero-app | `apps/general` | Clientes (Bonita y siguientes) |
 
 Ambos con las mismas dos variables de entorno.

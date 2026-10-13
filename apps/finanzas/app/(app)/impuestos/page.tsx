@@ -116,7 +116,7 @@ export default async function Impuestos({ searchParams }: { searchParams: Promis
                 <p style={{ marginTop: 10, fontSize: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <span>
                     Resultado:{" "}
-                    <strong style={{ color: res > 0 ? "#B4423A" : "#0F6E56" }}>
+                    <strong style={{ color: res > 0 ? "#B4423A" : "#2F3A45" }}>
                       {euros(res)} {res > 0 ? "a ingresar" : "a compensar"}
                     </strong>
                   </span>

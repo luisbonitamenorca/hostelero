@@ -1,7 +1,7 @@
-# CLAUDE.md — Hostelero · Finanzas
+# CLAUDE.md — Jano · Finanzas
 
 ## Qué es esto
-Módulo financiero de la plataforma Hostelero (multi-tenant sobre Supabase). Primer usuario: Bonita Menorca, SL (grupo hostelero, Menorca). Cubre facturación con Verifactu, contabilidad PGC, bancos, impuestos AEAT y remesas SEPA. Primero uso interno, después producto comercial. El alcance completo está en docs/erp-hostelero-alcance-y-arquitectura-v0.1.md — leerlo antes de tocar nada.
+Módulo financiero de la plataforma Jano (multi-tenant sobre Supabase). Primer usuario: Bonita Menorca, SL (grupo hostelero, Menorca). Cubre facturación con Verifactu, contabilidad PGC, bancos, impuestos AEAT y remesas SEPA. Primero uso interno, después producto comercial. El alcance completo está en docs/erp-hostelero-alcance-y-arquitectura-v0.1.md — leerlo antes de tocar nada.
 
 ## Dónde vive esto
 Es `apps/finanzas` del monorepo `luisbonitamenorca/hostelero`, junto a `apps/general` (hostelero-app) y `apps/consola`. Comparte `packages/db` (tipos generados de Supabase) y `packages/ui` (tokens). Se movió aquí el 16-08-2026: antes era un repo suelto, lo que duplicaba cliente de Supabase y tokens y obligaba a un segundo login.
@@ -90,7 +90,7 @@ chat tras el OK de Luis, y apps/general y apps/consola no se tocan sin pedirlo.
 5. Núcleo fiscal append-only: facturas expedidas, registros y eventos Verifactu no se editan ni se borran jamás. Los errores se corrigen con anulación o rectificativa (R1–R5).
 6. UI 100% en español. Fechas dd/mm/aaaa (toLocaleDateString "es-ES"); importes con Intl.NumberFormat "es-ES" EUR.
 7. Toda pantalla con sus estados: cargando, vacío y error. Sin excepciones.
-8. Estética: la paleta y las tipografías de la plataforma (packages/ui/tokens.ts, replicadas como variables CSS en app/globals.css igual que en apps/general): verde #0F6E56, papel #F0F2F1, tinta #1B2420, IBM Plex Sans/Mono. Escritorio primero con responsive hasta móvil, foco visible.
+8. Estética: la paleta y las tipografías de la plataforma (packages/ui/tokens.ts, replicadas como variables CSS en app/globals.css igual que en apps/general): pizarra #2F3A45, salvia #8FAE8B, cal #F3F4F0, niebla #DEDFE1, Plus Jakarta Sans (titulares 800, texto 400) e IBM Plex Mono para cifras; el logo es `LogoJano` de app/logo-jano.tsx. Escritorio primero con responsive hasta móvil, foco visible.
 9. Commits pequeños y descriptivos, en español. Nada de secretos en el repo: ni certificados, ni service_role, ni claves privadas.
 10. Verificar en cada paso: tras cada pantalla, probarla contra la base real con la sesión de Luis antes de pasar a la siguiente.
 

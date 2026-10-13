@@ -6,8 +6,8 @@
    y las variables --ped-* de .ped. */
 
 .ped {
-  --ped-verde: var(--verde, #0F6E56);
-  --ped-verde-oscuro: #0B5845;
+  --ped-verde: var(--verde, #2F3A45);
+  --ped-verde-oscuro: #242D36;
   --ped-verde-claro: #E7F1EC;
   --ped-verde-borde: #C5DED4;
   --ped-coral: var(--coral, #D85A30);
@@ -23,12 +23,12 @@
   --ped-azul-claro: #E6F1FB;
   --ped-morado: #534AB7;
   --ped-morado-claro: #EEEDFE;
-  --ped-tinta: var(--tinta, #1B2420);
-  --ped-grafito: var(--grafito, #22282B);
-  --ped-gris: var(--gris, #5F6B65);
-  --ped-gris-claro: var(--gris-claro, #8A9490);
-  --ped-borde: var(--borde, #DDE2DF);
-  --ped-papel: var(--papel, #F0F2F1);
+  --ped-tinta: var(--tinta, #242D36);
+  --ped-grafito: var(--grafito, #2F3A45);
+  --ped-gris: var(--gris, #5C6872);
+  --ped-gris-claro: var(--gris-claro, #8A949C);
+  --ped-borde: var(--borde, #DEDFE1);
+  --ped-papel: var(--papel, #F3F4F0);
   --ped-blanco: var(--blanco, #FFFFFF);
   --ped-radio: 12px;
   --ped-toque: 48px;
@@ -92,7 +92,7 @@
   color: var(--ped-gris); font-size: 15px; font-weight: 600; cursor: pointer;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px;
 }
-.ped-tab:hover { background: rgba(15, 110, 86, 0.06); color: var(--ped-tinta); }
+.ped-tab:hover { background: rgba(47, 58, 69, 0.06); color: var(--ped-tinta); }
 .ped-tab--activa, .ped-tab--activa:hover { background: var(--ped-verde); color: var(--ped-blanco); }
 
 .ped-toast {

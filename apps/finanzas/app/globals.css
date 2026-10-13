@@ -1,23 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 /* Paleta y tipografías: las mismas de apps/general. La fuente de verdad es
    packages/ui/tokens.ts; aquí se replican como variables CSS igual que en el
    resto de la plataforma. Debajo, solo lo propio del módulo de finanzas. */
 :root {
-  --verde: #0F6E56;
+  /* Identidad Jano · Pizarra y Salvia (packages/ui/tokens.ts) */
+  --pizarra: #2F3A45;
+  --pizarra-oscura: #242D36;
+  --salvia: #8FAE8B;
+  --salvia-oscura: #5E7D5A;
+  --cal: #F3F4F0;
+  --niebla: #DEDFE1;
+  /* Alias históricos: --verde es ahora pizarra; --coral solo para avisos */
+  --verde: #2F3A45;
   --coral: #D85A30;
-  --grafito: #22282B;
-  --papel: #F0F2F1;
+  --grafito: #2F3A45;
+  --papel: #F3F4F0;
   --blanco: #FFFFFF;
-  --tinta: #1B2420;
-  --gris: #5F6B65;
-  --gris-claro: #8A9490;
-  --borde: #DDE2DF;
-  --sans: 'IBM Plex Sans', system-ui, sans-serif;
-  --display: 'Bricolage Grotesque', var(--sans);
+  --tinta: #242D36;
+  --gris: #5C6872;
+  --gris-claro: #8A949C;
+  --borde: #DEDFE1;
+  --sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --display: 'Plus Jakarta Sans', var(--sans);
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --verde-hover: #0B5745;
+  --verde-hover: #242D36;
   --aviso: #B45309;
   --error: #B42318;
   --chrome-tinta: #C7D3DB;
@@ -143,7 +151,7 @@ button { font: inherit; cursor: pointer; }
 
 .marca { padding: 0 10px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 
-.marca-nombre { display: block; color: #fff; font-weight: 600; font-size: 16px; letter-spacing: 0.01em; }
+.marca-nombre { display: block; color: #fff; font-weight: 800; font-size: 16px; letter-spacing: 0.01em; }
 
 .marca-modulo { display: block; color: var(--chrome-suave); font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; margin-top: 2px; }
 

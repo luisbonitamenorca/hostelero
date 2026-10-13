@@ -1,4 +1,4 @@
-// PORTADA de agentes-bonita a Hostelero (19-08-2026) casi literal: solo
+// PORTADA de agentes-bonita a Jano (19-08-2026) casi literal: solo
 // cambian las constantes de conexión, que ahora apuntan al Supabase de la
 // casa — las tablas agent_* viven aquí y el Bearer que valida es el token de
 // sesión de HOSTELERO (el mismo que el route handler /agentes inyecta en el

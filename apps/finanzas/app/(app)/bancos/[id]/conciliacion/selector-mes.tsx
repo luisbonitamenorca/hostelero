@@ -11,7 +11,7 @@ export default function SelectorMes({ meses, valor }: { meses: string[]; valor: 
       name="mes"
       defaultValue={valor}
       onChange={(e) => e.currentTarget.form?.requestSubmit()}
-      style={{ padding: "6px 8px", border: "1px solid #DDE2DF", borderRadius: 6 }}
+      style={{ padding: "6px 8px", border: "1px solid #DEDFE1", borderRadius: 6 }}
     >
       <option value="">Todo el año</option>
       {meses.map((m) => (

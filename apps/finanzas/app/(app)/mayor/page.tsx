@@ -96,13 +96,13 @@ export default async function Mayor({
               key={p.id}
               href={`/mayor?pestana=${p.id}`}
               className="boton-secundario"
-              style={{ padding: "5px 12px", fontSize: 13, ...(pestana.id === p.id ? { background: "#0F6E56", color: "#fff", borderColor: "#0F6E56" } : {}) }}
+              style={{ padding: "5px 12px", fontSize: 13, ...(pestana.id === p.id ? { background: "#2F3A45", color: "#fff", borderColor: "#2F3A45" } : {}) }}
             >
               {p.titulo}
             </Link>
           ))}
         <form method="get" style={{ display: "flex", gap: 6, flex: "1 1 260px" }}>
-          <input name="q" defaultValue={q} placeholder="Cualquier cuenta: código o nombre…" style={{ flex: 1, padding: "6px 10px", border: "1px solid #DDE2DF", borderRadius: 6 }} />
+          <input name="q" defaultValue={q} placeholder="Cualquier cuenta: código o nombre…" style={{ flex: 1, padding: "6px 10px", border: "1px solid #DEDFE1", borderRadius: 6 }} />
           <button className="boton-secundario" type="submit">Buscar</button>
           {q && (
             <Link className="boton-secundario" href="/mayor" style={{ padding: "6px 10px" }}>

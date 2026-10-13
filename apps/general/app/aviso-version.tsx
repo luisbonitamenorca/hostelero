@@ -47,7 +47,7 @@ export default function AvisoVersion() {
       onClick={() => location.reload()}
       style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
-        background: "#0F6E56", color: "#fff", padding: "10px 14px",
+        background: "#2F3A45", color: "#fff", padding: "10px 14px",
         font: "14px system-ui, sans-serif", textAlign: "center",
         cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,.25)",
       }}

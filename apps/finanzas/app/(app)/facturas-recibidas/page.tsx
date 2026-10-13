@@ -154,11 +154,11 @@ export default async function FacturasRecibidas({
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "0 0 14px" }}>
         <div style={{ flex: "1 1 160px", background: "#fff", border: "1px solid var(--linea, #DDE3E0)", borderRadius: 8, padding: "10px 14px" }}>
           <div className="secundario" style={{ fontSize: 12 }}>Facturas de gasto{termino ? " (filtradas)" : ""}</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56" }}>{total}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#2F3A45" }}>{total}</div>
         </div>
         <div style={{ flex: "1 1 160px", background: "#fff", border: "1px solid var(--linea, #DDE3E0)", borderRadius: 8, padding: "10px 14px" }}>
           <div className="secundario" style={{ fontSize: 12 }}>Importe total</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#0F6E56" }}>{euros(sumaGlobal)}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#2F3A45" }}>{euros(sumaGlobal)}</div>
         </div>
       </div>
 
@@ -250,7 +250,7 @@ export default async function FacturasRecibidas({
                       {(() => {
                         const p = pagoDoc.get(f.id);
                         if (!p) return <BotonVencimiento id={f.id} yaTiene={conVencimiento.has(f.id)} />;
-                        if (p.estado === "liquidado") return <span style={{ color: "#0F6E56", fontWeight: 600 }}>✓ pagada</span>;
+                        if (p.estado === "liquidado") return <span style={{ color: "#2F3A45", fontWeight: 600 }}>✓ pagada</span>;
                         if (p.estado === "parcial")
                           return <span style={{ color: "#B4831A" }}>{euros(p.liquidado)} de {euros(p.importe)}</span>;
                         return <span className="texto-suave">pendiente</span>;

@@ -6,7 +6,7 @@ import FormMiClave from "./form-mi-clave";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Mi contraseña · Hostelero" };
+export const metadata: Metadata = { title: "Mi contraseña · Jano" };
 
 /**
  * «Mi contraseña»: cualquiera con sesión cambia la suya. Solo exige sesión

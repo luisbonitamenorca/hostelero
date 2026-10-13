@@ -7,7 +7,7 @@ import { cerrarSesion } from "../acciones";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Pedidos · Hostelero",
+  title: "Pedidos · Jano",
   description: "Pedidos a proveedores: por voz, por escrito o por catálogo.",
 };
 

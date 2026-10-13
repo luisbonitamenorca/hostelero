@@ -1,3 +1,4 @@
+import { LogoJano } from "@/app/logo-jano";
 import { exigirFacturacion, exigirPerfil } from "@/lib/supabase/server";
 import BotonSalir from "./boton-salir";
 import Navegacion from "./navegacion";
@@ -84,7 +85,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="aplicacion">
       <aside className="lateral">
         <div className="marca">
-          <span className="marca-nombre">Hostelero</span>
+          <span className="marca-nombre"><LogoJano tamano={22} /></span>
           <span className="marca-modulo">Finanzas</span>
         </div>
         <Navegacion grupos={gruposVisibles} enCamino={enCamino} />

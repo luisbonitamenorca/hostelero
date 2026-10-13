@@ -4,18 +4,18 @@
 
 .pedf,
 .pedf-cotejo {
-  --pedc-verde: var(--verde, #0F6E56);
+  --pedc-verde: var(--verde, #2F3A45);
   --pedc-verde-suave: #E7F1EC;
   --pedc-coral: var(--coral, #D85A30);
   --pedc-coral-suave: #FBEDE7;
   --pedc-rojo: #A32D2D;
   --pedc-ambar: #8F5A0A;
   --pedc-ambar-suave: #FAEEDA;
-  --pedc-gris: var(--gris, #5F6B65);
-  --pedc-gris-claro: var(--gris-claro, #8A9490);
-  --pedc-gris-suave: #F0F2F1;
-  --pedc-borde: var(--borde, #DDE2DF);
-  --pedc-tinta: var(--tinta, #1B2420);
+  --pedc-gris: var(--gris, #5C6872);
+  --pedc-gris-claro: var(--gris-claro, #8A949C);
+  --pedc-gris-suave: #F3F4F0;
+  --pedc-borde: var(--borde, #DEDFE1);
+  --pedc-tinta: var(--tinta, #242D36);
   --pedc-blanco: var(--blanco, #FFFFFF);
 }
 
@@ -23,7 +23,7 @@
 .pedf-vacio { padding: 40px 16px; text-align: center; color: var(--pedc-gris); }
 
 /* ── volver ── */
-.pedf-volver { position: sticky; top: 0; z-index: 5; background: var(--papel, #F0F2F1); padding: 6px 0; }
+.pedf-volver { position: sticky; top: 0; z-index: 5; background: var(--papel, #F3F4F0); padding: 6px 0; }
 .pedf-volver-btn {
   min-height: 44px;
   padding: 0 14px 0 6px;
@@ -242,7 +242,7 @@
   line-height: 1.15;
 }
 .pedf-canal small { font-size: 10px; color: var(--pedc-gris-claro); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
-.pedf-canal--activo { border-color: var(--grafito, #22282B); background: var(--grafito, #22282B); color: var(--pedc-blanco); font-weight: 500; }
+.pedf-canal--activo { border-color: var(--grafito, #2F3A45); background: var(--grafito, #2F3A45); color: var(--pedc-blanco); font-weight: 500; }
 .pedf-canal--activo small { color: rgba(255, 255, 255, 0.75); }
 .pedf-canal-cuerpo { display: grid; gap: 10px; }
 /* Las palabras de los canales no se parten («WhatsAp / p»): en móviles estrechos, rejilla 2 × 2. */
@@ -269,7 +269,7 @@
 }
 .pedf-accion:disabled { opacity: 0.55; cursor: default; }
 .pedf-accion--verde { background: var(--pedc-verde); color: var(--pedc-blanco); }
-.pedf-accion--oscuro { background: var(--grafito, #22282B); color: var(--pedc-blanco); }
+.pedf-accion--oscuro { background: var(--grafito, #2F3A45); color: var(--pedc-blanco); }
 .pedf-accion--claro { background: var(--pedc-blanco); color: var(--pedc-tinta); border-color: var(--pedc-borde); }
 .pedf-accion--auto { width: auto; min-height: 44px; font-size: 15px; }
 /* Texto del envío actualizándose tras un cambio: ni WhatsApp, ni correo, ni copiar hasta que llegue. */
@@ -434,7 +434,7 @@
 }
 .pedf-tabla td { padding: 10px; vertical-align: top; border-top: 1px solid var(--pedc-borde); }
 .pedf-tabla .pedf-notas-fila td { border-top: none; padding-top: 0; }
-.pedf-fila--ok > tr > td { background: rgba(15, 110, 86, 0.05); }
+.pedf-fila--ok > tr > td { background: rgba(47, 58, 69, 0.05); }
 .pedf-fila--cantidad > tr > td,
 .pedf-fila--precio > tr > td { background: var(--pedc-ambar-suave); }
 .pedf-fila--falta > tr > td { background: var(--pedc-coral-suave); }

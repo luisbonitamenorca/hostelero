@@ -21,8 +21,8 @@ export default async function PagoKo({
       <div style={{ background: "#fff", borderRadius: 14, padding: "40px 36px", maxWidth: 420, textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,.07)" }}>
         <div style={{ width: 56, height: 56, margin: "0 auto 16px", borderRadius: "50%", background: "#B4423A", color: "#fff", display: "grid", placeItems: "center", fontSize: 28 }}>✕</div>
         <h1 style={{ margin: "0 0 8px", fontSize: 22 }}>{t.t}</h1>
-        <p style={{ margin: "0 0 20px", color: "#5F6B65" }}>{t.p}</p>
-        <a href={`/reservar?lang=${sp.lang ?? "es"}`} style={{ color: "#0F6E56", fontWeight: 600, textDecoration: "none" }}>{t.v}</a>
+        <p style={{ margin: "0 0 20px", color: "#5C6872" }}>{t.p}</p>
+        <a href={`/reservar?lang=${sp.lang ?? "es"}`} style={{ color: "#2F3A45", fontWeight: 600, textDecoration: "none" }}>{t.v}</a>
       </div>
     </main>
   );

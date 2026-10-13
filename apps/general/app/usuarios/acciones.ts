@@ -24,7 +24,7 @@ const ROLES_VALIDOS = ["direccion", "responsable_area", "administracion", "jefe_
 type ClienteServicio = NonNullable<ReturnType<typeof crearClienteServicio>>;
 
 /**
- * ¿Es operador de Hostelero (public.operadores: acceso global a la consola y a
+ * ¿Es operador de Jano (public.operadores: acceso global a la consola y a
  * TODAS las cuentas)? Una dirección de cuenta no puede tocar su contraseña ni
  * borrarlo: sería tomar o tumbar una cuenta con acceso a todo. Devuelve null
  * si no se ha podido comprobar, y quien llama lo trata como «no se toca»:
@@ -38,7 +38,7 @@ async function esOperador(servicio: ClienteServicio, usuarioId: string): Promise
 
 /**
  * Candado para las acciones que van por redirect (rol, vetos, concesiones):
- * si el perfil es de un operador de Hostelero, o no se puede comprobar, se
+ * si el perfil es de un operador de Jano, o no se puede comprobar, se
  * vuelve a /usuarios con el error y no se toca nada.
  */
 async function bloquearSiOperador(perfilId: string, error: string) {
@@ -137,7 +137,7 @@ export async function crearUsuario(_previo: EstadoAlta, formData: FormData): Pro
  * vetos, concesiones…). La contraseña nunca se registra en ningún log.
  *
  * Quién NO entra aquí: uno mismo («Mi contraseña»), los operadores de
- * Hostelero (acceso global) y quien también gestiona Usuarios (concesión):
+ * Jano (acceso global) y quien también gestiona Usuarios (concesión):
  * ponerle contraseña a un igual sería poder entrar como él sin que se note.
  * Cada cambio deja una línea en el log del servidor (quién, a quién, cuenta).
  */
@@ -172,7 +172,7 @@ export async function nuevaClaveTemporal(
 
   const operador = await esOperador(servicio, perfilId);
   if (operador === null) return { error: "fallo-clave" };
-  // Un operador de Hostelero sí puede ponérsela a otro operador o a quien
+  // Un operador de Jano sí puede ponérsela a otro operador o a quien
   // gestiona Usuarios (p. ej. Luis a Joan cuando no puede entrar): ya tiene
   // acceso global, no gana nada que no tuviera. Desde una cuenta, no.
   const yoOperador = await esOperador(servicio, perfil.id);
@@ -224,7 +224,7 @@ export async function cambiarVeto(formData: FormData) {
   if (vetar && perfilId === perfil.id && moduloId === "usuarios") {
     redirect("/usuarios?error=propio");
   }
-  // A un operador de Hostelero no se le quitan módulos desde una cuenta
+  // A un operador de Jano no se le quitan módulos desde una cuenta
   // (levantarle un veto sí: eso solo suma). Lo de uno mismo es cosa suya.
   if (vetar && perfilId !== perfil.id) await bloquearSiOperador(perfilId, "operador-permisos");
 
@@ -309,7 +309,7 @@ export async function cambiarRol(formData: FormData) {
     .maybeSingle();
   if (!objetivo) redirect("/usuarios?error=datos");
 
-  // Un operador de Hostelero no se degrada desde una cuenta: con la service
+  // Un operador de Jano no se degrada desde una cuenta: con la service
   // key, además, el cambio le borraría vetos y concesiones (Usuarios incluida)
   // y la portada lo mandaría a /empleado. Ante la duda, cerrado.
   const operador = await esOperador(servicio, perfilId);
@@ -347,7 +347,7 @@ export async function borrarUsuario(formData: FormData) {
     .maybeSingle();
   if (!objetivo) redirect("/usuarios?error=datos");
 
-  // Un operador de Hostelero tiene acceso a todas las cuentas: no se borra
+  // Un operador de Jano tiene acceso a todas las cuentas: no se borra
   // desde una de ellas (ni por error ni a propósito). Si no se puede
   // comprobar, tampoco se borra.
   const operador = await esOperador(servicio, perfilId);

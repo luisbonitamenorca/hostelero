@@ -57,7 +57,7 @@ export default async function PaginaModulo({
         <div className="cabecera-interior">
           <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
             <span className="marca">{cuenta.nombre}</span>
-            <span className="pildora-rol">Hostelero</span>
+            <span className="pildora-rol">Jano</span>
           </div>
           <div className="cabecera-derecha">
             <span>{perfil.correo}</span>
@@ -92,7 +92,7 @@ export default async function PaginaModulo({
       </main>
 
       <footer className="pie">
-        <div className="pie-interior">Hostelero · {cuenta.nombre}</div>
+        <div className="pie-interior">Jano · {cuenta.nombre}</div>
       </footer>
     </>
   );

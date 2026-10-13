@@ -46,7 +46,7 @@ export default function SelectorGrupo({
   }
 
   return (
-    <form action={conciliarGrupo} style={{ border: "1px solid #DDE2DF", borderRadius: 8, padding: 12, background: "#fff", marginTop: 8 }}>
+    <form action={conciliarGrupo} style={{ border: "1px solid #DEDFE1", borderRadius: 8, padding: 12, background: "#fff", marginTop: 8 }}>
       <input type="hidden" name="banco" value={bancoId} />
       <input type="hidden" name="mov" value={movId} />
       <div style={{ maxHeight: 260, overflowY: "auto" }}>
@@ -62,23 +62,23 @@ export default function SelectorGrupo({
             <span style={{ minWidth: 84, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
               {euros(Number(c.importe) * Math.sign(objetivo))}
             </span>
-            <span style={{ color: "#5F6B65" }}>
+            <span style={{ color: "#5C6872" }}>
               nº {c.asiento_numero} · {fecha(c.asiento_fecha)} · {c.descripcion.slice(0, 52)}
             </span>
           </label>
         ))}
         {candidatos.length === 0 && (
-          <p style={{ color: "#5F6B65", fontSize: 13, margin: 0 }}>
+          <p style={{ color: "#5C6872", fontSize: 13, margin: 0 }}>
             No hay apuntes libres de importe compatible a menos de 60 días.
           </p>
         )}
       </div>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 10, borderTop: "1px solid #EEF1EF", paddingTop: 10 }}>
         <span style={{ fontSize: 13 }}>
-          Suma: <strong style={{ color: clavado ? "#0F6E56" : suma !== 0 ? "#B4423A" : undefined }}>{euros(suma)}</strong>
+          Suma: <strong style={{ color: clavado ? "#2F3A45" : suma !== 0 ? "#B4423A" : undefined }}>{euros(suma)}</strong>
           {" "}de <strong>{euros(objetivo)}</strong>
           {!clavado && suma !== 0 && (
-            <span style={{ color: "#5F6B65" }}> · faltan {euros(objetivo - suma)}</span>
+            <span style={{ color: "#5C6872" }}> · faltan {euros(objetivo - suma)}</span>
           )}
         </span>
         <button className="boton" type="submit" disabled={!clavado} style={{ marginLeft: "auto", opacity: clavado ? 1 : 0.45 }}>

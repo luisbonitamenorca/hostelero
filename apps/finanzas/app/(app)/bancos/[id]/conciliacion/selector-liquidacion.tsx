@@ -62,14 +62,14 @@ export default function SelectorLiquidacion({
   }
 
   return (
-    <form action={conciliarLiquidando} style={{ border: "1px solid #DDE2DF", borderRadius: 8, padding: 12, background: "#fff", marginTop: 8 }}>
+    <form action={conciliarLiquidando} style={{ border: "1px solid #DEDFE1", borderRadius: 8, padding: 12, background: "#fff", marginTop: 8 }}>
       <input type="hidden" name="banco" value={bancoId} />
       <input type="hidden" name="mov" value={movId} />
       <input
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
         placeholder="Filtrar por proveedor, cliente, factura o importe…"
-        style={{ width: "100%", padding: "6px 10px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 13, marginBottom: 8 }}
+        style={{ width: "100%", padding: "6px 10px", border: "1px solid #DEDFE1", borderRadius: 6, fontSize: 13, marginBottom: 8 }}
       />
       <div style={{ maxHeight: 260, overflowY: "auto" }}>
         {visibles.map((c) => (
@@ -84,13 +84,13 @@ export default function SelectorLiquidacion({
             <span style={{ minWidth: 84, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
               {euros(Number(c.importe))}
             </span>
-            <span style={{ color: "#5F6B65" }}>
+            <span style={{ color: "#5C6872" }}>
               {c.cuenta_codigo} · nº {c.asiento_numero} · {fecha(c.asiento_fecha)} · {c.descripcion.slice(0, 46)}
             </span>
           </label>
         ))}
         {visibles.length === 0 && (
-          <p style={{ color: "#5F6B65", fontSize: 13, margin: 0 }}>
+          <p style={{ color: "#5C6872", fontSize: 13, margin: 0 }}>
             {candidatos.length === 0
               ? "No hay facturas ni cuentas pendientes cercanas a esta fecha."
               : "Nada coincide con el filtro."}
@@ -99,13 +99,13 @@ export default function SelectorLiquidacion({
       </div>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 10, borderTop: "1px solid #EEF1EF", paddingTop: 10 }}>
         <span style={{ fontSize: 13 }}>
-          Suma: <strong style={{ color: clavado ? "#0F6E56" : suma !== 0 ? "#B4423A" : undefined }}>{euros(suma)}</strong>
+          Suma: <strong style={{ color: clavado ? "#2F3A45" : suma !== 0 ? "#B4423A" : undefined }}>{euros(suma)}</strong>
           {" "}de <strong>{euros(objetivoAbs)}</strong>
           {!clavado && suma !== 0 && (
-            <span style={{ color: "#5F6B65" }}> · faltan {euros(objetivoAbs - suma)}</span>
+            <span style={{ color: "#5C6872" }}> · faltan {euros(objetivoAbs - suma)}</span>
           )}
           {parcial && (
-            <span style={{ color: "#5F6B65" }}> · el último quedará liquidado en parte</span>
+            <span style={{ color: "#5C6872" }}> · el último quedará liquidado en parte</span>
           )}
         </span>
         <button className="boton" type="submit" disabled={!clavado} style={{ marginLeft: "auto", opacity: clavado ? 1 : 0.45 }} title="Genera el asiento de cobro/pago y liquida la cartera">

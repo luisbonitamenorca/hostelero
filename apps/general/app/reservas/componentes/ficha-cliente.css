@@ -30,7 +30,7 @@
 .rsp .fc-chip { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 3px 8px; letter-spacing: .02em; display: inline-flex; align-items: center; gap: 5px; }
 .rsp .fc-chip.vip { background: rgba(230, 201, 122, .22); color: #B8860B; }
 .rsp .fc-chip.negra { background: rgba(229, 72, 77, .18); color: #D32F2F; }
-.rsp .fc-chip.ok { background: rgba(47, 168, 134, .18); color: #0F6E56; }
+.rsp .fc-chip.ok { background: rgba(47, 168, 134, .18); color: #2F3A45; }
 .rsp .fc-chip.riesgo { background: var(--fc-panel2); color: var(--fc-tinta); }
 .rsp .fc-chip.riesgo i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .rsp .fc-chip.riesgo.bajo i { background: #2E9E5B; }
@@ -94,7 +94,7 @@
 .rsp .fc-res-estado { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 4px 9px; white-space: nowrap; border: 1px solid transparent; }
 .rsp .fc-msg-canal { width: 70px; flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--fc-gris); text-transform: uppercase; }
 .rsp .fc-msg-estado { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 3px 8px; background: var(--fc-panel2); color: var(--fc-gris); }
-.rsp .fc-msg-estado.enviado { background: rgba(47, 168, 134, .18); color: #0F6E56; }
+.rsp .fc-msg-estado.enviado { background: rgba(47, 168, 134, .18); color: #2F3A45; }
 .rsp .fc-msg-estado.error, .rsp .fc-msg-estado.fallido { background: rgba(229, 72, 77, .18); color: #D32F2F; }
 .rv[data-tema="oscuro"] .fc-msg-estado.enviado { color: #7EE2A4; }
 .rv[data-tema="oscuro"] .fc-msg-estado.error, .rv[data-tema="oscuro"] .fc-msg-estado.fallido { color: #F28B8E; }

@@ -7,7 +7,7 @@ import { cambiarRol, borrarUsuario, nuevaClaveTemporal } from "./acciones";
 import { ERRORES } from "./errores";
 
 const estiloBotonFila = {
-  padding: "6px 10px", border: "1px solid #DDE2DF", borderRadius: 6,
+  padding: "6px 10px", border: "1px solid #DEDFE1", borderRadius: 6,
   background: "#fff", cursor: "pointer", fontSize: 13,
 } as const;
 
@@ -16,7 +16,7 @@ const estiloBotonFila = {
  * Es componente de cliente por lo que el servidor no puede dar: enviar el
  * formulario al cambiar el select (sin botón «Guardar» aparte), el panel de
  * contraseña y el confirm del borrado. Las acciones reales son de servidor y
- * revalidan sus permisos (y protegen a los operadores de Hostelero).
+ * revalidan sus permisos (y protegen a los operadores de Jano).
  */
 export default function FilaAcciones({
   perfilId,
@@ -35,7 +35,7 @@ export default function FilaAcciones({
   esOperador: boolean;
   /** Tiene la concesión de Usuarios: es un igual, su contraseña la cambia él. */
   gestionaUsuarios: boolean;
-  /** Quien mira es operador de Hostelero: puede poner contraseña a operadores y gestores. */
+  /** Quien mira es operador de Jano: puede poner contraseña a operadores y gestores. */
   soyOperador: boolean;
   roles: { id: string; nombre: string }[];
 }) {
@@ -56,7 +56,7 @@ export default function FilaAcciones({
   if (esYo) {
     // El propio perfil no se toca desde aquí: ni rol ni borrado (candados de
     // las acciones). Mejor ni pintar los controles que explicar el error.
-    return <span style={{ color: "#5F6B65", fontSize: 12 }}>tú</span>;
+    return <span style={{ color: "#5C6872", fontSize: 12 }}>tú</span>;
   }
 
   return (
@@ -68,10 +68,10 @@ export default function FilaAcciones({
           <>
             <span style={{ fontSize: 13 }}>{roles.find((r) => r.id === rol)?.nombre ?? rol}</span>
             <span
-              title="Operador de Hostelero: su rol y su contraseña no se cambian desde una cuenta, ni se borra"
-              style={{ color: "#5F6B65", fontSize: 12 }}
+              title="Operador de Jano: su rol y su contraseña no se cambian desde una cuenta, ni se borra"
+              style={{ color: "#5C6872", fontSize: 12 }}
             >
-              operador de Hostelero
+              operador de Jano
             </span>
             {soyOperador && botonClave}
           </>
@@ -83,7 +83,7 @@ export default function FilaAcciones({
                 name="rol"
                 defaultValue={rol}
                 onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                style={{ padding: "6px 8px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 13 }}
+                style={{ padding: "6px 8px", border: "1px solid #DEDFE1", borderRadius: 6, fontSize: 13 }}
               >
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -95,7 +95,7 @@ export default function FilaAcciones({
             {gestionaUsuarios && !soyOperador ? (
               <span
                 title="También gestiona Usuarios: su contraseña la cambia él en «Mi contraseña»"
-                style={{ color: "#5F6B65", fontSize: 12 }}
+                style={{ color: "#5C6872", fontSize: 12 }}
               >
                 gestiona Usuarios
               </span>
@@ -109,7 +109,7 @@ export default function FilaAcciones({
                   !confirm(
                     `¿Borrar a ${nombre}? Perderá el acceso al momento y se borrará todo lo vinculado a su usuario (permisos y demás datos ligados a él). No se puede deshacer.\n\n` +
                       (gestionaUsuarios
-                        ? "Si solo es que no puede entrar, cancela: que la cambie él en «Mi contraseña» o escribe a soporte de Hostelero."
+                        ? "Si solo es que no puede entrar, cancela: que la cambie él en «Mi contraseña» o escribe a soporte de Jano."
                         : "Si solo es que no puede entrar, cancela y usa «Nueva contraseña».")
                   )
                 ) {
@@ -162,7 +162,7 @@ function PanelClave({ perfilId, nombre, alCerrar }: { perfilId: string; nombre: 
         aria-modal="true"
         aria-label={`Nueva contraseña para ${nombre}`}
         style={{
-          padding: 16, border: "1px solid #DDE2DF", borderRadius: 10, background: "var(--blanco, #fff)",
+          padding: 16, border: "1px solid #DEDFE1", borderRadius: 10, background: "var(--blanco, #fff)",
           whiteSpace: "normal", textAlign: "left", width: "min(440px, calc(100vw - 32px))",
           maxHeight: "calc(100vh - 32px)", overflowY: "auto", boxShadow: "0 10px 30px rgba(0, 0, 0, 0.18)",
         }}

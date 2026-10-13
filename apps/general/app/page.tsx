@@ -1,3 +1,4 @@
+import { LogoJano } from "@/app/logo-jano";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
@@ -23,10 +24,10 @@ export default async function Portada() {
     return (
       <main className="pantalla-login">
         <div className="caja-login">
-          <span className="marca" style={{ color: "var(--verde)" }}>Hostelero</span>
+          <span className="marca"><LogoJano tamano={26} /></span>
           <p style={{ margin: "12px 0 16px", color: "var(--gris)" }}>
             La cuenta de {cuenta.nombre} está {cuenta.estado === "baja" ? "de baja" : "suspendida"}.
-            Escribe a soporte de Hostelero para reactivarla.
+            Escribe a soporte de Jano para reactivarla.
           </p>
           <form action={cerrarSesion}>
             <button className="boton" type="submit" style={{ background: "var(--verde)" }}>
@@ -73,7 +74,7 @@ export default async function Portada() {
         <div className="cabecera-interior">
           <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
             <span className="marca">{cuenta.nombre}</span>
-            <span className="pildora-rol">Hostelero</span>
+            <span className="pildora-rol">Jano</span>
           </div>
           {/* Con «Mi contraseña» la fila ya no cabe en un móvil con un correo
               largo: se deja partir en dos líneas en vez de desbordar. */}
@@ -110,7 +111,7 @@ export default async function Portada() {
           <div className="tarjeta">
             <p className="vacio">
               Tu cuenta no tiene módulos activos ahora mismo. Habla con
-              Hostelero para activar los que necesites.
+              Jano para activar los que necesites.
             </p>
           </div>
         ) : (
@@ -190,7 +191,7 @@ export default async function Portada() {
       </main>
 
       <footer className="pie">
-        <div className="pie-interior">Hostelero · {cuenta.nombre}</div>
+        <div className="pie-interior">Jano · {cuenta.nombre}</div>
       </footer>
     </>
   );

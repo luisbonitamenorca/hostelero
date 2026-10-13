@@ -69,7 +69,7 @@ export default function MenuConciliar({
           e.currentTarget.value = "";
           elegir(v);
         }}
-        style={{ padding: "4px 8px", border: "1px solid #DDE2DF", borderRadius: 6, fontSize: 13, maxWidth: 220 }}
+        style={{ padding: "4px 8px", border: "1px solid #DEDFE1", borderRadius: 6, fontSize: 13, maxWidth: 220 }}
       >
         <option value="" disabled>
           {aplicando ? "Aplicando…" : "Conciliar…"}

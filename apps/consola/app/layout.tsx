@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Consola Hostelero",
-  description: "Administración interna de cuentas de Hostelero",
+  title: "Consola Jano",
+  description: "Administración interna de cuentas de Jano",
 };
 
 export default function RootLayout({

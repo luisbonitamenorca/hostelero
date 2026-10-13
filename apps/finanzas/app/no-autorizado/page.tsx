@@ -6,7 +6,7 @@ export default function NoAutorizado() {
       <div className="tarjeta-login">
         <h1>Sin acceso</h1>
         <p className="sub">
-          Tu usuario no está vinculado a ninguna cuenta de Hostelero, o esa cuenta no tiene
+          Tu usuario no está vinculado a ninguna cuenta de Jano, o esa cuenta no tiene
           contratado el módulo de facturación.
         </p>
         <BotonSalir />

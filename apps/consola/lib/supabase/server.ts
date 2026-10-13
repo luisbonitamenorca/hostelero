@@ -29,7 +29,7 @@ export async function crearClienteServidor() {
 }
 
 /**
- * Exige sesión de operador de Hostelero. Redirige a /login sin sesión
+ * Exige sesión de operador de Jano. Redirige a /login sin sesión
  * y a /no-autorizado si el usuario existe pero no es operador.
  */
 export async function exigirOperador() {
