@@ -4631,6 +4631,35 @@ export type Database = {
           },
         ]
       }
+      fin_ajustes: {
+        Row: {
+          actualizado_en: string
+          ajustes: Json
+          creado_en: string
+          cuenta_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          ajustes?: Json
+          creado_en?: string
+          cuenta_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          ajustes?: Json
+          creado_en?: string
+          cuenta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_ajustes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: true
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_amortizaciones: {
         Row: {
           activo_id: string
@@ -5828,39 +5857,48 @@ export type Database = {
       fin_proveedor_condiciones: {
         Row: {
           actualizado_en: string
+          contacto: string | null
           creado_en: string
           cuenta_id: string
           dias_pago: number
+          email: string | null
           forma_pago: string | null
           iban: string | null
           notas: string | null
           plazo_dia: number | null
           plazo_tipo: string
           proveedor_id: string
+          telefono: string | null
         }
         Insert: {
           actualizado_en?: string
+          contacto?: string | null
           creado_en?: string
           cuenta_id: string
           dias_pago?: number
+          email?: string | null
           forma_pago?: string | null
           iban?: string | null
           notas?: string | null
           plazo_dia?: number | null
           plazo_tipo?: string
           proveedor_id: string
+          telefono?: string | null
         }
         Update: {
           actualizado_en?: string
+          contacto?: string | null
           creado_en?: string
           cuenta_id?: string
           dias_pago?: number
+          email?: string | null
           forma_pago?: string | null
           iban?: string | null
           notas?: string | null
           plazo_dia?: number | null
           plazo_tipo?: string
           proveedor_id?: string
+          telefono?: string | null
         }
         Relationships: [
           {

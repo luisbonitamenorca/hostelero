@@ -55,6 +55,11 @@ const grupos = [
       { ruta: "/informes/perdidas-y-ganancias", nombre: "Pérdidas y ganancias", modulo: "contabilidad" },
     ],
   },
+
+  {
+    titulo: "Módulo",
+    items: [{ ruta: "/ajustes", nombre: "Ajustes", modulo: null }],
+  },
 ];
 
 const enCamino = [
