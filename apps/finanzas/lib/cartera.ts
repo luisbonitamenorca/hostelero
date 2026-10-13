@@ -23,7 +23,7 @@ export type CondicionesProveedor = {
   dias_pago: number;
   forma_pago: string | null;
   iban: string | null;
-  /** Cómo se interpreta dias_pago (migración 20261013121000). Ausente = 'dias'. */
+  /** Cómo se interpreta dias_pago (migración 20261013200500). Ausente = 'dias'. */
   plazo_tipo?: PlazoTipo | null;
   /** Día de la semana (1 = lunes … 7) o del mes (1..31) según plazo_tipo. */
   plazo_dia?: number | null;

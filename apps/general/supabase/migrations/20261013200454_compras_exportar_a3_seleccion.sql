@@ -1,4 +1,4 @@
--- PROPUESTA 13-10-2026 · Exportar a A3 solo las facturas seleccionadas (Lucía)
+-- APLICADA 13-10-2026 (registrada como 20261013200454) · Exportar a A3 solo las facturas seleccionadas (Lucía)
 --
 -- exportar_a3_anual numera TODO lo que está OK y sin bloqueos y devuelve el año
 -- entero. Lucía necesita a veces un fichero con una o dos facturas (una que se

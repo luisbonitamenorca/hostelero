@@ -1,4 +1,4 @@
--- PROPUESTA 13-10-2026 · Ficha de proveedor: forma de pago y plazo (Luis)
+-- APLICADA 13-10-2026 (registrada como 20261013200500) · Ficha de proveedor: forma de pago y plazo (Luis)
 --
 -- fin_proveedor_condiciones ya tenía dias_pago y forma_pago (texto libre). Luis
 -- quiere en la ficha la FORMA (transferencia, giro, tarjeta…) y un PLAZO que no

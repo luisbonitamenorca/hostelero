@@ -166,7 +166,7 @@ export async function guardarCondicionesProveedor(datos: {
       revalidatePath("/proveedores");
       return {
         ok: true,
-        aviso: plazoTipo === "dias" ? undefined : "Guardado a N días: el tipo de plazo necesita la migración 20261013121000 en la base.",
+        aviso: plazoTipo === "dias" ? undefined : "Guardado a N días: el tipo de plazo necesita la migración 20261013200500 en la base.",
       };
     }
     return { error: `No se pudieron guardar las condiciones: ${error.message}` };
