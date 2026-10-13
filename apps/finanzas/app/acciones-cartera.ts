@@ -1,5 +1,6 @@
 "use server";
 
+import { calcularVencimiento, type PlazoTipo } from "@/lib/cartera";
 import { revalidatePath } from "next/cache";
 import { exigirFacturacion, exigirModulo } from "@/lib/supabase/server";
 
@@ -79,28 +80,35 @@ export async function generarVencimientoCompra(compraDocId: string) {
     return { error: "Esa factura ya tiene vencimiento." };
   }
 
-  let dias = 30;
-  let forma: string | null = null;
+  // Condiciones del proveedor: días, forma y cómo se interpreta el plazo
+  // (a N días, primer lunes tras N, día 10 tras N). select('*') a propósito:
+  // si la migración del plazo aún no está aplicada, las columnas nuevas no
+  // vienen y se cae a «a N días» sin romper.
+  let condiciones: { dias_pago: number; forma_pago: string | null; plazo_tipo?: string | null; plazo_dia?: number | null } = {
+    dias_pago: 30,
+    forma_pago: null,
+  };
   if (doc.proveedor_id) {
     const { data: cond } = await db
       .from("fin_proveedor_condiciones")
-      .select("dias_pago, forma_pago")
+      .select("*")
       .eq("proveedor_id", doc.proveedor_id)
       .maybeSingle();
-    if (cond) {
-      dias = Number(cond.dias_pago);
-      forma = cond.forma_pago;
-    }
+    if (cond) condiciones = cond as typeof condiciones;
   }
-
-  const base = doc.fecha ? new Date(doc.fecha) : new Date();
-  base.setDate(base.getDate() + dias);
+  const dias = Number(condiciones.dias_pago);
+  const forma = condiciones.forma_pago;
+  const fechaVencimiento = calcularVencimiento(doc.fecha ?? new Date().toISOString().slice(0, 10), {
+    dias_pago: dias,
+    plazo_tipo: (condiciones.plazo_tipo as PlazoTipo | null | undefined) ?? "dias",
+    plazo_dia: condiciones.plazo_dia ?? null,
+  });
 
   const { error } = await db.from("fin_vencimientos").insert({
     cuenta_id: cuenta.id,
     sentido: "pago",
     compra_doc_id: doc.id,
-    fecha_vencimiento: base.toISOString().slice(0, 10),
+    fecha_vencimiento: fechaVencimiento,
     importe: Number(doc.total ?? 0),
     forma_pago: forma,
   });
@@ -118,28 +126,52 @@ export async function guardarCondicionesProveedor(datos: {
   diasPago: number;
   formaPago: string | null;
   iban: string | null;
+  /** Cómo se interpreta el plazo (13-10-2026). Ausente = a N días. */
+  plazoTipo?: PlazoTipo;
+  plazoDia?: number | null;
 }) {
   const { supabase, cuenta } = await exigirModulo("compras");
 
   if (!Number.isInteger(datos.diasPago) || datos.diasPago < 0 || datos.diasPago > 365) {
     return { error: "Los días de pago van de 0 a 365." };
   }
+  const plazoTipo: PlazoTipo = datos.plazoTipo ?? "dias";
+  const plazoDia = plazoTipo === "dias" ? null : datos.plazoDia ?? null;
+  if (plazoTipo === "dia_semana" && (plazoDia == null || plazoDia < 1 || plazoDia > 7)) {
+    return { error: "Elige el día de la semana." };
+  }
+  if (plazoTipo === "dia_mes" && (plazoDia == null || !Number.isInteger(plazoDia) || plazoDia < 1 || plazoDia > 31)) {
+    return { error: "El día del mes va de 1 a 31." };
+  }
+
+  const fila = {
+    proveedor_id: datos.proveedorId,
+    cuenta_id: cuenta.id,
+    dias_pago: datos.diasPago,
+    forma_pago: datos.formaPago?.trim() || null,
+    iban: datos.iban?.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || null,
+  };
 
   const { error } = await supabase
     .from("fin_proveedor_condiciones")
-    .upsert(
-      {
-        proveedor_id: datos.proveedorId,
-        cuenta_id: cuenta.id,
-        dias_pago: datos.diasPago,
-        forma_pago: datos.formaPago?.trim() || null,
-        iban: datos.iban?.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || null,
-      },
-      { onConflict: "proveedor_id" },
-    );
+    .upsert({ ...fila, plazo_tipo: plazoTipo, plazo_dia: plazoDia }, { onConflict: "proveedor_id" });
 
-  if (error) return { error: `No se pudieron guardar las condiciones: ${error.message}` };
+  if (error) {
+    // Migración del plazo sin aplicar: se guardan días y forma, y se avisa.
+    if (/plazo_tipo|plazo_dia/.test(error.message)) {
+      const { error: e2 } = await supabase
+        .from("fin_proveedor_condiciones")
+        .upsert(fila, { onConflict: "proveedor_id" });
+      if (e2) return { error: `No se pudieron guardar las condiciones: ${e2.message}` };
+      revalidatePath("/proveedores");
+      return {
+        ok: true,
+        aviso: plazoTipo === "dias" ? undefined : "Guardado a N días: el tipo de plazo necesita la migración 20261013121000 en la base.",
+      };
+    }
+    return { error: `No se pudieron guardar las condiciones: ${error.message}` };
+  }
 
   revalidatePath("/proveedores");
-  return { ok: true };
+  return { ok: true as const, aviso: undefined };
 }

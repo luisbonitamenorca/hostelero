@@ -5834,6 +5834,8 @@ export type Database = {
           forma_pago: string | null
           iban: string | null
           notas: string | null
+          plazo_dia: number | null
+          plazo_tipo: string
           proveedor_id: string
         }
         Insert: {
@@ -5844,6 +5846,8 @@ export type Database = {
           forma_pago?: string | null
           iban?: string | null
           notas?: string | null
+          plazo_dia?: number | null
+          plazo_tipo?: string
           proveedor_id: string
         }
         Update: {
@@ -5854,6 +5858,8 @@ export type Database = {
           forma_pago?: string | null
           iban?: string | null
           notas?: string | null
+          plazo_dia?: number | null
+          plazo_tipo?: string
           proveedor_id?: string
         }
         Relationships: [

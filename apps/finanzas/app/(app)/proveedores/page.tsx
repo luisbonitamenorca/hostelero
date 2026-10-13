@@ -4,6 +4,7 @@ import { euros } from "@/lib/importes";
 import { paginarEnParalelo } from "@/lib/paginar";
 import Buscador from "../clientes/buscador";
 import Condiciones from "./condiciones";
+import type { CondicionesProveedor } from "@/lib/cartera";
 
 export const dynamic = "force-dynamic";
 
@@ -46,15 +47,11 @@ export default async function Proveedores({
         .order("id")
         .range(d, h),
     ),
-    supabase.from("fin_proveedor_condiciones").select("proveedor_id, dias_pago, forma_pago"),
+    // select('*'): si la migración del plazo aún no está aplicada, simplemente no vienen esas columnas.
+    supabase.from("fin_proveedor_condiciones").select("*"),
   ]);
 
-  const cond = new Map(
-    (condiciones ?? []).map((c: { proveedor_id: string; dias_pago: number; forma_pago: string | null }) => [
-      c.proveedor_id,
-      c,
-    ]),
-  );
+  const cond = new Map((condiciones ?? []).map((c) => [c.proveedor_id, c as Partial<CondicionesProveedor>]));
 
   // Cuántas facturas y cuánto lleva gastado cada proveedor.
   const resumen = new Map<string, { n: number; total: number }>();
@@ -133,11 +130,7 @@ export default async function Proveedores({
                       <td className="numero">{r?.n ?? 0}</td>
                       <td className="numero">{r ? euros(r.total) : "—"}</td>
                       <td>
-                        <Condiciones
-                          proveedorId={p.id}
-                          dias={cond.get(p.id)?.dias_pago ?? null}
-                          forma={cond.get(p.id)?.forma_pago ?? null}
-                        />
+                        <Condiciones proveedorId={p.id} cond={cond.get(p.id) ?? null} />
                       </td>
                     </tr>
                   );

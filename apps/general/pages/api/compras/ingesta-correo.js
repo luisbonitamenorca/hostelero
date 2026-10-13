@@ -517,13 +517,37 @@ async function rescatarMovidos(client, movidos, resumen, arranque) {
 
 /* ---------------------------------------------------------------- handler */
 
+
+// ¿Es un token de sesión válido de un usuario de la plataforma? Se pregunta a
+// Supabase Auth con la clave publicable; solo con respuesta 200 se acepta.
+async function esUsuarioDeLaPlataforma(auth) {
+  const token = (auth || "").replace(/^Bearer\s+/i, "").trim();
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!token || !anon || !SB_URL || token === anon) return false;
+  try {
+    const r = await fetch(`${SB_URL}/auth/v1/user`, {
+      headers: { apikey: anon, Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) return false;
+    const u = await r.json();
+    return !!(u && u.id);
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(req, res) {
   // Guarda del cron: mismo patrón que los agentes. Acepta el CRON_SECRET de
   // Vercel o la service key (para pruebas manuales desde local).
   const auth = req.headers.authorization || "";
   const okCron = process.env.CRON_SECRET && auth === "Bearer " + process.env.CRON_SECRET;
   const okServicio = SB_KEY && auth === "Bearer " + SB_KEY;
-  if (!okCron && !okServicio)
+  // 13-10-2026: el botón «Buscar facturas en el correo» de Compras manda el
+  // token de sesión del usuario. Antes llegaba sin cabecera, esto contestaba
+  // 401 en silencio y el buzón solo se leía con el cron de las 05:00: por eso
+  // a Lucía le tardaba «un día» en entrar lo que mandaba a facturas@.
+  const okUsuario = !okCron && !okServicio && (await esUsuarioDeLaPlataforma(auth));
+  if (!okCron && !okServicio && !okUsuario)
     return res.status(401).json({ error: "No autorizado" });
 
   const host = process.env.IMAP_HOST;

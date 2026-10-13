@@ -422,6 +422,7 @@
             <button class="btn ghost" onclick="reprocesarDudosos('albaran')" title="Vuelve a leer con el modelo superior todos los albaranes en revisar o sin cuadrar">↻ Reprocesar dudosos</button>
             <button class="btn ghost" onclick="recalcularEstados()">♻️ Recalcular estados</button>
             <button class="btn ghost" onclick="loadAlbaranes()">↻ Refrescar</button>
+            <button class="btn ghost" onclick="nuevoDocManual('albaran')" title="Crear un albarán vacío y rellenarlo a mano, sin foto ni OCR">＋ Albarán a mano</button>
             <button class="btn" onclick="exportAlb()">Exportar Excel</button>
           </div>
         </div>
@@ -455,6 +456,7 @@
             <button class="btn ghost" onclick="reprocesarDudosos('factura')" title="Vuelve a leer con el modelo superior todas las facturas en revisar o sin cuadrar">↻ Reprocesar dudosos</button>
             <button class="btn ghost" onclick="recalcularEstadosFacturas()" title="Vuelve a comprobar que los importes de cada factura cuadren, con los controles actuales">♻︎ Recalcular estados</button>
             <button class="btn ghost" onclick="loadFacturas()">↻ Refrescar</button>
+            <button class="btn ghost" onclick="nuevoDocManual('factura')" title="Crear una factura vacía y rellenarla a mano, sin PDF ni OCR (abonos, facturas perdidas…). La foto o el PDF se pueden adjuntar después, o no.">＋ Factura a mano</button>
             <button class="btn" onclick="exportFac()">Exportar Excel</button>
           </div>
         </div>
@@ -572,6 +574,7 @@
           </select></div>
           <div><label class="fld">Buscar</label><input type="search" id="a3Busca" placeholder="proveedor, referencia, nº…" oninput="enDiferido('renderA3',renderA3)" style="min-width:190px"></div>
           <div style="flex:1 1 auto;text-align:right;align-self:flex-end;display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn ghost" id="btnA3Sel" onclick="exportarA3Seleccion()" disabled title="Numera y exporta solo las facturas marcadas en la tabla">Solo las seleccionadas</button>
             <button class="btn" onclick="exportarA3()">Generar Excel para A3 (año completo)</button>
           </div>
         </div>
@@ -583,7 +586,7 @@
           </table>
         </div>
         <div id="emptyA3" class="empty" style="display:none">No hay facturas pendientes de numerar. El fichero llevará las ya numeradas del año.</div>
-        <p class="hint">La tabla enseña lo PENDIENTE: facturas que aún no tienen número de A3, con sus bloqueos si los hay. El fichero lleva SIEMPRE todas las facturas del año — las ya numeradas más las pendientes sin bloqueos, que reciben su número al generarlo (da igual su fecha, así ninguna se queda huérfana) y con él pasan a Contabilidad: asiento, cartera y cruce automático con el banco. Lucía selecciona en el Excel lo que necesita cargar. La primera columna del fichero (fecha de registro) lleva siempre la fecha de hoy; la fecha de la factura va en la tercera columna como fecha contable. Cada fila es una línea del fichero FACTURASCOMPRA de A3; una factura con varios tipos de IVA o varios centros de coste genera varias líneas que comparten cabecera.</p>
+        <p class="hint">La tabla enseña lo PENDIENTE: facturas que aún no tienen número de A3, con sus bloqueos si los hay. El fichero lleva SIEMPRE todas las facturas del año — las ya numeradas más las pendientes sin bloqueos, que reciben su número al generarlo (da igual su fecha, así ninguna se queda huérfana) y con él pasan a Contabilidad: asiento, cartera y cruce automático con el banco. Lucía selecciona en el Excel lo que necesita cargar. Si solo quieres una o dos, márcalas en la tabla y pulsa «Solo las seleccionadas»: se numeran esas y el fichero lleva únicamente esas. La primera columna del fichero (fecha de registro) lleva siempre la fecha de hoy; la fecha de la factura va en la tercera columna como fecha contable. Cada fila es una línea del fichero FACTURASCOMPRA de A3; una factura con varios tipos de IVA o varios centros de coste genera varias líneas que comparten cabecera.</p>
       </div>
     </section>
 
@@ -1166,7 +1169,13 @@ async function sincronizarCorreo(forzado=false){
   let procesados=0;
   try{
     estadoCorreo('Pidiendo al servidor que revise el buzón…');
-    try{await fetch('/api/compras/ingesta-correo',{method:'POST'});}catch(e){console.warn('ingesta correo:',e.message);}
+    // Con el token de sesión: sin él la función contestaba 401 y el botón
+    // solo rescataba lo que el cron de la madrugada ya había bajado (13-10-2026).
+    try{
+      const r=await fetch('/api/compras/ingesta-correo',{method:'POST',headers:{Authorization:'Bearer '+(SB_TOKEN||'')}});
+      if(!r.ok)console.warn('ingesta correo: HTTP '+r.status);
+      else{const j=await r.json().catch(()=>null);if(j&&typeof j.adjuntos==='number'&&j.adjuntos)estadoCorreo(`Buzón revisado: ${j.adjuntos} adjunto(s) nuevos…`);}
+    }catch(e){console.warn('ingesta correo:',e.message);}
     // rescatar adjuntos atascados en PROCESANDO, o de la época sin claimed_at
     const corte=new Date(Date.now()-(forzado?90e3:900e3)).toISOString();
     const rescatados=await sb(`compras_correo_adjunto?estado=eq.PROCESANDO&or=(claimed_at.lt.${corte},claimed_at.is.null)`,{method:'PATCH',body:JSON.stringify({estado:'PENDIENTE',claimed_at:null})}).catch(()=>[]);
@@ -3259,6 +3268,26 @@ function exportFac(){
   XLSX.utils.book_append_sheet(wb,ws,'Facturas');
   XLSX.writeFile(wb,`facturas_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
+/* ---------- documento a mano (13-10-2026, Luis) ----------
+   Un abono, una factura perdida o un albarán sin foto: se crea el documento
+   vacío, en REVISAR y con origen 'manual', y se abre el modal de revisión, donde
+   todo es editable y la foto o el PDF se adjuntan si se tienen (o nunca). */
+async function nuevoDocManual(tipo){
+  const esF=(tipo==='factura');
+  if(!confirm(`Se crea ${esF?'una factura':'un albarán'} en blanco para rellenar a mano, sin foto ni OCR.\n\nRellena proveedor, nº, fecha e importes en la ventana que se abre (los abonos van en negativo). La foto o el PDF los puedes adjuntar después, o no.\n\n¿Continuar?`))return;
+  try{
+    const r=await sb('compras_doc',{method:'POST',body:JSON.stringify({
+      tipo,estado:'REVISAR',estado_detalle:'REVISAR',origen:'manual',
+      fecha:new Date().toISOString().slice(0,10),
+      albaranes_detectados:esF?[]:null,
+      pagina:esF?null:1,paginas:esF?null:1,paginas_vistas:esF?null:[1],
+      raw:{manual:true,creado_a_mano:new Date().toISOString()}})});
+    const id=r&&r[0]&&r[0].id; if(!id)throw new Error('la base no devolvió el documento');
+    toast(`${esF?'Factura':'Albarán'} creado: rellena los datos`);
+    if(esF)await loadFacturas(); else await loadAlbaranes();
+    await revisar(id);
+  }catch(e){toast('No pude crear el documento: '+e.message,true);}
+}
 async function revisar(docId){
   const r=await sb(`compras_doc?id=eq.${docId}&select=id,tipo,fecha,proveedor,num_documento,canal,base,iva,total,descuento,estado,estado_detalle,imagen_url,imagenes,albaranes_detectados,proveedor_id,proveedor_nif,reparto_sugerido,retencion,raw,pagina,paginas,paginas_vistas`);
   if(!r.length){toast('No encontrado',true);return;}
@@ -3293,7 +3322,10 @@ function fotosDe(a){
 }
 // Sube una foto o PDF y la engancha al documento abierto en el modal. Solo
 // añade la imagen: no relee nada ni toca importes (para eso está Reprocesar).
-function adjuntarImagenDoc(){
+// modo (13-10-2026, Luis): 'sustituir' cambia la foto por la nueva (la vieja
+// deja de estar enlazada al documento, pero no se borra del bucket); 'anadir'
+// la engancha como un folio más. Sin modo, es el adjuntar de siempre.
+function adjuntarImagenDoc(modo){
   const doc=revisarDoc; if(!doc)return;
   const inp=document.createElement('input');
   inp.type='file';inp.accept='image/*,application/pdf';
@@ -3306,14 +3338,28 @@ function adjuntarImagenDoc(){
         if(limpio!==f)f=new File([limpio],f.name,{type:'application/pdf'});
       }
       const url=await sbUpload(f);
-      await sb(`compras_doc?id=eq.${doc.id}`,{method:'PATCH',body:JSON.stringify({imagen_url:url})});
-      doc.imagen_url=url;
-      for(const lista of [facturas,albaranes]){const x=(lista||[]).find(d=>d.id===doc.id);if(x)x.imagen_url=url;}
-      if(revisarDoc&&revisarDoc.id===doc.id){imgsDoc=fotosDe(doc);pintaImagen(0);}
-      toast('Imagen adjuntada');
+      const actuales=(modo==='anadir')?fotosDe(doc).filter(x=>!x.pdf||x.url===x.pdf).map(x=>({url:x.pdf||x.url,pagina:Math.floor(num(x.pagina)||1)})):[];
+      // Si las fotos venían de un PDF rasterizado, se conserva el PDF original.
+      const vistas=[];const nuevas=[];
+      for(const x of actuales){if(!vistas.includes(x.url)){vistas.push(x.url);nuevas.push(x);}}
+      nuevas.push({url,pagina:(nuevas.length?Math.max(...nuevas.map(x=>x.pagina||1))+1:1)});
+      const parche={imagen_url:nuevas[0].url,imagenes:nuevas};
+      await sb(`compras_doc?id=eq.${doc.id}`,{method:'PATCH',body:JSON.stringify(parche)});
+      doc.imagen_url=parche.imagen_url;doc.imagenes=parche.imagenes;
+      for(const lista of [facturas,albaranes]){const x=(lista||[]).find(d=>d.id===doc.id);if(x){x.imagen_url=parche.imagen_url;x.imagenes=parche.imagenes;}}
+      if(revisarDoc&&revisarDoc.id===doc.id){imgsDoc=fotosDe(doc);pintaImagen(modo==='anadir'?imgsDoc.length-1:0);}
+      toast(modo==='sustituir'?'Foto sustituida':modo==='anadir'?'Página añadida':'Imagen adjuntada');
     }catch(err){toast('No pude adjuntar la imagen: '+err.message,true);}
   };
   inp.click();
+}
+// Barra sobre el visor: cambiar la foto o añadir un folio sin pasar por el OCR.
+function barraFoto(){
+  if(!revisarDoc)return '';
+  return `<div class="fotobar" style="position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:6px">
+    <button class="btn ghost" style="padding:3px 8px;font-size:11px" onclick="adjuntarImagenDoc('sustituir')" title="Cambiar la foto o el PDF de este documento (no se relee nada)">🔁 Sustituir foto</button>
+    <button class="btn ghost" style="padding:3px 8px;font-size:11px" onclick="adjuntarImagenDoc('anadir')" title="Añadir otro folio a este documento">＋ Añadir página</button>
+  </div>`;
 }
 function pintaImagen(i){
   const ic=document.getElementById('mImg');
@@ -3348,7 +3394,7 @@ function pintaImagen(i){
     // las fotos (22-09-2026, Luis: «todos los albaranes y facturas con zoom»).
     // Cada página del PDF pasa a ser una foto más de la galería; la descarga
     // sigue apuntando al PDF original. Si pdf.js falla, cae al visor del navegador.
-    ic.innerHTML=tabs+`<div class="noimg">Preparando el PDF…</div>`;
+    ic.innerHTML=barraFoto()+tabs+`<div class="noimg">Preparando el PDF…</div>`;
     pdfAImagenes(url).then(pags=>{
       if(!pags||!pags.length)throw new Error('sin páginas');
       const fila=imgsDoc[idx];
@@ -3357,11 +3403,11 @@ function pintaImagen(i){
       pintaImagen(idx);
     }).catch(e=>{
       console.warn('pdf.js no pudo rasterizar:',e&&e.message);
-      ic.innerHTML=tabs+`<iframe src="${url}"></iframe>`
+      ic.innerHTML=barraFoto()+tabs+`<iframe src="${url}"></iframe>`
         +`<div class="zoomctl"><a href="${dl}" title="Descargar el PDF" style="text-decoration:none">⤓</a></div>`;
     });
   }else{
-    ic.innerHTML=tabs+`<img id="zimg" src="${url}" alt="documento">`+ctl;
+    ic.innerHTML=barraFoto()+tabs+`<img id="zimg" src="${url}" alt="documento">`+ctl;
     setupZoom();
   }
 }
@@ -3553,6 +3599,7 @@ function renderDetalle(){
       ${(()=>{const c=cuadreAlbaranes(sumaAlb,a.base,a.total);return `<div class="aviso" id="avAlb" style="margin-top:12px;${c.ok===true?'background:var(--ok-soft);border-color:#B5CBB1;color:var(--ok)':(c.ok===null?'background:var(--paper);color:var(--muted)':'')}">${c.html}</div>`;})()}
       <p class="hint" style="margin-top:14px">Edita cualquier celda comparando con la foto. Útil para facturas con formatos difíciles. Al guardar se actualiza la lista.</p>
       <div id="mReparto" style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px"></div>
+      ${bloquePistas()}
       <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" onclick="guardarAlbaranes()">Guardar cambios</button>
         <button class="btn ghost" onclick="reprocesarUnoModal()" title="Volver a leer con la IA aplicando las pautas del proveedor">↻ Reprocesar</button>
@@ -3584,6 +3631,12 @@ function renderDetalle(){
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:13px">
       <span>Base imponible: <b ${ed} data-f="base">${a.base!=null?Number(a.base).toFixed(2):''}</b> €</span>
       <span>Descuento: <b ${ed} data-f="descuento">${desc?desc.toFixed(2):'0'}</b> €</span>
+      <span>IVA: <span class="editable" style="font-variant-numeric:tabular-nums" title="Cuota de IVA (editable)"
+            onblur="saveImporteDoc('${a.id}','iva',this.textContent)" contenteditable>${a.iva??''}</span> €</span>
+      <span>Retención: <span class="editable" style="font-variant-numeric:tabular-nums" title="Retención IRPF (editable)"
+            onblur="saveImporteDoc('${a.id}','retencion',this.textContent)" contenteditable>${a.retencion??''}</span> €</span>
+      <span>Total: <span class="editable" style="font-weight:600;font-variant-numeric:tabular-nums" title="Total del documento (editable)"
+            onblur="saveImporteDoc('${a.id}','total',this.textContent)" contenteditable>${a.total??''}</span> €</span>
     </div>
     ${bloqueMotivoEstado()}
     ${bloqueDesgloseIva()}
@@ -3604,6 +3657,7 @@ function renderDetalle(){
     </tbody></table>
     <div style="margin-top:8px"><span class="link" onclick="anadirLinea()">+ añadir línea</span></div>
     <p class="hint">Edita cualquier celda (clic) comparando con la foto. <b>«Guardar cambios» es también el visto bueno</b>: recalcula el cuadre y, si todo casa (y el documento tiene centro), pasa a Correcto — aunque no hayas tocado nada.</p>
+    ${bloquePistas()}
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn" onclick="guardarRevision()">Guardar cambios</button>
       <button class="btn ghost" onclick="reprocesarUnoModal()" title="Volver a leer con la IA aplicando las pautas del proveedor">↻ Reprocesar</button>
@@ -3611,6 +3665,16 @@ function renderDetalle(){
     </div>`;
   // recalcular el aviso en vivo al editar
   dc.querySelectorAll('.ce').forEach(el=>el.addEventListener('input',recalcAviso));
+}
+// Pistas para la IA (13-10-2026, Luis): quien revisa suele saber qué ha leído
+// mal el OCR. Se escriben aquí y van al final del prompt al pulsar Reprocesar.
+function bloquePistas(){
+  const prev=(revisarDoc&&revisarDoc.raw&&revisarDoc.raw._pistas)||'';
+  return `<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px">
+    <label class="fld" style="display:block;margin-bottom:4px">Pistas para la IA al reprocesar <span class="hint" style="margin:0">(opcional)</span></label>
+    <textarea id="mPistas" rows="2" style="width:100%;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);resize:vertical"
+      placeholder="Ej.: el total está en la segunda página · la base suma dos tipos de IVA · el nº de factura es el que empieza por F- · es un abono, los importes van en negativo">${esc(prev)}</textarea>
+  </div>`;
 }
 function recalcAviso(){
   // lee los valores actuales de las celdas para previsualizar el cuadre
@@ -4550,10 +4614,14 @@ async function urlABase64(url){
 // Vuelve a leer con la IA un documento ya guardado, aplicando las pautas actuales.
 // Mantiene el centro elegido a mano y el proveedor; refresca importes, descuento,
 // lineas y estado. Devuelve {ok, estado} o {ok:false, motivo}.
-async function reprocesarDoc(doc){
+async function reprocesarDoc(doc,pistas=''){
   const fotos=fotosDe(doc);
   if(!fotos.length)return {ok:false,motivo:'sin foto guardada'};
-  const prompt=construirPromptOCR(doc.tipo);
+  let prompt=construirPromptOCR(doc.tipo);
+  pistas=String(pistas||'').trim();
+  if(pistas){
+    prompt+="\n\nPISTAS DE LA PERSONA QUE REVISA ESTE DOCUMENTO. La lectura anterior falló y quien lo tiene delante te dice qué cree que fue mal. Dale prioridad sobre tus suposiciones, pero comprueba que lo que devuelves cuadra:\n"+pistas;
+  }
   const bloque=u=>String(u).toLowerCase().split('?')[0].endsWith('.pdf')
     ? {type:"document",source:{type:"url",url:u}}
     : {type:"image",source:{type:"url",url:u}};
@@ -4662,7 +4730,7 @@ async function reprocesarDoc(doc){
   const parche={
     fecha:fechaF,num_documento:numF,base,iva,total,descuento,
     estado:estadoSimple,estado_detalle:estadoDet,hash_doc:hashDoc,
-    albaranes_detectados:esFactura?(d.albaranes||[]):null,raw:d,
+    albaranes_detectados:esFactura?(d.albaranes||[]):null,raw:pistas?{...d,_pistas:pistas}:d,
     // Estos cuatro faltaban: el reproceso los leía y los tiraba, así que
     // retención y reparto se quedaban a null por mucho que el OCR los viera.
     retencion:Math.abs(num(d.retencion)||0)||null,
@@ -4744,11 +4812,14 @@ async function reprocesarProveedor(provId){
 async function reprocesarUnoModal(){
   if(!revisarDoc)return;
   if(!fotosDe(revisarDoc).length){toast('Este documento no tiene foto guardada',true);return;}
-  if(!confirm('Voy a volver a leer este documento con la IA aplicando las pautas actuales del proveedor. Se sobreescriben los datos leídos (el centro asignado se mantiene).\n\n¿Continuar?'))return;
+  const pistas=(document.getElementById('mPistas')?.value||'').trim();
+  if(!confirm('Voy a volver a leer este documento con la IA aplicando las pautas actuales del proveedor'
+    +(pistas?' y tus pistas:\n\n«'+pistas+'»':'')
+    +'.\n\nSe sobreescriben los datos leídos (el centro asignado y el proveedor se mantienen).\n\n¿Continuar?'))return;
   const id=revisarDoc.id;
   toast('Releyendo documento…');
   try{
-    const res=await reprocesarDoc(revisarDoc);
+    const res=await reprocesarDoc(revisarDoc,pistas);
     await loadAlbaranes();await loadFacturas();await loadCompras();
     if(res.ok){toast('Documento releído · '+(res.estado==='CORRECTO'?'ahora cuadra ✓':res.estado==='NO_CUADRA'?'sigue sin cuadrar':res.estado));await revisar(id);}
     else toast('No se pudo: '+res.motivo,true);
@@ -5952,7 +6023,10 @@ async function renderA3(){
 
   const flecha=c=>a3Orden.campo===c?(a3Orden.asc?' ↑':' ↓'):'';
   const th=(c,t,cls)=>`<th${cls?` class="${cls}"`:''} style="cursor:pointer" title="Ordenar por ${t}" onclick="ordenarA3('${c}')">${t}${flecha(c)}</th>`;
+  // Selección por documento (13-10-2026, Lucía): un Excel con solo uno o dos.
+  for(const id of [...a3Sel])if(!rows.some(r=>r.doc_id===id))a3Sel.delete(id);
   document.getElementById('headA3').innerHTML=
+    `<th style="width:28px"><input type="checkbox" title="Marcar todas las listas de la tabla" onchange="a3SelTodas(this.checked)"></th>`+
     th('cabfecha','Fecha')+th('cabnumdoc','Nº A3')+th('cabreferencia','Referencia')
    +th('proveedor_nombre','Proveedor')+th('cabcodpro','Cód.')
    +th('linprcmoneda','Base','num')+'<th>IVA</th><th>Cta. gasto</th><th>Centro</th><th>Estado</th>';
@@ -5962,43 +6036,59 @@ async function renderA3(){
     const estado=bl.length
       ? `<span class="est nocuadra" title="${bl.join(' · ').replace(/"/g,'&quot;')}">🟠 ${bl.length===1?bl[0]:bl.length+' bloqueos'}</span>`
       : '<span class="est correcto">🟢 Lista</span>';
-    return `<tr>
+    const primera=!rows.slice(0,rows.indexOf(r)).some(x=>x.doc_id===r.doc_id);
+    const sel=primera
+      ? `<input type="checkbox" ${a3Sel.has(r.doc_id)?'checked':''} ${bl.length?'disabled title="Con bloqueos: no se puede exportar"':''} onchange="a3Toggle('${r.doc_id}',this.checked)">`
+      : '';
+    return `<tr${a3Sel.has(r.doc_id)?' style="background:var(--ok-soft)"':''}>
+      <td>${sel}</td>
       <td>${r.cabfecha||''}</td><td>${r.cabnumdoc??''}</td><td>${r.cabreferencia||''}</td>
       <td>${(r.proveedor_nombre||'').slice(0,34)}${r.reparto_explicito?' <span style="color:var(--muted);font-size:11px">·reparto</span>':''}</td>
       <td>${r.cabcodpro||''}</td>
       <td class="num">${fmt(r.linprcmoneda)}</td><td>${r.lintipiva||''}${r.cabregiva&&r.cabregiva!=='CNAC'?` <span class="pill" title="Régimen de IVA de la cabecera (CABREGIVA)">${r.cabregiva}</span>`:''}</td>
       <td>${r.linctacon||''}</td><td>${r.lincentrocoste??''}</td>
       <td>${estado}</td></tr>`;}).join('');
+  actualizarBotonA3Sel();
 }
-async function exportarA3(){
-  // El fichero lleva SIEMPRE el año completo: todas las facturas con número de
-  // A3 más las que lo reciben ahora (OK y sin bloqueos, da igual la fecha).
-  // Un único Excel del que Lucía selecciona lo que carga; el rango de fechas
-  // de arriba solo afecta a la previsualización.
-  let pendientes;
-  try{pendientes=await cargarA3();}
-  catch(err){toast('Error al preparar la exportación: '+err.message,true);return;}
-  const conBloqueo=new Set(pendientes.filter(r=>(r.bloqueos||[]).length).map(r=>r.doc_id));
-  const nuevas=new Set(pendientes.map(r=>r.doc_id).filter(id=>!conBloqueo.has(id))).size;
-  const aviso=(nuevas?`\n\n${nuevas} facturas recibirán ahora su número de A3 (y pasarán a Contabilidad).`:'')
-    +(conBloqueo.size?`\nSe quedan fuera ${conBloqueo.size} facturas con bloqueos.`:'');
-  if(!confirm(`El fichero llevará TODAS las facturas del año con número de A3.${aviso}\n\n¿Continuar?`))return;
-  // La respuesta de Supabase se corta en 1.000 filas también en las funciones,
-  // y el año completo pasa de largo: se pide por páginas. Solo la primera
-  // llamada confirma (numera); las siguientes solo leen, y como el orden es
-  // por número de A3 las páginas no se pisan.
-  const rows=[];
-  try{
-    const tam=1000;
-    for(let pag=0;;pag++){
-      const trozo=await sb(`rpc/exportar_a3_anual?limit=${tam}&offset=${pag*tam}`,{method:'POST',
-        body:JSON.stringify({p_confirmar:pag===0})});
-      rows.push(...trozo);
-      if(trozo.length<tam)break;
-      if(pag>50)throw new Error('demasiadas páginas: aborto por seguridad');
-    }
-  }catch(err){toast('Error al exportar: '+err.message,true);return;}
-  if(!rows||!rows.length){toast('El servidor no devolvió ninguna línea',true);return;}
+const a3Sel=new Set();
+function a3Toggle(id,on){ if(on)a3Sel.add(id); else a3Sel.delete(id); renderA3(); }
+function a3SelTodas(on){
+  const filas=[...document.querySelectorAll('#a3Body input[type=checkbox]:not(:disabled)')];
+  // Las filas pintadas son las visibles con el filtro actual: se marcan esas.
+  const ids=new Set(a3Rows.map(r=>r.doc_id));
+  filas.forEach(c=>{const m=c.getAttribute('onchange').match(/'([0-9a-f-]{36})'/);if(m){if(on)a3Sel.add(m[1]);else a3Sel.delete(m[1]);}});
+  renderA3();
+}
+function actualizarBotonA3Sel(){
+  const b=document.getElementById('btnA3Sel'); if(!b)return;
+  b.disabled=!a3Sel.size;
+  b.textContent=a3Sel.size?`Generar Excel solo con las ${a3Sel.size} seleccionada${a3Sel.size>1?'s':''}`:'Solo las seleccionadas';
+}
+// Excel con SOLO los documentos marcados. Numera los que aún no tengan número
+// (los ya numerados salen con el suyo) y no toca ninguno más: lo hace la
+// función exportar_a3_seleccion de la base.
+async function exportarA3Seleccion(){
+  const ids=[...a3Sel]; if(!ids.length)return;
+  const nuevas=ids.filter(id=>!a3Rows.some(r=>r.doc_id===id&&r.cabnumdoc!=null)).length;
+  if(!confirm(`El fichero llevará solo ${ids.length} factura${ids.length>1?'s':''}.`
+    +(nuevas?`\n\n${nuevas} recibirán ahora su número de A3 (y pasarán a Contabilidad).`:'')
+    +`\nLas demás facturas pendientes no se tocan.\n\n¿Continuar?`))return;
+  let rows;
+  try{rows=await sb('rpc/exportar_a3_seleccion',{method:'POST',body:JSON.stringify({p_doc_ids:ids,p_confirmar:true})});}
+  catch(err){
+    toast(/exportar_a3_seleccion/.test(err.message)?'Falta aplicar la migración exportar_a3_seleccion en la base':'Error al exportar: '+err.message,true);return;
+  }
+  if(!rows||!rows.length){toast('El servidor no devolvió ninguna línea: ¿alguna de las seleccionadas tiene bloqueos?',true);return;}
+  const n=new Set(rows.map(r=>r.cabnumdoc)).size;
+  const sello=new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+  if(!escribirXlsA3(rows,`FACTURASCOMPRA_seleccion_${sello}.xls`))return;
+  toast(`Fichero con ${n} factura${n>1?'s':''} · ${rows.length} líneas`);
+  a3Sel.clear();
+  renderA3();
+}
+// Escribe el .xls de A3 a partir de las filas de la función de exportación.
+// Devuelve false si la persona cancela en el guardarraíl.
+function escribirXlsA3(rows,nombre){
   // Guardarraíl (caso 2671, 15-09-2026): una factura ya numerada puede quedarse
   // sin código de proveedor o sin cuenta si alguien vacía la ficha del proveedor
   // DESPUÉS de numerarla. El bloqueo solo actúa al numerar, así que aquí se
@@ -6007,7 +6097,7 @@ async function exportarA3(){
   if(huecos.length){
     const docs=[...new Set(huecos.map(r=>`${r.cabnumdoc??'s/n'} ${r.proveedor_nombre||''}`.trim()))];
     const lista=docs.slice(0,12).join('\n')+(docs.length>12?`\n… y ${docs.length-12} más`:'');
-    if(!confirm(`Hay ${docs.length} factura(s) numeradas SIN código de proveedor A3 o SIN cuenta de gasto:\n\n${lista}\n\nRevisa la ficha del proveedor (código A3 y cuenta) antes de mandar el fichero a Lucía.\n\n¿Generar el fichero de todas formas?`))return;
+    if(!confirm(`Hay ${docs.length} factura(s) numeradas SIN código de proveedor A3 o SIN cuenta de gasto:\n\n${lista}\n\nRevisa la ficha del proveedor (código A3 y cuenta) antes de mandar el fichero a Lucía.\n\n¿Generar el fichero de todas formas?`))return false;
   }
   const data=rows.map(r=>({
     // las dos fechas iguales: la de la factura (ver nota sobre hoyA3)
@@ -6039,7 +6129,39 @@ async function exportarA3(){
   XLSX.utils.book_append_sheet(wb,ws,'FACTURASCOMPRA');
   // A3 espera el formato antiguo .xls (BIFF8 / Excel 97-2004), no .xlsx.
   // La plantilla que nos pasaron es un .xls, así que se genera igual.
-  XLSX.writeFile(wb,`FACTURASCOMPRA_${new Date().getFullYear()}_completo.xls`,{bookType:'biff8'});
+  XLSX.writeFile(wb,nombre,{bookType:'biff8'});
+  return true;
+}
+async function exportarA3(){
+  // El fichero lleva SIEMPRE el año completo: todas las facturas con número de
+  // A3 más las que lo reciben ahora (OK y sin bloqueos, da igual la fecha).
+  // Un único Excel del que Lucía selecciona lo que carga; el rango de fechas
+  // de arriba solo afecta a la previsualización.
+  let pendientes;
+  try{pendientes=await cargarA3();}
+  catch(err){toast('Error al preparar la exportación: '+err.message,true);return;}
+  const conBloqueo=new Set(pendientes.filter(r=>(r.bloqueos||[]).length).map(r=>r.doc_id));
+  const nuevas=new Set(pendientes.map(r=>r.doc_id).filter(id=>!conBloqueo.has(id))).size;
+  const aviso=(nuevas?`\n\n${nuevas} facturas recibirán ahora su número de A3 (y pasarán a Contabilidad).`:'')
+    +(conBloqueo.size?`\nSe quedan fuera ${conBloqueo.size} facturas con bloqueos.`:'');
+  if(!confirm(`El fichero llevará TODAS las facturas del año con número de A3.${aviso}\n\n¿Continuar?`))return;
+  // La respuesta de Supabase se corta en 1.000 filas también en las funciones,
+  // y el año completo pasa de largo: se pide por páginas. Solo la primera
+  // llamada confirma (numera); las siguientes solo leen, y como el orden es
+  // por número de A3 las páginas no se pisan.
+  const rows=[];
+  try{
+    const tam=1000;
+    for(let pag=0;;pag++){
+      const trozo=await sb(`rpc/exportar_a3_anual?limit=${tam}&offset=${pag*tam}`,{method:'POST',
+        body:JSON.stringify({p_confirmar:pag===0})});
+      rows.push(...trozo);
+      if(trozo.length<tam)break;
+      if(pag>50)throw new Error('demasiadas páginas: aborto por seguridad');
+    }
+  }catch(err){toast('Error al exportar: '+err.message,true);return;}
+  if(!rows||!rows.length){toast('El servidor no devolvió ninguna línea',true);return;}
+  if(!escribirXlsA3(rows,`FACTURASCOMPRA_${new Date().getFullYear()}_completo.xls`))return;
   toast(`Fichero anual: ${new Set(rows.map(r=>r.cabnumdoc)).size} facturas · ${rows.length} líneas`);
   renderA3();
 }
