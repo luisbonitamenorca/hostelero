@@ -1,4 +1,4 @@
--- PROPUESTA 13-10-2026 · Las funciones de informes solo devuelven la cuenta del que consulta
+-- APLICADA 13-10-2026 (registrada como 20261013210341) · Las funciones de informes solo devuelven la cuenta del que consulta
 --
 -- Síntoma (Luis, 13-10): en PyG Pruebas los ingresos y el personal salían «el doble» que
 -- en Ratios y en el PyG de A3. Causa: la RLS de la casa deja a un OPERADOR ver todas las
