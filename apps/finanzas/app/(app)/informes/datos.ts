@@ -97,6 +97,7 @@ async function traerMensual(supabase: Cliente, anio: number): Promise<Fuente | n
  */
 async function traerDetalle(
   supabase: Cliente,
+  cuentaId: string,
   inicioEjercicio: string,
   hasta: string,
 ): Promise<Fuente> {
@@ -106,6 +107,8 @@ async function traerDetalle(
   const { count, error: errorCuenta } = await supabase
     .from("fin_asientos")
     .select("id", { count: "exact", head: true })
+    // Un operador ve todas las cuentas por RLS: aquí solo la suya (13-10-2026).
+    .eq("cuenta_id", cuentaId)
     .eq("estado", "confirmado")
     .gte("fecha", inicioEjercicio)
     .lte("fecha", hasta);
@@ -120,6 +123,7 @@ async function traerDetalle(
         supabase
           .from("fin_asientos")
           .select("fecha, fin_apuntes(debe, haber, centro_id, fin_plan_cuentas(codigo, nombre))")
+          .eq("cuenta_id", cuentaId)
           .eq("estado", "confirmado")
           .gte("fecha", inicioEjercicio)
           .lte("fecha", hasta)
@@ -152,6 +156,7 @@ async function traerDetalle(
 
 async function traerApuntes(
   supabase: Cliente,
+  cuentaId: string,
   anio: number,
   desde: string,
   hasta: string,
@@ -160,7 +165,7 @@ async function traerApuntes(
     const rapido = await traerMensual(supabase, anio);
     if (rapido) return rapido;
   }
-  return traerDetalle(supabase, `${anio}-01-01`, hasta);
+  return traerDetalle(supabase, cuentaId, `${anio}-01-01`, hasta);
 }
 
 // ---------------------------------------------------------------- cargas
@@ -178,7 +183,7 @@ async function traerApuntes(
  *   hecho contable: si contara, el balance cambiaría mientras alguien teclea.
  */
 export async function cargarApuntes(sp: Record<string, string | undefined>) {
-  const { supabase } = await exigirModulo("contabilidad");
+  const { supabase, cuenta } = await exigirModulo("contabilidad");
 
   const anio = Number(sp.anio) || new Date().getFullYear();
   const vista = (["anual", "trimestres", "meses", "rango", "centros"].includes(sp.vista ?? "")
@@ -190,7 +195,7 @@ export async function cargarApuntes(sp: Record<string, string | undefined>) {
   const hasta = tramos[tramos.length - 1].hasta;
 
   const [{ apuntes: todos, error }, { data: centros }] = await Promise.all([
-    traerApuntes(supabase, anio, tramos[0].desde, hasta),
+    traerApuntes(supabase, cuenta.id, anio, tramos[0].desde, hasta),
     supabase.from("centros").select("id, nombre").order("nombre"),
   ]);
 
@@ -226,7 +231,7 @@ export async function cargarApuntes(sp: Record<string, string | undefined>) {
  * leería. Conserva el selector clásico de periodo.
  */
 export async function cargarSaldos(sp: Record<string, string | undefined>) {
-  const { supabase } = await exigirModulo("contabilidad");
+  const { supabase, cuenta } = await exigirModulo("contabilidad");
 
   const anio = Number(sp.anio) || new Date().getFullYear();
   const modo = (sp.modo as ModoPeriodo) || "anual";
@@ -237,7 +242,7 @@ export async function cargarSaldos(sp: Record<string, string | undefined>) {
     hasta: sp.hasta,
   });
 
-  const { apuntes, error } = await traerApuntes(supabase, anio, periodo.desde, periodo.hasta);
+  const { apuntes, error } = await traerApuntes(supabase, cuenta.id, anio, periodo.desde, periodo.hasta);
 
   const filas = sumasYSaldos(apuntes, periodo.desde, periodo.hasta);
 

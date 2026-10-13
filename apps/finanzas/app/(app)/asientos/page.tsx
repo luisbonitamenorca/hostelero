@@ -22,7 +22,7 @@ export default async function Diario({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const { supabase } = await exigirModulo("contabilidad");
+  const { supabase, cuenta } = await exigirModulo("contabilidad");
 
   const anio = Number(sp.anio) || new Date().getFullYear();
   const modo = (sp.modo as ModoPeriodo) || "anual";
@@ -36,6 +36,8 @@ export default async function Diario({
   const { data, error } = await supabase
     .from("fin_asientos")
     .select("id, numero, fecha, descripcion, estado, origen_tipo, fin_apuntes(debe, haber)")
+    // Un operador ve todas las cuentas por RLS: aquí solo la suya (13-10-2026).
+    .eq("cuenta_id", cuenta.id)
     .gte("fecha", periodo.desde)
     .lte("fecha", periodo.hasta)
     .order("fecha", { ascending: false })

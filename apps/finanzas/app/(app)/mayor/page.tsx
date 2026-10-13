@@ -39,9 +39,9 @@ export default async function Mayor({
   searchParams: Promise<{ cuenta?: string; pestana?: string; q?: string; desde?: string; hasta?: string }>;
 }) {
   const sp = await searchParams;
-  const { supabase } = await exigirModulo("contabilidad");
+  const { supabase, cuenta } = await exigirModulo("contabilidad");
 
-  if (sp.cuenta) return <MayorDeCuenta supabase={supabase} sp={sp} />;
+  if (sp.cuenta) return <MayorDeCuenta supabase={supabase} cuentaId={cuenta.id} sp={sp} />;
 
   const pestana = PESTANAS.find((p) => p.id === sp.pestana) ?? PESTANAS[0];
   const q = (sp.q ?? "").trim();
@@ -64,6 +64,7 @@ export default async function Mayor({
     const { data: encontradas } = await supabase
       .from("fin_plan_cuentas")
       .select("codigo")
+      .eq("cuenta_id", cuenta.id)
       .or(`codigo.ilike.%${q.replace(/[,()*%\\]/g, " ")}%,nombre.ilike.%${q.replace(/[,()*%\\]/g, " ")}%`)
       .limit(400);
     const codigos = (encontradas ?? []).map((c) => c.codigo);
@@ -183,9 +184,12 @@ export default async function Mayor({
 
 async function MayorDeCuenta({
   supabase,
+  cuentaId,
   sp,
 }: {
   supabase: Awaited<ReturnType<typeof exigirModulo>>["supabase"];
+  /** Un operador ve todas las cuentas por RLS: se filtra la suya a mano (13-10-2026). */
+  cuentaId: string;
   sp: { cuenta?: string; desde?: string; hasta?: string; pestana?: string };
 }) {
   const codigo = String(sp.cuenta);
@@ -196,6 +200,7 @@ async function MayorDeCuenta({
   const { data: cuenta } = await supabase
     .from("fin_plan_cuentas")
     .select("id, codigo, nombre")
+    .eq("cuenta_id", cuentaId)
     .eq("codigo", codigo)
     .maybeSingle();
 
@@ -221,6 +226,7 @@ async function MayorDeCuenta({
       .from("fin_apuntes")
       .select("debe, haber, fin_asientos!inner(id, numero, fecha, descripcion, estado)")
       .eq("cuenta_plan_id", cuenta.id)
+      .eq("cuenta_id", cuentaId)
       .eq("fin_asientos.estado", "confirmado")
       .order("id")
       .range(d, h);

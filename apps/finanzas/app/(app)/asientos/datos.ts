@@ -13,7 +13,7 @@ export async function cargarCuentas() {
   // resuelto el layout en esta misma petición (va en caché): cero idas extra.
   // Hoy hay una sociedad por cuenta; cuando haya varias esto pasará a ser una
   // elección del usuario.
-  const { supabase, sociedad } = await exigirFacturacion();
+  const { supabase, sociedad, cuenta } = await exigirFacturacion();
 
   // Los centros se filtran por la sociedad porque la RLS de `centros` filtra
   // por CUENTA: en un cliente con varias sociedades el desplegable ofrecería
@@ -25,6 +25,7 @@ export async function cargarCuentas() {
       supabase
         .from("fin_plan_cuentas")
         .select("id, codigo, nombre", contar ? { count: "exact" } : undefined)
+        .eq("cuenta_id", cuenta.id)
         .eq("activo", true)
         .order("codigo")
         .order("id")

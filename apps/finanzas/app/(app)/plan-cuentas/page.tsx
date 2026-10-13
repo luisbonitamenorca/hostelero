@@ -19,11 +19,13 @@ export default async function PlanCuentas({
   const pag = Math.max(1, parseInt(sp.pag ?? "1", 10) || 1);
 
   // Esta pantalla es del módulo de contabilidad, no del de facturación.
-  const { supabase } = await exigirModulo("contabilidad");
+  const { supabase, cuenta } = await exigirModulo("contabilidad");
 
   let consulta = supabase
     .from("fin_plan_cuentas")
     .select("id, codigo, nombre, origen", { count: "exact" })
+    // Un operador ve todas las cuentas por RLS: aquí solo la suya (13-10-2026).
+    .eq("cuenta_id", cuenta.id)
     .order("codigo")
     .range((pag - 1) * LIMITE, pag * LIMITE - 1);
 
@@ -38,6 +40,7 @@ export default async function PlanCuentas({
     supabase
       .from("fin_plan_cuentas")
       .select("codigo")
+      .eq("cuenta_id", cuenta.id)
       .in("codigo", HABITUALES.map((h) => h.codigo)),
   ]);
   const filas = data ?? [];
