@@ -2767,6 +2767,7 @@ async function saveReparto(){
       DB.nominas_reparto=(DB.nominas_reparto||[]).filter(r=>(r.dni||'').trim()!==dni).concat(rows);
     }
     initRepartoNominas(); renderSalarios();
+    sincronizarTrasReparto();
     setSyncStatus('✓ Reparto guardado', '#5E7D5A'); setTimeout(()=>setSyncStatus('', '#7A848C'), 2500);
   }catch(e){ alert('Error al guardar: '+e.message); if(btn){btn.textContent='Guardar';} updateRepSaveState(); }
 }
@@ -2791,6 +2792,7 @@ async function deleteReparto(dni){
     DB.nominas_reparto=(DB.nominas_reparto||[]).filter(r=>(r.dni||'').trim()!==dni);
     DB.nominas_reparto_horas=(DB.nominas_reparto_horas||[]).filter(r=>(r.dni||'').trim()!==dni);
     renderRepartoList(); renderRepartoSuggest(); renderSalarios();
+    sincronizarTrasReparto();
     setSyncStatus('✓ Reparto eliminado', '#5E7D5A'); setTimeout(()=>setSyncStatus('', '#7A848C'), 2500);
   }catch(e){ alert('Error al eliminar: '+e.message); }
 }
@@ -2880,6 +2882,7 @@ async function addHorasReparto(dni, nombre){
     DB.nominas_reparto=(DB.nominas_reparto||[]).filter(r=>(r.dni||'').trim()!==dni);
     DB.nominas_reparto_horas=(DB.nominas_reparto_horas||[]).filter(r=>(r.dni||'').trim()!==dni).concat([{dni,nombre}]);
     renderRepartoList(); renderRepartoSuggest(); renderSalarios();
+    sincronizarTrasReparto();
     setSyncStatus('✓ Añadido reparto por horas', '#5E7D5A'); setTimeout(()=>setSyncStatus('', '#7A848C'), 2500);
   }catch(e){ alert('Error: '+e.message); }
 }
@@ -3105,16 +3108,64 @@ async function _enviarMes(mes, anio, A){
 }
 function _errMsg(e){ let m=e&&e.message?e.message:'Error'; try{const j=JSON.parse(m); m=j.message||j.hint||m;}catch(_){}; return m; }
 
+// ── Sincronización AUTOMÁTICA Ratios → Contabilidad (13-10-2026, Luis) ──────
+// Cada cambio en Ratios que afecte al asiento de nóminas (subir el Excel de
+// nóminas, tocar un reparto por centro) regenera el asiento del mes en
+// Contabilidad. fin_asiento_nominas sustituye el asiento anterior y lo deja
+// CONFIRMADO; solo se niega si ese mes ya tiene apuntes conciliados con el
+// banco (entonces se deja como está y se avisa). Al abrir Ratios se mandan
+// los meses con nóminas que aún no tengan asiento.
+let _sincNominasEnCurso = false;
+function mesesConNominas(){
+  const set=new Set();
+  (DB.nominas||[]).forEach(r=>{ if(r.anio&&r.mes) set.add(r.anio+'-'+r.mes); });
+  return [...set].map(k=>k.split('-').map(Number)).sort((a,b)=> a[0]-b[0] || a[1]-b[1]);
+}
+async function mesesSinAsientoContabilidad(){
+  const cuenta = await sbFetch('rpc/cuenta_actual', {method:'POST', body:'{}'});
+  if(!cuenta) return [];
+  const filas = await sbFetch(`fin_asientos?cuenta_id=eq.${cuenta}&estado=eq.confirmado&descripcion=like.N%C3%B3mina*(Ratios)&select=descripcion`) || [];
+  const hechos = new Set(filas.map(f=>{ const m=(f.descripcion||'').match(/N\u00f3mina (\d+)\/(\d+)/); return m ? `${m[2]}-${m[1]}` : null; }).filter(Boolean));
+  return mesesConNominas().filter(([a,m])=> !hechos.has(`${a}-${m}`));
+}
+async function sincronizarNominasContabilidad(meses, motivo){
+  if(!meses || !meses.length || _sincNominasEnCurso) return;
+  _sincNominasEnCurso = true;
+  const ok=[], fallo=[];
+  const msg=document.getElementById('as-envio');
+  const say=(t,c)=>{ setSyncStatus(t, c||'#7A848C'); if(msg){ msg.textContent=t; msg.style.color=c||'#7A848C'; } };
+  try{
+    say(`Contabilidad: actualizando nóminas (${motivo})…`);
+    for(const [anio,mes] of meses){
+      try{
+        const A=_buildAsiento(mes, anio);
+        if(!A || !A.rows.length) continue;
+        await _enviarMes(mes, anio, A);
+        ok.push(`${MESES_LARGOS[mes]} ${anio}`);
+      }catch(e){
+        const m=_errMsg(e);
+        fallo.push(`${MESES_LARGOS[mes]} ${anio}: ${/concilia/i.test(m) ? 'conciliado con banco, no se toca' : m}`);
+      }
+    }
+  } finally { _sincNominasEnCurso = false; }
+  const txt = (ok.length ? `✓ Contabilidad al día: ${ok.join(', ')}` : 'Contabilidad: nada que actualizar')
+            + (fallo.length ? ` · sin actualizar → ${fallo.join(' · ')}` : '');
+  say(txt, fallo.length && !ok.length ? '#A32D2D' : '#5E7D5A');
+  console.log('[nóminas→contabilidad]', motivo, {ok, fallo});
+  setTimeout(()=>setSyncStatus('', '#7A848C'), 6000);
+}
+function sincronizarTrasReparto(){ sincronizarNominasContabilidad(mesesConNominas(), 'reparto por centro').catch(e=>console.warn(e)); }
+
 async function enviarAsientoContabilidad(btn){
   const msg=document.getElementById('as-envio');
   const say=(t,c)=>{ if(msg){ msg.textContent=t; msg.style.color=c||'#7A848C'; } };
   if(!_asientoCache || !_asientoCache.rows.length){ say('No hay asiento que enviar.', '#A32D2D'); return; }
   const {mes, anio}=_asientoCache;
-  if(!confirm(`Se enviará el asiento de ${MESES_LARGOS[mes]} ${anio} a Contabilidad como BORRADOR. Luego lo confirmas tú allí. ¿Continuar?`)) return;
+  if(!confirm(`Se enviará el asiento de ${MESES_LARGOS[mes]} ${anio} a Contabilidad (sustituye al que hubiera y queda confirmado). Normalmente no hace falta: se manda solo al subir nóminas o cambiar un reparto. ¿Continuar?`)) return;
   if(btn) btn.disabled=true; say('Enviando…', '#7A848C');
   try{
     await _enviarMes(mes, anio, _asientoCache);
-    say(`✓ Borrador de ${MESES_LARGOS[mes]} ${anio} creado en Contabilidad. Revísalo y confírmalo allí.`, '#5E7D5A');
+    say(`✓ Asiento de ${MESES_LARGOS[mes]} ${anio} confirmado en Contabilidad.`, '#5E7D5A');
   }catch(e){ say('✗ '+_errMsg(e), '#A32D2D'); }
   finally{ if(btn) btn.disabled=false; }
 }
@@ -3128,7 +3179,7 @@ async function enviarAsientoTodos(btn){
   (DB.nominas||[]).forEach(r=>{ if(r.anio&&r.mes) set.add(r.anio+'-'+r.mes); });
   const meses=[...set].map(k=>k.split('-').map(Number)).sort((a,b)=> a[0]-b[0] || a[1]-b[1]);
   if(!meses.length){ say('No hay nóminas cargadas.', '#A32D2D'); return; }
-  if(!confirm(`Se enviarán ${meses.length} asientos (uno por mes con nóminas) a Contabilidad como BORRADOR. Reenviar un mes ya enviado lo reemplaza; los ya CONFIRMADOS se saltan. ¿Continuar?`)) return;
+  if(!confirm(`Se enviarán ${meses.length} asientos (uno por mes con nóminas) a Contabilidad, confirmados. Reenviar un mes lo reemplaza; los conciliados con banco se saltan. ¿Continuar?`)) return;
   if(btn) btn.disabled=true;
   const ok=[], fail=[];
   for(const [anio,mes] of meses){
@@ -7030,6 +7081,10 @@ function setSyncStatus(msg, color) {
 async function initApp() {
   pintaSemanaActual();
   await loadFromStorage();
+  // Meses con nóminas que aún no tienen asiento en Contabilidad: se mandan solos (13-10-2026).
+  mesesSinAsientoContabilidad()
+    .then(m => sincronizarNominasContabilidad(m, 'meses sin asiento'))
+    .catch(e => console.warn('nóminas→contabilidad:', e && e.message));
 }
 
 // Pinta en el header el cartel con la semana ISO actual y su rango de fechas
@@ -8419,6 +8474,12 @@ async function handleXlFile(file, opts) {
     if (rrhhRows.length > 0)      DB.rrhh = rrhhRows;
     if (nomRows.length > 0)       DB.nominas = nomRows;
     if (pnomRows.length > 0)      DB.presupuesto_nominas = pnomRows;
+    // Nóminas nuevas → asiento regenerado en Contabilidad, sin pulsar nada (13-10-2026).
+    if (nomRows.length > 0) {
+      const set=new Set(); nomRows.forEach(r=>{ if(r.anio&&r.mes) set.add(r.anio+'-'+r.mes); });
+      const meses=[...set].map(k=>k.split('-').map(Number)).sort((a,b)=> a[0]-b[0] || a[1]-b[1]);
+      setTimeout(()=>sincronizarNominasContabilidad(meses, 'nóminas subidas').catch(e=>console.warn(e)), 0);
+    }
     // Visitas y comensales: mismo criterio que en Supabase — se reemplaza solo
     // la ventana de fechas del fichero, el resto del histórico se conserva.
     const fusionarRango = (prev, rows) => {
