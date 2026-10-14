@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./acciones";
 import type { ArchivoTurno, Ausencia, Cambio, Companero, Disponibilidad, Fichaje, JornadaConfirmada, TareaTurno, Turno } from "./acciones";
 import { cerrarSesion } from "../acciones";
+import BannerJano from "../banner-jano";
 import { calcularDia, efectivosDe, finAbsoluto, horasNetas, hoyIso, lunesDe, minutos, sumaDia } from "../rrhh/tipos";
 import { colorTexto, fmtHoras, guardarPref, leerPref } from "../rrhh/lib-rrhh";
 
@@ -250,6 +251,7 @@ export default function EmpleadoApp({ empleado, centros, conPedidos = false }: {
         <button className="salir" onClick={() => cerrarSesion()} aria-label="Salir">↩</button>
       </header>
       <main>
+        <BannerJano />
         {tab === "turnos" ? <TabTurnos empleadoId={empleado.id} centros={centros} avisar={avisar} /> : null}
         {tab === "fichar" && empleado.fichajeMovil ? <TabFichar centros={centros} centroPrincipal={empleado.centroPrincipal} avisar={avisar} /> : null}
         {tab === "ausencias" ? <TabAusencias avisar={avisar} /> : null}

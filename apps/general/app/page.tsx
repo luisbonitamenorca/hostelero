@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
 import { RUTAS_MODULO, GRUPOS_PORTADA, grupoDe, enlaceExterno } from "@/lib/modulos";
 import { cerrarSesion } from "./acciones";
+import BannerJano from "./banner-jano";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,7 @@ export default async function Portada() {
       />
 
       <main className="contenido">
+        <BannerJano />
         {error ? (
           <p className="aviso-error">
             No se han podido cargar tus módulos. Recarga la página; si sigue
