@@ -41,8 +41,9 @@ export const RUTAS_MODULO: Record<string, string> = {
  */
 const ENLACES_EXTERNOS: Record<string, Record<string, string>> = {
   // Bonita Menorca · TPV de Joan (JS Technology), 04-10-2026, hasta integrarlo.
+  // 14-10-2026: pasa a la demo de Jano Software (antes jstechnologymenorcasl.ddns.net:7870).
   "082c5366-d9ae-49b9-a8b8-8caad73985bd": {
-    tpv: "http://jstechnologymenorcasl.ddns.net:7870/",
+    tpv: "https://demo.janosoftware.com:7870/",
   },
 };
 
