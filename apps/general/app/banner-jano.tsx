@@ -1,38 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { IconoJano, LogoJano } from "@/app/logo-jano";
 
 /**
  * Banner de presentación de la identidad Jano (octubre 2026, Luis): la
  * portada de la ficha «Pizarra y Salvia» para que todo el que entre la vea y
- * empiece el debate. Se cierra con «Entendido» y no vuelve en ese navegador.
+ * empiece el debate. Se cierra con «Entendido» y vuelve al volver a entrar.
  * Es de quita y pon: para retirarlo basta con borrar <BannerJano /> de la
  * portada y de /empleado. Colores en hex porque /empleado no carga globals.css.
  */
-const CLAVE = "jano-banner-identidad-v1";
 const PIZARRA = "#2F3A45";
 const SALVIA = "#8FAE8B";
 const SALVIA_OSCURA = "#5E7D5A";
 const CAL = "#F3F4F0";
 
 export default function BannerJano() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem(CLAVE)) setVisible(true);
-    } catch {
-      setVisible(true);
-    }
-  }, []);
+  // Sale cada vez que se entra en la pantalla principal: «Entendido» solo la
+  // oculta hasta que se sale y se vuelve (14-10-2026, Luis: que se acostumbren).
+  const [visible, setVisible] = useState(true);
 
   function cerrar() {
-    try {
-      localStorage.setItem(CLAVE, new Date().toISOString());
-    } catch {
-      /* sin almacenamiento: se cierra solo esta vez */
-    }
     setVisible(false);
   }
 
