@@ -781,6 +781,7 @@ let tipo="auto";
 let cola=[];               // [{file, b64, mime, status}]
 let compras=[], reglas=[], albaranes=[], proveedores=[], productos=[], facturas=[];
 let revisarDoc=null, revisarLineas=[], revisarAlbaranes=[], repartoFilas=[];
+let lineasImp=null;  // detalle de importes por líneas de la factura abierta (null = cerrado)
 let centrosPorFactura={};   // doc_id -> {n_centros, centros}
 let cuentasPorFactura={};   // doc_id -> [cuentas contables de gasto] (de compras_a3_lineas, lo mismo que va a A3)   // documento abierto en el modal de revisión
 
@@ -3298,6 +3299,7 @@ async function revisar(docId){
   if(!r.length){toast('No encontrado',true);return;}
   const a=r[0];
   revisarDoc=a;  // guardamos el doc abierto para la edición
+  lineasImp=null;
   const tituloTipo=(a.tipo==='factura')?'Factura':'Albarán';
   const lineas=(a.tipo==='factura')?[]:await sb(`compras_linea?doc_id=eq.${docId}&select=id,id_producto,producto,cantidad,precio_unit,importe&order=created_at.asc`);
   revisarLineas=lineas;
@@ -3588,7 +3590,9 @@ function renderDetalle(){
         <span>Total: <span class="editable" style="font-weight:600;font-variant-numeric:tabular-nums"
               onblur="saveImporteDoc('${a.id}','total',this.textContent)" contenteditable>${a.total??''}</span> €</span>
         <span id="avImportes" style="font-size:12px"></span>
+        <span class="link" style="font-size:12px" onclick="toggleLineasImp()">${lineasImp?'✕ cerrar detalle':'≡ detallar por líneas'}</span>
       </div>
+      ${bloqueLineasImp()}
       ${bloqueMotivoEstado()}
       ${bloqueDesgloseIva()}
       <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Albaranes incluidos en esta factura</div>
@@ -3613,6 +3617,7 @@ function renderDetalle(){
     dc.querySelectorAll('.ce').forEach(el=>el.addEventListener('input',recalcAlb));
     renderReparto();
     pintarAvisoImportes();
+    pintarSumaLineasImp();
     return;
   }
   // ===== ALBARÁN: tabla editable de productos =====
@@ -4047,6 +4052,110 @@ async function saveImporteDoc(docId,campo,val){
       revisarDoc.estado=fresco[0].estado; revisarDoc.estado_detalle=fresco[0].estado_detalle;
     }
     toast('Guardado');
+    renderDetalle(); loadFacturas();
+  }catch(err){toast('Error: '+err.message,true);}
+}
+/* ========== DETALLE DE IMPORTES POR LÍNEAS (14-10-2026, Luis) ==========
+   Facturas con varias bases, cada una con su IVA y su retención (p. ej. 100 al
+   10 % sin retención + 1.000 al 21 % con 15 % de IRPF). Se teclea línea a línea,
+   la cabecera (base, IVA, retención, total) sale del sumatorio y el detalle se
+   guarda en raw.desglose_iva, que es de donde sale el reparto por tipos de IVA
+   que se exporta a A3. */
+const r2=x=>Math.round(x*100)/100;
+function toggleLineasImp(){
+  if(lineasImp){lineasImp=null;renderDetalle();return;}
+  const a=revisarDoc||{};
+  const dg=((a.raw&&a.raw.desglose_iva)||[]).filter(x=>num(x.base)!=null&&num(x.base)!==0);
+  lineasImp=dg.length?dg.map(x=>({base:num(x.base),pct:num(x.pct),cuota:num(x.cuota),
+      ret_pct:num(x.ret_pct),retencion:num(x.retencion)})):[];
+  // Sin detalle previo: la primera línea es la cabecera actual.
+  if(!lineasImp.length){
+    const b=num(a.base),i=num(a.iva),r=Math.abs(num(a.retencion)||0);
+    const pc=(b&&i!=null)?pctDeCodIva(codIvaDePct(i/b*100)):null;
+    lineasImp.push({base:b,pct:pc??21,cuota:i,
+      ret_pct:(b&&r)?r2(r/b*100):0,retencion:r||0});
+  }
+  // Si el OCR no trajo la retención por línea, se la queda la primera.
+  const r=Math.abs(num(a.retencion)||0);
+  if(r&&!lineasImp.some(l=>l.retencion)){lineasImp[0].retencion=r;lineasImp[0].ret_pct=lineasImp[0].base?r2(r/lineasImp[0].base*100):null;}
+  renderDetalle();
+}
+function anadirLineaImp(){lineasImp.push({base:null,pct:21,cuota:null,ret_pct:0,retencion:0});renderDetalle();}
+function borrarLineaImp(i){lineasImp.splice(i,1);renderDetalle();}
+function editLineaImp(i,campo,val){
+  const l=lineasImp[i]; if(!l)return;
+  l[campo]=num(val);
+  // Base o % recalculan el importe; el importe tecleado a mano manda sobre el %.
+  if(campo==='base'||campo==='pct')
+    l.cuota=(l.base!=null&&l.pct!=null)?r2(l.base*l.pct/100):null;
+  if(campo==='base'||campo==='ret_pct')
+    l.retencion=(l.base!=null&&l.ret_pct!=null)?r2(l.base*l.ret_pct/100):0;
+  const v=x=>x==null?'':String(x);
+  const q=k=>document.getElementById(`li_${k}_${i}`);
+  if(campo!=='cuota'&&q('cuota'))q('cuota').value=v(l.cuota);
+  if(campo!=='retencion'&&q('retencion'))q('retencion').value=v(l.retencion);
+  if(q('tot'))q('tot').textContent=fmt(totLineaImp(l));
+  pintarSumaLineasImp();
+}
+function totLineaImp(l){return r2((l.base||0)+(l.cuota||0)-Math.abs(l.retencion||0));}
+function sumaLineasImp(){
+  const ls=(lineasImp||[]).filter(l=>l.base!=null&&l.base!==0);
+  const base=r2(ls.reduce((s,l)=>s+l.base,0)), iva=r2(ls.reduce((s,l)=>s+(l.cuota||0),0)),
+        ret=r2(ls.reduce((s,l)=>s+Math.abs(l.retencion||0),0));
+  return {ls,base,iva,ret,total:r2(base+iva-ret)};
+}
+function pintarSumaLineasImp(){
+  const el=document.getElementById('liSuma'); if(!el)return;
+  const s=sumaLineasImp();
+  el.innerHTML=`<td class="num">${fmt(s.base)}</td><td></td><td class="num">${fmt(s.iva)}</td><td></td><td class="num">${s.ret?'-'+fmt(s.ret):''}</td><td class="num">${fmt(s.total)}</td><td></td>`;
+}
+function bloqueLineasImp(){
+  if(!lineasImp)return '';
+  const inp=(i,k,w)=>`<input id="li_${k}_${i}" type="text" inputmode="decimal" value="${lineasImp[i][k]??''}"
+      oninput="editLineaImp(${i},'${k}',this.value)"
+      style="width:${w}px;text-align:right;font:inherit;font-variant-numeric:tabular-nums;padding:3px 5px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)">`;
+  return `<div style="margin-bottom:16px;padding:12px;border:1px solid var(--line);border-radius:8px">
+    <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Detalle de importes por líneas</div>
+    <p class="hint" style="margin:0 0 8px">El % calcula el importe; si tecleas el importe a mano, manda el importe. Al aplicar, la base, el IVA, la retención y el total de arriba pasan a ser la suma.</p>
+    <table><thead><tr><th class="num">Base</th><th class="num">% IVA</th><th class="num">Cuota IVA</th><th class="num">% Ret.</th><th class="num">Retención</th><th class="num">Total</th><th></th></tr></thead>
+    <tbody>${lineasImp.map((l,i)=>`<tr>
+      <td class="num">${inp(i,'base',90)}</td><td class="num">${inp(i,'pct',48)}</td><td class="num">${inp(i,'cuota',80)}</td>
+      <td class="num">${inp(i,'ret_pct',48)}</td><td class="num">${inp(i,'retencion',80)}</td>
+      <td class="num" id="li_tot_${i}" style="font-variant-numeric:tabular-nums">${fmt(totLineaImp(l))}</td>
+      <td><span class="del" onclick="borrarLineaImp(${i})" title="Quitar línea">🗑</span></td></tr>`).join('')}</tbody>
+    <tfoot><tr id="liSuma" style="font-weight:600;border-top:2px solid var(--line);font-variant-numeric:tabular-nums"></tr></tfoot></table>
+    <div style="margin-top:8px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <span class="link" onclick="anadirLineaImp()">+ añadir línea</span>
+      <button class="btn" onclick="aplicarLineasImp()">Aplicar a la factura</button>
+    </div></div>`;
+}
+async function aplicarLineasImp(){
+  const a=revisarDoc; if(!a||!lineasImp)return;
+  const s=sumaLineasImp();
+  if(!s.ls.length){toast('Pon al menos una línea con base',true);return;}
+  if(s.ls.some(l=>l.pct==null||codIvaDePct(l.pct)==null)){toast('Hay líneas con un % de IVA que A3 no reconoce (0, 4, 10, 10,5, 12 o 21)',true);return;}
+  const conRet=s.ls.filter(l=>Math.abs(l.retencion||0)>0);
+  const pcts=[...new Set(conRet.map(l=>l.ret_pct).filter(x=>x!=null))];
+  const desglose=s.ls.map(l=>({pct:l.pct,base:l.base,cuota:l.cuota||0,ret_pct:l.ret_pct||0,retencion:Math.abs(l.retencion||0)}));
+  const cambio={base:s.base,iva:s.iva,retencion:s.ret||null,total:s.total,
+    retencion_pct:pcts.length===1?pcts[0]:null,
+    retencion_base:conRet.length?r2(conRet.reduce((x,l)=>x+l.base,0)):null,
+    raw:{...(a.raw||{}),desglose_iva:desglose,_desglose_manual:true}};
+  try{
+    await sb(`compras_doc?id=eq.${a.id}`,{method:'PATCH',body:JSON.stringify(cambio)});
+    Object.assign(a,cambio);
+    // El reparto por IVA automático se rehace con las líneas nuevas; el hecho a
+    // mano por centro de coste no se toca (avisa el bloque de desglose si no cuadra).
+    if(!(await tieneRepartoManual(a.id))){
+      await sb(`compras_doc_reparto?doc_id=eq.${a.id}&manual=is.false`,{method:'DELETE'}).catch(()=>{});
+      await guardarRepartoIva(a.id,desglose,s.base);
+    }
+    try{await sb('rpc/recalcular_estado_facturas',{method:'POST',body:'{}'});}catch(e){}
+    const fresco=await sb(`compras_doc?id=eq.${a.id}&select=estado,estado_detalle`);
+    if(fresco.length){a.estado=fresco[0].estado;a.estado_detalle=fresco[0].estado_detalle;}
+    try{repartoFilas=await sb(`compras_doc_reparto?doc_id=eq.${a.id}&select=id,orden,base,tipo_iva,centro_coste,cuenta_gasto,descripcion,manual&order=orden.asc`);}catch(e){}
+    lineasImp=null;
+    toast(`Aplicado: base ${fmt(s.base)} · IVA ${fmt(s.iva)}${s.ret?' · ret. '+fmt(s.ret):''} · total ${fmt(s.total)}`);
     renderDetalle(); loadFacturas();
   }catch(err){toast('Error: '+err.message,true);}
 }
