@@ -2366,7 +2366,7 @@ async function procesarUno(c){
   // Tot per al Vi, por ejemplo— y mezclarlos ensucia el análisis de coste.
   // No se borra el adjunto: queda como DESCARTADO con el motivo, visible en Buzón.
   // EXCEPCIÓN (04-10-2026, módulo Pedidos): los proveedores con «Envía albaranes por
-  // email» marcado en Pedidos › Ajustes (compras_proveedor.albaranes_por_email) sí
+  // email» marcado (Compras › Proveedores o Pedidos › Ajustes; campo compras_proveedor.albaranes_por_email) sí
   // cargan sus albaranes de correo: es lo que se les pide para cotejar pedido ↔
   // albarán ↔ factura sin hacer fotos. Solo esos; el resto sigue descartándose.
   const provMatchCorreo=c.correoAdjId?matchProveedor(d.proveedor_nif,d.proveedor):null;
@@ -5688,7 +5688,7 @@ function renderProv(){
   if(f==='sincod')  rows=rows.filter(p=>!codA3(p));
   if(f==='nuevos')  rows=rows.filter(p=>p.autorizado===false);
   const st=sortState.proveedores;
-  const keymap={nombre:p=>p.nombre,nif:p=>p.nif,depto:p=>p.departamento||'',crit:p=>p.critico?1:0,docs:p=>p._n,
+  const keymap={nombre:p=>p.nombre,nif:p=>p.nif,depto:p=>p.departamento||'',crit:p=>p.critico?1:0,alb:p=>p.albaranes_por_email?'Sí':'No',docs:p=>p._n,
                 cta:p=>p.cuenta_contable||'',cod:p=>codA3(p),
                 irpf:p=>p.retencion_modelo||'zzz',regiva:p=>(p.regimen_iva||regimenAuto(p)),estado:p=>p.autorizado===false?0:1};
   const todas=rows;
@@ -5696,7 +5696,7 @@ function renderProv(){
   if(st.key&&keymap[st.key])rows=sortRows(rows,keymap[st.key],st.dir);
   registraVisibles('proveedores',rows);
   pintaFiltros('proveedores','fltProv',
-    ['nombre','nif',null,'depto','cta','cod','irpf','regiva','crit',null,null,null,'docs','estado'],
+    ['nombre','nif',null,'depto','cta','cod','irpf','regiva','crit','alb',null,null,null,'docs','estado'],
     todas,keymap,'renderProv');
   // aviso de proveedores nuevos sin autorizar (estilo Ratios)
   const nuevos=proveedores.filter(p=>p.autorizado===false);
@@ -5707,7 +5707,7 @@ function renderProv(){
   }else av.style.display='none';
   document.getElementById('headProv').innerHTML=
     thh('proveedores','nombre','Nombre')+thh('proveedores','nif','CIF / NIF')+'<th>Alias / logos</th>'+thh('proveedores','depto','Departamento')+thh('proveedores','cta','Cuenta gasto')+thh('proveedores','cod','Cód. A3')+thh('proveedores','irpf','IRPF')+thh('proveedores','regiva','Régimen IVA')+
-    thh('proveedores','crit','Crítico')+'<th>Pautas albarán</th><th>Pauta factura</th><th>Muestras</th>'+thh('proveedores','docs','Docs','num')+thh('proveedores','estado','Estado');
+    thh('proveedores','crit','Crítico')+thh('proveedores','alb','Albaranes por email')+'<th>Pautas albarán</th><th>Pauta factura</th><th>Muestras</th>'+thh('proveedores','docs','Docs','num')+thh('proveedores','estado','Estado');
   const tb=document.getElementById('provBody');
   document.getElementById('provCount').textContent=(rows.length===proveedores.length)?proveedores.length:`${rows.length} / ${proveedores.length}`;
   document.getElementById('emptyP').style.display=proveedores.length?'none':'block';
@@ -5721,6 +5721,7 @@ function renderProv(){
     <td>${celdaIrpfProv(p)}</td>
     <td>${celdaRegimenProv(p)}</td>
     <td><span class="swi" onclick="toggleCritico('${p.id}')" title="Marcar crítico">${p.critico?'🔴':'⚪️'}</span></td>
+    <td><span class="swi" onclick="toggleAlbEmail('${p.id}')" title="${p.albaranes_por_email?'Va por albaranes: se cargan los que lleguen por email':'No va por albaranes: los que lleguen por email se descartan'}" style="font-size:12.5px;white-space:nowrap">${p.albaranes_por_email?'📧 Sí':'<span style="color:var(--muted)">No</span>'}</span></td>
     <td><span class="editable" style="font-size:12.5px;color:var(--muted)" onblur="saveProv('${p.id}','pautas',this.textContent)" contenteditable>${p.pautas||'—'}</span></td>
     <td><span class="editable" style="font-size:12.5px;color:var(--muted)" onblur="saveProv('${p.id}','pauta_factura',this.textContent)" contenteditable>${p.pauta_factura||'—'}</span></td>
     <td>${celdaMuestras(p)}</td>
@@ -5912,6 +5913,16 @@ async function rechazarProv(id){
     proveedores=proveedores.filter(x=>x.id!==id);renderProv();toast('Proveedor rechazado');}
   catch(err){toast('Error: '+err.message,true);}
 }
+// Va por albaranes (14-10-2026, Luis): los marcados cargan los albaranes que
+// lleguen por email; el resto se descartan en la ingesta aunque lleguen. Es el
+// mismo campo que «Envía albaranes por email» de Pedidos › Ajustes.
+async function toggleAlbEmail(id){
+  const p=proveedores.find(x=>x.id===id);if(!p)return;
+  const nv=!p.albaranes_por_email;
+  try{await sb(`compras_proveedor?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({albaranes_por_email:nv})});
+    p.albaranes_por_email=nv;renderProv();toast(nv?'Va por albaranes: se cargarán los que lleguen por email':'Ya no se cargarán sus albaranes por email');}
+  catch(err){toast('Error: '+err.message,true);}
+}
 async function toggleCritico(id){
   const p=proveedores.find(x=>x.id===id);if(!p)return;
   const nv=!p.critico;
@@ -5945,7 +5956,7 @@ function exportProv(){
   const keymap={nombre:p=>p.nombre,nif:p=>p.nif,depto:p=>p.departamento||'',crit:p=>p.critico?1:0,docs:p=>p._n};
   if(st.key&&keymap[st.key])rows=sortRows(rows,keymap[st.key],st.dir);
   const data=rows.map(p=>({Nombre:p.nombre||'','CIF / NIF':p.nif||'',Departamento:p.departamento||'',
-    'Cuenta gasto':p.cuenta_contable||'','Cód. A3':codA3(p),'Modelo IRPF':p.retencion_modelo||'','% IRPF':p.retencion_pct??'','Cuenta proveedor':p.cuenta_proveedor||'',Crítico:p.critico?'SI':'',Pautas:p.pautas||'',Documentos:p._n??0,Estado:p.autorizado===false?'NUEVO':'OK'}));
+    'Cuenta gasto':p.cuenta_contable||'','Cód. A3':codA3(p),'Modelo IRPF':p.retencion_modelo||'','% IRPF':p.retencion_pct??'','Cuenta proveedor':p.cuenta_proveedor||'',Crítico:p.critico?'SI':'','Albaranes por email':p.albaranes_por_email?'SI':'',Pautas:p.pautas||'',Documentos:p._n??0,Estado:p.autorizado===false?'NUEVO':'OK'}));
   if(!data.length){toast('No hay proveedores que exportar',true);return;}
   const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Proveedores');
