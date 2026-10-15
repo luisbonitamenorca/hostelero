@@ -293,8 +293,11 @@ con zoom, giro y arrastre) y a la derecha el detalle editable.
 - **Albarán**: líneas editables, base y descuento. «Guardar cambios» (`guardarRevision`) es **el visto bueno**:
   recalcula el estado (`CORRECTO` si las líneas cuadran con la base con un margen de 0,15 €) y pasa a `OK` si hay
   centro.
-- **Factura**: base, IVA, retención y total editables (cada cambio llama a `regenerar_reparto_iva` y
-  `recalcular_estado_facturas`), lista de albaranes incluidos y **reparto por centro de coste** (`compras_doc_reparto`
+- **Factura**: base, IVA, retención y total en inputs (`inputImpCab`); cada cambio guarda los cuatro a la vez
+  (`saveImportesCab`, luego `regenerar_reparto_iva` y `recalcular_estado_facturas`) y solo redibuja el panel si
+  el foco ya no está en esas casillas (15-10-2026: antes cada celda redibujaba todo y se perdía lo tecleado en la
+  siguiente). El detalle por líneas (`lineasImp`) vive en memoria hasta «Aplicar a la factura»; sobrevive a
+  `revisar()` del mismo documento y `closeModal` avisa si se cierra sin aplicar, lista de albaranes incluidos y **reparto por centro de coste** (`compras_doc_reparto`
   con `manual=true`). Sus botones son «↔ Repartir entre varios centros», «✨ Proponer reparto automático» y
   «Guardar reparto». En facturas, «Guardar cambios» guarda la lista de albaranes; el estado lo recalcula
   `recalcular_estado_facturas`.
