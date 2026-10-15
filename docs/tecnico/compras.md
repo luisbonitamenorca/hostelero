@@ -298,8 +298,13 @@ con zoom, giro y arrastre) y a la derecha el detalle editable.
   con `manual=true`). Sus botones son «↔ Repartir entre varios centros», «✨ Proponer reparto automático» y
   «Guardar reparto». En facturas, «Guardar cambios» guarda la lista de albaranes; el estado lo recalcula
   `recalcular_estado_facturas`.
-- En los dos: nº y fecha editables, desplegables de centro y proveedor (cambiar el proveedor reenlaza las
-  líneas), «↻ Reprocesar» (relee todos los folios con Opus; si la relectura viene sin líneas, conserva las
+- En los dos: cabecera `cabeceraDocModal` con el nº (contenteditable, `saveDatoDoc`) y las fechas como
+  `<input type="date">` (`saveFechaModal`): fecha del documento en ambos y, en facturas, también la contable.
+  El PATCH devuelve la fila, así que si cambia la fecha factura y la contable era la de por defecto se ve el
+  recálculo del trigger `compras_doc_0_fecha_contable`; si la factura ya tiene `a3_numdoc` y cambia la
+  contable, se llama a `compras_asiento_rehacer` como desde el listado. Si la fecha viene vacía (documento a
+  mano) el selector enseña hoy; `nuevoDocManual` ya la graba con la fecha de hoy. Desplegables de centro y
+  proveedor (cambiar el proveedor reenlaza las líneas), «↻ Reprocesar» (relee todos los folios con Opus; si la relectura viene sin líneas, conserva las
   anteriores) y «🗑 Borrar documento» (bloqueado si tiene nº de A3; pide doble confirmación si ya salió en un
   Excel).
 
