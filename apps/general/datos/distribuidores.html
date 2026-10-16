@@ -10,7 +10,8 @@
      las líneas «A consultar» admiten precio, cantidad y meses y entran en los totales.
      v1.3 (16-10-2026): comparativa con la competencia — pestaña Competencia (estudio de
      precios oct. 2026, editable), categoría de comparación en Precios, «Hoy con…» por módulo
-     en el presupuesto, tarjeta Comparativa con el ahorro anual y sección en el PDF. -->
+     en el presupuesto, tarjeta Comparativa con el ahorro anual y sección en el PDF.
+     v1.3.1: la competencia se compara en los MISMOS meses que cada módulo (no 12 contra 7). -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -331,14 +332,9 @@ table.g th.cal{text-align:right}
 
         <div class="card" id="card-comp" style="display:none">
           <div class="card-title">Comparativa con lo que paga hoy</div>
-          <div class="card-sub">Suma de los módulos en los que has indicado «Hoy con…». Jano va con el descuento aplicado.
-            <span class="radio" style="margin-left:10px">La competencia se cuenta:
-              <label><input type="radio" name="comp-meses" value="todo" onchange="setCompMeses('todo')"> todo el año (12 meses)</label>
-              <label><input type="radio" name="comp-meses" value="apertura" onchange="setCompMeses('apertura')"> solo los meses de apertura</label>
-            </span>
-          </div>
+          <div class="card-sub">Suma de los módulos en los que has indicado «Hoy con…». Se comparan los <b>mismos meses</b>: a la competencia se le cuentan solo los meses en que el módulo está enchufado. Jano va con el descuento aplicado.</div>
           <div class="ahorro-hero" id="comp-hero"></div>
-          <div class="tbl-wrap"><table class="g" id="tbl-comp"><thead><tr><th>Módulo</th><th>Hoy con</th><th class="num">Hoy €/mes</th><th class="num">Hoy €/año</th><th class="num">Jano €/año</th><th class="num">Diferencia</th></tr></thead><tbody></tbody></table></div>
+          <div class="tbl-wrap"><table class="g" id="tbl-comp"><thead><tr><th>Módulo</th><th>Hoy con</th><th class="num">Hoy €/mes</th><th>Meses</th><th class="num">Hoy €/año</th><th class="num">Jano €/año</th><th class="num">Diferencia</th></tr></thead><tbody></tbody></table></div>
         </div>
 
         <div class="totales">
@@ -445,7 +441,7 @@ let presupuestos = [];   // filas dist_presupuestos
 let P = null;            // presupuesto abierto en el editor (objeto de trabajo)
 let sel = new Map();     // precio_id -> {cantidad, meses:[1..12], copia} (selección en el editor)
 let apertura = [...TODOS]; // meses de apertura del presupuesto abierto
-let compMeses = 'todo';    // cómo se cuenta la competencia en la comparativa: 'todo' | 'apertura'
+let compMeses = 'modulo';  // la competencia se cuenta los mismos meses que cada módulo (decisión de Luis, 16-10-2026)
 let competencia = [], competenciaDel = new Set();
 let dirtyPre = false, dirtyPrecios = false, dirtyComp = false;
 let tabActual = 'presupuestos';
@@ -690,7 +686,7 @@ function mesesLinea(id, arr){ const s=sel.get(id); if(!s) return; s.meses=[...ar
 function nuevoPresupuesto(){
   if(dirtyPrecios && !confirm('Hay cambios sin guardar en Precios. ¿Seguir?')) return;
   P = { id:null, numero:'', fecha:hoy(), estado:'borrador', cliente_nombre:'', cif:'', contacto:'', email:'', telefono:'', direccion:'', n_centros:null, n_empleados:null, lineas:[], descuento_pct:0, alta_inicial:0, notas:'', meses_apertura:[...TODOS] };
-  apertura = [...TODOS]; compMeses = 'todo';
+  apertura = [...TODOS];
   sel = new Map();
   // de serie: lo que va incluido se marca solo
   precios.filter(p=>p.activo && p.tipo==='incluido').forEach(p => sel.set(p.id,{cantidad:1, meses:[...apertura]}));
@@ -703,7 +699,7 @@ function selDesdeLineas(lineas){
 function abrirPresupuesto(id){
   const p = presupuestos.find(x=>x.id===id); if(!p) return;
   P = JSON.parse(JSON.stringify(p));
-  apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS); compMeses = P.comp_meses||'todo';
+  apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS);
   sel = selDesdeLineas(P.lineas);
   abrirEditor();
 }
@@ -799,8 +795,8 @@ function compHtml(p, s, pe, cant, meses){
   }
   return `<div class="comp"><span class="lbl">Hoy con</span><select class="inp" onchange="setComp('${p.id}',this.value)">${opts}</select>${detalle}</div>`;
 }
-/** Meses que se cuentan a la competencia para una línea. */
-function mesesComp(meses){ return compMeses==='apertura' ? apertura.length : 12; }
+/** Meses que se cuentan a la competencia para una línea: los mismos que el módulo. */
+function mesesComp(meses){ return meses.length; }
 function setComp(id, val){
   const s=sel.get(id); if(!s) return;
   const p = lineasOfrecidas().find(x=>x.id===id);
@@ -811,7 +807,6 @@ function setComp(id, val){
   tocar(); renderSeleccion(); calcular();
 }
 function compCampo(id, campo, val){ const s=sel.get(id); if(!s||!s.comp) return; s.comp[campo]=val; tocar(); if(campo==='precio_mes') { renderSeleccion(); } calcular(); }
-function setCompMeses(m){ compMeses=m; tocar(); renderSeleccion(); calcular(); }
 function toggleLinea(id,on){
   if(on){ const prev=sel.get(id); sel.set(id,{cantidad:prev?.cantidad||1, meses: prev?.meses ? [...prev.meses] : [...apertura], precio: prev?.precio ?? null, comp: prev?.comp ?? null, copia:prev?.copia}); } else sel.delete(id);
   tocar(); renderSeleccion(); calcular();
@@ -882,7 +877,6 @@ const nombreComp = c => c.id==='media' ? `Media del mercado (${c.plan})` : [c.pr
 function renderComparativa(n){
   const card = document.getElementById('card-comp');
   card.style.display = n.compLineas.length ? '' : 'none';
-  document.querySelectorAll('input[name="comp-meses"]').forEach(r => r.checked = r.value===compMeses);
   if(!n.compLineas.length) return;
   const pos = n.ahorro>=0;
   document.getElementById('comp-hero').innerHTML = pos
@@ -891,9 +885,9 @@ function renderComparativa(n){
   document.querySelector('#tbl-comp tbody').innerHTML = n.compLineas.map(x => `<tr>
       <td>${esc(x.l.modulo)} <span class="chip plan-${esc(x.l.plan)}">${esc(x.l.plan)}</span>${x.l.cantidad>1?` <span class="note">×${x.l.cantidad}</span>`:''}</td>
       <td>${esc(nombreComp(x.l.comp))}${x.l.comp.nota?` <span class="note">· ${esc(x.l.comp.nota)}</span>`:''}</td>
-      <td class="num">${fmt(x.l.comp.precio_mes)}</td><td class="num">${fmt(x.hoy)}</td><td class="num">${fmt(x.jano)}</td>
+      <td class="num">${fmt(x.l.comp.precio_mes)}</td><td><span class="note">${esc(textoMeses(x.l.meses))}</span></td><td class="num">${fmt(x.hoy)}</td><td class="num">${fmt(x.jano)}</td>
       <td class="num" style="color:${x.dif>=0?'var(--green)':'var(--red)'};font-weight:500">${x.dif>=0?'−':'+'}${fmt(Math.abs(x.dif))}</td></tr>`).join('')
-    + `<tr class="r-total"><td>Total</td><td></td><td></td><td class="num">${fmt(n.compHoy)}</td><td class="num">${fmt(n.compJano)}</td><td class="num" style="color:${pos?'var(--green)':'var(--red)'}">${pos?'−':'+'}${fmt(Math.abs(n.ahorro))}</td></tr>`;
+    + `<tr class="r-total"><td>Total</td><td></td><td></td><td></td><td class="num">${fmt(n.compHoy)}</td><td class="num">${fmt(n.compJano)}</td><td class="num" style="color:${pos?'var(--green)':'var(--red)'}">${pos?'−':'+'}${fmt(Math.abs(n.ahorro))}</td></tr>`;
 }
 function leerFormulario(){
   const c = calcular();
@@ -905,7 +899,7 @@ function leerFormulario(){
     meses_apertura: [...apertura],
     lineas: c.lineas, descuento_pct: c.dto, alta_inicial: r2(+v('c-alta')||0), notas: v('c-notas').trim()||null,
     total_anual: c.anual, total_mensual: c.media,
-    comp_meses: compMeses, ahorro_anual: c.compLineas.length ? c.ahorro : null,
+    comp_meses: 'modulo', ahorro_anual: c.compLineas.length ? c.ahorro : null,
   };
 }
 async function guardarPresupuesto(){
@@ -952,7 +946,7 @@ function duplicarPresupuesto(){
   if(dirtyPre && !confirm('Hay cambios sin guardar; el duplicado parte de lo guardado. ¿Seguir?')) return;
   const copia = JSON.parse(JSON.stringify(P));
   copia.id=null; copia.numero=''; copia.fecha=hoy(); copia.estado='borrador';
-  P = copia; apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS); compMeses = P.comp_meses||'todo'; sel = selDesdeLineas(P.lineas);
+  P = copia; apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS); sel = selDesdeLineas(P.lineas);
   abrirEditor(); tocar(); toast('Copia creada: guarda para darle número');
 }
 
@@ -999,12 +993,12 @@ function imprimir(){
     <div class="imp-h">Comparativa con lo que paga hoy</div>
     <div class="imp-ahorro ${c.ahorro>=0?'pos':''}">${c.ahorro>=0 ? `Ahorro anual con Jano: ${fmt2(c.ahorro)} <small>(${c.ahorroPct}% menos: de ${fmt2(c.compHoy)} a ${fmt2(c.compJano)} al año)</small>` : `Diferencia: Jano ${fmt2(-c.ahorro)} más al año <small>(de ${fmt2(c.compHoy)} a ${fmt2(c.compJano)})</small>`}</div>
     <table class="imp comp">
-      <thead><tr><th>Módulo</th><th>Hoy con</th><th class="num">Hoy €/mes</th><th class="num">Hoy €/año</th><th class="num">Jano €/año</th><th class="num">Diferencia</th></tr></thead>
-      <tbody>${c.compLineas.map(x=>`<tr><td>${esc(x.l.modulo)} · ${esc(x.l.plan)}${x.l.cantidad>1?` ×${x.l.cantidad}`:''}</td><td>${esc(nombreComp(x.l.comp))}</td><td class="num">${fmt2(x.l.comp.precio_mes)}</td><td class="num">${fmt2(x.hoy)}</td><td class="num">${fmt2(x.jano)}</td><td class="num">${x.dif>=0?'−':'+'}${fmt2(Math.abs(x.dif))}</td></tr>`).join('')}
-        <tr class="tot"><td>Total</td><td></td><td></td><td class="num">${fmt2(c.compHoy)}</td><td class="num">${fmt2(c.compJano)}</td><td class="num">${c.ahorro>=0?'−':'+'}${fmt2(Math.abs(c.ahorro))}</td></tr>
+      <thead><tr><th>Módulo</th><th>Hoy con</th><th class="num">Hoy €/mes</th><th>Meses</th><th class="num">Hoy €/año</th><th class="num">Jano €/año</th><th class="num">Diferencia</th></tr></thead>
+      <tbody>${c.compLineas.map(x=>`<tr><td>${esc(x.l.modulo)} · ${esc(x.l.plan)}${x.l.cantidad>1?` ×${x.l.cantidad}`:''}</td><td>${esc(nombreComp(x.l.comp))}</td><td class="num">${fmt2(x.l.comp.precio_mes)}</td><td>${esc(textoMeses(x.l.meses))}</td><td class="num">${fmt2(x.hoy)}</td><td class="num">${fmt2(x.jano)}</td><td class="num">${x.dif>=0?'−':'+'}${fmt2(Math.abs(x.dif))}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td></td><td></td><td></td><td class="num">${fmt2(c.compHoy)}</td><td class="num">${fmt2(c.compJano)}</td><td class="num">${c.ahorro>=0?'−':'+'}${fmt2(Math.abs(c.ahorro))}</td></tr>
       </tbody>
     </table>
-    <p class="imp-notas" style="margin-top:6px">Precios de la competencia: tarifas públicas recogidas en el estudio de mercado de octubre de 2026 o indicadas por el cliente; la competencia se cuenta ${compMeses==='apertura'?'solo en los meses de apertura':'los 12 meses del año'}. Jano, con el descuento aplicado.</p>` : ''}
+    <p class="imp-notas" style="margin-top:6px">Precios de la competencia: tarifas públicas recogidas en el estudio de mercado de octubre de 2026 o indicadas por el cliente; a la competencia se le cuentan los mismos meses que a cada módulo de Jano. Jano, con el descuento aplicado.</p>` : ''}
     ${cons.length ? `<p class="imp-notas"><b>A valorar aparte:</b> ${cons.map(l=>`${esc(l.modulo)} (${esc(l.plan)})`).join(', ')}.</p>` : ''}
     ${f.notas ? `<div class="imp-notas">${esc(f.notas)}</div>` : ''}
     <div class="imp-pie">Importes sin IVA. Cada módulo se factura solo los meses indicados. Precios mensuales por licencia de uso de Jano. ${esc(CUENTA_NOMBRE)}.</div>`;
