@@ -3,7 +3,9 @@
      el route handler ANTES de entregar este HTML. Datos en tablas dist_* de esta
      casa (RLS por cuenta), leídas con el token de sesión inyectado.
      v1 (16-10-2026): lista de precios (pestaña Precios) + presupuestos a medida
-     (datos del cliente, selección de módulos, descuento, impresión). -->
+     (datos del cliente, selección de módulos, descuento, impresión).
+     v1.1 (16-10-2026): presupuesto por meses — meses de apertura del cliente, cada
+     módulo se enchufa/desenchufa mes a mes, totales anualizados y calendario mensual. -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -97,7 +99,7 @@ table.g td textarea.inp{min-height:48px}
 .form-grid .f label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
 .f.span2{grid-column:span 2}
 .f.span4{grid-column:span 4}
-.sel-mod{display:grid;grid-template-columns:28px 1fr 90px 1fr 110px 70px 100px;gap:0;align-items:center;padding:7px 8px;border-bottom:0.5px solid var(--border)}
+.sel-mod{display:grid;grid-template-columns:28px 0.8fr 72px 1.3fr 80px 50px 232px 86px;gap:0;align-items:center;padding:7px 8px;border-bottom:0.5px solid var(--border)}
 .sel-mod:last-child{border-bottom:none}
 .sel-mod.on{background:#FAFBF9}
 .sel-mod .mod{font-weight:500}
@@ -106,8 +108,21 @@ table.g td textarea.inp{min-height:48px}
 .sel-mod .cant .inp{width:56px;text-align:right}
 .sel-mod .sub{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
 .sel-mod input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--green)}
-.sel-head{display:grid;grid-template-columns:28px 1fr 90px 1fr 110px 70px 100px;padding:6px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--hdr);border-bottom:0.5px solid var(--border)}
-.sel-head span:nth-child(5),.sel-head span:nth-child(6),.sel-head span:nth-child(7){text-align:right}
+.sel-head{display:grid;grid-template-columns:28px 0.8fr 72px 1.3fr 80px 50px 232px 86px;padding:6px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--hdr);border-bottom:0.5px solid var(--border)}
+.sel-head span:nth-child(5),.sel-head span:nth-child(6),.sel-head span:nth-child(8){text-align:right}
+.sel-head span:nth-child(7){padding-left:6px}
+/* interruptores de meses */
+.mes-tog{display:inline-flex;gap:2px;padding-left:6px}
+.mes-tog button{width:17px;height:21px;font-size:9px;font-weight:600;border:0.5px solid var(--border);background:var(--surface);border-radius:3px;cursor:pointer;color:#B5BBB4;padding:0;font-family:inherit;line-height:1}
+.mes-tog button.on{background:var(--green);color:#fff;border-color:var(--green)}
+.mes-tog button:disabled{opacity:.35;cursor:default}
+.mes-tog button:not(:disabled):hover{border-color:var(--green)}
+.mes-tog.big{padding-left:0;gap:3px}
+.mes-tog.big button{width:34px;height:28px;font-size:11px}
+.sel-mod .dur{font-size:10px;color:var(--muted);display:block;margin-top:2px}
+table.g td.off{color:#C9CDC7;text-align:center}
+table.g td.cal{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.g th.cal{text-align:right}
 .sel-wrap{border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
 .totales{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tot-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px}
@@ -148,6 +163,12 @@ table.g td textarea.inp{min-height:48px}
   .imp-tot{margin-left:auto;width:320px}
   .imp-tot .r{display:flex;justify-content:space-between;padding:4px 6px}
   .imp-tot .r.big{font-size:16px;font-weight:700;border-top:2px solid #2F3A45;margin-top:4px;padding-top:8px}
+  table.imp.cal{font-size:10px;margin-top:6px}
+  table.imp.cal th,table.imp.cal td{padding:4px 3px;text-align:right}
+  table.imp.cal th:first-child,table.imp.cal td:first-child{text-align:left}
+  table.imp.cal td.off{color:#bbb;text-align:center}
+  table.imp.cal tr.tot td{font-weight:700;border-top:1px solid #2F3A45}
+  .imp-h{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7A848C;margin:16px 0 4px}
   .imp-notas{margin-top:22px;font-size:11px;color:#444;white-space:pre-line;line-height:1.5}
   .imp-pie{margin-top:30px;font-size:10px;color:#888;border-top:0.5px solid #ccc;padding-top:8px}
 }
@@ -163,9 +184,10 @@ table.g td textarea.inp{min-height:48px}
   .f.span4{grid-column:span 2}
   .totales{grid-template-columns:1fr}
   .sel-head{display:none}
-  .sel-mod{grid-template-columns:28px 1fr 80px;grid-template-areas:"chk mod plan" "chk cont cont" "chk pr cant" "chk sub sub";row-gap:4px}
+  .sel-mod{grid-template-columns:28px 1fr 80px;grid-template-areas:"chk mod plan" "chk cont cont" "chk pr cant" "chk mes mes" "chk sub sub";row-gap:4px}
   .sel-mod>:nth-child(1){grid-area:chk}.sel-mod>:nth-child(2){grid-area:mod}.sel-mod>:nth-child(3){grid-area:plan}
-  .sel-mod>:nth-child(4){grid-area:cont}.sel-mod>:nth-child(5){grid-area:pr;text-align:left}.sel-mod>:nth-child(6){grid-area:cant}.sel-mod>:nth-child(7){grid-area:sub}
+  .sel-mod>:nth-child(4){grid-area:cont}.sel-mod>:nth-child(5){grid-area:pr;text-align:left}.sel-mod>:nth-child(6){grid-area:cant}.sel-mod>:nth-child(7){grid-area:mes}.sel-mod>:nth-child(8){grid-area:sub}
+  .mes-tog{padding-left:0;flex-wrap:wrap}.mes-tog button{width:22px;height:24px;font-size:10px}
 }
 </style>
 </head>
@@ -206,7 +228,7 @@ table.g td textarea.inp{min-height:48px}
       </header>
       <div class="content">
         <div class="tbl-wrap"><table class="g">
-          <thead><tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>CIF</th><th class="num">Centros</th><th class="num">Empleados</th><th class="num">Módulos</th><th class="num">€/mes</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>CIF</th><th class="num">Centros</th><th class="num">Empleados</th><th>Apertura</th><th class="num">Módulos</th><th class="num">€/año</th><th class="num">Media €/mes</th><th>Estado</th></tr></thead>
           <tbody id="pre-tbody"></tbody>
         </table></div>
         <div class="empty" id="pre-vacio" style="display:none">Todavía no hay presupuestos. Pulsa «Nuevo presupuesto» para hacer el primero.</div>
@@ -252,13 +274,31 @@ table.g td textarea.inp{min-height:48px}
         </div>
 
         <div class="card">
+          <div class="card-title">Meses de apertura</div>
+          <div class="card-sub">Los meses en que el cliente tiene abierto. Es la plantilla de los módulos que marques; después, cada módulo se puede enchufar o desenchufar mes a mes en su fila.</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <span class="mes-tog big" id="apertura-tog"></span>
+            <span class="note" id="apertura-txt" style="min-width:150px"></span>
+            <span style="flex:1"></span>
+            <button class="btn btn-sm" onclick="setApertura(TODOS)">Todo el año</button>
+            <button class="btn btn-sm" onclick="setApertura(TEMPORADA)">Temporada (abr–oct)</button>
+            <button class="btn btn-sm" onclick="aplicarApertura()" title="Pone los meses de apertura en todos los módulos marcados">Aplicar a todos los módulos</button>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">Módulos</div>
-          <div class="card-sub">Marca lo que entra en el presupuesto. «Cantidad» sirve para repetir una línea (por ejemplo, un TPV por centro). Los precios son los de la pestaña Precios en el momento de guardar; si la lista cambia después, el presupuesto no se mueve.</div>
+          <div class="card-sub">Marca lo que entra en el presupuesto. «Cantidad» repite una línea (por ejemplo, un TPV por centro). Con los 12 interruptores enchufas o desenchufas cada módulo mes a mes: solo se cobra en los meses en verde. Los precios son los de la pestaña Precios al guardar; si la lista cambia después, el presupuesto no se mueve.</div>
           <div class="sel-wrap">
-            <div class="sel-head"><span></span><span>Módulo</span><span>Plan</span><span>Contenido</span><span>Precio/mes</span><span>Cant.</span><span>Subtotal</span></div>
+            <div class="sel-head"><span></span><span>Módulo</span><span>Plan</span><span>Contenido</span><span>Precio/mes</span><span>Cant.</span><span>Meses</span><span>€/año</span></div>
             <div id="sel-lineas"></div>
           </div>
-          <p class="note" id="sel-huerfanas" style="margin-top:8px;display:none"></p>
+        </div>
+
+        <div class="card" id="card-cal" style="display:none">
+          <div class="card-title">Calendario mensual</div>
+          <div class="card-sub">Lo que paga el cliente cada mes, módulo a módulo (con el descuento aplicado en la fila de total).</div>
+          <div class="tbl-wrap"><table class="g" id="tbl-cal"><thead></thead><tbody></tbody></table></div>
         </div>
 
         <div class="totales">
@@ -269,11 +309,12 @@ table.g td textarea.inp{min-height:48px}
           </div>
           <div class="card">
             <div class="card-title">Totales</div>
-            <div class="tot-row"><span>Subtotal mensual</span><b id="t-sub">0 €</b></div>
+            <div class="tot-row"><span>Subtotal anual <small id="t-meses-info"></small></span><b id="t-sub">0 €</b></div>
             <div class="tot-row"><span>Descuento <small>%</small></span><input class="inp num" id="c-descuento" type="number" min="0" max="100" step="0.5" value="0" oninput="tocar();calcular()"></div>
             <div class="tot-row"><span>Alta inicial <small>(pago único, €)</small></span><input class="inp num" id="c-alta" type="number" min="0" step="1" value="0" oninput="tocar();calcular()"></div>
-            <div class="tot-row big"><span>Total mensual</span><span id="t-mes">0 €</span></div>
-            <div class="tot-row"><span>Equivale al año <small>(×12)</small></span><b id="t-anio">0 €</b></div>
+            <div class="tot-row big"><span>Total anual</span><span id="t-anio">0 €</span></div>
+            <div class="tot-row"><span>Media mensual <small>(÷ 12)</small></span><b id="t-media">0 €</b></div>
+            <div class="tot-row"><span>Cuota en los meses activos <small id="t-activos-info"></small></span><b id="t-activos">0 €</b></div>
             <p class="note" id="t-consultar" style="margin-top:8px;display:none"></p>
           </div>
         </div>
@@ -324,13 +365,18 @@ window.fetch = async (u,o) => { const r = await _fetchOriginal(u,o); if (r.statu
 const PLANES = ['Normal','Premium','Asesoría'];
 const TIPOS = [['precio','Precio'],['incluido','Incluido'],['consultar','A consultar']];
 const ESTADOS = { borrador:'Borrador', enviado:'Enviado', aceptado:'Aceptado', rechazado:'Rechazado' };
+const MES_C = ['E','F','M','A','M','J','J','A','S','O','N','D'];
+const MES_N = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const TODOS = [1,2,3,4,5,6,7,8,9,10,11,12];
+const TEMPORADA = [4,5,6,7,8,9,10];
 
 // ───────────────────────────── ESTADO ─────────────────────────────
 let precios = [];        // filas dist_precios (todas, activas o no)
 let preciosDel = new Set();
 let presupuestos = [];   // filas dist_presupuestos
 let P = null;            // presupuesto abierto en el editor (objeto de trabajo)
-let sel = new Map();     // precio_id -> {cantidad} (selección en el editor)
+let sel = new Map();     // precio_id -> {cantidad, meses:[1..12], copia} (selección en el editor)
+let apertura = [...TODOS]; // meses de apertura del presupuesto abierto
 let dirtyPre = false, dirtyPrecios = false;
 let tabActual = 'presupuestos';
 
@@ -447,25 +493,62 @@ function renderLista(){
       <td>${esc(p.cif||'')}</td>
       <td class="num">${p.n_centros??''}</td>
       <td class="num">${p.n_empleados??''}</td>
+      <td><span class="note">${textoMeses(p.meses_apertura||TODOS)}</span></td>
       <td class="num">${(p.lineas||[]).length}</td>
-      <td class="num"><b>${fmt(p.total_mensual)}</b></td>
+      <td class="num"><b>${fmt(p.total_anual ?? (p.total_mensual*12))}</b></td>
+      <td class="num">${fmt((p.total_anual ?? (p.total_mensual*12))/12)}</td>
       <td><span class="chip ${p.estado}">${ESTADOS[p.estado]||p.estado}</span></td>
-    </tr>`).join('') || (presupuestos.length ? '<tr><td colspan="9" class="empty">Nada coincide con la búsqueda.</td></tr>' : '');
+    </tr>`).join('') || (presupuestos.length ? '<tr><td colspan="11" class="empty">Nada coincide con la búsqueda.</td></tr>' : '');
 }
+
+// ═════════════════════════════ MESES ═════════════════════════════
+const normMeses = arr => [...new Set((arr||[]).map(Number).filter(m=>m>=1&&m<=12))].sort((a,b)=>a-b);
+/** Texto corto de una lista de meses: «Todo el año», «Abr–Oct (7 meses)», «Ene, Jul, Ago (3 meses)». */
+function textoMeses(meses){
+  const M = normMeses(meses);
+  if(M.length===12) return 'Todo el año';
+  if(!M.length) return 'Ningún mes';
+  const contiguo = M.every((m,i)=>i===0 || m===M[i-1]+1);
+  const n = ` (${M.length} ${M.length===1?'mes':'meses'})`;
+  if(contiguo && M.length>2) return `${MES_N[M[0]-1]}–${MES_N[M[M.length-1]-1]}${n}`;
+  return M.map(m=>MES_N[m-1]).join(', ') + n;
+}
+function renderApertura(){
+  document.getElementById('apertura-tog').innerHTML = TODOS.map(m=>`<button class="${apertura.includes(m)?'on':''}" onclick="toggleApertura(${m})" title="${MES_N[m-1]}">${MES_N[m-1]}</button>`).join('');
+  document.getElementById('apertura-txt').textContent = textoMeses(apertura);
+}
+function toggleApertura(m){ apertura = apertura.includes(m) ? apertura.filter(x=>x!==m) : normMeses([...apertura,m]); tocar(); renderApertura(); }
+function setApertura(arr){ apertura=[...arr]; tocar(); renderApertura(); }
+function aplicarApertura(){
+  if(!apertura.length) return toast('No hay ningún mes de apertura marcado',true);
+  for(const s of sel.values()) s.meses=[...apertura];
+  tocar(); renderSeleccion(); calcular(); toast('Meses de apertura aplicados a los módulos marcados');
+}
+function toggleMes(id,m){
+  const s=sel.get(id); if(!s) return;
+  s.meses = s.meses.includes(m) ? s.meses.filter(x=>x!==m) : normMeses([...s.meses,m]);
+  tocar(); renderSeleccion(); calcular();
+}
+function mesesLinea(id, arr){ const s=sel.get(id); if(!s) return; s.meses=[...arr]; tocar(); renderSeleccion(); calcular(); }
 
 // ═════════════════════════════ PRESUPUESTOS · EDITOR ═════════════════════════════
 function nuevoPresupuesto(){
   if(dirtyPrecios && !confirm('Hay cambios sin guardar en Precios. ¿Seguir?')) return;
-  P = { id:null, numero:'', fecha:hoy(), estado:'borrador', cliente_nombre:'', cif:'', contacto:'', email:'', telefono:'', direccion:'', n_centros:null, n_empleados:null, lineas:[], descuento_pct:0, alta_inicial:0, notas:'' };
+  P = { id:null, numero:'', fecha:hoy(), estado:'borrador', cliente_nombre:'', cif:'', contacto:'', email:'', telefono:'', direccion:'', n_centros:null, n_empleados:null, lineas:[], descuento_pct:0, alta_inicial:0, notas:'', meses_apertura:[...TODOS] };
+  apertura = [...TODOS];
   sel = new Map();
   // de serie: lo que va incluido se marca solo
-  precios.filter(p=>p.activo && p.tipo==='incluido').forEach(p => sel.set(p.id,{cantidad:1}));
+  precios.filter(p=>p.activo && p.tipo==='incluido').forEach(p => sel.set(p.id,{cantidad:1, meses:[...apertura]}));
   abrirEditor();
+}
+function selDesdeLineas(lineas){
+  return new Map((lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, meses: l.meses ? normMeses(l.meses) : [...TODOS], copia:l}]));
 }
 function abrirPresupuesto(id){
   const p = presupuestos.find(x=>x.id===id); if(!p) return;
   P = JSON.parse(JSON.stringify(p));
-  sel = new Map((P.lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, copia:l}]));
+  apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS);
+  sel = selDesdeLineas(P.lineas);
   abrirEditor();
 }
 function abrirEditor(){
@@ -479,7 +562,7 @@ function abrirEditor(){
   setv('c-centros',P.n_centros); setv('c-empleados',P.n_empleados); setv('c-notas',P.notas);
   setv('c-descuento',P.descuento_pct||0); setv('c-alta',P.alta_inicial||0);
   dirtyPre=false; document.getElementById('dirty-pre').classList.remove('on');
-  renderChipEstado(); renderSeleccion(); calcular();
+  renderChipEstado(); renderApertura(); renderSeleccion(); calcular();
   window.scrollTo(0,0);
 }
 function volverLista(){
@@ -501,8 +584,12 @@ function precioLinea(p){ return p.tipo==='precio' ? (+p.precio||0) : 0; }
 function renderSeleccion(){
   const lineas = lineasOfrecidas();
   document.getElementById('sel-lineas').innerHTML = lineas.map(p => {
-    const s = sel.get(p.id); const on = !!s; const cant = s?.cantidad||1;
+    const s = sel.get(p.id); const on = !!s; const cant = s?.cantidad||1; const meses = s?.meses||[];
     const pr = p.tipo==='precio' ? fmt(p.precio) : (p.tipo==='incluido' ? '<span class="chip">Incluido</span>' : '<span class="chip plan-Asesoría">A consultar</span>');
+    const togs = p.tipo==='precio'
+      ? `<span class="mes-tog">${TODOS.map(m=>`<button class="${on&&meses.includes(m)?'on':''}" ${on?'':'disabled'} onclick="toggleMes('${p.id}',${m})" title="${MES_N[m-1]}">${MES_C[m-1]}</button>`).join('')}</span>${on?`<span class="dur">${textoMeses(meses)}${meses.length!==apertura.length||meses.some(m=>!apertura.includes(m))?` · <a href="#" onclick="mesesLinea('${p.id}',apertura);return false" title="Poner los meses de apertura">= apertura</a>`:''}</span>`:''}`
+      : (on ? '<span class="dur" style="padding-left:6px">Sin coste mensual</span>' : '');
+    const anual = on && p.tipo==='precio' ? precioLinea(p)*cant*meses.length : null;
     return `<div class="sel-mod ${on?'on':''} ${p._huerfana?'huerfana':''}">
       <span><input type="checkbox" ${on?'checked':''} onchange="toggleLinea('${p.id}',this.checked)"></span>
       <span class="mod">${esc(p.modulo)}${p._huerfana?' <span class="chip">ya no está en la lista</span>':''}</span>
@@ -510,38 +597,64 @@ function renderSeleccion(){
       <span class="cont">${esc(p.contenido)}</span>
       <span class="pr">${pr}</span>
       <span class="cant">${p.tipo==='precio' ? `<input class="inp num" type="number" min="1" step="1" value="${cant}" ${on?'':'disabled'} oninput="cantLinea('${p.id}',this.value)">` : ''}</span>
-      <span class="sub">${on && p.tipo==='precio' ? fmt(precioLinea(p)*cant) : ''}</span>
+      <span>${togs}</span>
+      <span class="sub">${anual!=null ? fmt(anual) : ''}</span>
     </div>`;
   }).join('') || '<div class="empty">No hay líneas activas en la lista de precios.</div>';
 }
 function toggleLinea(id,on){
-  if(on){ const prev=sel.get(id); sel.set(id,{cantidad:prev?.cantidad||1, copia:prev?.copia}); } else sel.delete(id);
+  if(on){ const prev=sel.get(id); sel.set(id,{cantidad:prev?.cantidad||1, meses: prev?.meses ? [...prev.meses] : [...apertura], copia:prev?.copia}); } else sel.delete(id);
   tocar(); renderSeleccion(); calcular();
 }
 function cantLinea(id,val){ const s=sel.get(id); if(!s) return; s.cantidad=Math.max(1,parseInt(val)||1); tocar(); renderSeleccion(); calcular(); }
 
-/** Líneas del presupuesto tal y como se guardan (copia de la lista). */
+/** Líneas del presupuesto tal y como se guardan (copia de la lista + meses). */
 function lineasPresupuesto(){
   const porId = new Map(lineasOfrecidas().map(p=>[p.id,p]));
   const out=[];
   for(const [id,s] of sel){ const p=porId.get(id); if(!p) continue;
-    out.push({ precio_id:id, orden:p.orden||0, modulo:p.modulo, plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio:p.tipo==='precio'?r2(p.precio):null, cantidad:p.tipo==='precio'?(s.cantidad||1):1 });
+    out.push({ precio_id:id, orden:p.orden||0, modulo:p.modulo, plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio:p.tipo==='precio'?r2(p.precio):null, cantidad:p.tipo==='precio'?(s.cantidad||1):1, meses: p.tipo==='precio' ? normMeses(s.meses) : [...apertura] });
   }
   return out.sort((a,b)=>(a.orden-b.orden)||a.modulo.localeCompare(b.modulo));
 }
+/** Números del presupuesto: por mes, anual, descuento, medias. */
+function calcularNumeros(L, dto){
+  const porMes = Array(12).fill(0);
+  L.forEach(l => { if(l.tipo!=='precio') return; l.meses.forEach(m => porMes[m-1] += (l.precio||0)*l.cantidad); });
+  const subAnual = r2(porMes.reduce((a,b)=>a+b,0));
+  const factor = 1 - dto/100;
+  const anual = r2(subAnual*factor);
+  const porMesNeto = porMes.map(x=>r2(x*factor));
+  const mesesActivos = porMes.filter(x=>x>0).length;
+  return { porMes, porMesNeto, subAnual, anual, factor, media: r2(anual/12), mesesActivos, cuotaActivos: mesesActivos ? r2(anual/mesesActivos) : 0 };
+}
 function calcular(){
   const L = lineasPresupuesto();
-  const sub = L.reduce((t,l)=>t+(l.precio||0)*l.cantidad,0);
   const dto = Math.min(100,Math.max(0,+v('c-descuento')||0));
-  const mes = r2(sub*(1-dto/100));
-  document.getElementById('t-sub').textContent = fmt2(sub);
-  document.getElementById('t-mes').textContent = fmt2(mes);
-  document.getElementById('t-anio').textContent = fmt2(mes*12);
+  const n = calcularNumeros(L, dto);
+  document.getElementById('t-sub').textContent = fmt2(n.subAnual);
+  document.getElementById('t-anio').textContent = fmt2(n.anual);
+  document.getElementById('t-media').textContent = fmt2(n.media);
+  document.getElementById('t-activos').textContent = n.mesesActivos ? fmt2(n.cuotaActivos) : '—';
+  document.getElementById('t-activos-info').textContent = n.mesesActivos ? `(÷ ${n.mesesActivos} ${n.mesesActivos===1?'mes':'meses'} con cuota)` : '';
+  const conPrecio = L.filter(l=>l.tipo==='precio');
+  document.getElementById('t-meses-info').textContent = conPrecio.length ? `(${conPrecio.length} ${conPrecio.length===1?'módulo':'módulos'} con cuota)` : '';
   const cons = L.filter(l=>l.tipo==='consultar');
   const tc = document.getElementById('t-consultar');
   tc.style.display = cons.length ? '' : 'none';
   tc.textContent = cons.length ? 'Pendiente de valorar aparte: ' + cons.map(l=>`${l.modulo} (${l.plan})`).join(', ') + '.' : '';
-  return { lineas:L, sub, dto, mes };
+  renderCalendario(conPrecio, n);
+  return { lineas:L, dto, ...n };
+}
+function renderCalendario(conPrecio, n){
+  const card = document.getElementById('card-cal');
+  card.style.display = conPrecio.length ? '' : 'none';
+  if(!conPrecio.length) return;
+  const t = document.getElementById('tbl-cal');
+  t.querySelector('thead').innerHTML = `<tr><th>Módulo</th>${MES_N.map(m=>`<th class="cal">${m}</th>`).join('')}<th class="cal">Año</th></tr>`;
+  const fila = l => `<tr><td>${esc(l.modulo)} <span class="chip plan-${esc(l.plan)}">${esc(l.plan)}</span>${l.cantidad>1?` <span class="note">×${l.cantidad}</span>`:''}</td>${TODOS.map(m=> l.meses.includes(m) ? `<td class="cal">${fmt(l.precio*l.cantidad)}</td>` : '<td class="off">·</td>').join('')}<td class="cal"><b>${fmt(l.precio*l.cantidad*l.meses.length)}</b></td></tr>`;
+  const tot = `<tr class="r-total"><td>Total${n.factor<1?` <span class="note">(con ${r2((1-n.factor)*100)}% dto.)</span>`:''}</td>${n.porMesNeto.map(x=>`<td class="cal">${x?fmt(x):'<span style="color:#C9CDC7">·</span>'}</td>`).join('')}<td class="cal">${fmt(n.anual)}</td></tr>`;
+  t.querySelector('tbody').innerHTML = conPrecio.map(fila).join('') + tot;
 }
 function leerFormulario(){
   const c = calcular();
@@ -550,13 +663,17 @@ function leerFormulario(){
     cliente_nombre: v('c-nombre').trim(), cif: v('c-cif').trim()||null, contacto: v('c-contacto').trim()||null,
     email: v('c-email').trim()||null, telefono: v('c-telefono').trim()||null, direccion: v('c-direccion').trim()||null,
     n_centros: v('c-centros')===''?null:parseInt(v('c-centros')), n_empleados: v('c-empleados')===''?null:parseInt(v('c-empleados')),
-    lineas: c.lineas, descuento_pct: c.dto, alta_inicial: r2(+v('c-alta')||0), notas: v('c-notas').trim()||null, total_mensual: c.mes,
+    meses_apertura: [...apertura],
+    lineas: c.lineas, descuento_pct: c.dto, alta_inicial: r2(+v('c-alta')||0), notas: v('c-notas').trim()||null,
+    total_anual: c.anual, total_mensual: c.media,
   };
 }
 async function guardarPresupuesto(){
   const f = leerFormulario();
   if(!f.cliente_nombre) return toast('Falta el nombre del cliente',true);
   if(!f.lineas.length && !confirm('No has marcado ningún módulo. ¿Guardar igualmente?')) return;
+  const sinMes = f.lineas.filter(l=>l.tipo==='precio' && !l.meses.length);
+  if(sinMes.length && !confirm(`Hay módulos marcados sin ningún mes (${sinMes.map(l=>l.modulo).join(', ')}): no se cobrarán. ¿Guardar igualmente?`)) return;
   try{
     loading(true,'Guardando…');
     let fila;
@@ -570,7 +687,7 @@ async function guardarPresupuesto(){
     const i = presupuestos.findIndex(x=>x.id===fila.id);
     if(i>=0) presupuestos[i]=fila; else presupuestos.unshift(fila);
     P = JSON.parse(JSON.stringify(fila));
-    sel = new Map((P.lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, copia:l}]));
+    sel = selDesdeLineas(P.lineas);
     document.getElementById('pre-titulo').textContent = `Presupuesto ${P.numero}`;
     document.getElementById('btn-borrar').style.display=''; document.getElementById('btn-duplicar').style.display='';
     dirtyPre=false; document.getElementById('dirty-pre').classList.remove('on');
@@ -595,7 +712,7 @@ function duplicarPresupuesto(){
   if(dirtyPre && !confirm('Hay cambios sin guardar; el duplicado parte de lo guardado. ¿Seguir?')) return;
   const copia = JSON.parse(JSON.stringify(P));
   copia.id=null; copia.numero=''; copia.fecha=hoy(); copia.estado='borrador';
-  P = copia; sel = new Map((P.lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, copia:l}]));
+  P = copia; apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS); sel = selDesdeLineas(P.lineas);
   abrirEditor(); tocar(); toast('Copia creada: guarda para darle número');
 }
 
@@ -604,9 +721,18 @@ function imprimir(){
   const f = leerFormulario();
   const c = calcular();
   const conPrecio = f.lineas.filter(l=>l.tipo==='precio'), incl = f.lineas.filter(l=>l.tipo==='incluido'), cons = f.lineas.filter(l=>l.tipo==='consultar');
-  const fila = l => `<tr><td><b>${esc(l.modulo)}</b> · ${esc(l.plan)}<div class="cont">${esc(l.contenido)}</div></td><td class="num">${l.tipo==='precio'?fmt2(l.precio):(l.tipo==='incluido'?'Incluido':'A consultar')}</td><td class="num">${l.tipo==='precio'?l.cantidad:''}</td><td class="num">${l.tipo==='precio'?fmt2(l.precio*l.cantidad):''}</td></tr>`;
+  const fila = l => `<tr><td><b>${esc(l.modulo)}</b> · ${esc(l.plan)}<div class="cont">${esc(l.contenido)}</div></td><td class="num">${l.tipo==='precio'?fmt2(l.precio):(l.tipo==='incluido'?'Incluido':'A consultar')}</td><td class="num">${l.tipo==='precio'?l.cantidad:''}</td><td>${l.tipo==='precio'?esc(textoMeses(l.meses)):''}</td><td class="num">${l.tipo==='precio'?fmt2(l.precio*l.cantidad*l.meses.length):''}</td></tr>`;
   const datos = [f.cif&&`CIF ${esc(f.cif)}`, f.direccion&&esc(f.direccion), f.contacto&&esc(f.contacto), f.email&&esc(f.email), f.telefono&&esc(f.telefono)].filter(Boolean).join('<br>');
   const dim = [f.n_centros!=null&&`${f.n_centros} centro${f.n_centros===1?'':'s'}`, f.n_empleados!=null&&`${f.n_empleados} empleado${f.n_empleados===1?'':'s'}`].filter(Boolean).join(' · ');
+  const calFila = l => `<tr><td>${esc(l.modulo)}${l.cantidad>1?` ×${l.cantidad}`:''}</td>${TODOS.map(m=> l.meses.includes(m) ? `<td>${fmt(l.precio*l.cantidad)}</td>` : '<td class="off">·</td>').join('')}<td><b>${fmt(l.precio*l.cantidad*l.meses.length)}</b></td></tr>`;
+  const calendario = conPrecio.length ? `
+    <div class="imp-h">Calendario mensual${c.factor<1?' (con descuento)':''}</div>
+    <table class="imp cal">
+      <thead><tr><th>Módulo</th>${MES_N.map(m=>`<th>${m}</th>`).join('')}<th>Año</th></tr></thead>
+      <tbody>${conPrecio.map(calFila).join('')}
+        <tr class="tot"><td>Total</td>${c.porMesNeto.map(x=>`<td>${x?fmt(x):'·'}</td>`).join('')}<td>${fmt(c.anual)}</td></tr>
+      </tbody>
+    </table>` : '';
   document.getElementById('impresion').innerHTML = `
     <div class="imp-cab">
       <div><div class="imp-marca">Ja<span>no</span></div><div style="font-size:11px;color:#555">${esc(CUENTA_NOMBRE)}</div></div>
@@ -614,22 +740,24 @@ function imprimir(){
     </div>
     <div class="imp-cliente">
       <div><h4>Cliente</h4><p><b>${esc(f.cliente_nombre)||'—'}</b><br>${datos}</p></div>
-      <div><h4>Dimensión</h4><p>${dim||'—'}</p></div>
+      <div><h4>Dimensión</h4><p>${dim||'—'}<br>Apertura: ${esc(textoMeses(f.meses_apertura))}</p></div>
     </div>
     <table class="imp">
-      <thead><tr><th>Módulo</th><th class="num">Precio/mes</th><th class="num">Cant.</th><th class="num">Importe/mes</th></tr></thead>
-      <tbody>${[...conPrecio,...incl,...cons].map(fila).join('') || '<tr><td colspan="4" style="color:#888">Sin módulos</td></tr>'}</tbody>
+      <thead><tr><th>Módulo</th><th class="num">Precio/mes</th><th class="num">Cant.</th><th>Meses</th><th class="num">Importe/año</th></tr></thead>
+      <tbody>${[...conPrecio,...incl,...cons].map(fila).join('') || '<tr><td colspan="5" style="color:#888">Sin módulos</td></tr>'}</tbody>
     </table>
     <div class="imp-tot">
-      <div class="r"><span>Subtotal mensual</span><span>${fmt2(c.sub)}</span></div>
-      ${c.dto ? `<div class="r"><span>Descuento ${c.dto}%</span><span>−${fmt2(c.sub-c.mes)}</span></div>` : ''}
-      <div class="r big"><span>Total mensual</span><span>${fmt2(c.mes)}</span></div>
-      <div class="r"><span>Equivalente anual</span><span>${fmt2(c.mes*12)}</span></div>
+      <div class="r"><span>Subtotal anual</span><span>${fmt2(c.subAnual)}</span></div>
+      ${c.dto ? `<div class="r"><span>Descuento ${c.dto}%</span><span>−${fmt2(c.subAnual-c.anual)}</span></div>` : ''}
+      <div class="r big"><span>Total anual</span><span>${fmt2(c.anual)}</span></div>
+      <div class="r"><span>Media mensual (÷ 12)</span><span>${fmt2(c.media)}</span></div>
+      ${c.mesesActivos && c.mesesActivos<12 ? `<div class="r"><span>Cuota en los ${c.mesesActivos} meses con servicio</span><span>${fmt2(c.cuotaActivos)}</span></div>` : ''}
       ${f.alta_inicial ? `<div class="r"><span>Alta inicial (pago único)</span><span>${fmt2(f.alta_inicial)}</span></div>` : ''}
     </div>
+    ${calendario}
     ${cons.length ? `<p class="imp-notas"><b>A valorar aparte:</b> ${cons.map(l=>`${esc(l.modulo)} (${esc(l.plan)})`).join(', ')}.</p>` : ''}
     ${f.notas ? `<div class="imp-notas">${esc(f.notas)}</div>` : ''}
-    <div class="imp-pie">Importes sin IVA. Precios mensuales por licencia de uso de Jano. ${esc(CUENTA_NOMBRE)}.</div>`;
+    <div class="imp-pie">Importes sin IVA. Cada módulo se factura solo los meses indicados. Precios mensuales por licencia de uso de Jano. ${esc(CUENTA_NOMBRE)}.</div>`;
   window.print();
 }
 </script>
