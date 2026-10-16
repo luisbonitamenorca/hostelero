@@ -5,7 +5,9 @@
      v1 (16-10-2026): lista de precios (pestaña Precios) + presupuestos a medida
      (datos del cliente, selección de módulos, descuento, impresión).
      v1.1 (16-10-2026): presupuesto por meses — meses de apertura del cliente, cada
-     módulo se enchufa/desenchufa mes a mes, totales anualizados y calendario mensual. -->
+     módulo se enchufa/desenchufa mes a mes, totales anualizados y calendario mensual.
+     v1.2 (16-10-2026): precio editable por línea del presupuesto (la lista queda de referencia);
+     las líneas «A consultar» admiten precio, cantidad y meses y entran en los totales. -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -105,6 +107,9 @@ table.g td textarea.inp{min-height:48px}
 .sel-mod .mod{font-weight:500}
 .sel-mod .cont{font-size:11px;color:var(--muted);white-space:pre-line;line-height:1.35}
 .sel-mod .pr{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sel-mod .pr .inp{width:72px;text-align:right;display:inline-block}
+.sel-mod .pr .lista{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+.sel-mod .pr .lista.dif{color:var(--amber)}
 .sel-mod .cant .inp{width:56px;text-align:right}
 .sel-mod .sub{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
 .sel-mod input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--green)}
@@ -288,7 +293,7 @@ table.g th.cal{text-align:right}
 
         <div class="card">
           <div class="card-title">Módulos</div>
-          <div class="card-sub">Marca lo que entra en el presupuesto. «Cantidad» repite una línea (por ejemplo, un TPV por centro). Con los 12 interruptores enchufas o desenchufas cada módulo mes a mes: solo se cobra en los meses en verde. Los precios son los de la pestaña Precios al guardar; si la lista cambia después, el presupuesto no se mueve.</div>
+          <div class="card-sub">Marca lo que entra en el presupuesto. El <b>precio</b> se puede cambiar en cada línea (debajo queda el de la lista como referencia); en las líneas «A consultar» pon el precio que acordéis y entran en los totales. «Cantidad» repite una línea (por ejemplo, un TPV por centro). Con los 12 interruptores enchufas o desenchufas cada módulo mes a mes: solo se cobra en los meses en verde. Los precios son los de la pestaña Precios al guardar; si la lista cambia después, el presupuesto no se mueve.</div>
           <div class="sel-wrap">
             <div class="sel-head"><span></span><span>Módulo</span><span>Plan</span><span>Contenido</span><span>Precio/mes</span><span>Cant.</span><span>Meses</span><span>€/año</span></div>
             <div id="sel-lineas"></div>
@@ -542,7 +547,8 @@ function nuevoPresupuesto(){
   abrirEditor();
 }
 function selDesdeLineas(lineas){
-  return new Map((lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, meses: l.meses ? normMeses(l.meses) : [...TODOS], copia:l}]));
+  // precio: el guardado en la línea (copia del momento); así un presupuesto no cambia aunque cambie la lista
+  return new Map((lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, meses: l.meses ? normMeses(l.meses) : [...TODOS], precio: l.tipo==='incluido' ? null : (l.precio ?? null), copia:l}]));
 }
 function abrirPresupuesto(id){
   const p = presupuestos.find(x=>x.id===id); if(!p) return;
@@ -580,30 +586,45 @@ function lineasOfrecidas(){
   const huerfanas = [...sel.entries()].filter(([id,s]) => !ids.has(id) && s.copia).map(([id,s]) => ({ ...s.copia, id, _huerfana:true }));
   return [...activas, ...huerfanas];
 }
-function precioLinea(p){ return p.tipo==='precio' ? (+p.precio||0) : 0; }
+/** Precio efectivo de una línea marcada: el escrito en el presupuesto o, si no, el de la lista. null = a consultar sin precio. */
+function precioEf(p,s){ if(p.tipo==='incluido') return 0; if(s && s.precio!=null) return +s.precio; return p.tipo==='precio' ? (+p.precio||0) : null; }
+/** ¿La línea entra en los totales? (todo lo que tenga precio, salvo lo incluido) */
+const esCobrable = l => l.tipo!=='incluido' && l.precio!=null;
+function precioLinea(id,val){ const s=sel.get(id); if(!s) return; s.precio = (val===''||val==null||isNaN(+val)) ? null : Math.max(0,+val); tocar(); renderSeleccion(); calcular(); }
 function renderSeleccion(){
   const lineas = lineasOfrecidas();
   document.getElementById('sel-lineas').innerHTML = lineas.map(p => {
     const s = sel.get(p.id); const on = !!s; const cant = s?.cantidad||1; const meses = s?.meses||[];
-    const pr = p.tipo==='precio' ? fmt(p.precio) : (p.tipo==='incluido' ? '<span class="chip">Incluido</span>' : '<span class="chip plan-Asesoría">A consultar</span>');
-    const togs = p.tipo==='precio'
+    const pe = on ? precioEf(p,s) : null;          // precio efectivo si está marcada
+    const editable = p.tipo!=='incluido';           // precio y consultar: se puede escribir el precio
+    const cobrable = on && editable && pe!=null;
+    let pr;
+    if(!editable) pr = '<span class="chip">Incluido</span>';
+    else if(!on) pr = p.tipo==='precio' ? fmt(p.precio) : '<span class="chip plan-Asesoría">A consultar</span>';
+    else {
+      const val = s.precio!=null ? s.precio : (p.tipo==='precio' ? p.precio : '');
+      const dif = p.tipo==='precio' && s.precio!=null && +s.precio!==+p.precio;
+      pr = `<input class="inp num" type="number" min="0" step="1" value="${val}" placeholder="${p.tipo==='consultar'?'€/mes':''}" oninput="precioLinea('${p.id}',this.value)" title="Precio mensual en este presupuesto">`
+         + (p.tipo==='precio' ? `<span class="lista ${dif?'dif':''}">${dif?'lista '+fmt(p.precio):'precio de lista'}</span>` : `<span class="lista">${pe==null?'a consultar':'acordado'}</span>`);
+    }
+    const togs = editable
       ? `<span class="mes-tog">${TODOS.map(m=>`<button class="${on&&meses.includes(m)?'on':''}" ${on?'':'disabled'} onclick="toggleMes('${p.id}',${m})" title="${MES_N[m-1]}">${MES_C[m-1]}</button>`).join('')}</span>${on?`<span class="dur">${textoMeses(meses)}${meses.length!==apertura.length||meses.some(m=>!apertura.includes(m))?` · <a href="#" onclick="mesesLinea('${p.id}',apertura);return false" title="Poner los meses de apertura">= apertura</a>`:''}</span>`:''}`
       : (on ? '<span class="dur" style="padding-left:6px">Sin coste mensual</span>' : '');
-    const anual = on && p.tipo==='precio' ? precioLinea(p)*cant*meses.length : null;
+    const anual = cobrable ? pe*cant*meses.length : null;
     return `<div class="sel-mod ${on?'on':''} ${p._huerfana?'huerfana':''}">
       <span><input type="checkbox" ${on?'checked':''} onchange="toggleLinea('${p.id}',this.checked)"></span>
       <span class="mod">${esc(p.modulo)}${p._huerfana?' <span class="chip">ya no está en la lista</span>':''}</span>
       <span><span class="chip plan-${esc(p.plan)}">${esc(p.plan)}</span></span>
       <span class="cont">${esc(p.contenido)}</span>
       <span class="pr">${pr}</span>
-      <span class="cant">${p.tipo==='precio' ? `<input class="inp num" type="number" min="1" step="1" value="${cant}" ${on?'':'disabled'} oninput="cantLinea('${p.id}',this.value)">` : ''}</span>
+      <span class="cant">${editable ? `<input class="inp num" type="number" min="1" step="1" value="${cant}" ${on?'':'disabled'} oninput="cantLinea('${p.id}',this.value)">` : ''}</span>
       <span>${togs}</span>
-      <span class="sub">${anual!=null ? fmt(anual) : ''}</span>
+      <span class="sub">${anual!=null ? fmt(anual) : (on && editable && pe==null ? '<span class="chip plan-Asesoría">a consultar</span>' : '')}</span>
     </div>`;
   }).join('') || '<div class="empty">No hay líneas activas en la lista de precios.</div>';
 }
 function toggleLinea(id,on){
-  if(on){ const prev=sel.get(id); sel.set(id,{cantidad:prev?.cantidad||1, meses: prev?.meses ? [...prev.meses] : [...apertura], copia:prev?.copia}); } else sel.delete(id);
+  if(on){ const prev=sel.get(id); sel.set(id,{cantidad:prev?.cantidad||1, meses: prev?.meses ? [...prev.meses] : [...apertura], precio: prev?.precio ?? null, copia:prev?.copia}); } else sel.delete(id);
   tocar(); renderSeleccion(); calcular();
 }
 function cantLinea(id,val){ const s=sel.get(id); if(!s) return; s.cantidad=Math.max(1,parseInt(val)||1); tocar(); renderSeleccion(); calcular(); }
@@ -613,14 +634,15 @@ function lineasPresupuesto(){
   const porId = new Map(lineasOfrecidas().map(p=>[p.id,p]));
   const out=[];
   for(const [id,s] of sel){ const p=porId.get(id); if(!p) continue;
-    out.push({ precio_id:id, orden:p.orden||0, modulo:p.modulo, plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio:p.tipo==='precio'?r2(p.precio):null, cantidad:p.tipo==='precio'?(s.cantidad||1):1, meses: p.tipo==='precio' ? normMeses(s.meses) : [...apertura] });
+    const pe = precioEf(p,s);
+    out.push({ precio_id:id, orden:p.orden||0, modulo:p.modulo, plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio: pe==null ? null : r2(pe), precio_lista: p.tipo==='precio' ? r2(p.precio) : null, cantidad: p.tipo==='incluido' ? 1 : (s.cantidad||1), meses: p.tipo==='incluido' ? [...apertura] : normMeses(s.meses) });
   }
   return out.sort((a,b)=>(a.orden-b.orden)||a.modulo.localeCompare(b.modulo));
 }
 /** Números del presupuesto: por mes, anual, descuento, medias. */
 function calcularNumeros(L, dto){
   const porMes = Array(12).fill(0);
-  L.forEach(l => { if(l.tipo!=='precio') return; l.meses.forEach(m => porMes[m-1] += (l.precio||0)*l.cantidad); });
+  L.forEach(l => { if(!esCobrable(l)) return; l.meses.forEach(m => porMes[m-1] += (l.precio||0)*l.cantidad); });
   const subAnual = r2(porMes.reduce((a,b)=>a+b,0));
   const factor = 1 - dto/100;
   const anual = r2(subAnual*factor);
@@ -637,9 +659,9 @@ function calcular(){
   document.getElementById('t-media').textContent = fmt2(n.media);
   document.getElementById('t-activos').textContent = n.mesesActivos ? fmt2(n.cuotaActivos) : '—';
   document.getElementById('t-activos-info').textContent = n.mesesActivos ? `(÷ ${n.mesesActivos} ${n.mesesActivos===1?'mes':'meses'} con cuota)` : '';
-  const conPrecio = L.filter(l=>l.tipo==='precio');
+  const conPrecio = L.filter(esCobrable);
   document.getElementById('t-meses-info').textContent = conPrecio.length ? `(${conPrecio.length} ${conPrecio.length===1?'módulo':'módulos'} con cuota)` : '';
-  const cons = L.filter(l=>l.tipo==='consultar');
+  const cons = L.filter(l=>l.tipo==='consultar' && l.precio==null);
   const tc = document.getElementById('t-consultar');
   tc.style.display = cons.length ? '' : 'none';
   tc.textContent = cons.length ? 'Pendiente de valorar aparte: ' + cons.map(l=>`${l.modulo} (${l.plan})`).join(', ') + '.' : '';
@@ -672,7 +694,7 @@ async function guardarPresupuesto(){
   const f = leerFormulario();
   if(!f.cliente_nombre) return toast('Falta el nombre del cliente',true);
   if(!f.lineas.length && !confirm('No has marcado ningún módulo. ¿Guardar igualmente?')) return;
-  const sinMes = f.lineas.filter(l=>l.tipo==='precio' && !l.meses.length);
+  const sinMes = f.lineas.filter(l=>esCobrable(l) && !l.meses.length);
   if(sinMes.length && !confirm(`Hay módulos marcados sin ningún mes (${sinMes.map(l=>l.modulo).join(', ')}): no se cobrarán. ¿Guardar igualmente?`)) return;
   try{
     loading(true,'Guardando…');
@@ -720,8 +742,8 @@ function duplicarPresupuesto(){
 function imprimir(){
   const f = leerFormulario();
   const c = calcular();
-  const conPrecio = f.lineas.filter(l=>l.tipo==='precio'), incl = f.lineas.filter(l=>l.tipo==='incluido'), cons = f.lineas.filter(l=>l.tipo==='consultar');
-  const fila = l => `<tr><td><b>${esc(l.modulo)}</b> · ${esc(l.plan)}<div class="cont">${esc(l.contenido)}</div></td><td class="num">${l.tipo==='precio'?fmt2(l.precio):(l.tipo==='incluido'?'Incluido':'A consultar')}</td><td class="num">${l.tipo==='precio'?l.cantidad:''}</td><td>${l.tipo==='precio'?esc(textoMeses(l.meses)):''}</td><td class="num">${l.tipo==='precio'?fmt2(l.precio*l.cantidad*l.meses.length):''}</td></tr>`;
+  const conPrecio = f.lineas.filter(esCobrable), incl = f.lineas.filter(l=>l.tipo==='incluido'), cons = f.lineas.filter(l=>l.tipo==='consultar' && l.precio==null);
+  const fila = l => { const c = esCobrable(l); return `<tr><td><b>${esc(l.modulo)}</b> · ${esc(l.plan)}<div class="cont">${esc(l.contenido)}</div></td><td class="num">${c?fmt2(l.precio):(l.tipo==='incluido'?'Incluido':'A consultar')}</td><td class="num">${c?l.cantidad:''}</td><td>${c?esc(textoMeses(l.meses)):''}</td><td class="num">${c?fmt2(l.precio*l.cantidad*l.meses.length):''}</td></tr>`; };
   const datos = [f.cif&&`CIF ${esc(f.cif)}`, f.direccion&&esc(f.direccion), f.contacto&&esc(f.contacto), f.email&&esc(f.email), f.telefono&&esc(f.telefono)].filter(Boolean).join('<br>');
   const dim = [f.n_centros!=null&&`${f.n_centros} centro${f.n_centros===1?'':'s'}`, f.n_empleados!=null&&`${f.n_empleados} empleado${f.n_empleados===1?'':'s'}`].filter(Boolean).join(' · ');
   const calFila = l => `<tr><td>${esc(l.modulo)}${l.cantidad>1?` ×${l.cantidad}`:''}</td>${TODOS.map(m=> l.meses.includes(m) ? `<td>${fmt(l.precio*l.cantidad)}</td>` : '<td class="off">·</td>').join('')}<td><b>${fmt(l.precio*l.cantidad*l.meses.length)}</b></td></tr>`;
