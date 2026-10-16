@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<!-- Servido en /distribuidores por hostelero-app: la sesión y el módulo los valida
+     el route handler ANTES de entregar este HTML. Datos en tablas dist_* de esta
+     casa (RLS por cuenta), leídas con el token de sesión inyectado.
+     v1 (16-10-2026): lista de precios (pestaña Precios) + presupuestos a medida
+     (datos del cliente, selección de módulos, descuento, impresión). -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distribuidores — Jano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F3F4F0;--surface:#fff;--panel:#EAECE8;--hdr:#F8F9F6;
+  --border:#DEDFE1;--border-med:#CDD0CC;--text:#242D36;--muted:#7A848C;
+  --green:#5E7D5A;--green-dark:#2F3A45;--green-bg:#E7EEE5;
+  --blue:#185FA5;--blue-bg:#E6F1FB;--purple:#534AB7;--purple-bg:#EEEDFE;
+  --amber:#BA7517;--amber-bg:#FAEEDA;--red:#A32D2D;--red-bg:#FCEBEB;
+  --radius:8px;--radius-lg:10px;
+}
+body{font-family:'Plus Jakarta Sans', system-ui, sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+
+/* layout */
+#app-screen{display:flex;align-items:flex-start;min-height:100vh}
+.side-nav{width:200px;flex-shrink:0;position:sticky;top:48px;height:calc(100vh - 48px);overflow-y:auto;background:#F8F9F6;border-right:0.5px solid var(--border);padding:18px 10px 18px 14px;display:flex;flex-direction:column}
+.side-brand{padding:0 4px 14px;border-bottom:0.5px solid var(--border);margin-bottom:12px}
+.app-title{font-size:18px;font-weight:500;letter-spacing:-.2px}
+.app-title span{color:var(--green)}
+.app-subtitle{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.45}
+.side-foot{margin-top:auto;padding-top:14px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.side-status{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);padding:0 4px;line-height:1.3}
+.side-version{font-size:10px;color:#aaa;padding:0 4px}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-dot.ok{background:var(--green)}.status-dot.loading{background:var(--amber)}.status-dot.err{background:var(--red)}
+.main-col{flex:1;min-width:0;padding:0 16px 40px}
+.main-inner{max-width:1300px;margin:0 auto}
+.app-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:0.5px solid var(--border);position:sticky;top:48px;background:var(--bg);z-index:20}
+.app-header h1{font-size:16px;font-weight:600}
+.header-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.content{padding-top:14px}
+.tabs{display:flex;flex-direction:column;gap:1px}
+.tab{padding:8px 10px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:12px;font-family:inherit;text-align:left;width:100%;border-left:3px solid transparent;border-radius:0 6px 6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s,border-color .15s,background .15s}
+.tab.active{color:var(--green);border-left-color:var(--green);background:rgba(94,125,90,.12);font-weight:500}
+.tab:hover:not(.active){color:var(--text);background:rgba(0,0,0,.04)}
+.section{display:none}.section.active{display:block}
+
+/* cards, buttons, inputs */
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:13px 14px;margin-bottom:12px}
+.card-title{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.card-sub{font-size:11px;color:#aaa;margin-bottom:10px;line-height:1.5}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .12s}
+.btn:hover{background:var(--panel)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-g{background:var(--green);color:#fff;border-color:var(--green);font-weight:500}
+.btn-g:hover{background:var(--green-dark);border-color:var(--green-dark)}
+.btn-sm{padding:3px 9px;font-size:11px}
+.btn-danger{color:var(--red);border-color:#e8c4c4}
+select,input,textarea{font-family:inherit;color:var(--text)}
+.inp{height:30px;font-size:12px;padding:0 8px;border:0.5px solid var(--border);border-radius:6px;background:var(--surface);width:100%}
+.inp:focus,textarea.inp:focus{outline:none;border-color:var(--green)}
+.inp.num{text-align:right;font-variant-numeric:tabular-nums}
+textarea.inp{height:auto;min-height:54px;padding:6px 8px;line-height:1.45;resize:vertical}
+select.inp{cursor:pointer}
+.dirty-pill{font-size:11px;padding:3px 9px;border-radius:99px;background:var(--amber-bg);color:var(--amber);font-weight:500;display:none}
+.dirty-pill.on{display:inline-block}
+.chip{display:inline-block;font-size:10px;padding:1px 7px;border-radius:99px;background:var(--panel);color:var(--muted);white-space:nowrap}
+.chip.borrador{background:var(--panel);color:var(--muted)}
+.chip.enviado{background:var(--blue-bg);color:var(--blue)}
+.chip.aceptado{background:var(--green-bg);color:var(--green-dark)}
+.chip.rechazado{background:var(--red-bg);color:var(--red)}
+.chip.plan-Normal{background:var(--panel);color:#555}
+.chip.plan-Premium{background:var(--purple-bg);color:var(--purple)}
+.chip.plan-Asesoría{background:var(--amber-bg);color:var(--amber)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7}
+.note{font-size:11px;color:var(--muted);line-height:1.6}
+
+/* tables */
+.tbl-wrap{border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:auto}
+table.g{width:100%;border-collapse:collapse;font-size:12px}
+table.g th{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:7px 8px;text-align:left;border-bottom:0.5px solid var(--border);background:var(--hdr);white-space:nowrap;position:sticky;top:0;z-index:2}
+table.g td{padding:6px 8px;border-bottom:0.5px solid var(--border);vertical-align:top;line-height:1.4}
+table.g th.num,table.g td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.g tr.click{cursor:pointer}
+table.g tr.click:hover td{background:#FAFBF9}
+table.g tr.r-total td{font-weight:600;background:var(--panel);border-top:0.5px solid var(--border-med)}
+table.g tr.inactivo td{opacity:.5}
+table.g td .inp{height:28px;font-size:12px}
+table.g td .inp.num{padding:0 5px}
+table.g td textarea.inp{min-height:48px}
+.pre{white-space:pre-line}
+
+/* editor de presupuesto */
+.form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.form-grid .f label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.f.span2{grid-column:span 2}
+.f.span4{grid-column:span 4}
+.sel-mod{display:grid;grid-template-columns:28px 1fr 90px 1fr 110px 70px 100px;gap:0;align-items:center;padding:7px 8px;border-bottom:0.5px solid var(--border)}
+.sel-mod:last-child{border-bottom:none}
+.sel-mod.on{background:#FAFBF9}
+.sel-mod .mod{font-weight:500}
+.sel-mod .cont{font-size:11px;color:var(--muted);white-space:pre-line;line-height:1.35}
+.sel-mod .pr{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sel-mod .cant .inp{width:56px;text-align:right}
+.sel-mod .sub{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.sel-mod input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--green)}
+.sel-head{display:grid;grid-template-columns:28px 1fr 90px 1fr 110px 70px 100px;padding:6px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--hdr);border-bottom:0.5px solid var(--border)}
+.sel-head span:nth-child(5),.sel-head span:nth-child(6),.sel-head span:nth-child(7){text-align:right}
+.sel-wrap{border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.totales{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tot-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.tot-row.big{font-size:17px;font-weight:600;border-bottom:none;padding-top:10px}
+.tot-row .inp{width:80px}
+.tot-row small{color:var(--muted);font-weight:400;font-size:11px}
+
+/* loading, toast, modal */
+#loading{display:none;position:fixed;inset:0;background:rgba(248,248,246,.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#loading.on{display:flex}
+#loading p{color:var(--muted);font-size:13px}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#242D36;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:1000;max-width:90vw}
+#toast.on{opacity:1}
+#toast.err{background:var(--red)}
+
+/* impresión del presupuesto */
+#impresion{display:none}
+@media print{
+  body{background:#fff;font-size:12px}
+  body>*:not(#impresion){display:none !important}
+  #aviso-version-nueva,#banda-jano,.banda-jano{display:none !important}
+  #impresion{display:block;padding:0;color:#111}
+  .imp-cab{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #2F3A45;padding-bottom:12px;margin-bottom:18px}
+  .imp-marca{font-size:26px;font-weight:800;letter-spacing:-.5px;color:#2F3A45}
+  .imp-marca span{color:#8FAE8B}
+  .imp-cab .der{text-align:right;font-size:12px;line-height:1.5}
+  .imp-cab .der b{font-size:15px}
+  .imp-cliente{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  .imp-cliente h4{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7A848C;margin-bottom:4px}
+  .imp-cliente p{line-height:1.5}
+  table.imp{width:100%;border-collapse:collapse;margin-bottom:14px}
+  table.imp th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#7A848C;border-bottom:1px solid #999;padding:6px 6px}
+  table.imp td{padding:7px 6px;border-bottom:0.5px solid #ddd;vertical-align:top;line-height:1.4}
+  table.imp .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  table.imp .cont{font-size:11px;color:#555;white-space:pre-line}
+  .imp-tot{margin-left:auto;width:320px}
+  .imp-tot .r{display:flex;justify-content:space-between;padding:4px 6px}
+  .imp-tot .r.big{font-size:16px;font-weight:700;border-top:2px solid #2F3A45;margin-top:4px;padding-top:8px}
+  .imp-notas{margin-top:22px;font-size:11px;color:#444;white-space:pre-line;line-height:1.5}
+  .imp-pie{margin-top:30px;font-size:10px;color:#888;border-top:0.5px solid #ccc;padding-top:8px}
+}
+
+@media(max-width:900px){
+  #app-screen{flex-direction:column}
+  .side-nav{position:static;width:100%;height:auto;border-right:none;border-bottom:0.5px solid var(--border);padding:12px 12px 0}
+  .side-foot{margin-top:8px;border-top:none;flex-direction:row;align-items:center;justify-content:space-between;padding-top:0}
+  .tabs{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:2px;padding-bottom:6px}
+  .tab{width:auto;border-left:none;border-bottom:2px solid transparent;border-radius:0}
+  .tab.active{border-left:none;border-bottom-color:var(--green);background:none}
+  .form-grid{grid-template-columns:1fr 1fr}
+  .f.span4{grid-column:span 2}
+  .totales{grid-template-columns:1fr}
+  .sel-head{display:none}
+  .sel-mod{grid-template-columns:28px 1fr 80px;grid-template-areas:"chk mod plan" "chk cont cont" "chk pr cant" "chk sub sub";row-gap:4px}
+  .sel-mod>:nth-child(1){grid-area:chk}.sel-mod>:nth-child(2){grid-area:mod}.sel-mod>:nth-child(3){grid-area:plan}
+  .sel-mod>:nth-child(4){grid-area:cont}.sel-mod>:nth-child(5){grid-area:pr;text-align:left}.sel-mod>:nth-child(6){grid-area:cant}.sel-mod>:nth-child(7){grid-area:sub}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p id="loading-msg">Cargando…</p></div>
+<div id="toast"></div>
+
+<div id="app-screen">
+  <aside class="side-nav">
+    <div class="side-brand">
+      <div class="app-title">Jano <span>Distribuidores</span></div>
+      <div class="app-subtitle">Presupuestos a clientes</div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" id="tab-presupuestos" onclick="showTab('presupuestos',this)">📋 Presupuestos</button>
+      <button class="tab" id="tab-precios" onclick="showTab('precios',this)">💶 Precios</button>
+    </nav>
+    <div class="side-foot">
+      <div class="side-status"><div class="status-dot ok" id="status-dot"></div><span id="status-label">—</span></div>
+      <div class="side-version">Distribuidores · v1</div>
+    </div>
+  </aside>
+
+  <div class="main-col"><div class="main-inner">
+
+  <!-- ══ PRESUPUESTOS ══ -->
+  <section class="section active" id="sec-presupuestos">
+
+    <!-- lista -->
+    <div id="pre-lista">
+      <header class="app-header">
+        <h1>Presupuestos</h1>
+        <div class="header-controls">
+          <input class="inp" id="pre-buscar" placeholder="Buscar cliente o número…" style="width:220px" oninput="renderLista()">
+          <button class="btn btn-g" onclick="nuevoPresupuesto()">+ Nuevo presupuesto</button>
+        </div>
+      </header>
+      <div class="content">
+        <div class="tbl-wrap"><table class="g">
+          <thead><tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>CIF</th><th class="num">Centros</th><th class="num">Empleados</th><th class="num">Módulos</th><th class="num">€/mes</th><th>Estado</th></tr></thead>
+          <tbody id="pre-tbody"></tbody>
+        </table></div>
+        <div class="empty" id="pre-vacio" style="display:none">Todavía no hay presupuestos. Pulsa «Nuevo presupuesto» para hacer el primero.</div>
+      </div>
+    </div>
+
+    <!-- editor -->
+    <div id="pre-editor" style="display:none">
+      <header class="app-header">
+        <div class="header-controls">
+          <button class="btn" onclick="volverLista()">← Presupuestos</button>
+          <h1 id="pre-titulo">Nuevo presupuesto</h1>
+          <span class="chip" id="pre-chip-estado"></span>
+        </div>
+        <div class="header-controls">
+          <span class="dirty-pill" id="dirty-pre">Cambios sin guardar</span>
+          <button class="btn" onclick="imprimir()" title="Abre el diálogo de impresión: imprime o guarda como PDF">🖨 Imprimir / PDF</button>
+          <button class="btn" id="btn-duplicar" onclick="duplicarPresupuesto()">Duplicar</button>
+          <button class="btn btn-danger" id="btn-borrar" onclick="borrarPresupuesto()">Borrar</button>
+          <button class="btn btn-g" onclick="guardarPresupuesto()">Guardar</button>
+        </div>
+      </header>
+      <div class="content">
+
+        <div class="card">
+          <div class="card-title">Cliente</div>
+          <div class="card-sub">Datos que salen en la cabecera del presupuesto.</div>
+          <div class="form-grid">
+            <div class="f span2"><label>Nombre o razón social *</label><input class="inp" id="c-nombre" oninput="tocar()"></div>
+            <div class="f"><label>CIF / NIF</label><input class="inp" id="c-cif" oninput="tocar()"></div>
+            <div class="f"><label>Fecha</label><input class="inp" id="c-fecha" type="date" oninput="tocar()"></div>
+            <div class="f"><label>Persona de contacto</label><input class="inp" id="c-contacto" oninput="tocar()"></div>
+            <div class="f"><label>Email</label><input class="inp" id="c-email" type="email" oninput="tocar()"></div>
+            <div class="f"><label>Teléfono</label><input class="inp" id="c-telefono" oninput="tocar()"></div>
+            <div class="f"><label>Estado</label>
+              <select class="inp" id="c-estado" onchange="tocar();renderChipEstado()">
+                <option value="borrador">Borrador</option><option value="enviado">Enviado</option><option value="aceptado">Aceptado</option><option value="rechazado">Rechazado</option>
+              </select></div>
+            <div class="f span2"><label>Dirección</label><input class="inp" id="c-direccion" oninput="tocar()"></div>
+            <div class="f"><label>Nº de centros</label><input class="inp num" id="c-centros" type="number" min="0" step="1" oninput="tocar()"></div>
+            <div class="f"><label>Nº de empleados</label><input class="inp num" id="c-empleados" type="number" min="0" step="1" oninput="tocar()"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Módulos</div>
+          <div class="card-sub">Marca lo que entra en el presupuesto. «Cantidad» sirve para repetir una línea (por ejemplo, un TPV por centro). Los precios son los de la pestaña Precios en el momento de guardar; si la lista cambia después, el presupuesto no se mueve.</div>
+          <div class="sel-wrap">
+            <div class="sel-head"><span></span><span>Módulo</span><span>Plan</span><span>Contenido</span><span>Precio/mes</span><span>Cant.</span><span>Subtotal</span></div>
+            <div id="sel-lineas"></div>
+          </div>
+          <p class="note" id="sel-huerfanas" style="margin-top:8px;display:none"></p>
+        </div>
+
+        <div class="totales">
+          <div class="card">
+            <div class="card-title">Notas y condiciones</div>
+            <div class="card-sub">Salen al pie del presupuesto impreso.</div>
+            <textarea class="inp" id="c-notas" style="min-height:120px" oninput="tocar()"></textarea>
+          </div>
+          <div class="card">
+            <div class="card-title">Totales</div>
+            <div class="tot-row"><span>Subtotal mensual</span><b id="t-sub">0 €</b></div>
+            <div class="tot-row"><span>Descuento <small>%</small></span><input class="inp num" id="c-descuento" type="number" min="0" max="100" step="0.5" value="0" oninput="tocar();calcular()"></div>
+            <div class="tot-row"><span>Alta inicial <small>(pago único, €)</small></span><input class="inp num" id="c-alta" type="number" min="0" step="1" value="0" oninput="tocar();calcular()"></div>
+            <div class="tot-row big"><span>Total mensual</span><span id="t-mes">0 €</span></div>
+            <div class="tot-row"><span>Equivale al año <small>(×12)</small></span><b id="t-anio">0 €</b></div>
+            <p class="note" id="t-consultar" style="margin-top:8px;display:none"></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ PRECIOS ══ -->
+  <section class="section" id="sec-precios">
+    <header class="app-header">
+      <h1>Lista de precios</h1>
+      <div class="header-controls">
+        <span class="dirty-pill" id="dirty-precios">Cambios sin guardar</span>
+        <button class="btn" onclick="nuevaLineaPrecio()">+ Añadir línea</button>
+        <button class="btn btn-g" onclick="guardarPrecios()">Guardar</button>
+      </div>
+    </header>
+    <div class="content">
+      <div class="card">
+        <div class="card-title">Cómo funciona</div>
+        <p class="note">Cada fila es un módulo con un plan (Normal, Premium, Asesoría…) y lo que incluye. <b>Tipo</b>: «Precio» cobra el importe mensual; «Incluido» va de serie sin coste; «A consultar» se lista en el presupuesto sin importe. Las filas desactivadas no se ofrecen en los presupuestos nuevos, pero no se pierden. El orden es el de la lista y el del presupuesto impreso.</p>
+      </div>
+      <div class="tbl-wrap"><table class="g">
+        <thead><tr><th style="width:76px">Orden</th><th style="width:150px">Módulo</th><th style="width:120px">Plan</th><th>Contenido (una línea por elemento)</th><th style="width:120px">Tipo</th><th class="num" style="width:100px">€/mes</th><th style="width:60px">Activo</th><th style="width:40px"></th></tr></thead>
+        <tbody id="precios-tbody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  </div></div>
+</div>
+
+<!-- versión para imprimir / PDF (solo visible al imprimir) -->
+<div id="impresion"></div>
+
+<script>
+// ───────────────────────────── CONFIG ─────────────────────────────
+const SUPABASE_URL = '__SUPABASE_URL__';
+const SUPABASE_KEY = '__SUPABASE_ANON__';
+const SB_TOKEN = '__SB_TOKEN__';
+const CUENTA_ID = '__CUENTA_ID__';
+const CUENTA_NOMBRE = '__CUENTA_NOMBRE__';
+setTimeout(()=>{ if(!dirty()) location.reload(); }, 50*60*1000);
+const _fetchOriginal = window.fetch.bind(window);
+window.fetch = async (u,o) => { const r = await _fetchOriginal(u,o); if (r.status===401 && String(u).startsWith(SUPABASE_URL)) setTimeout(()=>location.reload(),800); return r; };
+
+const PLANES = ['Normal','Premium','Asesoría'];
+const TIPOS = [['precio','Precio'],['incluido','Incluido'],['consultar','A consultar']];
+const ESTADOS = { borrador:'Borrador', enviado:'Enviado', aceptado:'Aceptado', rechazado:'Rechazado' };
+
+// ───────────────────────────── ESTADO ─────────────────────────────
+let precios = [];        // filas dist_precios (todas, activas o no)
+let preciosDel = new Set();
+let presupuestos = [];   // filas dist_presupuestos
+let P = null;            // presupuesto abierto en el editor (objeto de trabajo)
+let sel = new Map();     // precio_id -> {cantidad} (selección en el editor)
+let dirtyPre = false, dirtyPrecios = false;
+let tabActual = 'presupuestos';
+
+const fmt = n => (n==null||isNaN(n)) ? '—' : Math.round(n).toLocaleString('es-ES') + ' €';
+const fmt2 = n => (n==null||isNaN(n)) ? '—' : (+n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+const r2 = n => Math.round((+n||0)*100)/100;
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hoy = () => new Date().toISOString().slice(0,10);
+const fechaEs = s => s ? new Date(s+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+const dirty = () => dirtyPre || dirtyPrecios;
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);}));
+window.addEventListener('beforeunload', e => { if(dirty()){ e.preventDefault(); e.returnValue=''; } });
+
+// ───────────────────────────── SUPABASE ─────────────────────────────
+function sbHeaders(extra={}) { return { 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SB_TOKEN||SUPABASE_KEY}`, 'Content-Type':'application/json', ...extra }; }
+async function sbFetch(path, options={}) {
+  const res = await fetch(SUPABASE_URL+'/rest/v1/'+path, { cache:'no-store', ...options, headers: sbHeaders(options.headers||{}) });
+  if (!res.ok) throw new Error((await res.text()) || ('HTTP '+res.status));
+  if (res.status===204) return null;
+  const t = await res.text(); return t ? JSON.parse(t) : null;
+}
+async function sbUpsert(table, rows, conflict='id') {
+  if(!rows.length) return;
+  await sbFetch(`${table}?on_conflict=${conflict}`, { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates,return=minimal' }, body:JSON.stringify(rows) });
+}
+const sbDelete = (table, q) => sbFetch(`${table}?${q}`, { method:'DELETE', headers:{ 'Prefer':'return=minimal' } });
+const enc = encodeURIComponent;
+
+// ───────────────────────────── UI helpers ─────────────────────────────
+function loading(on,msg){ document.getElementById('loading').classList.toggle('on',!!on); if(msg) document.getElementById('loading-msg').textContent=msg; }
+let toastT; function toast(msg,err){ const t=document.getElementById('toast'); t.textContent=msg; t.className='on'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:2600); }
+function status(kind,label){ document.getElementById('status-dot').className='status-dot '+kind; document.getElementById('status-label').textContent=label; }
+function showTab(id,btn){ tabActual=id; document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById('sec-'+id).classList.add('active'); document.querySelectorAll('.side-nav .tab').forEach(b=>b.classList.remove('active')); (btn||document.getElementById('tab-'+id)).classList.add('active'); if(id==='precios') renderPrecios(); else renderLista(); }
+function tocar(){ dirtyPre=true; document.getElementById('dirty-pre').classList.add('on'); }
+function tocarPrecios(){ dirtyPrecios=true; document.getElementById('dirty-precios').classList.add('on'); }
+const v = id => document.getElementById(id).value;
+const setv = (id,val) => { document.getElementById(id).value = val ?? ''; };
+
+// ───────────────────────────── ARRANQUE ─────────────────────────────
+(async function init(){
+  try{
+    loading(true,'Cargando…'); status('loading','cargando');
+    await cargar();
+    renderLista(); renderPrecios();
+    status('ok','conectado');
+  }catch(e){ status('err','error'); toast('Error al cargar: '+e.message,true); console.error(e); }
+  finally{ loading(false); }
+})();
+
+async function cargar(){
+  [precios, presupuestos] = await Promise.all([
+    sbFetch(`dist_precios?cuenta_id=eq.${CUENTA_ID}&order=orden.asc,modulo.asc&limit=1000`),
+    sbFetch(`dist_presupuestos?cuenta_id=eq.${CUENTA_ID}&order=creado_en.desc&limit=1000`),
+  ]);
+  precios = precios||[]; presupuestos = presupuestos||[];
+}
+
+// ═════════════════════════════ PRECIOS ═════════════════════════════
+function renderPrecios(){
+  const tb = document.getElementById('precios-tbody');
+  if(!precios.length){ tb.innerHTML = '<tr><td colspan="8" class="empty">No hay líneas. Pulsa «Añadir línea».</td></tr>'; return; }
+  tb.innerHTML = precios.map((p,i) => `
+    <tr class="${p.activo?'':'inactivo'}">
+      <td><input class="inp num" type="number" step="10" value="${p.orden??0}" oninput="pr(${i},'orden',+this.value)"></td>
+      <td><input class="inp" value="${esc(p.modulo)}" oninput="pr(${i},'modulo',this.value)" placeholder="Módulo"></td>
+      <td><select class="inp" onchange="pr(${i},'plan',this.value)">${PLANES.map(x=>`<option ${p.plan===x?'selected':''}>${x}</option>`).join('')}${PLANES.includes(p.plan)?'':`<option selected>${esc(p.plan)}</option>`}</select></td>
+      <td><textarea class="inp" oninput="pr(${i},'contenido',this.value)" placeholder="Una línea por elemento">${esc(p.contenido)}</textarea></td>
+      <td><select class="inp" onchange="pr(${i},'tipo',this.value);renderPrecios()">${TIPOS.map(([k,l])=>`<option value="${k}" ${p.tipo===k?'selected':''}>${l}</option>`).join('')}</select></td>
+      <td class="num">${p.tipo==='precio' ? `<input class="inp num" type="number" step="1" min="0" value="${p.precio??''}" oninput="pr(${i},'precio',this.value===''?null:+this.value)">` : `<span class="chip">${p.tipo==='incluido'?'Incluido':'A consultar'}</span>`}</td>
+      <td style="text-align:center"><input type="checkbox" ${p.activo?'checked':''} onchange="pr(${i},'activo',this.checked);renderPrecios()"></td>
+      <td><button class="btn btn-sm btn-danger" title="Quitar línea" onclick="quitarPrecio(${i})">✕</button></td>
+    </tr>`).join('');
+}
+function pr(i,campo,val){ precios[i][campo]=val; tocarPrecios(); }
+function nuevaLineaPrecio(){
+  const maxOrden = precios.reduce((m,p)=>Math.max(m,p.orden||0),0);
+  precios.push({ id:uuid(), cuenta_id:CUENTA_ID, orden:maxOrden+10, modulo:'', plan:'Normal', contenido:'', tipo:'precio', precio:0, activo:true, _nueva:true });
+  tocarPrecios(); renderPrecios();
+  const tb=document.getElementById('precios-tbody'); tb.lastElementChild.querySelector('input[placeholder="Módulo"]').focus();
+}
+function quitarPrecio(i){
+  const p=precios[i];
+  const usada = presupuestos.some(q => (q.lineas||[]).some(l => l.precio_id===p.id));
+  if(usada && !confirm('Esta línea está en algún presupuesto guardado (allí se conserva como copia). ¿Quitarla de la lista?')) return;
+  if(!p._nueva) preciosDel.add(p.id);
+  precios.splice(i,1); tocarPrecios(); renderPrecios();
+}
+async function guardarPrecios(){
+  const malas = precios.filter(p => !p.modulo.trim() || (p.tipo==='precio' && (p.precio==null || isNaN(p.precio))));
+  if(malas.length) return toast('Hay líneas sin módulo o sin precio',true);
+  try{
+    loading(true,'Guardando precios…');
+    const filas = precios.map(p => ({ id:p.id, cuenta_id:CUENTA_ID, orden:p.orden||0, modulo:p.modulo.trim(), plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio:p.tipo==='precio'?r2(p.precio):null, activo:!!p.activo }));
+    await sbUpsert('dist_precios', filas);
+    for(const id of preciosDel) await sbDelete('dist_precios', `id=eq.${id}`);
+    preciosDel.clear(); precios.forEach(p=>delete p._nueva);
+    precios.sort((a,b)=>(a.orden-b.orden)||a.modulo.localeCompare(b.modulo));
+    dirtyPrecios=false; document.getElementById('dirty-precios').classList.remove('on');
+    renderPrecios(); toast('Precios guardados');
+  }catch(e){ toast('Error al guardar: '+e.message,true); console.error(e); }
+  finally{ loading(false); }
+}
+
+// ═════════════════════════════ PRESUPUESTOS · LISTA ═════════════════════════════
+function renderLista(){
+  const q = (document.getElementById('pre-buscar').value||'').trim().toLowerCase();
+  const filas = presupuestos.filter(p => !q || (p.cliente_nombre||'').toLowerCase().includes(q) || (p.numero||'').toLowerCase().includes(q) || (p.cif||'').toLowerCase().includes(q));
+  document.getElementById('pre-vacio').style.display = presupuestos.length ? 'none' : '';
+  document.getElementById('pre-tbody').innerHTML = filas.map(p => `
+    <tr class="click" onclick="abrirPresupuesto('${p.id}')">
+      <td><b>${esc(p.numero)}</b></td>
+      <td>${fechaEs(p.fecha)}</td>
+      <td>${esc(p.cliente_nombre)||'<span class="note">(sin nombre)</span>'}</td>
+      <td>${esc(p.cif||'')}</td>
+      <td class="num">${p.n_centros??''}</td>
+      <td class="num">${p.n_empleados??''}</td>
+      <td class="num">${(p.lineas||[]).length}</td>
+      <td class="num"><b>${fmt(p.total_mensual)}</b></td>
+      <td><span class="chip ${p.estado}">${ESTADOS[p.estado]||p.estado}</span></td>
+    </tr>`).join('') || (presupuestos.length ? '<tr><td colspan="9" class="empty">Nada coincide con la búsqueda.</td></tr>' : '');
+}
+
+// ═════════════════════════════ PRESUPUESTOS · EDITOR ═════════════════════════════
+function nuevoPresupuesto(){
+  if(dirtyPrecios && !confirm('Hay cambios sin guardar en Precios. ¿Seguir?')) return;
+  P = { id:null, numero:'', fecha:hoy(), estado:'borrador', cliente_nombre:'', cif:'', contacto:'', email:'', telefono:'', direccion:'', n_centros:null, n_empleados:null, lineas:[], descuento_pct:0, alta_inicial:0, notas:'' };
+  sel = new Map();
+  // de serie: lo que va incluido se marca solo
+  precios.filter(p=>p.activo && p.tipo==='incluido').forEach(p => sel.set(p.id,{cantidad:1}));
+  abrirEditor();
+}
+function abrirPresupuesto(id){
+  const p = presupuestos.find(x=>x.id===id); if(!p) return;
+  P = JSON.parse(JSON.stringify(p));
+  sel = new Map((P.lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, copia:l}]));
+  abrirEditor();
+}
+function abrirEditor(){
+  document.getElementById('pre-lista').style.display='none';
+  document.getElementById('pre-editor').style.display='';
+  document.getElementById('pre-titulo').textContent = P.id ? `Presupuesto ${P.numero}` : 'Nuevo presupuesto';
+  document.getElementById('btn-borrar').style.display = P.id ? '' : 'none';
+  document.getElementById('btn-duplicar').style.display = P.id ? '' : 'none';
+  setv('c-nombre',P.cliente_nombre); setv('c-cif',P.cif); setv('c-fecha',P.fecha); setv('c-contacto',P.contacto);
+  setv('c-email',P.email); setv('c-telefono',P.telefono); setv('c-estado',P.estado); setv('c-direccion',P.direccion);
+  setv('c-centros',P.n_centros); setv('c-empleados',P.n_empleados); setv('c-notas',P.notas);
+  setv('c-descuento',P.descuento_pct||0); setv('c-alta',P.alta_inicial||0);
+  dirtyPre=false; document.getElementById('dirty-pre').classList.remove('on');
+  renderChipEstado(); renderSeleccion(); calcular();
+  window.scrollTo(0,0);
+}
+function volverLista(){
+  if(dirtyPre && !confirm('Hay cambios sin guardar. ¿Salir sin guardar?')) return;
+  dirtyPre=false; document.getElementById('dirty-pre').classList.remove('on');
+  P=null; document.getElementById('pre-editor').style.display='none'; document.getElementById('pre-lista').style.display=''; renderLista();
+}
+function renderChipEstado(){ const e=v('c-estado'); const c=document.getElementById('pre-chip-estado'); c.className='chip '+e; c.textContent=ESTADOS[e]; }
+
+/** Líneas que se ofrecen en el editor: las activas de la lista + las del presupuesto guardado
+ *  que ya no estén en la lista (se muestran con su copia, para no perderlas). */
+function lineasOfrecidas(){
+  const activas = precios.filter(p=>p.activo);
+  const ids = new Set(activas.map(p=>p.id));
+  const huerfanas = [...sel.entries()].filter(([id,s]) => !ids.has(id) && s.copia).map(([id,s]) => ({ ...s.copia, id, _huerfana:true }));
+  return [...activas, ...huerfanas];
+}
+function precioLinea(p){ return p.tipo==='precio' ? (+p.precio||0) : 0; }
+function renderSeleccion(){
+  const lineas = lineasOfrecidas();
+  document.getElementById('sel-lineas').innerHTML = lineas.map(p => {
+    const s = sel.get(p.id); const on = !!s; const cant = s?.cantidad||1;
+    const pr = p.tipo==='precio' ? fmt(p.precio) : (p.tipo==='incluido' ? '<span class="chip">Incluido</span>' : '<span class="chip plan-Asesoría">A consultar</span>');
+    return `<div class="sel-mod ${on?'on':''} ${p._huerfana?'huerfana':''}">
+      <span><input type="checkbox" ${on?'checked':''} onchange="toggleLinea('${p.id}',this.checked)"></span>
+      <span class="mod">${esc(p.modulo)}${p._huerfana?' <span class="chip">ya no está en la lista</span>':''}</span>
+      <span><span class="chip plan-${esc(p.plan)}">${esc(p.plan)}</span></span>
+      <span class="cont">${esc(p.contenido)}</span>
+      <span class="pr">${pr}</span>
+      <span class="cant">${p.tipo==='precio' ? `<input class="inp num" type="number" min="1" step="1" value="${cant}" ${on?'':'disabled'} oninput="cantLinea('${p.id}',this.value)">` : ''}</span>
+      <span class="sub">${on && p.tipo==='precio' ? fmt(precioLinea(p)*cant) : ''}</span>
+    </div>`;
+  }).join('') || '<div class="empty">No hay líneas activas en la lista de precios.</div>';
+}
+function toggleLinea(id,on){
+  if(on){ const prev=sel.get(id); sel.set(id,{cantidad:prev?.cantidad||1, copia:prev?.copia}); } else sel.delete(id);
+  tocar(); renderSeleccion(); calcular();
+}
+function cantLinea(id,val){ const s=sel.get(id); if(!s) return; s.cantidad=Math.max(1,parseInt(val)||1); tocar(); renderSeleccion(); calcular(); }
+
+/** Líneas del presupuesto tal y como se guardan (copia de la lista). */
+function lineasPresupuesto(){
+  const porId = new Map(lineasOfrecidas().map(p=>[p.id,p]));
+  const out=[];
+  for(const [id,s] of sel){ const p=porId.get(id); if(!p) continue;
+    out.push({ precio_id:id, orden:p.orden||0, modulo:p.modulo, plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio:p.tipo==='precio'?r2(p.precio):null, cantidad:p.tipo==='precio'?(s.cantidad||1):1 });
+  }
+  return out.sort((a,b)=>(a.orden-b.orden)||a.modulo.localeCompare(b.modulo));
+}
+function calcular(){
+  const L = lineasPresupuesto();
+  const sub = L.reduce((t,l)=>t+(l.precio||0)*l.cantidad,0);
+  const dto = Math.min(100,Math.max(0,+v('c-descuento')||0));
+  const mes = r2(sub*(1-dto/100));
+  document.getElementById('t-sub').textContent = fmt2(sub);
+  document.getElementById('t-mes').textContent = fmt2(mes);
+  document.getElementById('t-anio').textContent = fmt2(mes*12);
+  const cons = L.filter(l=>l.tipo==='consultar');
+  const tc = document.getElementById('t-consultar');
+  tc.style.display = cons.length ? '' : 'none';
+  tc.textContent = cons.length ? 'Pendiente de valorar aparte: ' + cons.map(l=>`${l.modulo} (${l.plan})`).join(', ') + '.' : '';
+  return { lineas:L, sub, dto, mes };
+}
+function leerFormulario(){
+  const c = calcular();
+  return {
+    fecha: v('c-fecha')||hoy(), estado: v('c-estado'),
+    cliente_nombre: v('c-nombre').trim(), cif: v('c-cif').trim()||null, contacto: v('c-contacto').trim()||null,
+    email: v('c-email').trim()||null, telefono: v('c-telefono').trim()||null, direccion: v('c-direccion').trim()||null,
+    n_centros: v('c-centros')===''?null:parseInt(v('c-centros')), n_empleados: v('c-empleados')===''?null:parseInt(v('c-empleados')),
+    lineas: c.lineas, descuento_pct: c.dto, alta_inicial: r2(+v('c-alta')||0), notas: v('c-notas').trim()||null, total_mensual: c.mes,
+  };
+}
+async function guardarPresupuesto(){
+  const f = leerFormulario();
+  if(!f.cliente_nombre) return toast('Falta el nombre del cliente',true);
+  if(!f.lineas.length && !confirm('No has marcado ningún módulo. ¿Guardar igualmente?')) return;
+  try{
+    loading(true,'Guardando…');
+    let fila;
+    if(P.id){
+      fila = await sbFetch(`dist_presupuestos?id=eq.${P.id}`, { method:'PATCH', headers:{ 'Prefer':'return=representation' }, body:JSON.stringify(f) });
+      fila = fila[0];
+    } else {
+      fila = await sbFetch('dist_presupuestos', { method:'POST', headers:{ 'Prefer':'return=representation' }, body:JSON.stringify({ ...f, cuenta_id:CUENTA_ID }) });
+      fila = fila[0];
+    }
+    const i = presupuestos.findIndex(x=>x.id===fila.id);
+    if(i>=0) presupuestos[i]=fila; else presupuestos.unshift(fila);
+    P = JSON.parse(JSON.stringify(fila));
+    sel = new Map((P.lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, copia:l}]));
+    document.getElementById('pre-titulo').textContent = `Presupuesto ${P.numero}`;
+    document.getElementById('btn-borrar').style.display=''; document.getElementById('btn-duplicar').style.display='';
+    dirtyPre=false; document.getElementById('dirty-pre').classList.remove('on');
+    renderSeleccion(); calcular();
+    toast(`Guardado ${P.numero}`);
+  }catch(e){ toast('Error al guardar: '+e.message,true); console.error(e); }
+  finally{ loading(false); }
+}
+async function borrarPresupuesto(){
+  if(!P?.id) return;
+  if(!confirm(`¿Borrar el presupuesto ${P.numero} de ${P.cliente_nombre||'(sin nombre)'}? No se puede deshacer.`)) return;
+  try{
+    loading(true,'Borrando…');
+    await sbDelete('dist_presupuestos', `id=eq.${P.id}`);
+    presupuestos = presupuestos.filter(x=>x.id!==P.id);
+    dirtyPre=false; volverLista(); toast('Presupuesto borrado');
+  }catch(e){ toast('Error al borrar: '+e.message,true); }
+  finally{ loading(false); }
+}
+function duplicarPresupuesto(){
+  if(!P?.id) return;
+  if(dirtyPre && !confirm('Hay cambios sin guardar; el duplicado parte de lo guardado. ¿Seguir?')) return;
+  const copia = JSON.parse(JSON.stringify(P));
+  copia.id=null; copia.numero=''; copia.fecha=hoy(); copia.estado='borrador';
+  P = copia; sel = new Map((P.lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, copia:l}]));
+  abrirEditor(); tocar(); toast('Copia creada: guarda para darle número');
+}
+
+// ═════════════════════════════ IMPRESIÓN ═════════════════════════════
+function imprimir(){
+  const f = leerFormulario();
+  const c = calcular();
+  const conPrecio = f.lineas.filter(l=>l.tipo==='precio'), incl = f.lineas.filter(l=>l.tipo==='incluido'), cons = f.lineas.filter(l=>l.tipo==='consultar');
+  const fila = l => `<tr><td><b>${esc(l.modulo)}</b> · ${esc(l.plan)}<div class="cont">${esc(l.contenido)}</div></td><td class="num">${l.tipo==='precio'?fmt2(l.precio):(l.tipo==='incluido'?'Incluido':'A consultar')}</td><td class="num">${l.tipo==='precio'?l.cantidad:''}</td><td class="num">${l.tipo==='precio'?fmt2(l.precio*l.cantidad):''}</td></tr>`;
+  const datos = [f.cif&&`CIF ${esc(f.cif)}`, f.direccion&&esc(f.direccion), f.contacto&&esc(f.contacto), f.email&&esc(f.email), f.telefono&&esc(f.telefono)].filter(Boolean).join('<br>');
+  const dim = [f.n_centros!=null&&`${f.n_centros} centro${f.n_centros===1?'':'s'}`, f.n_empleados!=null&&`${f.n_empleados} empleado${f.n_empleados===1?'':'s'}`].filter(Boolean).join(' · ');
+  document.getElementById('impresion').innerHTML = `
+    <div class="imp-cab">
+      <div><div class="imp-marca">Ja<span>no</span></div><div style="font-size:11px;color:#555">${esc(CUENTA_NOMBRE)}</div></div>
+      <div class="der"><b>Presupuesto ${esc(P?.numero||'(sin guardar)')}</b><br>Fecha: ${fechaEs(f.fecha)}<br>Validez: 30 días</div>
+    </div>
+    <div class="imp-cliente">
+      <div><h4>Cliente</h4><p><b>${esc(f.cliente_nombre)||'—'}</b><br>${datos}</p></div>
+      <div><h4>Dimensión</h4><p>${dim||'—'}</p></div>
+    </div>
+    <table class="imp">
+      <thead><tr><th>Módulo</th><th class="num">Precio/mes</th><th class="num">Cant.</th><th class="num">Importe/mes</th></tr></thead>
+      <tbody>${[...conPrecio,...incl,...cons].map(fila).join('') || '<tr><td colspan="4" style="color:#888">Sin módulos</td></tr>'}</tbody>
+    </table>
+    <div class="imp-tot">
+      <div class="r"><span>Subtotal mensual</span><span>${fmt2(c.sub)}</span></div>
+      ${c.dto ? `<div class="r"><span>Descuento ${c.dto}%</span><span>−${fmt2(c.sub-c.mes)}</span></div>` : ''}
+      <div class="r big"><span>Total mensual</span><span>${fmt2(c.mes)}</span></div>
+      <div class="r"><span>Equivalente anual</span><span>${fmt2(c.mes*12)}</span></div>
+      ${f.alta_inicial ? `<div class="r"><span>Alta inicial (pago único)</span><span>${fmt2(f.alta_inicial)}</span></div>` : ''}
+    </div>
+    ${cons.length ? `<p class="imp-notas"><b>A valorar aparte:</b> ${cons.map(l=>`${esc(l.modulo)} (${esc(l.plan)})`).join(', ')}.</p>` : ''}
+    ${f.notas ? `<div class="imp-notas">${esc(f.notas)}</div>` : ''}
+    <div class="imp-pie">Importes sin IVA. Precios mensuales por licencia de uso de Jano. ${esc(CUENTA_NOMBRE)}.</div>`;
+  window.print();
+}
+</script>
+</body>
+</html>

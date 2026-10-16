@@ -32,7 +32,24 @@ export const RUTAS_MODULO: Record<string, string> = {
   contabilidad: "/finanzas",
   // Pedidos a proveedores (04-10-2026): dictado/catálogo → borradores → envío → cotejo.
   pedidos: "/pedidos",
+  // Distribuidores (16-10-2026): herramienta de presupuestos para quien vende Jano.
+  // Apartado «Soporte», el último de la portada (ORDEN_AREAS).
+  distribuidores: "/distribuidores",
 };
+
+/**
+ * Orden de los apartados (áreas) en la portada. Las áreas que no estén aquí
+ * van después, en el orden en que aparecen; «Soporte» siempre la última.
+ */
+export const ORDEN_AREAS = ["Análisis", "Finanzas", "Equipo", "Operaciones", "Soporte"]; // el orden que ya tenía la portada + Soporte
+
+export function ordenarAreas(areas: string[]): string[] {
+  const pos = (a: string) => {
+    const i = ORDEN_AREAS.indexOf(a);
+    return i === -1 ? ORDEN_AREAS.length - 1 : i; // desconocidas justo antes de Soporte
+  };
+  return [...areas].sort((a, b) => pos(a) - pos(b) || (a === "Soporte" ? 1 : b === "Soporte" ? -1 : 0));
+}
 
 /**
  * Accesos directos a aplicaciones EXTERNAS por cuenta, mientras no se integran en el esqueleto.

@@ -3,7 +3,7 @@ import { CabeceraModulo } from "@/app/cabecera-modulo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirPerfil, rolIncluye } from "@/lib/supabase/server";
-import { RUTAS_MODULO, GRUPOS_PORTADA, grupoDe, enlaceExterno } from "@/lib/modulos";
+import { RUTAS_MODULO, GRUPOS_PORTADA, grupoDe, enlaceExterno, ordenarAreas } from "@/lib/modulos";
 import { cerrarSesion } from "./acciones";
 import BannerJano from "./banner-jano";
 
@@ -68,7 +68,8 @@ export default async function Portada() {
       .map((m) => m.id)
   );
 
-  const areas = [...new Set(contratadosMod.map((m) => m.area))];
+  // Apartados en orden fijo (Soporte, el último); dentro, como vengan de la tabla.
+  const areas = ordenarAreas([...new Set(contratadosMod.map((m) => m.area))]);
 
   return (
     <>
