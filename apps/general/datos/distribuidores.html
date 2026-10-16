@@ -7,7 +7,10 @@
      v1.1 (16-10-2026): presupuesto por meses — meses de apertura del cliente, cada
      módulo se enchufa/desenchufa mes a mes, totales anualizados y calendario mensual.
      v1.2 (16-10-2026): precio editable por línea del presupuesto (la lista queda de referencia);
-     las líneas «A consultar» admiten precio, cantidad y meses y entran en los totales. -->
+     las líneas «A consultar» admiten precio, cantidad y meses y entran en los totales.
+     v1.3 (16-10-2026): comparativa con la competencia — pestaña Competencia (estudio de
+     precios oct. 2026, editable), categoría de comparación en Precios, «Hoy con…» por módulo
+     en el presupuesto, tarjeta Comparativa con el ahorro anual y sección en el PDF. -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -125,6 +128,20 @@ table.g td textarea.inp{min-height:48px}
 .mes-tog.big{padding-left:0;gap:3px}
 .mes-tog.big button{width:34px;height:28px;font-size:11px}
 .sel-mod .dur{font-size:10px;color:var(--muted);display:block;margin-top:2px}
+/* comparativa por línea */
+.sel-mod .comp{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0 2px 28px;font-size:11px;color:var(--muted)}
+.sel-mod .comp .lbl{font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10px}
+.sel-mod .comp select.inp{width:auto;max-width:380px;height:26px;font-size:11px}
+.sel-mod .comp .inp.num{width:74px;height:26px;font-size:11px}
+.sel-mod .comp .inp.txt{width:170px;height:26px;font-size:11px}
+.sel-mod .comp .res{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:500;color:var(--text);white-space:nowrap}
+.sel-mod .comp .res.pos{color:var(--green)}.sel-mod .comp .res.neg{color:var(--red)}
+.ahorro-hero{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin:4px 0 10px}
+.ahorro-hero .big{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.ahorro-hero .big.pos{color:var(--green)}.ahorro-hero .big.neg{color:var(--red)}
+.radio{display:inline-flex;gap:10px;align-items:center;font-size:11px;color:#555}
+.radio label{display:inline-flex;gap:4px;align-items:center;cursor:pointer}
+table.g td a{color:var(--blue)}
 table.g td.off{color:#C9CDC7;text-align:center}
 table.g td.cal{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 table.g th.cal{text-align:right}
@@ -174,6 +191,10 @@ table.g th.cal{text-align:right}
   table.imp.cal td.off{color:#bbb;text-align:center}
   table.imp.cal tr.tot td{font-weight:700;border-top:1px solid #2F3A45}
   .imp-h{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7A848C;margin:16px 0 4px}
+  .imp-ahorro{font-size:15px;font-weight:700;margin:4px 0 8px}
+  .imp-ahorro.pos{color:#2F3A45}.imp-ahorro small{font-weight:400;color:#555;font-size:11px}
+  table.imp.comp td,table.imp.comp th{font-size:11px}
+  table.imp.comp tr.tot td{font-weight:700;border-top:1px solid #2F3A45}
   .imp-notas{margin-top:22px;font-size:11px;color:#444;white-space:pre-line;line-height:1.5}
   .imp-pie{margin-top:30px;font-size:10px;color:#888;border-top:0.5px solid #ccc;padding-top:8px}
 }
@@ -193,6 +214,7 @@ table.g th.cal{text-align:right}
   .sel-mod>:nth-child(1){grid-area:chk}.sel-mod>:nth-child(2){grid-area:mod}.sel-mod>:nth-child(3){grid-area:plan}
   .sel-mod>:nth-child(4){grid-area:cont}.sel-mod>:nth-child(5){grid-area:pr;text-align:left}.sel-mod>:nth-child(6){grid-area:cant}.sel-mod>:nth-child(7){grid-area:mes}.sel-mod>:nth-child(8){grid-area:sub}
   .mes-tog{padding-left:0;flex-wrap:wrap}.mes-tog button{width:22px;height:24px;font-size:10px}
+  .sel-mod .comp{padding-left:0}.sel-mod .comp .res{margin-left:0;width:100%}
 }
 </style>
 </head>
@@ -210,6 +232,7 @@ table.g th.cal{text-align:right}
     <nav class="tabs">
       <button class="tab active" id="tab-presupuestos" onclick="showTab('presupuestos',this)">📋 Presupuestos</button>
       <button class="tab" id="tab-precios" onclick="showTab('precios',this)">💶 Precios</button>
+      <button class="tab" id="tab-competencia" onclick="showTab('competencia',this)">🏷 Competencia</button>
     </nav>
     <div class="side-foot">
       <div class="side-status"><div class="status-dot ok" id="status-dot"></div><span id="status-label">—</span></div>
@@ -233,7 +256,7 @@ table.g th.cal{text-align:right}
       </header>
       <div class="content">
         <div class="tbl-wrap"><table class="g">
-          <thead><tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>CIF</th><th class="num">Centros</th><th class="num">Empleados</th><th>Apertura</th><th class="num">Módulos</th><th class="num">€/año</th><th class="num">Media €/mes</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>CIF</th><th class="num">Centros</th><th class="num">Empleados</th><th>Apertura</th><th class="num">Módulos</th><th class="num">€/año</th><th class="num">Media €/mes</th><th class="num">Ahorro/año</th><th>Estado</th></tr></thead>
           <tbody id="pre-tbody"></tbody>
         </table></div>
         <div class="empty" id="pre-vacio" style="display:none">Todavía no hay presupuestos. Pulsa «Nuevo presupuesto» para hacer el primero.</div>
@@ -274,7 +297,7 @@ table.g th.cal{text-align:right}
               </select></div>
             <div class="f span2"><label>Dirección</label><input class="inp" id="c-direccion" oninput="tocar()"></div>
             <div class="f"><label>Nº de centros</label><input class="inp num" id="c-centros" type="number" min="0" step="1" oninput="tocar()"></div>
-            <div class="f"><label>Nº de empleados</label><input class="inp num" id="c-empleados" type="number" min="0" step="1" oninput="tocar()"></div>
+            <div class="f"><label>Nº de empleados</label><input class="inp num" id="c-empleados" type="number" min="0" step="1" oninput="tocar();renderSeleccion()"></div>
           </div>
         </div>
 
@@ -304,6 +327,18 @@ table.g th.cal{text-align:right}
           <div class="card-title">Calendario mensual</div>
           <div class="card-sub">Lo que paga el cliente cada mes, módulo a módulo (con el descuento aplicado en la fila de total).</div>
           <div class="tbl-wrap"><table class="g" id="tbl-cal"><thead></thead><tbody></tbody></table></div>
+        </div>
+
+        <div class="card" id="card-comp" style="display:none">
+          <div class="card-title">Comparativa con lo que paga hoy</div>
+          <div class="card-sub">Suma de los módulos en los que has indicado «Hoy con…». Jano va con el descuento aplicado.
+            <span class="radio" style="margin-left:10px">La competencia se cuenta:
+              <label><input type="radio" name="comp-meses" value="todo" onchange="setCompMeses('todo')"> todo el año (12 meses)</label>
+              <label><input type="radio" name="comp-meses" value="apertura" onchange="setCompMeses('apertura')"> solo los meses de apertura</label>
+            </span>
+          </div>
+          <div class="ahorro-hero" id="comp-hero"></div>
+          <div class="tbl-wrap"><table class="g" id="tbl-comp"><thead><tr><th>Módulo</th><th>Hoy con</th><th class="num">Hoy €/mes</th><th class="num">Hoy €/año</th><th class="num">Jano €/año</th><th class="num">Diferencia</th></tr></thead><tbody></tbody></table></div>
         </div>
 
         <div class="totales">
@@ -341,12 +376,36 @@ table.g th.cal{text-align:right}
     <div class="content">
       <div class="card">
         <div class="card-title">Cómo funciona</div>
-        <p class="note">Cada fila es un módulo con un plan (Normal, Premium, Asesoría…) y lo que incluye. <b>Tipo</b>: «Precio» cobra el importe mensual; «Incluido» va de serie sin coste; «A consultar» se lista en el presupuesto sin importe. Las filas desactivadas no se ofrecen en los presupuestos nuevos, pero no se pierden. El orden es el de la lista y el del presupuesto impreso.</p>
+        <p class="note">Cada fila es un módulo con un plan (Normal, Premium, Asesoría…) y lo que incluye. <b>Tipo</b>: «Precio» cobra el importe mensual; «Incluido» va de serie sin coste; «A consultar» se lista en el presupuesto sin importe. <b>Compara con</b>: la categoría de la pestaña Competencia con la que se compara esta línea en los presupuestos (vacío = sin comparativa). Las filas desactivadas no se ofrecen en los presupuestos nuevos, pero no se pierden. El orden es el de la lista y el del presupuesto impreso.</p>
       </div>
       <div class="tbl-wrap"><table class="g">
-        <thead><tr><th style="width:76px">Orden</th><th style="width:150px">Módulo</th><th style="width:120px">Plan</th><th>Contenido (una línea por elemento)</th><th style="width:120px">Tipo</th><th class="num" style="width:100px">€/mes</th><th style="width:60px">Activo</th><th style="width:40px"></th></tr></thead>
+        <thead><tr><th style="width:76px">Orden</th><th style="width:150px">Módulo</th><th style="width:120px">Plan</th><th>Contenido (una línea por elemento)</th><th style="width:120px">Tipo</th><th class="num" style="width:100px">€/mes</th><th style="width:130px">Compara con</th><th style="width:60px">Activo</th><th style="width:40px"></th></tr></thead>
         <tbody id="precios-tbody"></tbody>
       </table></div>
+    </div>
+  </section>
+
+  <!-- ══ COMPETENCIA ══ -->
+  <section class="section" id="sec-competencia">
+    <header class="app-header">
+      <h1>Precios de la competencia</h1>
+      <div class="header-controls">
+        <select class="inp" id="comp-filtro" style="width:170px" onchange="renderCompetencia()"><option value="">Todas las categorías</option></select>
+        <span class="dirty-pill" id="dirty-comp">Cambios sin guardar</span>
+        <button class="btn" onclick="nuevaLineaComp()">+ Añadir plan</button>
+        <button class="btn btn-g" onclick="guardarCompetencia()">Guardar</button>
+      </div>
+    </header>
+    <div class="content">
+      <div class="card">
+        <div class="card-title">De dónde sale</div>
+        <p class="note">Estudio de precios de la competencia de octubre de 2026 (€/mes sin IVA). <b>Base</b>: «por local» es cuota fija por local o cuenta; «por empleado» y «por usuario» se multiplican por la plantilla del cliente al compararlos; «comisión» y «pago único» no tienen cuota mensual comparable (en el presupuesto habrá que poner una cuota estimada a mano). Las filas desactivadas no se ofrecen al comparar. La <b>categoría</b> es la que se elige en «Compara con» de la pestaña Precios.</p>
+      </div>
+      <div class="tbl-wrap" style="max-height:none"><table class="g" style="min-width:1500px">
+        <thead><tr><th style="width:60px">Orden</th><th style="width:120px">Categoría</th><th style="width:140px">Proveedor</th><th style="width:150px">Plan</th><th class="num" style="width:90px">€/mes</th><th style="width:120px">Base</th><th style="width:170px">Unidad / modelo</th><th>Qué incluye</th><th>Extras y comisiones</th><th style="width:110px">Fiabilidad</th><th style="width:70px">Fuente</th><th style="width:55px">Activo</th><th style="width:40px"></th></tr></thead>
+        <tbody id="comp-tbody"></tbody>
+      </table></div>
+      <datalist id="dl-categorias"></datalist>
     </div>
   </section>
 
@@ -374,6 +433,10 @@ const MES_C = ['E','F','M','A','M','J','J','A','S','O','N','D'];
 const MES_N = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const TODOS = [1,2,3,4,5,6,7,8,9,10,11,12];
 const TEMPORADA = [4,5,6,7,8,9,10];
+const BASES = [['local','por local'],['empleado','por empleado'],['usuario','por usuario'],['comision','comisión'],['pago_unico','pago único']];
+const BASE_TXT = Object.fromEntries(BASES);
+const USUARIOS_TIPO = 3;   // supuesto del estudio para las tarifas por usuario
+const EMPLEADOS_TIPO = 20; // ídem para las tarifas por empleado, si el presupuesto no dice la plantilla
 
 // ───────────────────────────── ESTADO ─────────────────────────────
 let precios = [];        // filas dist_precios (todas, activas o no)
@@ -382,7 +445,9 @@ let presupuestos = [];   // filas dist_presupuestos
 let P = null;            // presupuesto abierto en el editor (objeto de trabajo)
 let sel = new Map();     // precio_id -> {cantidad, meses:[1..12], copia} (selección en el editor)
 let apertura = [...TODOS]; // meses de apertura del presupuesto abierto
-let dirtyPre = false, dirtyPrecios = false;
+let compMeses = 'todo';    // cómo se cuenta la competencia en la comparativa: 'todo' | 'apertura'
+let competencia = [], competenciaDel = new Set();
+let dirtyPre = false, dirtyPrecios = false, dirtyComp = false;
 let tabActual = 'presupuestos';
 
 const fmt = n => (n==null||isNaN(n)) ? '—' : Math.round(n).toLocaleString('es-ES') + ' €';
@@ -391,7 +456,7 @@ const r2 = n => Math.round((+n||0)*100)/100;
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hoy = () => new Date().toISOString().slice(0,10);
 const fechaEs = s => s ? new Date(s+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
-const dirty = () => dirtyPre || dirtyPrecios;
+const dirty = () => dirtyPre || dirtyPrecios || dirtyComp;
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);}));
 window.addEventListener('beforeunload', e => { if(dirty()){ e.preventDefault(); e.returnValue=''; } });
 
@@ -414,9 +479,10 @@ const enc = encodeURIComponent;
 function loading(on,msg){ document.getElementById('loading').classList.toggle('on',!!on); if(msg) document.getElementById('loading-msg').textContent=msg; }
 let toastT; function toast(msg,err){ const t=document.getElementById('toast'); t.textContent=msg; t.className='on'+(err?' err':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='',err?6000:2600); }
 function status(kind,label){ document.getElementById('status-dot').className='status-dot '+kind; document.getElementById('status-label').textContent=label; }
-function showTab(id,btn){ tabActual=id; document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById('sec-'+id).classList.add('active'); document.querySelectorAll('.side-nav .tab').forEach(b=>b.classList.remove('active')); (btn||document.getElementById('tab-'+id)).classList.add('active'); if(id==='precios') renderPrecios(); else renderLista(); }
+function showTab(id,btn){ tabActual=id; document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById('sec-'+id).classList.add('active'); document.querySelectorAll('.side-nav .tab').forEach(b=>b.classList.remove('active')); (btn||document.getElementById('tab-'+id)).classList.add('active'); if(id==='precios') renderPrecios(); else if(id==='competencia') renderCompetencia(); else renderLista(); }
 function tocar(){ dirtyPre=true; document.getElementById('dirty-pre').classList.add('on'); }
 function tocarPrecios(){ dirtyPrecios=true; document.getElementById('dirty-precios').classList.add('on'); }
+function tocarComp(){ dirtyComp=true; document.getElementById('dirty-comp').classList.add('on'); }
 const v = id => document.getElementById(id).value;
 const setv = (id,val) => { document.getElementById(id).value = val ?? ''; };
 
@@ -425,24 +491,25 @@ const setv = (id,val) => { document.getElementById(id).value = val ?? ''; };
   try{
     loading(true,'Cargando…'); status('loading','cargando');
     await cargar();
-    renderLista(); renderPrecios();
+    renderLista(); renderPrecios(); renderCompetencia();
     status('ok','conectado');
   }catch(e){ status('err','error'); toast('Error al cargar: '+e.message,true); console.error(e); }
   finally{ loading(false); }
 })();
 
 async function cargar(){
-  [precios, presupuestos] = await Promise.all([
+  [precios, presupuestos, competencia] = await Promise.all([
     sbFetch(`dist_precios?cuenta_id=eq.${CUENTA_ID}&order=orden.asc,modulo.asc&limit=1000`),
     sbFetch(`dist_presupuestos?cuenta_id=eq.${CUENTA_ID}&order=creado_en.desc&limit=1000`),
+    sbFetch(`dist_competencia?cuenta_id=eq.${CUENTA_ID}&order=categoria.asc,orden.asc&limit=2000`),
   ]);
-  precios = precios||[]; presupuestos = presupuestos||[];
+  precios = precios||[]; presupuestos = presupuestos||[]; competencia = competencia||[];
 }
 
 // ═════════════════════════════ PRECIOS ═════════════════════════════
 function renderPrecios(){
   const tb = document.getElementById('precios-tbody');
-  if(!precios.length){ tb.innerHTML = '<tr><td colspan="8" class="empty">No hay líneas. Pulsa «Añadir línea».</td></tr>'; return; }
+  if(!precios.length){ tb.innerHTML = '<tr><td colspan="9" class="empty">No hay líneas. Pulsa «Añadir línea».</td></tr>'; return; }
   tb.innerHTML = precios.map((p,i) => `
     <tr class="${p.activo?'':'inactivo'}">
       <td><input class="inp num" type="number" step="10" value="${p.orden??0}" oninput="pr(${i},'orden',+this.value)"></td>
@@ -451,10 +518,13 @@ function renderPrecios(){
       <td><textarea class="inp" oninput="pr(${i},'contenido',this.value)" placeholder="Una línea por elemento">${esc(p.contenido)}</textarea></td>
       <td><select class="inp" onchange="pr(${i},'tipo',this.value);renderPrecios()">${TIPOS.map(([k,l])=>`<option value="${k}" ${p.tipo===k?'selected':''}>${l}</option>`).join('')}</select></td>
       <td class="num">${p.tipo==='precio' ? `<input class="inp num" type="number" step="1" min="0" value="${p.precio??''}" oninput="pr(${i},'precio',this.value===''?null:+this.value)">` : `<span class="chip">${p.tipo==='incluido'?'Incluido':'A consultar'}</span>`}</td>
+      <td><select class="inp" onchange="pr(${i},'categoria',this.value||null)"><option value="">— sin comparar —</option>${categorias().map(c=>`<option ${p.categoria===c?'selected':''}>${esc(c)}</option>`).join('')}${p.categoria&&!categorias().includes(p.categoria)?`<option selected>${esc(p.categoria)}</option>`:''}</select></td>
       <td style="text-align:center"><input type="checkbox" ${p.activo?'checked':''} onchange="pr(${i},'activo',this.checked);renderPrecios()"></td>
       <td><button class="btn btn-sm btn-danger" title="Quitar línea" onclick="quitarPrecio(${i})">✕</button></td>
     </tr>`).join('');
 }
+/** Categorías conocidas: las de la tabla de competencia + las ya usadas en la lista de precios. */
+function categorias(){ return [...new Set([...competencia.map(c=>c.categoria), ...precios.map(p=>p.categoria)].filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
 function pr(i,campo,val){ precios[i][campo]=val; tocarPrecios(); }
 function nuevaLineaPrecio(){
   const maxOrden = precios.reduce((m,p)=>Math.max(m,p.orden||0),0);
@@ -474,7 +544,7 @@ async function guardarPrecios(){
   if(malas.length) return toast('Hay líneas sin módulo o sin precio',true);
   try{
     loading(true,'Guardando precios…');
-    const filas = precios.map(p => ({ id:p.id, cuenta_id:CUENTA_ID, orden:p.orden||0, modulo:p.modulo.trim(), plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio:p.tipo==='precio'?r2(p.precio):null, activo:!!p.activo }));
+    const filas = precios.map(p => ({ id:p.id, cuenta_id:CUENTA_ID, orden:p.orden||0, modulo:p.modulo.trim(), plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio:p.tipo==='precio'?r2(p.precio):null, categoria:p.categoria||null, activo:!!p.activo }));
     await sbUpsert('dist_precios', filas);
     for(const id of preciosDel) await sbDelete('dist_precios', `id=eq.${id}`);
     preciosDel.clear(); precios.forEach(p=>delete p._nueva);
@@ -484,6 +554,85 @@ async function guardarPrecios(){
   }catch(e){ toast('Error al guardar: '+e.message,true); console.error(e); }
   finally{ loading(false); }
 }
+
+// ═════════════════════════════ COMPETENCIA ═════════════════════════════
+function renderCompetencia(){
+  const cats = categorias();
+  const f = document.getElementById('comp-filtro'); const act = f.value;
+  f.innerHTML = '<option value="">Todas las categorías</option>' + cats.map(c=>`<option ${act===c?'selected':''}>${esc(c)}</option>`).join('');
+  document.getElementById('dl-categorias').innerHTML = cats.map(c=>`<option value="${esc(c)}">`).join('');
+  const tb = document.getElementById('comp-tbody');
+  const filas = competencia.map((c,i)=>[c,i]).filter(([c]) => !act || c.categoria===act);
+  if(!filas.length){ tb.innerHTML = '<tr><td colspan="13" class="empty">No hay planes. Pulsa «Añadir plan».</td></tr>'; return; }
+  tb.innerHTML = filas.map(([c,i]) => `
+    <tr class="${c.activo?'':'inactivo'}">
+      <td><input class="inp num" type="number" step="10" value="${c.orden??0}" oninput="cp(${i},'orden',+this.value)"></td>
+      <td><input class="inp" list="dl-categorias" value="${esc(c.categoria)}" oninput="cp(${i},'categoria',this.value)" placeholder="Categoría"></td>
+      <td><input class="inp" value="${esc(c.proveedor)}" oninput="cp(${i},'proveedor',this.value)" placeholder="Proveedor"></td>
+      <td><input class="inp" value="${esc(c.plan)}" oninput="cp(${i},'plan',this.value)" placeholder="Plan"></td>
+      <td class="num"><input class="inp num" type="number" step="0.01" min="0" value="${c.precio??''}" oninput="cp(${i},'precio',this.value===''?null:+this.value)"></td>
+      <td><select class="inp" onchange="cp(${i},'base',this.value)">${BASES.map(([k,l])=>`<option value="${k}" ${c.base===k?'selected':''}>${l}</option>`).join('')}</select></td>
+      <td><input class="inp" value="${esc(c.unidad||'')}" oninput="cp(${i},'unidad',this.value||null)"></td>
+      <td><textarea class="inp" oninput="cp(${i},'incluye',this.value||null)">${esc(c.incluye||'')}</textarea></td>
+      <td><textarea class="inp" oninput="cp(${i},'extras',this.value||null)">${esc(c.extras||'')}</textarea></td>
+      <td><input class="inp" value="${esc(c.fiabilidad||'')}" oninput="cp(${i},'fiabilidad',this.value||null)" placeholder="Oficial / Comparador…"></td>
+      <td>${c.fuente ? `<a href="${esc(c.fuente)}" target="_blank" rel="noopener" title="${esc(c.fuente)}">abrir ↗</a><br>` : ''}<input class="inp" value="${esc(c.fuente||'')}" oninput="cp(${i},'fuente',this.value||null)" placeholder="URL" style="margin-top:2px"></td>
+      <td style="text-align:center"><input type="checkbox" ${c.activo?'checked':''} onchange="cp(${i},'activo',this.checked);renderCompetencia()"></td>
+      <td><button class="btn btn-sm btn-danger" title="Quitar plan" onclick="quitarComp(${i})">✕</button></td>
+    </tr>`).join('');
+}
+function cp(i,campo,val){ competencia[i][campo]=val; tocarComp(); }
+function nuevaLineaComp(){
+  const cat = document.getElementById('comp-filtro').value || '';
+  const maxOrden = competencia.reduce((m,c)=>Math.max(m,c.orden||0),0);
+  competencia.push({ id:uuid(), cuenta_id:CUENTA_ID, orden:maxOrden+10, categoria:cat, proveedor:'', plan:'', precio:null, base:'local', unidad:null, incluye:null, extras:null, fiabilidad:null, fuente:null, activo:true, _nueva:true });
+  tocarComp(); renderCompetencia();
+  const tb=document.getElementById('comp-tbody'); tb.lastElementChild.querySelector('input[placeholder="Proveedor"]').focus();
+}
+function quitarComp(i){
+  const c=competencia[i];
+  if(!confirm(`¿Quitar ${c.proveedor||'este plan'} ${c.plan||''} de la lista? Los presupuestos que lo usen conservan su copia.`)) return;
+  if(!c._nueva) competenciaDel.add(c.id);
+  competencia.splice(i,1); tocarComp(); renderCompetencia();
+}
+async function guardarCompetencia(){
+  const malas = competencia.filter(c => !(c.categoria||'').trim() || !(c.proveedor||'').trim());
+  if(malas.length) return toast('Hay planes sin categoría o sin proveedor',true);
+  try{
+    loading(true,'Guardando competencia…');
+    const filas = competencia.map(c => ({ id:c.id, cuenta_id:CUENTA_ID, orden:c.orden||0, categoria:c.categoria.trim(), proveedor:c.proveedor.trim(), plan:(c.plan||'').trim(), precio:c.precio==null?null:r2(c.precio), base:c.base||'local', unidad:c.unidad||null, incluye:c.incluye||null, extras:c.extras||null, fiabilidad:c.fiabilidad||null, fuente:c.fuente||null, activo:!!c.activo }));
+    await sbUpsert('dist_competencia', filas);
+    for(const id of competenciaDel) await sbDelete('dist_competencia', `id=eq.${id}`);
+    competenciaDel.clear(); competencia.forEach(c=>delete c._nueva);
+    competencia.sort((a,b)=>a.categoria.localeCompare(b.categoria)||(a.orden-b.orden));
+    dirtyComp=false; document.getElementById('dirty-comp').classList.remove('on');
+    renderCompetencia(); toast('Competencia guardada');
+  }catch(e){ toast('Error al guardar: '+e.message,true); console.error(e); }
+  finally{ loading(false); }
+}
+/** Planes comparables de una categoría (activos). */
+const planesDe = cat => cat ? competencia.filter(c=>c.activo && c.categoria===cat) : [];
+/** Cuota mensual estimada de un plan para este cliente, según su base. null = no comparable sin dato a mano. */
+function cuotaPlan(c){
+  if(c.precio==null) return null;
+  if(c.base==='local') return +c.precio;
+  if(c.base==='empleado'){ const n = parseInt(v('c-empleados'))||EMPLEADOS_TIPO; return r2(c.precio*n); }
+  if(c.base==='usuario') return r2(c.precio*USUARIOS_TIPO);
+  return null; // comision, pago_unico
+}
+function notaPlan(c){
+  if(c.base==='empleado'){ const n = parseInt(v('c-empleados')); return n ? `${c.precio} € × ${n} empleados` : `${c.precio} € × ${EMPLEADOS_TIPO} empleados (plantilla no indicada)`; }
+  if(c.base==='usuario') return `${c.precio} € × ${USUARIOS_TIPO} usuarios`;
+  if(c.base==='comision') return `va por comisión (${c.unidad||''}): pon una cuota estimada`;
+  if(c.base==='pago_unico') return `licencia de pago único (${c.precio} €): pon una cuota estimada`;
+  return c.unidad||'';
+}
+/** Media del mercado de una categoría: planes activos con cuota fija por local. */
+function mediaMercado(cat){
+  const xs = planesDe(cat).filter(c=>c.base==='local' && c.precio!=null && c.precio>0).map(c=>+c.precio);
+  return xs.length ? { n:xs.length, media:r2(xs.reduce((a,b)=>a+b,0)/xs.length) } : null;
+}
+function textoCuota(c){ const q=cuotaPlan(c); return q!=null ? `${fmt(q)}/mes${c.base!=='local'?' aprox.':''}` : (c.base==='comision'?'comisión':c.base==='pago_unico'?'pago único':'sin precio'); }
 
 // ═════════════════════════════ PRESUPUESTOS · LISTA ═════════════════════════════
 function renderLista(){
@@ -502,8 +651,9 @@ function renderLista(){
       <td class="num">${(p.lineas||[]).length}</td>
       <td class="num"><b>${fmt(p.total_anual ?? (p.total_mensual*12))}</b></td>
       <td class="num">${fmt((p.total_anual ?? (p.total_mensual*12))/12)}</td>
+      <td class="num">${p.ahorro_anual!=null ? `<span class="${p.ahorro_anual>=0?'dv-pos':'dv-neg'}" style="color:${p.ahorro_anual>=0?'var(--green)':'var(--red)'};font-weight:500">${p.ahorro_anual>=0?'':'−'}${fmt(Math.abs(p.ahorro_anual))}</span>` : '<span class="note">—</span>'}</td>
       <td><span class="chip ${p.estado}">${ESTADOS[p.estado]||p.estado}</span></td>
-    </tr>`).join('') || (presupuestos.length ? '<tr><td colspan="11" class="empty">Nada coincide con la búsqueda.</td></tr>' : '');
+    </tr>`).join('') || (presupuestos.length ? '<tr><td colspan="12" class="empty">Nada coincide con la búsqueda.</td></tr>' : '');
 }
 
 // ═════════════════════════════ MESES ═════════════════════════════
@@ -540,7 +690,7 @@ function mesesLinea(id, arr){ const s=sel.get(id); if(!s) return; s.meses=[...ar
 function nuevoPresupuesto(){
   if(dirtyPrecios && !confirm('Hay cambios sin guardar en Precios. ¿Seguir?')) return;
   P = { id:null, numero:'', fecha:hoy(), estado:'borrador', cliente_nombre:'', cif:'', contacto:'', email:'', telefono:'', direccion:'', n_centros:null, n_empleados:null, lineas:[], descuento_pct:0, alta_inicial:0, notas:'', meses_apertura:[...TODOS] };
-  apertura = [...TODOS];
+  apertura = [...TODOS]; compMeses = 'todo';
   sel = new Map();
   // de serie: lo que va incluido se marca solo
   precios.filter(p=>p.activo && p.tipo==='incluido').forEach(p => sel.set(p.id,{cantidad:1, meses:[...apertura]}));
@@ -548,12 +698,12 @@ function nuevoPresupuesto(){
 }
 function selDesdeLineas(lineas){
   // precio: el guardado en la línea (copia del momento); así un presupuesto no cambia aunque cambie la lista
-  return new Map((lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, meses: l.meses ? normMeses(l.meses) : [...TODOS], precio: l.tipo==='incluido' ? null : (l.precio ?? null), copia:l}]));
+  return new Map((lineas||[]).map(l => [l.precio_id, {cantidad:l.cantidad||1, meses: l.meses ? normMeses(l.meses) : [...TODOS], precio: l.tipo==='incluido' ? null : (l.precio ?? null), comp: l.comp ? {...l.comp} : null, copia:l}]));
 }
 function abrirPresupuesto(id){
   const p = presupuestos.find(x=>x.id===id); if(!p) return;
   P = JSON.parse(JSON.stringify(p));
-  apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS);
+  apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS); compMeses = P.comp_meses||'todo';
   sel = selDesdeLineas(P.lineas);
   abrirEditor();
 }
@@ -620,11 +770,50 @@ function renderSeleccion(){
       <span class="cant">${editable ? `<input class="inp num" type="number" min="1" step="1" value="${cant}" ${on?'':'disabled'} oninput="cantLinea('${p.id}',this.value)">` : ''}</span>
       <span>${togs}</span>
       <span class="sub">${anual!=null ? fmt(anual) : (on && editable && pe==null ? '<span class="chip plan-Asesoría">a consultar</span>' : '')}</span>
+      ${on && editable ? compHtml(p, s, pe, cant, meses) : ''}
     </div>`;
   }).join('') || '<div class="empty">No hay líneas activas en la lista de precios.</div>';
 }
+/** Subfila «Hoy con…»: con quién tiene hoy el cliente este módulo y lo que le cuesta. */
+function compHtml(p, s, pe, cant, meses){
+  const cat = p.categoria || null;
+  const planes = planesDe(cat);
+  const c = s.comp;
+  if(!cat && !c) return `<div class="comp"><span class="lbl">Hoy con</span><span>sin categoría de comparación (ponla en Precios › «Compara con»)</span> <button class="btn btn-sm" onclick="setComp('${p.id}','otro')">Indicar a mano</button></div>`;
+  const med = mediaMercado(cat);
+  const porProv = {}; planes.forEach(x => (porProv[x.proveedor] ||= []).push(x));
+  const selId = c ? (c.id||'otro') : '';
+  const opts = `<option value="">— no comparar —</option>`
+    + (med ? `<option value="media" ${selId==='media'?'selected':''}>Media del mercado · ${esc(cat)} (${med.n} planes, ${fmt(med.media)}/mes)</option>` : '')
+    + Object.entries(porProv).map(([prov,xs]) => `<optgroup label="${esc(prov)}">${xs.map(x=>`<option value="${x.id}" ${selId===x.id?'selected':''}>${esc(prov)} · ${esc(x.plan||'—')} — ${esc(textoCuota(x))}</option>`).join('')}</optgroup>`).join('')
+    + `<option value="otro" ${selId==='otro'?'selected':''}>Otro proveedor…</option>`;
+  let detalle = '';
+  if(c){
+    detalle = (c.id==='otro' ? `<input class="inp txt" value="${esc(c.proveedor||'')}" placeholder="Proveedor y plan" oninput="compCampo('${p.id}','proveedor',this.value)">` : '')
+      + `<input class="inp num" type="number" min="0" step="1" value="${c.precio_mes??''}" placeholder="€/mes" oninput="compCampo('${p.id}','precio_mes',this.value===''?null:+this.value)" title="Lo que paga hoy al mes por unidad"> <span>€/mes</span>`
+      + (c.nota ? `<span class="note" title="${esc(c.nota)}">· ${esc(c.nota)}</span>` : '');
+    if(c.precio_mes!=null && pe!=null){
+      const hoy = c.precio_mes*cant*mesesComp(meses), jano = pe*cant*meses.length, d = hoy-jano;
+      detalle += `<span class="res ${d>=0?'pos':'neg'}">hoy ${fmt(hoy)}/año · Jano ${fmt(jano)}/año · ${d>=0?'ahorra':'paga'} ${fmt(Math.abs(d))}</span>`;
+    } else if(c.precio_mes==null) detalle += `<span class="res">pon la cuota para comparar</span>`;
+  }
+  return `<div class="comp"><span class="lbl">Hoy con</span><select class="inp" onchange="setComp('${p.id}',this.value)">${opts}</select>${detalle}</div>`;
+}
+/** Meses que se cuentan a la competencia para una línea. */
+function mesesComp(meses){ return compMeses==='apertura' ? apertura.length : 12; }
+function setComp(id, val){
+  const s=sel.get(id); if(!s) return;
+  const p = lineasOfrecidas().find(x=>x.id===id);
+  if(!val) s.comp=null;
+  else if(val==='media'){ const m=mediaMercado(p?.categoria); s.comp={ id:'media', proveedor:'Media del mercado', plan:p?.categoria||'', precio_mes:m?m.media:null, base:'local', nota:m?`media de ${m.n} planes`:'' }; }
+  else if(val==='otro'){ s.comp={ id:'otro', proveedor:'', plan:'', precio_mes:null, base:'local', nota:'' }; }
+  else { const c=competencia.find(x=>x.id===val); if(!c) return; s.comp={ id:c.id, proveedor:c.proveedor, plan:c.plan, precio_mes:cuotaPlan(c), base:c.base, nota:notaPlan(c) }; }
+  tocar(); renderSeleccion(); calcular();
+}
+function compCampo(id, campo, val){ const s=sel.get(id); if(!s||!s.comp) return; s.comp[campo]=val; tocar(); if(campo==='precio_mes') { renderSeleccion(); } calcular(); }
+function setCompMeses(m){ compMeses=m; tocar(); renderSeleccion(); calcular(); }
 function toggleLinea(id,on){
-  if(on){ const prev=sel.get(id); sel.set(id,{cantidad:prev?.cantidad||1, meses: prev?.meses ? [...prev.meses] : [...apertura], precio: prev?.precio ?? null, copia:prev?.copia}); } else sel.delete(id);
+  if(on){ const prev=sel.get(id); sel.set(id,{cantidad:prev?.cantidad||1, meses: prev?.meses ? [...prev.meses] : [...apertura], precio: prev?.precio ?? null, comp: prev?.comp ?? null, copia:prev?.copia}); } else sel.delete(id);
   tocar(); renderSeleccion(); calcular();
 }
 function cantLinea(id,val){ const s=sel.get(id); if(!s) return; s.cantidad=Math.max(1,parseInt(val)||1); tocar(); renderSeleccion(); calcular(); }
@@ -635,7 +824,8 @@ function lineasPresupuesto(){
   const out=[];
   for(const [id,s] of sel){ const p=porId.get(id); if(!p) continue;
     const pe = precioEf(p,s);
-    out.push({ precio_id:id, orden:p.orden||0, modulo:p.modulo, plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio: pe==null ? null : r2(pe), precio_lista: p.tipo==='precio' ? r2(p.precio) : null, cantidad: p.tipo==='incluido' ? 1 : (s.cantidad||1), meses: p.tipo==='incluido' ? [...apertura] : normMeses(s.meses) });
+    out.push({ precio_id:id, orden:p.orden||0, modulo:p.modulo, plan:p.plan, contenido:p.contenido||'', tipo:p.tipo, precio: pe==null ? null : r2(pe), precio_lista: p.tipo==='precio' ? r2(p.precio) : null, cantidad: p.tipo==='incluido' ? 1 : (s.cantidad||1), meses: p.tipo==='incluido' ? [...apertura] : normMeses(s.meses),
+      comp: (p.tipo!=='incluido' && s.comp) ? { id:s.comp.id||null, proveedor:s.comp.proveedor||'', plan:s.comp.plan||'', precio_mes: s.comp.precio_mes==null?null:r2(s.comp.precio_mes), base:s.comp.base||'local', nota:s.comp.nota||'' } : null });
   }
   return out.sort((a,b)=>(a.orden-b.orden)||a.modulo.localeCompare(b.modulo));
 }
@@ -648,7 +838,16 @@ function calcularNumeros(L, dto){
   const anual = r2(subAnual*factor);
   const porMesNeto = porMes.map(x=>r2(x*factor));
   const mesesActivos = porMes.filter(x=>x>0).length;
-  return { porMes, porMesNeto, subAnual, anual, factor, media: r2(anual/12), mesesActivos, cuotaActivos: mesesActivos ? r2(anual/mesesActivos) : 0 };
+  // Comparativa: líneas cobrables con competidor y cuota conocida. Jano neto (con descuento).
+  const compLineas = L.filter(l => esCobrable(l) && l.comp && l.comp.precio_mes!=null).map(l => {
+    const jano = r2(l.precio*l.cantidad*l.meses.length*factor);
+    const hoy = r2(l.comp.precio_mes*l.cantidad*mesesComp(l.meses));
+    return { l, jano, hoy, dif: r2(hoy-jano) };
+  });
+  const compHoy = r2(compLineas.reduce((t,x)=>t+x.hoy,0)), compJano = r2(compLineas.reduce((t,x)=>t+x.jano,0));
+  const ahorro = r2(compHoy-compJano);
+  return { porMes, porMesNeto, subAnual, anual, factor, media: r2(anual/12), mesesActivos, cuotaActivos: mesesActivos ? r2(anual/mesesActivos) : 0,
+           compLineas, compHoy, compJano, ahorro, ahorroPct: compHoy ? r2(ahorro/compHoy*100) : 0 };
 }
 function calcular(){
   const L = lineasPresupuesto();
@@ -666,6 +865,7 @@ function calcular(){
   tc.style.display = cons.length ? '' : 'none';
   tc.textContent = cons.length ? 'Pendiente de valorar aparte: ' + cons.map(l=>`${l.modulo} (${l.plan})`).join(', ') + '.' : '';
   renderCalendario(conPrecio, n);
+  renderComparativa(n);
   return { lineas:L, dto, ...n };
 }
 function renderCalendario(conPrecio, n){
@@ -678,6 +878,23 @@ function renderCalendario(conPrecio, n){
   const tot = `<tr class="r-total"><td>Total${n.factor<1?` <span class="note">(con ${r2((1-n.factor)*100)}% dto.)</span>`:''}</td>${n.porMesNeto.map(x=>`<td class="cal">${x?fmt(x):'<span style="color:#C9CDC7">·</span>'}</td>`).join('')}<td class="cal">${fmt(n.anual)}</td></tr>`;
   t.querySelector('tbody').innerHTML = conPrecio.map(fila).join('') + tot;
 }
+const nombreComp = c => c.id==='media' ? `Media del mercado (${c.plan})` : [c.proveedor, c.plan].filter(Boolean).join(' · ') || 'Otro proveedor';
+function renderComparativa(n){
+  const card = document.getElementById('card-comp');
+  card.style.display = n.compLineas.length ? '' : 'none';
+  document.querySelectorAll('input[name="comp-meses"]').forEach(r => r.checked = r.value===compMeses);
+  if(!n.compLineas.length) return;
+  const pos = n.ahorro>=0;
+  document.getElementById('comp-hero').innerHTML = pos
+    ? `<span class="big pos">Ahorro con Jano: ${fmt(n.ahorro)}/año</span><span class="note">${n.ahorroPct}% menos · hoy ${fmt(n.compHoy)}/año → Jano ${fmt(n.compJano)}/año en ${n.compLineas.length} ${n.compLineas.length===1?'módulo':'módulos'}</span>`
+    : `<span class="big neg">Jano cuesta ${fmt(-n.ahorro)}/año más</span><span class="note">hoy ${fmt(n.compHoy)}/año → Jano ${fmt(n.compJano)}/año en ${n.compLineas.length} ${n.compLineas.length===1?'módulo':'módulos'}</span>`;
+  document.querySelector('#tbl-comp tbody').innerHTML = n.compLineas.map(x => `<tr>
+      <td>${esc(x.l.modulo)} <span class="chip plan-${esc(x.l.plan)}">${esc(x.l.plan)}</span>${x.l.cantidad>1?` <span class="note">×${x.l.cantidad}</span>`:''}</td>
+      <td>${esc(nombreComp(x.l.comp))}${x.l.comp.nota?` <span class="note">· ${esc(x.l.comp.nota)}</span>`:''}</td>
+      <td class="num">${fmt(x.l.comp.precio_mes)}</td><td class="num">${fmt(x.hoy)}</td><td class="num">${fmt(x.jano)}</td>
+      <td class="num" style="color:${x.dif>=0?'var(--green)':'var(--red)'};font-weight:500">${x.dif>=0?'−':'+'}${fmt(Math.abs(x.dif))}</td></tr>`).join('')
+    + `<tr class="r-total"><td>Total</td><td></td><td></td><td class="num">${fmt(n.compHoy)}</td><td class="num">${fmt(n.compJano)}</td><td class="num" style="color:${pos?'var(--green)':'var(--red)'}">${pos?'−':'+'}${fmt(Math.abs(n.ahorro))}</td></tr>`;
+}
 function leerFormulario(){
   const c = calcular();
   return {
@@ -688,6 +905,7 @@ function leerFormulario(){
     meses_apertura: [...apertura],
     lineas: c.lineas, descuento_pct: c.dto, alta_inicial: r2(+v('c-alta')||0), notas: v('c-notas').trim()||null,
     total_anual: c.anual, total_mensual: c.media,
+    comp_meses: compMeses, ahorro_anual: c.compLineas.length ? c.ahorro : null,
   };
 }
 async function guardarPresupuesto(){
@@ -734,7 +952,7 @@ function duplicarPresupuesto(){
   if(dirtyPre && !confirm('Hay cambios sin guardar; el duplicado parte de lo guardado. ¿Seguir?')) return;
   const copia = JSON.parse(JSON.stringify(P));
   copia.id=null; copia.numero=''; copia.fecha=hoy(); copia.estado='borrador';
-  P = copia; apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS); sel = selDesdeLineas(P.lineas);
+  P = copia; apertura = normMeses(P.meses_apertura && P.meses_apertura.length ? P.meses_apertura : TODOS); compMeses = P.comp_meses||'todo'; sel = selDesdeLineas(P.lineas);
   abrirEditor(); tocar(); toast('Copia creada: guarda para darle número');
 }
 
@@ -777,6 +995,16 @@ function imprimir(){
       ${f.alta_inicial ? `<div class="r"><span>Alta inicial (pago único)</span><span>${fmt2(f.alta_inicial)}</span></div>` : ''}
     </div>
     ${calendario}
+    ${c.compLineas.length ? `
+    <div class="imp-h">Comparativa con lo que paga hoy</div>
+    <div class="imp-ahorro ${c.ahorro>=0?'pos':''}">${c.ahorro>=0 ? `Ahorro anual con Jano: ${fmt2(c.ahorro)} <small>(${c.ahorroPct}% menos: de ${fmt2(c.compHoy)} a ${fmt2(c.compJano)} al año)</small>` : `Diferencia: Jano ${fmt2(-c.ahorro)} más al año <small>(de ${fmt2(c.compHoy)} a ${fmt2(c.compJano)})</small>`}</div>
+    <table class="imp comp">
+      <thead><tr><th>Módulo</th><th>Hoy con</th><th class="num">Hoy €/mes</th><th class="num">Hoy €/año</th><th class="num">Jano €/año</th><th class="num">Diferencia</th></tr></thead>
+      <tbody>${c.compLineas.map(x=>`<tr><td>${esc(x.l.modulo)} · ${esc(x.l.plan)}${x.l.cantidad>1?` ×${x.l.cantidad}`:''}</td><td>${esc(nombreComp(x.l.comp))}</td><td class="num">${fmt2(x.l.comp.precio_mes)}</td><td class="num">${fmt2(x.hoy)}</td><td class="num">${fmt2(x.jano)}</td><td class="num">${x.dif>=0?'−':'+'}${fmt2(Math.abs(x.dif))}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td></td><td></td><td class="num">${fmt2(c.compHoy)}</td><td class="num">${fmt2(c.compJano)}</td><td class="num">${c.ahorro>=0?'−':'+'}${fmt2(Math.abs(c.ahorro))}</td></tr>
+      </tbody>
+    </table>
+    <p class="imp-notas" style="margin-top:6px">Precios de la competencia: tarifas públicas recogidas en el estudio de mercado de octubre de 2026 o indicadas por el cliente; la competencia se cuenta ${compMeses==='apertura'?'solo en los meses de apertura':'los 12 meses del año'}. Jano, con el descuento aplicado.</p>` : ''}
     ${cons.length ? `<p class="imp-notas"><b>A valorar aparte:</b> ${cons.map(l=>`${esc(l.modulo)} (${esc(l.plan)})`).join(', ')}.</p>` : ''}
     ${f.notas ? `<div class="imp-notas">${esc(f.notas)}</div>` : ''}
     <div class="imp-pie">Importes sin IVA. Cada módulo se factura solo los meses indicados. Precios mensuales por licencia de uso de Jano. ${esc(CUENTA_NOMBRE)}.</div>`;
