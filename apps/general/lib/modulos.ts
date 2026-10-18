@@ -35,6 +35,9 @@ export const RUTAS_MODULO: Record<string, string> = {
   // Distribuidores (16-10-2026): herramienta de presupuestos para quien vende Jano.
   // Apartado «Soporte», el último de la portada (ORDEN_AREAS).
   distribuidores: "/distribuidores",
+  // Recetas (18-10-2026): escandallos / food cost de los productos de Ágora, con ingredientes
+  // que agrupan productos de Compras bajo Familia > Subfamilia de Ratios.
+  recetas: "/recetas",
 };
 
 /**

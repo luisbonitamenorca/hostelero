@@ -18,6 +18,7 @@ const nextConfig = {
     "/mantenimiento": ["./datos/mantenimiento.html"],
     "/presupuesto": ["./datos/presupuesto.html"],
     "/distribuidores": ["./datos/distribuidores.html"],
+    "/recetas": ["./datos/recetas.html"],
   },
   async rewrites() {
     return [
