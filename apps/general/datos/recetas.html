@@ -9,7 +9,9 @@
        · rec_agora_pvp (vista sobre ingresos de Ratios): PVP medio sin IVA y raciones 12 meses.
      v1 (18-10-2026): Ingredientes (Familia > Subfamilia > Ingrediente, con unidad kg/l/ud),
      vínculo de productos de Compras a ingredientes (factor + principal → coste/ud), recetas
-     de todos los productos Ágora + preparaciones, escandallo con coste, PVP y food cost %. -->
+     de todos los productos Ágora + preparaciones, escandallo con coste, PVP y food cost %.
+     v1.1 (18-10-2026): foto y vídeo de la elaboración por receta (bucket privado `recetas`, URL
+     firmada bajo demanda, foto comprimida en el navegador, vídeo subido o enlace externo). -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -128,6 +130,21 @@ table.g td.cod{color:var(--muted);white-space:nowrap;font-variant-numeric:tabula
 .add-row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
 .add-row .inp{width:360px}
 
+/* foto y vídeo */
+.media{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.media-box{border:0.5px dashed var(--border-med);border-radius:var(--radius-lg);padding:10px;min-height:150px;display:flex;flex-direction:column;gap:8px;background:var(--hdr)}
+.media-box .lbl{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.media-box img{max-width:100%;max-height:320px;border-radius:8px;object-fit:contain;background:#fff;cursor:zoom-in}
+.media-box video,.media-box iframe{width:100%;max-height:320px;border-radius:8px;background:#000;border:none;aspect-ratio:16/9}
+.media-box .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:auto}
+.media-box .vacio{color:var(--muted);font-size:12px;padding:18px 6px;text-align:center;flex:1;display:flex;align-items:center;justify-content:center}
+.prog{height:6px;background:var(--border);border-radius:99px;overflow:hidden;display:none}
+.prog.on{display:block}
+.prog div{height:100%;background:var(--green);width:0;transition:width .2s}
+#lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1150;align-items:center;justify-content:center;cursor:zoom-out}
+#lightbox.on{display:flex}
+#lightbox img{max-width:95vw;max-height:95vh;border-radius:6px}
+
 /* loading, toast, modal */
 #loading{display:none;position:fixed;inset:0;background:rgba(248,248,246,.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px}
 #loading.on{display:flex}
@@ -154,6 +171,7 @@ table.g td.cod{color:var(--muted);white-space:nowrap;font-variant-numeric:tabula
   .form-grid{grid-template-columns:1fr 1fr}
   .f.span4{grid-column:span 2}
   .two{grid-template-columns:1fr}
+  .media{grid-template-columns:1fr}
   .add-row .inp{width:100%}
 }
 </style>
@@ -176,7 +194,7 @@ table.g td.cod{color:var(--muted);white-space:nowrap;font-variant-numeric:tabula
     </nav>
     <div class="side-foot">
       <div class="side-status"><div class="status-dot ok" id="status-dot"></div><span id="status-label">—</span></div>
-      <div class="side-version">Recetas · v1</div>
+      <div class="side-version">Recetas · v1.1</div>
     </div>
   </aside>
 
@@ -285,6 +303,34 @@ table.g td.cod{color:var(--muted);white-space:nowrap;font-variant-numeric:tabula
         </div>
 
         <div class="card">
+          <div class="card-title">Foto y vídeo de la elaboración</div>
+          <div class="card-sub" id="media-sub">Una foto del plato (se comprime sola) y, si quieres, un vídeo de la elaboración: súbelo (hasta 100 MB) o pega un enlace de YouTube, Vimeo o Drive.</div>
+          <div class="media">
+            <div class="media-box" id="box-foto">
+              <div class="lbl">Foto</div>
+              <div id="foto-vista" class="vacio">Sin foto</div>
+              <div class="prog" id="foto-prog"><div></div></div>
+              <div class="acts">
+                <input type="file" id="foto-file" accept="image/*" style="display:none" onchange="subirFoto(this.files[0]);this.value=''">
+                <button class="btn btn-sm" id="btn-foto" onclick="document.getElementById('foto-file').click()">📷 Subir foto</button>
+                <button class="btn btn-sm btn-danger" id="btn-foto-quitar" onclick="quitarFoto()" style="display:none">Quitar</button>
+              </div>
+            </div>
+            <div class="media-box" id="box-video">
+              <div class="lbl">Vídeo</div>
+              <div id="video-vista" class="vacio">Sin vídeo</div>
+              <div class="prog" id="video-prog"><div></div></div>
+              <div class="acts">
+                <input type="file" id="video-file" accept="video/mp4,video/quicktime,video/webm" style="display:none" onchange="subirVideo(this.files[0]);this.value=''">
+                <button class="btn btn-sm" id="btn-video" onclick="document.getElementById('video-file').click()">🎬 Subir vídeo</button>
+                <button class="btn btn-sm" id="btn-video-enlace" onclick="pedirEnlaceVideo()">🔗 Enlace</button>
+                <button class="btn btn-sm btn-danger" id="btn-video-quitar" onclick="quitarVideo()" style="display:none">Quitar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">Elaboración y notas</div>
           <textarea class="inp" id="r-elaboracion" style="min-height:90px" placeholder="Pasos, tiempos, puntos de control…" oninput="tocar()"></textarea>
         </div>
@@ -369,6 +415,8 @@ table.g td.cod{color:var(--muted);white-space:nowrap;font-variant-numeric:tabula
 
   </div></div>
 </div>
+
+<div id="lightbox" onclick="this.classList.remove('on')"><img id="lightbox-img" alt=""></div>
 
 <!-- modal ingrediente -->
 <div class="modal-bg" id="modal-ing">
@@ -604,7 +652,7 @@ function renderRecetas(){
   if(!filas.length){ tb.innerHTML='<tr><td colspan="9" class="empty">Ninguna receta con estos filtros.</td></tr>'; }
   else tb.innerHTML = filas.map(({r,s})=>`
     <tr class="click ${r.activo?'':'inactivo'}" onclick="abrirReceta('${r.id}')">
-      <td><b>${esc(r.nombre)}</b>${r.agora_id?` <span class="chip" title="Id de Ágora">${esc(r.agora_id)}</span>`:''}</td>
+      <td><b>${esc(r.nombre)}</b>${r.agora_id?` <span class="chip" title="Id de Ágora">${esc(r.agora_id)}</span>`:''}${r.foto_path?' <span title="Con foto">📷</span>':''}${(r.video_path||r.video_url)?' <span title="Con vídeo">🎬</span>':''}</td>
       <td><span class="chip ${r.tipo}">${r.tipo==='agora'?'Ágora':'Preparación'}</span></td>
       <td class="mut">${esc(r.familia)}</td><td class="mut">${esc(r.subfamilia)}</td>
       <td class="num">${s.n||'<span class="mut">—</span>'}</td>
@@ -659,7 +707,7 @@ function pintarEditor(){
   const usos = R.id ? [...(usosPrep.get(R.id)||[])].map(id=>recById.get(id)).filter(Boolean) : [];
   document.getElementById('card-usos').style.display = usos.length ? '' : 'none';
   document.getElementById('usos-lista').innerHTML = usos.map(u=>`<div><a href="#" onclick="event.preventDefault();irAReceta('${u.id}')">${esc(u.nombre)}</a></div>`).join('');
-  renderLineas();
+  renderLineas(); renderMedia();
 }
 function irAReceta(id){ if(dirtyRec && !confirm('Hay cambios sin guardar. ¿Salir sin guardar?')) return; dirtyRec=false; document.getElementById('dirty-rec').classList.remove('on'); abrirReceta(id); }
 
@@ -744,7 +792,7 @@ async function borrarReceta(){
   if(!R.id || R.tipo==='agora') return;
   const usos = usosPrep.get(R.id); if(usos && usos.size){ toast(`No se puede borrar: la usan ${usos.size} receta(s).`, true); return; }
   if(!confirm(`¿Borrar la preparación «${R.nombre}» y sus líneas?`)) return;
-  try{ loading(true,'Borrando…'); await sbDelete('rec_receta', `id=eq.${R.id}`); recetas = recetas.filter(r=>r.id!==R.id); lineas = lineas.filter(l=>l.receta_id!==R.id); indexar(); dirtyRec=false; document.getElementById('dirty-rec').classList.remove('on'); R=null; L=[]; document.getElementById('rec-editor').style.display='none'; document.getElementById('rec-lista').style.display='block'; renderRecetas(); toast('Preparación borrada.'); }
+  try{ loading(true,'Borrando…'); const fp = R.foto_path, vp = R.video_path; await sbDelete('rec_receta', `id=eq.${R.id}`); if(fp) stBorrar(fp); if(vp) stBorrar(vp); recetas = recetas.filter(r=>r.id!==R.id); lineas = lineas.filter(l=>l.receta_id!==R.id); indexar(); dirtyRec=false; document.getElementById('dirty-rec').classList.remove('on'); R=null; L=[]; document.getElementById('rec-editor').style.display='none'; document.getElementById('rec-lista').style.display='block'; renderRecetas(); toast('Preparación borrada.'); }
   catch(e){ toast('Error al borrar: '+e.message, true); } finally{ loading(false); }
 }
 async function sincronizarAgora(){
@@ -759,6 +807,103 @@ async function sincronizarAgora(){
     indexar(); renderRecetas(); toast(`${faltan.length} receta(s) creadas desde Ágora.`);
   }catch(e){ toast('Error al sincronizar: '+e.message, true); } finally{ loading(false); }
 }
+
+// ═════════════════════════════ FOTO Y VÍDEO (Storage) ═════════════════════════════
+const BUCKET = 'recetas', MAX_VIDEO = 100*1024*1024;
+const firmadas = new Map(); // path → {url, hasta}
+async function stFirmar(path){
+  const c = firmadas.get(path); if(c && c.hasta > Date.now()) return c.url;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/${path.split('/').map(enc).join('/')}`, { method:'POST', headers: sbHeaders(), body: JSON.stringify({ expiresIn: 3600 }) });
+  if(!res.ok) throw new Error(await res.text());
+  const j = await res.json(); const url = SUPABASE_URL + '/storage/v1' + j.signedURL;
+  firmadas.set(path, { url, hasta: Date.now() + 55*60*1000 }); return url;
+}
+function stSubir(path, blob, tipo, onProg){
+  return new Promise((ok, ko)=>{
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path.split('/').map(enc).join('/')}`);
+    xhr.setRequestHeader('apikey', SUPABASE_KEY); xhr.setRequestHeader('Authorization', `Bearer ${SB_TOKEN||SUPABASE_KEY}`);
+    xhr.setRequestHeader('Content-Type', tipo); xhr.setRequestHeader('x-upsert', 'true'); xhr.setRequestHeader('cache-control', '3600');
+    xhr.upload.onprogress = e => { if(e.lengthComputable && onProg) onProg(e.loaded/e.total); };
+    xhr.onload = () => xhr.status < 300 ? ok() : ko(new Error(xhr.responseText || ('HTTP '+xhr.status)));
+    xhr.onerror = () => ko(new Error('Error de red al subir'));
+    xhr.send(blob);
+  });
+}
+async function stBorrar(path){ if(!path) return; const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}`, { method:'DELETE', headers: sbHeaders(), body: JSON.stringify({ prefixes:[path] }) }); if(!res.ok) console.warn('No se pudo borrar', path, await res.text()); }
+// Foto: se reduce a 1600 px de lado mayor y JPEG 85 % antes de subir
+function comprimirFoto(file){
+  return new Promise((ok, ko)=>{
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(url); const MAXL = 1600; let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, MAXL/Math.max(w,h)); w = Math.round(w*k); h = Math.round(h*k);
+      const cv = document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+      cv.toBlob(b => b ? ok(b) : ko(new Error('No se pudo procesar la imagen')), 'image/jpeg', 0.85); };
+    img.onerror = () => { URL.revokeObjectURL(url); ko(new Error('El fichero no es una imagen válida')); };
+    img.src = url;
+  });
+}
+function prog(id, f){ const p = document.getElementById(id); if(f==null){ p.classList.remove('on'); p.firstElementChild.style.width='0'; } else { p.classList.add('on'); p.firstElementChild.style.width = Math.round(f*100)+'%'; } }
+function embedVideo(url){
+  const u = String(url||'').trim(); let m;
+  if((m = u.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/))) return `<iframe src="https://www.youtube.com/embed/${m[1]}" allowfullscreen allow="fullscreen"></iframe>`;
+  if((m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/))) return `<iframe src="https://player.vimeo.com/video/${m[1]}" allowfullscreen allow="fullscreen"></iframe>`;
+  if((m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/))) return `<iframe src="https://drive.google.com/file/d/${m[1]}/preview" allowfullscreen allow="fullscreen"></iframe>`;
+  return `<div class="vacio"><a href="${esc(u)}" target="_blank" rel="noopener">Abrir el vídeo enlazado ↗</a></div>`;
+}
+async function renderMedia(){
+  const guardada = !!R.id;
+  ['btn-foto','btn-video','btn-video-enlace'].forEach(id => document.getElementById(id).disabled = !guardada);
+  document.getElementById('media-sub').textContent = guardada
+    ? 'Una foto del plato (se comprime sola) y, si quieres, un vídeo de la elaboración: súbelo (hasta 100 MB) o pega un enlace de YouTube, Vimeo o Drive. Se guardan al momento, sin pulsar Guardar.'
+    : 'Guarda primero la preparación para poder subir foto o vídeo.';
+  const fv = document.getElementById('foto-vista'), vv = document.getElementById('video-vista');
+  document.getElementById('btn-foto-quitar').style.display = R.foto_path ? '' : 'none';
+  document.getElementById('btn-video-quitar').style.display = (R.video_path||R.video_url) ? '' : 'none';
+  if(R.foto_path){ fv.className=''; fv.innerHTML = '<div class="vacio">Cargando foto…</div>'; try{ const u = await stFirmar(R.foto_path); if(R.foto_path) fv.innerHTML = `<img src="${u}" alt="Foto de ${esc(R.nombre)}" onclick="verGrande(this.src)">`; }catch(e){ fv.innerHTML = `<div class="vacio">No se pudo cargar la foto (${esc(e.message)})</div>`; } }
+  else { fv.className='vacio'; fv.textContent='Sin foto'; }
+  if(R.video_path){ vv.className=''; vv.innerHTML = '<div class="vacio">Cargando vídeo…</div>'; try{ const u = await stFirmar(R.video_path); if(R.video_path) vv.innerHTML = `<video controls preload="metadata" src="${u}"></video>`; }catch(e){ vv.innerHTML = `<div class="vacio">No se pudo cargar el vídeo (${esc(e.message)})</div>`; } }
+  else if(R.video_url){ vv.className=''; vv.innerHTML = embedVideo(R.video_url); }
+  else { vv.className='vacio'; vv.textContent='Sin vídeo'; }
+}
+function verGrande(src){ document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('on'); }
+async function patchMedia(campos){
+  const [fila] = await sbPatch('rec_receta', `id=eq.${R.id}`, campos);
+  Object.assign(R, campos); const idx = recetas.findIndex(r=>r.id===R.id); if(idx>=0) Object.assign(recetas[idx], campos); recById.set(R.id, recetas[idx]||R);
+  return fila;
+}
+async function subirFoto(file){
+  if(!file || !R.id) return;
+  try{
+    prog('foto-prog', 0.02); const blob = await comprimirFoto(file);
+    const path = `${CUENTA_ID}/${R.id}/foto-${Date.now()}.jpg`; const anterior = R.foto_path;
+    await stSubir(path, blob, 'image/jpeg', f => prog('foto-prog', 0.05 + f*0.9));
+    await patchMedia({ foto_path: path }); if(anterior) stBorrar(anterior);
+    prog('foto-prog', null); renderMedia(); toast('Foto guardada.');
+  }catch(e){ prog('foto-prog', null); toast('Error al subir la foto: '+e.message, true); console.error(e); }
+}
+async function quitarFoto(){ if(!R.foto_path || !confirm('¿Quitar la foto de esta receta?')) return; try{ const p = R.foto_path; await patchMedia({ foto_path: null }); stBorrar(p); renderMedia(); toast('Foto quitada.'); }catch(e){ toast('Error: '+e.message, true); } }
+async function subirVideo(file){
+  if(!file || !R.id) return;
+  if(file.size > MAX_VIDEO){ toast(`El vídeo pesa ${(file.size/1048576).toFixed(0)} MB y el máximo es 100 MB. Recórtalo o súbelo a YouTube/Drive y pega el enlace.`, true); return; }
+  const ext = (file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'') || 'mp4';
+  const tipo = file.type || (ext==='mov' ? 'video/quicktime' : ext==='webm' ? 'video/webm' : 'video/mp4');
+  try{
+    prog('video-prog', 0.01);
+    const path = `${CUENTA_ID}/${R.id}/video-${Date.now()}.${ext}`; const anterior = R.video_path;
+    await stSubir(path, file, tipo, f => prog('video-prog', f));
+    await patchMedia({ video_path: path, video_url: null }); if(anterior) stBorrar(anterior);
+    prog('video-prog', null); renderMedia(); toast('Vídeo guardado.');
+  }catch(e){ prog('video-prog', null); toast('Error al subir el vídeo: '+e.message, true); console.error(e); }
+}
+async function pedirEnlaceVideo(){
+  if(!R.id) return;
+  const u = prompt('Pega el enlace del vídeo (YouTube, Vimeo, Drive o cualquier URL):', R.video_url||''); if(u==null) return;
+  const url = u.trim(); if(!url){ return; }
+  if(!/^https?:\/\//i.test(url)){ toast('El enlace debe empezar por http:// o https://', true); return; }
+  try{ const anterior = R.video_path; await patchMedia({ video_url: url, video_path: null }); if(anterior) stBorrar(anterior); renderMedia(); toast('Enlace guardado.'); }
+  catch(e){ toast('Error: '+e.message, true); }
+}
+async function quitarVideo(){ if(!(R.video_path||R.video_url) || !confirm('¿Quitar el vídeo de esta receta?')) return; try{ const p = R.video_path; await patchMedia({ video_path: null, video_url: null }); if(p) stBorrar(p); renderMedia(); toast('Vídeo quitado.'); }catch(e){ toast('Error: '+e.message, true); } }
 
 // ═════════════════════════════ INGREDIENTES ═════════════════════════════
 function renderIngredientes(){
