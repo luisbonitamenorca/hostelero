@@ -1026,6 +1026,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
           <tfoot id="co-tbl-foot"></tfoot>
         </table></div>
       </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-t" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <span id="co-nac-t">Reservas y comensales por nacionalidad · 2026</span>
+          <span style="display:flex;align-items:center;gap:6px"><span class="fbar-label">% sobre</span><button class="fbtn active" onclick="fset(this,'co-nac-base','reservas',renderComensalesNac)">Reservas</button><button class="fbtn" onclick="fset(this,'co-nac-base','comensales',renderComensalesNac)">Comensales</button></span>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead id="co-nac-head"></thead>
+          <tbody id="tb-co-nac"></tbody>
+          <tfoot id="co-nac-foot"></tfoot>
+        </table></div>
+        <div class="hint" id="co-nac-hint" style="margin-top:8px"></div>
+      </div>
     </div>
 
     <!-- ══════════════ VALORACIONES (Cover · satisfacción) ══════════════ -->
@@ -1677,6 +1689,7 @@ const DB = {
   nominas_reparto_horas: [],
   visitas:             [],
   comensales:          [],
+  comensales_nac:      [],   // reservas y comensales por día/centro/servicio/país (vista comensales_nacionalidad_desde_reservas)
   valoraciones:        [],
   ingresos_historico:  [],
   productos_agora:     [],
@@ -1697,7 +1710,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-09-29.1'; // rendimiento: guardado incremental (sin truncate), índices y cachés tras la carga
+const APP_VERSION = '2026-10-21.1'; // Comensales: tabla de nacionalidades por centro (vista comensales_nacionalidad_desde_reservas)
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -6974,6 +6987,8 @@ async function loadFromStorage() {
     const comprasCatProm = safeLoad('compras_producto');
     // Valoraciones de Cover (vista valoraciones_ratios, 13-10-2026): sin datos personales.
     const valoracionesProm = safeLoad('valoraciones_ratios');
+    // Nacionalidad de las reservas (vista comensales_nacionalidad_desde_reservas, 21-10-2026): sin datos personales.
+    const nacionalidadProm = safeLoad('comensales_nacionalidad_desde_reservas');
     const [ingresos, gastos, presupuesto, rrhh, nominas, presupuesto_nominas, nominas_reparto, nominas_reparto_horas, visitas, comensales, ingresos_historico, productos_agora, productos_dijit, familias, subfamilias, ratios_objetivo, productos_controlados, inventarios, rrhh_excepciones, rrhh_puestos, ecommerce, ecommerce_historico, doc_departamentos, doc_subcategorias, doc_documentos] = await Promise.all([
       loadIngresosRapido(loadAll),
       loadGastosRapido(loadAll),
@@ -7030,6 +7045,7 @@ async function loadFromStorage() {
     DB.visitas              = visitas              || [];
     DB.comensales           = comensales           || [];
     DB.valoraciones         = (await valoracionesProm) || [];
+    DB.comensales_nac       = (await nacionalidadProm) || [];
     DB.ingresos_historico   = ingresos_historico   || [];
     DB.productos_agora      = productos_agora      || [];
     DB.productos_dijit      = productos_dijit      || [];
@@ -10338,6 +10354,98 @@ function renderComensales() {
     <td class="tr" style="color:#7A848C">${baseSum25>0?'€'+fmt(baseSum25):'—'}</td>
     <td class="tr" style="color:#7A848C">${ticketMedio25!==null?'€'+fmt(ticketMedio25):'—'}</td>
   </tr>`;
+
+  renderComensalesNac();
+}
+
+// ── Reservas y comensales por nacionalidad (21-10-2026) ──
+// Fuente: vista comensales_nacionalidad_desde_reservas (una fila por día, centro, servicio y país;
+// 'WALKIN' para los walk-ins de Cover, '??' si no se pudo deducir el país). La nacionalidad sale
+// del prefijo del teléfono del cliente (ver la migración 20261021120000).
+// Regla de Luis: un país tiene columna propia si en algún centro pasa del 2 % de las reservas;
+// los demás van a «Resto países». Walk-in siempre aparte. Cada fila cuadra al 100 %.
+// La tabla enseña SIEMPRE todos los centros (es un resumen por centro); se aplican los filtros
+// de servicio, mes y rango de fechas de la pestaña, no el de centro.
+const NAC_UMBRAL = 0.02;
+const NAC_NOMBRE = {ES:'España', GB:'Reino Unido', FR:'Francia', IT:'Italia', US:'EE.UU. / Canadá', CH:'Suiza', DE:'Alemania',
+  NL:'Países Bajos', BE:'Bélgica', PT:'Portugal', IE:'Irlanda', AT:'Austria', AU:'Australia', BR:'Brasil', AR:'Argentina',
+  PL:'Polonia', LU:'Luxemburgo', DK:'Dinamarca', SE:'Suecia', NO:'Noruega', FI:'Finlandia', AE:'Emiratos Árabes', MX:'México',
+  AD:'Andorra', SG:'Singapur', RU:'Rusia', ZA:'Sudáfrica', IL:'Israel', GR:'Grecia', CZ:'Chequia', HU:'Hungría', TR:'Turquía',
+  CN:'China', JP:'Japón', IN:'India', MA:'Marruecos', CL:'Chile', PE:'Perú', CO:'Colombia', UY:'Uruguay', NZ:'Nueva Zelanda',
+  HK:'Hong Kong', PH:'Filipinas', TH:'Tailandia', ID:'Indonesia', EG:'Egipto', RO:'Rumanía', SI:'Eslovenia', RS:'Serbia',
+  LT:'Lituania', KW:'Kuwait', GT:'Guatemala', VE:'Venezuela', MT:'Malta', CY:'Chipre', HR:'Croacia', BG:'Bulgaria', UA:'Ucrania',
+  WALKIN:'Walk-in', '??':'Sin datos'};
+const NAC_CENTRO = {'BINIFADET':'Binifadet', 'TAMARINDOS':'Tamarindos', 'TAMARINDOS BAR':'Bar Tamarindos', 'TIRANT':'Casa Tirant'};
+function renderComensalesNac() {
+  const head = document.getElementById('co-nac-head');
+  const body = document.getElementById('tb-co-nac');
+  const foot = document.getElementById('co-nac-foot');
+  const hint = document.getElementById('co-nac-hint');
+  const titulo = document.getElementById('co-nac-t');
+  if (!head || !body) return;
+  const serv = fget('co-serv') || '';
+  const mes  = +fget('co-mes');
+  const base = fget('co-nac-base') || 'reservas';      // 'reservas' | 'comensales'
+  const {desde, hasta} = gd();
+
+  let rows = (DB.comensales_nac || []).filter(r => r.anio === 2026);
+  if (serv)  rows = rows.filter(r => r.servicio === serv);
+  if (mes)   rows = rows.filter(r => r.mes === mes);
+  if (desde) rows = rows.filter(r => r.fecha >= desde);
+  if (hasta) rows = rows.filter(r => r.fecha <= hasta);
+
+  // Acumular por centro y país
+  const porCentro = {};                      // centro → país → {r, c}
+  const grupo = {};                          // país → {r, c}
+  rows.forEach(r => {
+    const pc = porCentro[r.centro] || (porCentro[r.centro] = {});
+    const x  = pc[r.pais] || (pc[r.pais] = {r:0, c:0});
+    const g  = grupo[r.pais] || (grupo[r.pais] = {r:0, c:0});
+    x.r += r.reservas || 0; x.c += r.comensales || 0;
+    g.r += r.reservas || 0; g.c += r.comensales || 0;
+  });
+  const totDe = (pc, k) => Object.values(pc).reduce((s, x) => s + (x[k] || 0), 0);
+  const centros = Object.keys(porCentro).sort((a, b) => totDe(porCentro[b], 'r') - totDe(porCentro[a], 'r'));
+
+  // Regla del 2 %: país con columna propia si en algún centro supera el umbral de las reservas
+  const conColumna = new Set();
+  centros.forEach(ct => {
+    const tot = totDe(porCentro[ct], 'r');
+    if (!tot) return;
+    Object.entries(porCentro[ct]).forEach(([p, x]) => {
+      if (p !== 'WALKIN' && p !== '??' && x.r / tot > NAC_UMBRAL) conColumna.add(p);
+    });
+  });
+  const paises = [...conColumna].sort((a, b) => (grupo[b]?.r || 0) - (grupo[a]?.r || 0));
+  const columnas = [{k:'WALKIN', n:'Walk-in'}].concat(paises.map(p => ({k:p, n:NAC_NOMBRE[p] || p})), [{k:'RESTO', n:'Resto países'}]);
+  const kBase = base === 'comensales' ? 'c' : 'r';
+  const valorDe = (pc, k) => {
+    if (k === 'RESTO') return Object.entries(pc).reduce((s, [p, x]) => s + (p !== 'WALKIN' && !conColumna.has(p) ? x[kBase] : 0), 0);
+    return pc[k] ? pc[k][kBase] : 0;
+  };
+  const celda = (v, tot) => {
+    if (!tot || !v) return '<td class="tr" style="color:#aaa">—</td>';
+    const p = v / tot;
+    return `<td class="tr" title="${fmtInt(v)} ${base}"${p >= 0.1 ? ' style="font-weight:500"' : ''}>${(p * 100).toFixed(1)}%</td>`;
+  };
+
+  if (titulo) titulo.textContent = `Reservas y comensales por nacionalidad · 2026${serv ? ' · ' + serv : ''}${mes ? ' · ' + MESES[mes] : ''}`;
+  head.innerHTML = `<tr><th>Centro</th><th class="tr">Reservas</th><th class="tr">Comensales</th><th class="tr">Pax/res.</th>${columnas.map(c => `<th class="tr">${c.n}</th>`).join('')}</tr>`;
+  body.innerHTML = centros.map(ct => {
+    const pc = porCentro[ct];
+    const tr = totDe(pc, 'r'), tc = totDe(pc, 'c'), tb = kBase === 'r' ? tr : tc;
+    return `<tr><td>${NAC_CENTRO[ct] || ct}</td><td class="tr">${fmtInt(tr)}</td><td class="tr">${fmtInt(tc)}</td><td class="tr">${tr ? (tc / tr).toFixed(2) : '—'}</td>${columnas.map(c => celda(valorDe(pc, c.k), tb)).join('')}</tr>`;
+  }).join('') || `<tr><td colspan="${4 + columnas.length}" style="text-align:center;color:#aaa;padding:20px">Sin datos (¿está aplicada la vista comensales_nacionalidad_desde_reservas?)</td></tr>`;
+  const gr = totDe(grupo, 'r'), gc = totDe(grupo, 'c'), gb = kBase === 'r' ? gr : gc;
+  foot.innerHTML = centros.length ? `<tr class="tr-tot"><td>TOTAL</td><td class="tr">${fmtInt(gr)}</td><td class="tr">${fmtInt(gc)}</td><td class="tr">${gr ? (gc / gr).toFixed(2) : '—'}</td>${columnas.map(c => celda(valorDe(grupo, c.k), gb)).join('')}</tr>` : '';
+
+  // Pie: regla y de qué se compone «Resto países»
+  const resto = Object.entries(grupo).filter(([p]) => p !== 'WALKIN' && !conColumna.has(p)).sort((a, b) => b[1].r - a[1].r);
+  const restoTxt = resto.slice(0, 10).map(([p, x]) => `${NAC_NOMBRE[p] || p} ${fmtInt(x.r)}`).join(', ') + (resto.length > 10 ? ` y ${resto.length - 10} más` : '');
+  if (hint) hint.innerHTML = `Porcentaje sobre ${base} de cada centro; cada fila suma 100 %. Un país tiene columna propia si en algún centro pasa del ${NAC_UMBRAL * 100} % de las reservas. ` +
+    `Walk-in: entradas sin reserva (sin ficha de cliente, no se les asigna país). La nacionalidad sale del prefijo del teléfono. ` +
+    `Mismas reservas que el resto de la pestaña (hasta hoy, sin canceladas ni no-show). La tabla enseña todos los centros; el filtro de centro no le afecta.` +
+    (resto.length ? `<br><b>Resto países</b> (reservas): ${restoTxt}.` : '');
 }
 
 // ══════════════ DOCUMENTOS ══════════════
