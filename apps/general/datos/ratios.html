@@ -1710,7 +1710,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-10-21.1'; // Comensales: tabla de nacionalidades por centro (vista comensales_nacionalidad_desde_reservas)
+const APP_VERSION = '2026-10-21.2'; // Comensales: tabla de nacionalidades por centro (vista comensales_nacionalidad_desde_reservas)
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -10364,9 +10364,12 @@ function renderComensales() {
 // del prefijo del teléfono del cliente (ver la migración 20261021120000).
 // Regla de Luis: un país tiene columna propia si en algún centro pasa del 2 % de las reservas;
 // los demás van a «Resto países». Walk-in siempre aparte. Cada fila cuadra al 100 %.
+// El Bar de Tamarindos NO cuenta para la regla (21-10): tiene pocas reservas y una docena ya
+// pasaba del 2 % y abría columna para todos. Sí sale en la tabla, con esas columnas.
 // La tabla enseña SIEMPRE todos los centros (es un resumen por centro); se aplican los filtros
 // de servicio, mes y rango de fechas de la pestaña, no el de centro.
 const NAC_UMBRAL = 0.02;
+const NAC_SIN_REGLA = new Set(['TAMARINDOS BAR']);   // centros que no deciden columnas
 const NAC_NOMBRE = {ES:'España', GB:'Reino Unido', FR:'Francia', IT:'Italia', US:'EE.UU. / Canadá', CH:'Suiza', DE:'Alemania',
   NL:'Países Bajos', BE:'Bélgica', PT:'Portugal', IE:'Irlanda', AT:'Austria', AU:'Australia', BR:'Brasil', AR:'Argentina',
   PL:'Polonia', LU:'Luxemburgo', DK:'Dinamarca', SE:'Suecia', NO:'Noruega', FI:'Finlandia', AE:'Emiratos Árabes', MX:'México',
@@ -10410,6 +10413,7 @@ function renderComensalesNac() {
   // Regla del 2 %: país con columna propia si en algún centro supera el umbral de las reservas
   const conColumna = new Set();
   centros.forEach(ct => {
+    if (NAC_SIN_REGLA.has(ct)) return;
     const tot = totDe(porCentro[ct], 'r');
     if (!tot) return;
     Object.entries(porCentro[ct]).forEach(([p, x]) => {
@@ -10442,7 +10446,7 @@ function renderComensalesNac() {
   // Pie: regla y de qué se compone «Resto países»
   const resto = Object.entries(grupo).filter(([p]) => p !== 'WALKIN' && !conColumna.has(p)).sort((a, b) => b[1].r - a[1].r);
   const restoTxt = resto.slice(0, 10).map(([p, x]) => `${NAC_NOMBRE[p] || p} ${fmtInt(x.r)}`).join(', ') + (resto.length > 10 ? ` y ${resto.length - 10} más` : '');
-  if (hint) hint.innerHTML = `Porcentaje sobre ${base} de cada centro; cada fila suma 100 %. Un país tiene columna propia si en algún centro pasa del ${NAC_UMBRAL * 100} % de las reservas. ` +
+  if (hint) hint.innerHTML = `Porcentaje sobre ${base} de cada centro; cada fila suma 100 %. Un país tiene columna propia si en algún centro pasa del ${NAC_UMBRAL * 100} % de las reservas (el Bar de Tamarindos no cuenta para esta regla). ` +
     `Walk-in: entradas sin reserva (sin ficha de cliente, no se les asigna país). La nacionalidad sale del prefijo del teléfono. ` +
     `Mismas reservas que el resto de la pestaña (hasta hoy, sin canceladas ni no-show). La tabla enseña todos los centros; el filtro de centro no le afecta.` +
     (resto.length ? `<br><b>Resto países</b> (reservas): ${restoTxt}.` : '');

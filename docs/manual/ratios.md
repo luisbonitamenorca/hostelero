@@ -148,7 +148,8 @@ En la tabla **Detalle mensual** de Salarios ves salarios real y presupuesto, el 
   Al final de la pestaña está la tabla **«Reservas y comensales por nacionalidad»**: una fila por
   centro y una columna por nacionalidad (Walk-in, España, Reino Unido, Francia, Italia… y «Resto
   países»). Cada fila suma el 100 %. Un país tiene columna propia cuando en algún centro pasa del 2 %
-  de las reservas; los demás se agrupan en «Resto países» (debajo de la tabla se indica cuáles son).
+  de las reservas (el Bar de Tamarindos no cuenta para esta regla, por tener pocas reservas); los demás se
+  agrupan en «Resto países» (debajo de la tabla se indica cuáles son).
   Con los botones «% sobre» eliges si el porcentaje es sobre reservas o sobre comensales; pasando el
   ratón por una celda ves la cifra. Walk-in son las entradas sin reserva: no tienen ficha de cliente,
   así que no se les puede poner país. La nacionalidad se deduce del prefijo del teléfono del cliente.
