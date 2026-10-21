@@ -1,4 +1,4 @@
--- Nacionalidad de las reservas para Ratios (21-10-2026).
+-- APLICADA 21-10-2026 (registrada como reservas_nacionalidad_ratios) · Nacionalidad de las reservas para Ratios.
 --
 -- Luis pidió ver en la pestaña Comensales de Ratios la tabla «reservas y comensales por
 -- nacionalidad» que antes se sacó a Excel: por centro, con columnas que cuadran al 100 %:
