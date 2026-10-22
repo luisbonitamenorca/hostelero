@@ -1,0 +1,26 @@
+{
+ "proveedor": { "nombre": "BIONA S.L", "nif": "B07568488", "codigos_son_ean": true },
+ "fuente": "email",
+ "archivo": "Correo de Biona del 22-10-2026 (una sola referencia, sin PDF)",
+ "vigente_desde": "2026-10-22",
+ "productos": [
+  {
+   "ref_proveedor": "8437017259817",
+   "ref_fabricante": null,
+   "ean": "8437017259817",
+   "nombre": "KOMBUCHA JENGIBRE LIMÓN",
+   "marca": "MUN",
+   "categoria": "Bebidas",
+   "formato": "Cristal 25 cl · caja 9 ud",
+   "unidad_venta": "ud",
+   "unidades_caja": 9,
+   "contenido": 0.25,
+   "contenido_unidad": "l",
+   "precio_tarifa": 1.75,
+   "precio_tarifa_desde": "2026-10-22",
+   "iva_pct": 21,
+   "caducidad": null,
+   "pagina": null
+  }
+ ]
+}

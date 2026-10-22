@@ -582,7 +582,8 @@ RETENCIÓN DE IRPF. Algunos proveedores autónomos (profesionales como gestoría
   const formaAlbaran=`{"tipo":"albaran","fecha":"YYYY-MM-DD","proveedor":"","proveedor_nif":"","num_documento":"","canal":null,"base":null,"iva":null,"retencion":0,"retencion_pct":null,"retencion_base":null,"total":null,"descuento":0,
 "pagina":null,"paginas":null,
 "desglose_iva":[{"pct":0,"base":0,"cuota":0}],
-"lineas":[{"id_producto":"","producto":"","cantidad":0,"precio_unit":0,"importe":0}]}`;
+"lineas":[{"id_producto":"","producto":"","cantidad":0,"precio_unit":0,"importe":0}],
+"anotaciones":""}`;
   const instrFactura=`Una FACTURA agrupa varios ALBARANES (notas de entrega). NO extraigas productos como tales: tu salida es UNA fila por albarán.
 
 Cómo leer los albaranes:
@@ -611,6 +612,8 @@ LA FECHA. Coge la fecha del documento, el campo "DATA / FECHA" o "Fecha". NO coj
 PÁGINAS. Muchos albaranes vienen en varios folios y lo indican con "PÀG/PÁG 1/2", "Pág. 2 de 3" o "Hoja 1/2". Si lo ves, devuelve "pagina" (el folio que estás mirando) y "paginas" (el total). Si no hay indicación de página, devuelve pagina:1 y paginas:1.
 - Si esta página NO trae el cuadro de totales, o el cuadro está vacío, o dice "Sigue...", "Continúa" o similar, devuelve base:null, iva:null y total:null. NO devuelvas 0: un cero es un dato falso y estropea la contabilidad. El nulo dice "en esta página no está" y se completa con la otra página.
 - Extrae las líneas de producto de ESTA página solamente. No inventes las de la otra.
+
+ANOTACIONES A MANO. Si el papel lleva algo escrito a mano (tachaduras, cantidades corregidas a bolígrafo, "falta", "no llegó", "devuelto", "roto", "abono", firmas con comentario), transcríbelo en "anotaciones" como texto corto diciendo a qué producto se refiere. Las líneas devuélvelas con lo IMPRESO; la corrección a mano va solo en "anotaciones". Si no hay nada escrito a mano, devuelve "anotaciones":"".
 
 DESGLOSE DE IVA. Si esta página trae el cuadro de tipos ("IVA 10 %", "IVA 21 %" con su base y su cuota), extráelo en "desglose_iva" con "pct", "base" y "cuota", una entrada por tipo. Si no lo trae, devuelve "desglose_iva":[]. No lo inventes ni lo deduzcas dividiendo.`;
 
@@ -803,16 +806,108 @@ function normNumDoc(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,
 // crear un documento nuevo. La fecha NO entra en la clave de agrupación porque
 // es justo el campo que el OCR confunde con el vencimiento.
 // Devuelve: {accion:'fusionado'|'duplicado'|'nuevo', docId, aviso}
-async function fusionarPaginaAlbaran(d,proveedor_id,pagina,imagen_url){
+/* ========== COTEJO FOTO ↔ PDF (22-10-2026) ==========
+   Transcripción del bloque homónimo de compras.html: misma lógica, con ctx.
+   Foto después del PDF → cotejarFotoConPdf (la foto se guarda en foto_cotejo y
+   se compara con las líneas del PDF). PDF después de la foto →
+   sustituirFotoPorPdf (las líneas del PDF sustituyen a las de la foto). */
+function claveLineaCotejo(l){
+  const ref=String(l.id_producto||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^0+(?=\d)/,'');
+  return {ref:ref||null,nom:normName(l.producto||'')};
+}
+function lineasParecidas(a,b){
+  if(!a||!b)return false; if(a===b)return true;
+  const ca=a.replace(/ /g,''),cb=b.replace(/ /g,'');
+  if(ca.length>=6&&cb.length>=6&&(ca.includes(cb)||cb.includes(ca)))return true;
+  const ta=new Set(a.split(' ').filter(x=>x.length>=3)),tb=new Set(b.split(' ').filter(x=>x.length>=3));
+  if(!ta.size||!tb.size)return false; let c=0;ta.forEach(x=>{if(tb.has(x))c++;});
+  return c/Math.min(ta.size,tb.size)>=0.6;
+}
+function resumenLineaCotejo(l){return {id_producto:l.id_producto||null,producto:l.producto||null,cantidad:num(l.cantidad),precio_unit:num(l.precio_unit),importe:num(l.importe)};}
+function compararLineasCotejo(pdf,foto,completa){
+  const dif=[],usadas=new Set();
+  const kp=(pdf||[]).map(l=>({l,...claveLineaCotejo(l)})),kf=(foto||[]).map(l=>({l,...claveLineaCotejo(l)}));
+  for(const f of kf){
+    let i=kp.findIndex((p,k)=>!usadas.has(k)&&f.ref&&p.ref===f.ref);
+    if(i<0)i=kp.findIndex((p,k)=>!usadas.has(k)&&lineasParecidas(p.nom,f.nom));
+    if(i<0){dif.push({tipo:'no_en_pdf',producto:f.l.producto||null,foto:resumenLineaCotejo(f.l)});continue;}
+    usadas.add(i);const m=kp[i];
+    const cp=num(m.l.cantidad),cf=num(f.l.cantidad),ip=num(m.l.importe),iF=num(f.l.importe);
+    if(cp!=null&&cf!=null&&Math.abs(cp-cf)>0.01&&Math.abs(cp-cf)>Math.abs(cp)*0.01)dif.push({tipo:'cantidad',producto:m.l.producto||null,pdf:resumenLineaCotejo(m.l),foto:resumenLineaCotejo(f.l)});
+    else if(ip!=null&&iF!=null&&Math.abs(ip-iF)>0.05&&Math.abs(ip-iF)>Math.abs(ip)*0.01)dif.push({tipo:'importe',producto:m.l.producto||null,pdf:resumenLineaCotejo(m.l),foto:resumenLineaCotejo(f.l)});
+  }
+  if(completa)kp.forEach((p,k)=>{if(!usadas.has(k))dif.push({tipo:'no_en_foto',producto:p.l.producto||null,pdf:resumenLineaCotejo(p.l)});});
+  return dif;
+}
+async function cotejarFotoConPdf(h,d,pagina,imagen_url){
+  // el jsonb del cotejo se pide solo para este documento (no en la lista de hermanos)
+  try{const r=await sb(`compras_doc?id=eq.${h.id}&select=foto_cotejo`);h.foto_cotejo=r&&r[0]?r[0].foto_cotejo:null;}catch(e){}
+  const prev=(h.foto_cotejo&&typeof h.foto_cotejo==='object')?{...h.foto_cotejo}:{};
+  const fotos=Array.isArray(prev.fotos)?prev.fotos.slice():[];
+  const pags=Array.isArray(prev.paginas_foto)?prev.paginas_foto.slice():[];
+  if(pags.includes(pagina)&&fotos.length)return {accion:'duplicado',docId:h.id};
+  if(imagen_url&&!fotos.some(f=>f&&f.url===imagen_url))fotos.push({url:imagen_url,pagina});
+  if(!pags.includes(pagina))pags.push(pagina);
+  const lineasFoto=(Array.isArray(prev.lineas_foto)?prev.lineas_foto:[]).concat((d.lineas||[]).map(l=>({...resumenLineaCotejo(l),pagina})));
+  const anot=(Array.isArray(prev.anotaciones)?prev.anotaciones:[]).concat(d.anotaciones?[String(d.anotaciones)]:[]);
+  let lineasPdf=[];
+  try{lineasPdf=await sb(`compras_linea?doc_id=eq.${h.id}&select=id_producto,producto,cantidad,precio_unit,importe&order=created_at.asc`);}catch(e){}
+  const completa=pags.length>=(num(h.paginas)||1);
+  const dif=compararLineasCotejo(lineasPdf,lineasFoto,completa);
+  const tp=num(d.total),th=num(h.total);
+  if(completa&&tp!=null&&th!=null&&Math.abs(tp-th)>0.05)dif.push({tipo:'total',producto:null,pdf:{importe:th},foto:{importe:tp}});
+  const estado=(dif.length||anot.length)?'DIFERENCIAS':'OK';
+  const cot={...prev,fotos,paginas_foto:pags.sort((a,b)=>a-b),lineas_foto:lineasFoto,anotaciones:anot,diferencias:dif,total_foto:tp,comparado_en:new Date().toISOString(),aceptado_por:null,aceptado_en:null};
+  await sb(`compras_doc?id=eq.${h.id}`,{method:'PATCH',body:JSON.stringify({foto_cotejo:cot,foto_estado:estado})});
+  return {accion:'cotejado',docId:h.id,estado,nDif:dif.length,nAnot:anot.length};
+}
+async function sustituirFotoPorPdf(h,d,pagina,imagen_url,ctx){
+  let lineasFoto=[];
+  try{lineasFoto=await sb(`compras_linea?doc_id=eq.${h.id}&select=id_producto,producto,cantidad,precio_unit,importe&order=created_at.asc`);}catch(e){}
+  let rawFoto=null;
+  try{const r=await sb(`compras_doc?id=eq.${h.id}&select=raw`);rawFoto=r&&r[0]?r[0].raw:null;}catch(e){}
+  const fotosPrev=(Array.isArray(h.imagenes)&&h.imagenes.length)?h.imagenes.filter(f=>f&&f.url):(h.imagen_url?[{url:h.imagen_url,pagina:h.pagina||1}]:[]);
+  const pags=[...new Set(fotosPrev.map(f=>Math.floor(num(f.pagina)||1)))];
+  const nuevas=(d.lineas||[]);
+  await sb(`compras_linea?doc_id=eq.${h.id}`,{method:'DELETE'});
+  await guardarLineasDoc(h.id,nuevas,h.canal,h.proveedor_id,d.proveedor,ctx);
+  const completa=pags.length>=(num(d.paginas)||1);
+  const dif=compararLineasCotejo(nuevas.map(resumenLineaCotejo),lineasFoto.map(l=>({...resumenLineaCotejo(l),pagina:null})),completa);
+  const anot=(rawFoto&&rawFoto.anotaciones)?[String(rawFoto.anotaciones)]:[];
+  const th=num(h.total),tp=num(d.total);
+  if(th!=null&&tp!=null&&Math.abs(th-tp)>0.05)dif.push({tipo:'total',producto:null,pdf:{importe:tp},foto:{importe:th}});
+  const estado=(dif.length||anot.length)?'DIFERENCIAS':'OK';
+  const suma=nuevas.reduce((s,l)=>s+(num(l.importe)||0),0);
+  let estadoDet='REVISAR';
+  if(nuevas.length){const cu=cuadreAlbaranes(suma-(num(d.descuento)||0),num(d.base),tp);estadoDet=(cu.ok===true)?'CORRECTO':(cu.ok===false)?'NO_CUADRA':'REVISAR';}
+  if(h.estado_detalle==='DUPLICADO')estadoDet='DUPLICADO';
+  const parche={origen:'correo',imagen_url:imagen_url||h.imagen_url,imagenes:imagen_url?[{url:imagen_url,pagina}]:h.imagenes,
+    pagina,paginas:num(d.paginas)||1,paginas_vistas:[pagina],
+    fecha:d.fecha||h.fecha,num_documento:d.num_documento||h.num_documento,
+    base:num(d.base)??h.base,iva:num(d.iva)??h.iva,total:tp??h.total,descuento:num(d.descuento)??h.descuento,
+    hash_doc:firmaDup(d.num_documento,d.fecha,tp)||h.hash_doc,
+    estado_detalle:estadoDet,estado:(estadoDet==='CORRECTO'&&h.canal)?'OK':'REVISAR',
+    raw:{...d,sustituye_foto:true},
+    foto_cotejo:{fotos:fotosPrev,paginas_foto:pags,lineas_foto:lineasFoto.map(resumenLineaCotejo),anotaciones:anot,diferencias:dif,total_foto:th,comparado_en:new Date().toISOString(),aceptado_por:null,aceptado_en:null,raw_foto:rawFoto},
+    foto_estado:estado};
+  await sb(`compras_doc?id=eq.${h.id}`,{method:'PATCH',body:JSON.stringify(parche)});
+  return {accion:'sustituido',docId:h.id,estado,nDif:dif.length,nAnot:anot.length};
+}
+// opts.esFoto = subido a mano / móvil · opts.esDigital = llegó por correo
+async function fusionarPaginaAlbaran(d,proveedor_id,pagina,imagen_url,opts,ctx){
+  opts=opts||{};
   const nn=normNumDoc(d.num_documento);
   if(!proveedor_id||!nn) return {accion:'nuevo'};
   let hermanos;
   try{
     hermanos=await sb(`compras_doc?tipo=eq.albaran&proveedor_id=eq.${proveedor_id}`
-      +`&select=id,num_documento,fecha,base,iva,total,pagina,paginas,paginas_vistas,imagenes,imagen_url&order=created_at.asc`);
+      +`&select=id,num_documento,fecha,base,iva,total,descuento,canal,proveedor_id,pagina,paginas,paginas_vistas,imagenes,imagen_url,origen,estado_detalle,hash_doc,foto_estado&order=created_at.asc`);
   }catch(e){ console.warn('No pude buscar páginas hermanas:',e.message); return {accion:'nuevo'}; }
   const h=(hermanos||[]).find(x=>normNumDoc(x.num_documento)===nn);
   if(!h) return {accion:'nuevo'};
+  const hDigital=h.origen==='correo';
+  if(opts.esFoto&&hDigital) return await cotejarFotoConPdf(h,d,pagina,imagen_url);
+  if(opts.esDigital&&!hDigital&&!opts.albPostFac) return await sustituirFotoPorPdf(h,d,pagina,imagen_url,ctx);
 
   const vistas=Array.isArray(h.paginas_vistas)&&h.paginas_vistas.length
     ? h.paginas_vistas : [h.pagina||1];
@@ -1199,7 +1294,17 @@ async function procesarUno(c, ctx, quedaMs) {
   // 2c) ¿es un folio de un albarán que ya tenemos?
   if (docTipo === "albaran") {
     const pag = num(d.pagina) || 1;
-    const fus = await fusionarPaginaAlbaran(d, proveedor_id, pag, imagen_url);
+    const esFoto = !c.correoAdjId || !!c.esMovil;
+    const fus = await fusionarPaginaAlbaran(d, proveedor_id, pag, imagen_url, { esFoto, esDigital: !esFoto, albPostFac: !!c.albPostFac }, ctx);
+    if (fus.accion === "cotejado" || fus.accion === "sustituido") {
+      const n = fus.nDif, s = n === 1 ? "" : "s";
+      const msg = fus.accion === "cotejado"
+        ? (fus.estado === "OK" ? `foto cotejada con el PDF del albarán ${d.num_documento}: coincide` : `foto cotejada con el PDF del albarán ${d.num_documento}: ${n} diferencia${s}${fus.nAnot ? " y anotaciones a mano" : ""}`)
+        : (`PDF del proveedor: sustituye a la foto del albarán ${d.num_documento}` + (fus.estado === "OK" ? " (coinciden)" : ` (${n} diferencia${s}${fus.nAnot ? ", anotaciones a mano" : ""})`));
+      await cerrarAdjuntoConDoc(c, { estado: "PROCESADO", doc_id: fus.docId, error: msg });
+      c.docId = fus.docId; c.cotejado = msg; c.cotejoEstado = fus.estado;
+      return;
+    }
     if (fus.accion === "fusionado") {
       await guardarLineasDoc(fus.docId, d.lineas, canal, proveedor_id, d.proveedor, ctx);
       await cerrarAdjuntoConDoc(c, { estado: "PROCESADO", doc_id: fus.docId, error: `página ${pag} unida al albarán ${d.num_documento}` });
@@ -1271,6 +1376,11 @@ async function procesarUno(c, ctx, quedaMs) {
   if (rc && rc.filas) { if (!canal) canal = rc.canal; }
   else if (rc && rc.aviso) { c.avisos.push(`${d.proveedor || "Factura"} ${d.num_documento || ""}: ${rc.aviso}`); }
   const estadoSimple = (estadoDet === "CORRECTO") ? (canal ? "OK" : "REVISAR") : "REVISAR";
+  // Cotejo foto ↔ PDF: albarán de proveedor «por email» que entra sin pareja (ver bloque COTEJO)
+  const provFicha = match || ctx.proveedores.find((p) => p.id === proveedor_id) || null;
+  const esFotoDoc = !c.correoAdjId || !!c.esMovil;
+  const fotoEstadoInicial = (!esFactura && provFicha && provFicha.albaranes_por_email === true && !c.albPostFac) ? (esFotoDoc ? "SIN_PDF" : "SIN_FOTO") : null;
+  const fotoCotejoInicial = (!esFactura && esFotoDoc && d.anotaciones) ? { fotos: [], paginas_foto: [], lineas_foto: [], anotaciones: [String(d.anotaciones)], diferencias: [] } : null;
 
   // 4) documento (mismos campos que el navegador, más cuenta_id explícito)
   const doc = await sb("compras_doc", { method: "POST", body: JSON.stringify({
@@ -1288,6 +1398,7 @@ async function procesarUno(c, ctx, quedaMs) {
     paginas: !esFactura ? (num(d.paginas) || 1) : null,
     paginas_vistas: !esFactura ? [num(d.pagina) || 1] : null,
     albaranes_detectados: esFactura ? (d.albaranes || []) : null,
+    foto_estado: fotoEstadoInicial, foto_cotejo: fotoCotejoInicial,
     raw: c.albPostFac ? { ...d, alb_post_fac: true, sustituye_a: c.sustituyeA || null } : d }) });
   const docId = doc[0].id;
   c.docId = docId; c.estado = estadoSimple; c.estadoDet = estadoDet;
@@ -1453,6 +1564,7 @@ export async function procesarColaServidor({ presupuestoMs = 200000, tamLote = 2
         } else if (c.descartado) { resumen.descartados++; anotar(c, "descartado", c.descartado); }
         else if (c.duplicado) { resumen.duplicados++; anotar(c, "duplicado", c.duplicado); }
         else if (c.fusionado) { resumen.fusionados++; anotar(c, "fusionado", "folio unido a un albarán existente"); }
+        else if (c.cotejado) { resumen.cotejados = (resumen.cotejados || 0) + 1; anotar(c, "cotejado", c.cotejado); }
         else { resumen.guardados++; anotar(c, "guardado", `${c.estado || ""} ${c.estadoDet || ""}`.trim()); }
         for (const av of (c.avisos || [])) resumen.avisos.push(`${c.nombre}: ${av}`);
       } catch (err) {

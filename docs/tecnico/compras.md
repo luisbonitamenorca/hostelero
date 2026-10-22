@@ -187,6 +187,7 @@ En el repo (ordenadas):
 | `general/20260928120000_compras_fecha_contable` | Fecha contable. |
 | `general/20260929100000_rls_initplan` | Políticas envueltas en `(select …)` (todos los módulos). |
 | `general/20260930140000_compras_arreglos_lucia` | **NO APLICADA a 04-10-2026.** `regenerar_reparto_iva` ignora filas de IVA con base 0 y `recalcular_estado_facturas` acepta facturas **repartidas** sin `canal`. Pendiente de que el chat la aplique. |
+| `general/20261022120000_maestros_catalogo_y_cotejo_foto` | Maestro común `mae_*` (ver [maestros.md](maestros.md)) y `compras_doc.foto_cotejo` / `foto_estado` (§4.11). |
 
 ---
 
@@ -404,6 +405,41 @@ los modelos 111/115). La conexión con el banco se explica en
 | `scripts/migrar-compras-esquema.mjs`, `migrar-compras-datos.mjs`, `migrar-compras-storage.mjs`, `delta-compras-correo.mjs` | **Históricos** del port (20 al 25-08). No se vuelven a ejecutar: apuntan al Supabase viejo. |
 
 ---
+
+### 4.11 Cotejo foto ↔ PDF de albaranes (22-10-2026)
+
+Decisión de Luis: los proveedores pasan a mandar el albarán **por email** (PDF, lectura perfecta). La foto del
+papel se sigue haciendo, pero deja de ser la fuente: es la **prueba de entrega** y donde aparecen las
+anotaciones a mano (faltas, devoluciones). Vale también para detectar PDFs que no corresponden a ninguna
+entrega nuestra (un proveedor manda cuatro, se fotografían tres).
+
+Dónde: bloque «COTEJO FOTO ↔ PDF» en `compras.html` (antes de `fusionarPaginaAlbaran`) y su transcripción en
+`lib/compras/ocr-servidor.js`. Columnas nuevas en `compras_doc` (migración
+`20261022120000_maestros_catalogo_y_cotejo_foto.sql`, bloque B): `foto_cotejo jsonb` y `foto_estado`
+(`OK` / `DIFERENCIAS` / `SIN_FOTO` / `SIN_PDF`, índice parcial por cuenta).
+
+Cómo funciona, dentro de `procesarUno`, cuando el documento es un albarán y ya existe otro del mismo proveedor
+con el mismo número (lo que antes solo servía para unir folios):
+
+| Entra | Ya había | Qué pasa |
+|---|---|---|
+| Foto (Subir, móvil) | PDF (`origen = 'correo'`) | `cotejarFotoConPdf`: la foto se añade a `foto_cotejo.fotos`, sus líneas a `lineas_foto`, sus anotaciones a `anotaciones`; se comparan con las líneas del PDF (`compararLineasCotejo`: por referencia normalizada y, si no, por parecido de nombre; diferencias de cantidad > 1 %, de importe > 0,05 €, líneas que faltan en un lado; «falta en la foto» solo cuando hay foto de todas las páginas) y con el total. `foto_estado` = `OK` o `DIFERENCIAS` (también si hay anotaciones a mano). **No se crea otro documento.** |
+| PDF (correo, proveedor con `albaranes_por_email`) | Foto (`origen` ≠ `correo`) | `sustituirFotoPorPdf`: se borran las líneas de la foto y se insertan las del PDF; el documento pasa a `origen = 'correo'`, con la imagen, totales, fecha, nº, `hash_doc` y `raw` del PDF (el `raw` de la foto queda en `foto_cotejo.raw_foto`); las fotos pasan a `foto_cotejo.fotos` y se coteja igual. El estado del documento se recalcula con las líneas del PDF. |
+| Foto | Foto, o PDF | PDF | Como antes: folio nuevo (`fusionado`) o copia (`duplicado`). |
+| Albarán suelto de proveedor «por email» | nada | Nace en `SIN_PDF` (foto) o `SIN_FOTO` (PDF). Los de proveedores sin `albaranes_por_email` no llevan estado. |
+
+El prompt del albarán pide además `"anotaciones"` (texto escrito a mano; las líneas se devuelven con lo impreso).
+
+Pantalla: columna **Cotejo** y contador en Albaranes (`cotejoBadge`, `COTEJO_MAP`, filtro y Excel), galería del
+modal con el PDF primero y las pestañas «📷 Foto» detrás (`fotosCotejoDe`; `fotosDe` no cambia, así el
+reproceso no relee las fotos), y bloque `bloqueCotejo()` con anotaciones, tabla de diferencias y «✓ Dar por
+bueno» (`darPorBuenoCotejo`: `foto_estado = 'OK'` + `aceptado_en`).
+
+Límites: el cotejo compara lo que el OCR leyó de la foto, que sigue siendo peor que el PDF: una «diferencia»
+suele ser una lectura torcida y por eso existe «Dar por bueno». `sustituirFotoPorPdf` pisa líneas que alguien
+pudo corregir a mano sobre la foto (quedan en `lineas_foto`). Un PDF que llega dividido en dos correos (una
+página cada uno) entra como folios de un mismo digital, como antes. El cotejo no mira el pedido: eso es el cotejo
+de **Pedidos** (`pedidos_cotejar`), que es otra cosa.
 
 ## 5. Permisos
 
