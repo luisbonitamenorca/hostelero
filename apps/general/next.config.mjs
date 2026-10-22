@@ -7,6 +7,10 @@ const URL_FINANZAS = process.env.URL_FINANZAS ?? "https://hostelero-finanzas.ver
 
 const nextConfig = {
   transpilePackages: ["@hostelero/db", "@hostelero/ui"],
+  // El OCR del servidor (lib/compras/ocr-servidor.js) carga pdfjs-dist con un
+  // import() dinámico; se deja fuera del empaquetado para que Node lo resuelva
+  // tal cual (como hace Next con sharp).
+  serverExternalPackages: ["pdfjs-dist"],
   // Los HTML de PyG Socios y Ratios se leen del disco en tiempo de ejecución:
   // hay que decirle a Vercel que los empaquete junto a la función de su ruta.
   outputFileTracingIncludes: {

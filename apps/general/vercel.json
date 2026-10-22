@@ -21,6 +21,10 @@
       "schedule": "*/30 * * * *"
     },
     {
+      "path": "/api/compras/procesar-cola",
+      "schedule": "5,35 * * * *"
+    },
+    {
       "path": "/api/agentes/google-resenas",
       "schedule": "30 7 * * *"
     },

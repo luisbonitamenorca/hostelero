@@ -40,3 +40,25 @@ jobs:
           fi
 
           echo "$RESPUESTA" | head -1 >> $GITHUB_STEP_SUMMARY
+
+      - name: Llamar a /api/compras/procesar-cola (OCR en el servidor)
+        # 22-10-2026: tras bajar los adjuntos, el OCR también corre en el servidor
+        # para que las facturas entren aunque nadie tenga Compras abierta. La
+        # función admite hasta 300 s; se le da margen.
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "Procesando la bandeja (OCR)..."
+          RESPUESTA=$(curl -sS --max-time 330 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -w "\nHTTP:%{http_code}" \
+            https://hostelero-app.vercel.app/api/compras/procesar-cola)
+          echo "$RESPUESTA"
+
+          CODIGO=$(echo "$RESPUESTA" | tail -1 | cut -d: -f2)
+          if [ "$CODIGO" != "200" ]; then
+            echo "::error::El OCR del servidor respondió $CODIGO"
+            exit 1
+          fi
+
+          echo "$RESPUESTA" | head -1 >> $GITHUB_STEP_SUMMARY
