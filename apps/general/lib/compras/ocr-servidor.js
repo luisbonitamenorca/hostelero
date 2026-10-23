@@ -905,7 +905,9 @@ async function fusionarPaginaAlbaran(d,proveedor_id,pagina,imagen_url,opts,ctx){
   }catch(e){ console.warn('No pude buscar páginas hermanas:',e.message); return {accion:'nuevo'}; }
   const h=(hermanos||[]).find(x=>normNumDoc(x.num_documento)===nn);
   if(!h) return {accion:'nuevo'};
-  const hDigital=h.origen==='correo';
+  // «Digital» = el fichero del documento es un PDF. No vale origen==='correo': las fotos del móvil
+  // entran por la misma bandeja y hasta la v87 quedaban con origen 'correo'.
+  const hDigital=[h.imagen_url].concat((Array.isArray(h.imagenes)?h.imagenes:[]).map(f=>f&&f.url)).some(u=>/\.pdf(\?|$)/i.test(String(u||'')));
   if(opts.esFoto&&hDigital) return await cotejarFotoConPdf(h,d,pagina,imagen_url);
   if(opts.esDigital&&!hDigital&&!opts.albPostFac) return await sustituirFotoPorPdf(h,d,pagina,imagen_url,ctx);
 
@@ -1392,7 +1394,7 @@ async function procesarUno(c, ctx, quedaMs) {
     reparto_sugerido: (Array.isArray(d.reparto_centros) && d.reparto_centros.length) ? d.reparto_centros : null,
     codigo_terminal: d.codigo_terminal || null,
     codigo_cups: (d.codigo_cups || "").replace(/[^A-Za-z0-9]/g, "") || null,
-    estado: estadoSimple, estado_detalle: estadoDet, hash_doc: hashDoc, imagen_url, origen: c.correoAdjId ? "correo" : "manual",
+    estado: estadoSimple, estado_detalle: estadoDet, hash_doc: hashDoc, imagen_url, origen: (c.correoAdjId && !c.esMovil) ? "correo" : "manual",
     imagenes: imagen_url ? [{ url: imagen_url, pagina: !esFactura ? (num(d.pagina) || 1) : 1 }] : null,
     pagina: !esFactura ? (num(d.pagina) || 1) : null,
     paginas: !esFactura ? (num(d.paginas) || 1) : null,
