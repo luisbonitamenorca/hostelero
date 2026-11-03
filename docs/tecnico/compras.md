@@ -330,6 +330,10 @@ con zoom, giro y arrastre) y a la derecha el detalle editable.
   fichero, `CABTIPOIRPF = 1` tanto para el 111 como para el 115 (indicación de la técnica de A3, 03-09-2026).
 - **Cuenta de gasto** editable desde el listado de Facturas (desde el 22-09): crea o corrige el reparto y, si la
   factura ya está numerada, llama a `compras_asiento_rehacer`.
+- **Cuenta de gasto por línea del reparto** (desde el 03-11): en el detalle, cada línea de `compras_doc_reparto`
+  lleva su `cuenta_gasto` en un desplegable (`selCuentaRep`, misma lista `CUENTAS` del listado). Vacío = hereda:
+  la vista `compras_a3_lineas` hace `coalesce(r.cuenta_gasto, cabecera.cuenta_gasto_defecto)`, igual que con el
+  centro. Antes la celda era un texto libre sin pista y nadie la usaba.
 - **Fechas** (desde el 28-09): fecha de factura y fecha contable editables en el listado; el registro
   (`created_at`) es informativo. Si cambia la contable de una factura numerada, se rehace el asiento, y hay que
   cambiarla también en A3.
@@ -488,6 +492,7 @@ de **Pedidos** (`pedidos_cotejar`), que es otra cosa.
 | 16-09-2026 | Las dos fechas del fichero A3 iguales (la de factura; desde el 28-09, la contable). | Antes la primera llevaba el día de generación, y eso desfasaba un mes el listado por proveedor de A3. |
 | 21-09-2026 | Régimen de IVA CNAC/CCEE/SUJPAS con autorrepercusión. | Indicación de la técnica de A3 y de administración. |
 | 22-09-2026 | Cuenta de gasto editable desde el listado; asiento rehecho si ya está numerada. | Petición de administración. |
+| 03-11-2026 | Cuenta de gasto por línea en el reparto por centro: desplegable en vez de texto libre; vacío = hereda la del proveedor. | Petición de Luis: una factura repartida entre centros necesita cuentas distintas por línea. |
 | 24-09-2026 | Abonos en negativo aunque el documento los imprima en positivo. | Sumaban como gasto. |
 | 25-09-2026 | Coca-Cola: ya no se fotografían albaranes; entra el PDF `ALB.-POST-FAC.` por correo como albarán y marca duplicado el original. | Las fotos solo tenían la página 1 (sin totales) y el post-factura incluye la devolución de envases, que es lo que se factura. |
 | 28-09-2026 | Rentings por contrato; el **seguro siempre separado** a 625000000. | Así lo contabiliza administración en A3. Criterio confirmado por dirección. |

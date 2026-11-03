@@ -3908,6 +3908,21 @@ function selCentro(val,idx){
   return `<select onchange="setRep(${idx},'centro_coste',this.value)" style="font-size:12px;max-width:190px">
             <option value="">— hereda el de la factura —</option>${op}</select>`;
 }
+// Cuenta de gasto por línea (03-11-2026): antes era un hueco de texto libre y
+// nadie sabía que se podía escribir. Ahora es el mismo desplegable de cuentas
+// que el listado; vacío = hereda la cuenta del proveedor (la vista de A3 hace
+// coalesce(reparto.cuenta_gasto, cuenta del proveedor)).
+function cuentaHeredadaReparto(){
+  const p=revisarDoc?provPorId(revisarDoc.proveedor_id):null;
+  return (p&&p.cuenta_contable)||'';
+}
+function selCuentaRep(val,idx){
+  const her=cuentaHeredadaReparto();
+  const op=CUENTAS.map(c=>`<option value="${c.c}" ${c.c===val?'selected':''}>${c.c} — ${esc(c.n)}</option>`).join('');
+  const extra=(val&&!CUENTAS.some(c=>c.c===val))?`<option value="${esc(val)}" selected>${esc(val)}</option>`:'';
+  return `<select onchange="setRep(${idx},'cuenta_gasto',this.value)" style="font-size:12px;max-width:230px" title="${esc(val?nombreCuenta(val):'Hereda la cuenta del proveedor')}">
+            <option value="">— hereda${her?' · '+her:''} —</option>${op}${extra}</select>`;
+}
 function selIva(val,idx){
   const op=mTiposIva.map(t=>`<option value="${t.codigo}" ${t.codigo===val?'selected':''}>${t.codigo}</option>`).join('');
   return `<select onchange="setRep(${idx},'tipo_iva',this.value)" style="font-size:12px"><option value="">—</option>${op}</select>`;
@@ -4082,9 +4097,10 @@ function renderReparto(){
   const dif=(base!=null)?Math.round((base-suma)*100)/100:null;
   const cuadra=(dif!=null&&Math.abs(dif)<=0.02);
   const nCentros=new Set(vivas.map(r=>r.centro_coste).filter(Boolean)).size;
+  const nCuentas=new Set(vivas.map(r=>r.cuenta_gasto||cuentaHeredadaReparto()).filter(Boolean)).size;
 
   const cabecera=`<div style="font-weight:600;font-size:13px;margin-bottom:4px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Reparto por centro de coste</div>
-    <p class="hint" style="margin:0 0 10px">Cada línea será una fila del fichero de A3. Déjalo vacío si toda la factura va a un solo centro: entonces se usa el de arriba.</p>`;
+    <p class="hint" style="margin:0 0 10px">Cada línea será una fila del fichero de A3, con su centro y su cuenta de gasto. Déjalo vacío si toda la factura va a un solo centro: entonces se usa el de arriba y la cuenta del proveedor.</p>`;
 
   if(!vivas.length){
     cont.innerHTML=cabecera+`<div style="display:flex;gap:14px;align-items:center">
@@ -4096,14 +4112,14 @@ function renderReparto(){
      <td class="num" style="width:110px"><span contenteditable class="ce" data-rep="${i}">${r.base!=null?Number(r.base).toFixed(2):''}</span></td>
      <td style="width:110px">${selIva(r.tipo_iva,i)}</td>
      <td>${selCentro(r.centro_coste,i)}</td>
-     <td style="width:130px"><span contenteditable class="ce" data-repc="${i}" style="font-variant-numeric:tabular-nums">${r.cuenta_gasto||''}</span></td>
+     <td>${selCuentaRep(r.cuenta_gasto,i)}</td>
      <td><span class="del" onclick="delRep(${i})" title="Quitar">🗑</span></td></tr>`).join('');
 
   const sinIva=vivas.filter(r=>!r.tipo_iva).length;
   const avisoIva = sinIva
     ? `<div class="aviso" style="margin-top:12px">⚠️ ${sinIva} línea${sinIva>1?'s':''} sin tipo de IVA. A3 las rechaza: asigna el tipo en cada una.</div>` : '';
   const avisoCuadre = cuadra
-    ? `<div class="aviso" style="margin-top:12px;background:var(--ok-soft);border-color:#B5CBB1;color:var(--ok)">✓ El reparto suma ${fmt(suma)} y cuadra con la base${nCentros>1?` · ${nCentros} centros`:''}</div>`
+    ? `<div class="aviso" style="margin-top:12px;background:var(--ok-soft);border-color:#B5CBB1;color:var(--ok)">✓ El reparto suma ${fmt(suma)} y cuadra con la base${nCentros>1?` · ${nCentros} centros`:''}${nCuentas>1?` · ${nCuentas} cuentas`:''}</div>`
     : `<div class="aviso" style="margin-top:12px">⚠️ El reparto suma ${fmt(suma)} y la base es ${fmt(base)} · ${dif>0?'faltan':'sobran'} ${fmt(Math.abs(dif))}. No se puede exportar a A3 hasta que cuadre.</div>`;
 
   cont.innerHTML=cabecera+
@@ -4120,7 +4136,6 @@ function renderReparto(){
      <div style="margin-top:12px"><button class="btn" onclick="guardarReparto()">Guardar reparto</button></div>`;
 
   cont.querySelectorAll('[data-rep]').forEach(el=>el.addEventListener('blur',()=>setRep(+el.dataset.rep,'base',el.textContent)));
-  cont.querySelectorAll('[data-repc]').forEach(el=>el.addEventListener('blur',()=>setRep(+el.dataset.repc,'cuenta_gasto',el.textContent.trim())));
 }
 function repartirRestante(){
   const base=num(revisarDoc.base); if(base==null)return;
