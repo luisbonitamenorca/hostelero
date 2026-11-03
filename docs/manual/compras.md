@@ -70,3 +70,18 @@ desplegable de **Cuenta gasto**, además del centro. Así una misma factura pued
 4. Cuando el aviso verde diga que cuadra, **Guardar reparto**. Cada línea sale como una fila en el Excel de A3.
 
 En la lista de Facturas, una factura con varias cuentas se ve como **varias · N**; se edita desde el detalle.
+
+## Una factura con bloqueo que está bien: «Dar por buena»
+
+Al abrir una factura con 🟠 bloqueo, arriba del todo sale un cuadro con **cada motivo y qué hacer**.
+
+- **Faltan datos** (código de proveedor en A3, nº, fecha, cuenta de gasto, centro, tipo de IVA, modelo o % de
+  IRPF…): hay que rellenarlos, no se pueden saltar porque el fichero de A3 saldría incompleto. Para «sin cuenta
+  de gasto» puedes elegir la cuenta ahí mismo; ponla también en la ficha del proveedor para las siguientes.
+- **Comprobaciones de coherencia** (factura intracomunitaria con IVA en el documento, desglose de IVA que no
+  cuadra con lo guardado, base + IVA − retención que no da el total): si has mirado la factura y está bien,
+  pulsa **✓ Dar por buena (verificada)**. Puedes dejar una nota con el motivo. En la lista pasa a **✓ Verificada**
+  y entra en el próximo Excel de A3.
+
+Si después cambias importes, proveedor o régimen de IVA, la verificación se deshace sola y hay que volver a
+mirarla. En el detalle tienes **deshacer** por si te has equivocado.

@@ -334,6 +334,15 @@ con zoom, giro y arrastre) y a la derecha el detalle editable.
   lleva su `cuenta_gasto` en un desplegable (`selCuentaRep`, misma lista `CUENTAS` del listado). Vacío = hereda:
   la vista `compras_a3_lineas` hace `coalesce(r.cuenta_gasto, cabecera.cuenta_gasto_defecto)`, igual que con el
   centro. Antes la celda era un texto libre sin pista y nadie la usaba.
+- **Factura verificada / «Dar por buena»** (desde el 03-11, migración `20261103130000_compras_factura_verificada`):
+  `compras_doc.verificada_at/por/nota`. Los bloqueos de A3 son de dos clases: *datos que faltan* para el fichero
+  (código proveedor, nº, fecha, cuenta, centro, base, tipo de IVA, modelo/% IRPF, retención parcial, reparto
+  descuadrado), que no se pueden saltar, y *comprobaciones de coherencia* (intracom./ISP con IVA en el documento,
+  desglose de IVA que no cuadra, base + IVA − retención ≠ total), que la vista `compras_a3_export_preview` deja
+  de contar cuando `verificada_at` no es nulo. El trigger `trg_compras_doc_verificada` la deshace si cambian base,
+  IVA, retención, total, proveedor o régimen, y rellena `verificada_por` con el email del token. En el detalle,
+  `bloqueA3()` enseña cada bloqueo con qué hacer (y un selector de cuenta para «sin cuenta de gasto»); la lista
+  `BLOQUEOS_SUAVES` del HTML tiene que coincidir con las tres condiciones de la vista.
 - **Fechas** (desde el 28-09): fecha de factura y fecha contable editables en el listado; el registro
   (`created_at`) es informativo. Si cambia la contable de una factura numerada, se rehace el asiento, y hay que
   cambiarla también en A3.
@@ -493,6 +502,7 @@ de **Pedidos** (`pedidos_cotejar`), que es otra cosa.
 | 21-09-2026 | Régimen de IVA CNAC/CCEE/SUJPAS con autorrepercusión. | Indicación de la técnica de A3 y de administración. |
 | 22-09-2026 | Cuenta de gasto editable desde el listado; asiento rehecho si ya está numerada. | Petición de administración. |
 | 03-11-2026 | Cuenta de gasto por línea en el reparto por centro: desplegable en vez de texto libre; vacío = hereda la del proveedor. | Petición de Luis: una factura repartida entre centros necesita cuentas distintas por línea. |
+| 03-11-2026 | Bloqueos de A3 visibles en el detalle con qué hacer; «Dar por buena (verificada)» salta las comprobaciones de coherencia; la verificación cae sola si cambian los importes. | Petición de Luis: facturas correctas que quedaban bloqueadas sin saber por qué ni cómo darlas por buenas. |
 | 24-09-2026 | Abonos en negativo aunque el documento los imprima en positivo. | Sumaban como gasto. |
 | 25-09-2026 | Coca-Cola: ya no se fotografían albaranes; entra el PDF `ALB.-POST-FAC.` por correo como albarán y marca duplicado el original. | Las fotos solo tenían la página 1 (sin totales) y el post-factura incluye la devolución de envases, que es lo que se factura. |
 | 28-09-2026 | Rentings por contrato; el **seguro siempre separado** a 625000000. | Así lo contabiliza administración en A3. Criterio confirmado por dirección. |
