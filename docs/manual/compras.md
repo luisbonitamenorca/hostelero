@@ -57,3 +57,16 @@ Al abrirlo, el visor enseña primero el PDF y después las pestañas «📷 Foto
 
 Si la diferencia es solo una lectura torcida de la foto, pulsa **«✓ Dar por bueno»** y pasa a 🟢. Si de verdad
 faltó mercancía o hubo devolución, corrige las líneas como siempre y pide el abono al proveedor.
+
+## Repartir una factura entre centros con cuentas de gasto distintas
+
+Desde el 03-11-2026, en el **reparto por centro de coste** (dentro de la factura) cada línea lleva su propio
+desplegable de **Cuenta gasto**, además del centro. Así una misma factura puede ir, por ejemplo, mitad a
+*Reparaciones* en Tamarindos y mitad a *Vajilla* en Casa Tirant.
+
+1. Abre la factura y pulsa **↔ Repartir entre varios centros**.
+2. En cada línea elige **Importe**, **IVA**, **Centro de coste** y **Cuenta gasto**.
+3. Si dejas la cuenta en «hereda», esa línea va a la cuenta del proveedor (el desplegable te la enseña).
+4. Cuando el aviso verde diga que cuadra, **Guardar reparto**. Cada línea sale como una fila en el Excel de A3.
+
+En la lista de Facturas, una factura con varias cuentas se ve como **varias · N**; se edita desde el detalle.
