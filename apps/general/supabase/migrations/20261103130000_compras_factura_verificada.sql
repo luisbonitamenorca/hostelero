@@ -1,4 +1,4 @@
--- Compras (03-11-2026, Luis): «esta factura tiene un bloqueo pero está bien: quiero darla por buena».
+-- APLICADA 03-11-2026 (registrada como compras_factura_verificada) · Compras: «esta factura tiene un bloqueo pero está bien: quiero darla por buena».
 --
 -- Los bloqueos de A3 son de dos clases:
 --   · DATOS QUE FALTAN para el fichero (código de proveedor, nº, fecha, cuenta de gasto, centro, base,
