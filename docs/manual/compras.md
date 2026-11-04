@@ -22,6 +22,24 @@ fines de semana**, sin que nadie tenga abierta la pantalla de Compras:
 Lo que **no** cambia: las fotos de albaranes subidas desde el móvil, la revisión, los repartos, la exportación a
 A3 y la pestaña Buzón funcionan exactamente igual.
 
+### «He reenviado una factura y no aparece» (04-11-2026)
+
+No hay ningún bloqueo a los correos que facturas@ se reenvía a sí mismo: entran y se leen como cualquier otro.
+Lo que pasa casi siempre es que **esa factura ya había entrado antes** (por el correo del proveedor, o por el de
+administracion@ o lucia@). El sistema reconoce el duplicado por nº de documento + fecha + importe, no crea otra
+factura y cierra el adjunto como «ya registrado». Desde fuera parece que el correo no ha llegado.
+
+Para verlo, en la pestaña **Buzón**:
+
+- El correo sale con diagnóstico **«ya registrada antes»** (hay un KPI arriba y se puede filtrar por él). Si el
+  correo traía varias facturas y solo alguna estaba repetida, sale «ok · alguna ya registrada».
+- En «ver», cada adjunto repetido lleva un recuadro naranja con la factura existente: proveedor, nº, fecha,
+  importe, cuándo se cargó, su estado y el nº de A3 si ya está exportada, y el enlace **«Abrir la factura
+  existente»**.
+
+Antes de reenviar una factura, lo rápido es buscarla por nº o proveedor en Facturas. Si de verdad no está,
+el reenvío tarda hasta media hora en aparecer (cadencia del buzón).
+
 ## Albaranes: el PDF del proveedor manda, la foto es la prueba
 
 Desde octubre de 2026 la mayoría de proveedores mandan el albarán **por email** (PDF). Ese PDF se lee perfecto y
