@@ -9423,27 +9423,6 @@ function renderCompras() {
 }
 
 // ── SALARIOS ──────────────────────────────────────────────────────
-// Vista mes a mes con dos bloques: REAL (ingresos + nóminas + ratio)
-// vs PRESUPUESTO (ingresos presupuestados + nóminas presupuestadas + ratio).
-// El filtro de centro respeta todos los datos: ingresos, nóminas,
-// presupuesto y presupuesto_nominas usan el mismo centro/canal.
-function renderSalarios() {
-  const c = fget('sa-centro') || '';
-  const tb = document.getElementById('tb-salarios');
-  const tf = document.getElementById('tf-salarios');
-  const mt = document.getElementById('sa-metrics');
-  if (!tb) return;
-
-  // Coordinar con el selector global Desde/Hasta. Como nóminas y presupuesto
-  // son tablas mensuales (sin día), inferimos el rango de meses a incluir:
-  //  - Desde fija el mes inicial (inclusive)
-  //  - Hasta fija el mes final (inclusive)
-  //  - Si no hay rango, año en curso completo.
-  // Los ingresos REAL sí son diarios → se filtran exactamente por la fecha.
-  const {desde, hasta} = gd();
-  const año = desde ? +desde.substring(0,4) : (hasta ? +hasta.substring(0,4) : new Date().getFullYear());
-  const mDesde = desde ? +desde.substring(5,7) : 1;
-  const mHasta = hasta ? +hasta.substring(5,7) : 12;
 // Departamento normalizado de una fila de nóminas o de presupuesto de nóminas.
 // La gestoría escribe el departamento con el centro delante ("TIRANT COCINA",
 // "TAMARINDOS BAR SALA"); se quita ese prefijo. Agrupaciones acordadas (08-11-2026):
@@ -9462,12 +9441,12 @@ function saDeptoNorm(depto, canal){
   if (!d) { if (['TIENDA','BODEGA','ESTRUCTURA','PRODUCCION'].includes(c)) d=c; else d='OTROS'; }
   return SA_DEPTOS.includes(d) ? d : 'OTROS';
 }
-  const enMesRango = m => m >= mDesde && m <= mHasta;
-  const passCentro = r => !c || (r.centro||r.canal) === c;
-
-  // Acumular por mes los 4 ejes: ingresos, nóminas, presupuesto ingresos, presupuesto nóminas
-  const mesMap = {};
-  const ensure = (m) => {
+// Vista mes a mes con dos bloques: REAL (ingresos + nóminas + ratio)
+// vs PRESUPUESTO (ingresos presupuestados + nóminas presupuestadas + ratio).
+// El filtro de centro respeta todos los datos: ingresos, nóminas,
+// presupuesto y presupuesto_nominas usan el mismo centro/canal.
+function renderSalarios() {
+  const c = fget('sa-centro') || '';
   const dep = fget('sa-depto') || '';
   const passDepto = r => !dep || saDeptoNorm(r.depto, r.canal) === dep;
   const nota = document.getElementById('sa-depto-nota');
@@ -9475,6 +9454,27 @@ function saDeptoNorm(depto, canal){
     nota.style.display = dep ? '' : 'none';
     nota.textContent = dep ? 'Filtro por departamento: salarios y presupuesto de salarios son solo del departamento; los ingresos son del centro completo, así que el ratio es el peso de ese departamento sobre los ingresos totales.' : '';
   }
+  const tb = document.getElementById('tb-salarios');
+  const tf = document.getElementById('tf-salarios');
+  const mt = document.getElementById('sa-metrics');
+  if (!tb) return;
+
+  // Coordinar con el selector global Desde/Hasta. Como nóminas y presupuesto
+  // son tablas mensuales (sin día), inferimos el rango de meses a incluir:
+  //  - Desde fija el mes inicial (inclusive)
+  //  - Hasta fija el mes final (inclusive)
+  //  - Si no hay rango, año en curso completo.
+  // Los ingresos REAL sí son diarios → se filtran exactamente por la fecha.
+  const {desde, hasta} = gd();
+  const año = desde ? +desde.substring(0,4) : (hasta ? +hasta.substring(0,4) : new Date().getFullYear());
+  const mDesde = desde ? +desde.substring(5,7) : 1;
+  const mHasta = hasta ? +hasta.substring(5,7) : 12;
+  const enMesRango = m => m >= mDesde && m <= mHasta;
+  const passCentro = r => !c || (r.centro||r.canal) === c;
+
+  // Acumular por mes los 4 ejes: ingresos, nóminas, presupuesto ingresos, presupuesto nóminas
+  const mesMap = {};
+  const ensure = (m) => {
     if (!mesMap[m]) mesMap[m] = {mes:m, ing:0, nom:0, ingP:0, nomP:0};
     return mesMap[m];
   };
@@ -9490,6 +9490,7 @@ function saDeptoNorm(depto, canal){
   // Como es mensual, filtramos por mes en el rango.
   (nominasEfectivas()).forEach(r => {
     if (c && r.canal !== c) return;
+    if (!passDepto(r)) return;
     if (r.anio && r.anio !== año) return;
     if (!enMesRango(r.mes)) return;
     ensure(r.mes).nom += (r.coste_total||0);
@@ -9503,6 +9504,7 @@ function saDeptoNorm(depto, canal){
   // Nóminas PRESUPUESTO (DB.presupuesto_nominas: campo `canal`)
   (DB.presupuesto_nominas||[]).forEach(r => {
     if (c && r.canal !== c) return;
+    if (!passDepto(r)) return;
     if (!enMesRango(r.mes)) return;
     ensure(r.mes).nomP += (r.importe||0);
   });
@@ -9511,7 +9513,6 @@ function saDeptoNorm(depto, canal){
   const rows = [];
   for (let m=1; m<=12; m++) {
     const x = mesMap[m];
-    if (!passDepto(r)) return;
     if (x && (x.ing || x.nom || x.ingP || x.nomP)) rows.push(x);
   }
 
@@ -9525,7 +9526,6 @@ function saDeptoNorm(depto, canal){
 
   // Calcular ratios por fila + diffs (real − presupuesto)
   rows.forEach(r => {
-    if (!passDepto(r)) return;
     r.ratio  = r.ing>0  ? r.nom/r.ing   : null;
     r.ratioP = r.ingP>0 ? r.nomP/r.ingP : null;
     r.difIng    = (r.ingP > 0 || r.ing > 0) ? (r.ing - r.ingP) : null;
