@@ -835,6 +835,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
         <button class="fbtn" onclick="fset(this,'sa-centro','PRODUCCION',renderSalarios)">Producción</button>
         <button class="fbtn" onclick="fset(this,'sa-centro','ESTRUCTURA',renderSalarios)">Estructura</button>
       </div>
+      <div class="fbar">
+        <span class="fbar-label">Dpto.</span>
+        <button class="fbtn active" onclick="fset(this,'sa-depto','',renderSalarios)">Todos</button>
+        <button class="fbtn" onclick="fset(this,'sa-depto','COCINA',renderSalarios)">Cocina</button>
+        <button class="fbtn" onclick="fset(this,'sa-depto','SALA',renderSalarios)">Sala</button>
+        <button class="fbtn" onclick="fset(this,'sa-depto','RECEPCION',renderSalarios)">Recepción</button>
+        <button class="fbtn" onclick="fset(this,'sa-depto','BODEGA',renderSalarios)">Bodega</button>
+        <button class="fbtn" onclick="fset(this,'sa-depto','PRODUCCION',renderSalarios)">Producción</button>
+        <button class="fbtn" onclick="fset(this,'sa-depto','TIENDA',renderSalarios)">Tienda</button>
+        <button class="fbtn" onclick="fset(this,'sa-depto','ESTRUCTURA',renderSalarios)">Estructura</button>
+      </div>
+      <div id="sa-depto-nota" style="display:none;font-size:11px;color:#7A848C;margin-top:-4px;margin-bottom:8px"></div>
       <div id="sa-metrics" class="metrics-row" style="margin-top:12px"></div>
       <div class="card" style="margin-top:12px">
         <div class="card-t">Detalle mensual</div>
@@ -9432,12 +9444,37 @@ function renderSalarios() {
   const año = desde ? +desde.substring(0,4) : (hasta ? +hasta.substring(0,4) : new Date().getFullYear());
   const mDesde = desde ? +desde.substring(5,7) : 1;
   const mHasta = hasta ? +hasta.substring(5,7) : 12;
+// Departamento normalizado de una fila de nóminas o de presupuesto de nóminas.
+// La gestoría escribe el departamento con el centro delante ("TIRANT COCINA",
+// "TAMARINDOS BAR SALA"); se quita ese prefijo. Agrupaciones acordadas (08-11-2026):
+//   CAMPO + LOGISTICA + BODEGA → BODEGA · OFICINA → ESTRUCTURA (nombre del presupuesto).
+// Si la fila no trae departamento, se deduce del centro cuando es unívoco.
+const SA_DEPTOS = ['COCINA','SALA','RECEPCION','BODEGA','PRODUCCION','TIENDA','ESTRUCTURA'];
+function saDeptoNorm(depto, canal){
+  let d = String(depto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/_/g,' ').replace(/\s+/g,' ').trim();
+  const c = String(canal||'').toUpperCase().replace(/_/g,' ').trim();
+  // Quitar prefijo de centro (el de la fila o cualquiera de los conocidos; el más largo primero)
+  for (const pre of ['TAMARINDOS BAR','BINIFADET','TAMARINDOS','TIRANT','PRODUCCION','ESTRUCTURA','BODEGA','TIENDA']) {
+    if (d !== pre && d.startsWith(pre+' ')) { d = d.slice(pre.length+1).trim(); break; }
+  }
+  if (d==='CAMPO' || d==='LOGISTICA') d='BODEGA';
+  if (d==='OFICINA') d='ESTRUCTURA';
+  if (!d) { if (['TIENDA','BODEGA','ESTRUCTURA','PRODUCCION'].includes(c)) d=c; else d='OTROS'; }
+  return SA_DEPTOS.includes(d) ? d : 'OTROS';
+}
   const enMesRango = m => m >= mDesde && m <= mHasta;
   const passCentro = r => !c || (r.centro||r.canal) === c;
 
   // Acumular por mes los 4 ejes: ingresos, nóminas, presupuesto ingresos, presupuesto nóminas
   const mesMap = {};
   const ensure = (m) => {
+  const dep = fget('sa-depto') || '';
+  const passDepto = r => !dep || saDeptoNorm(r.depto, r.canal) === dep;
+  const nota = document.getElementById('sa-depto-nota');
+  if (nota) {
+    nota.style.display = dep ? '' : 'none';
+    nota.textContent = dep ? 'Filtro por departamento: salarios y presupuesto de salarios son solo del departamento; los ingresos son del centro completo, así que el ratio es el peso de ese departamento sobre los ingresos totales.' : '';
+  }
     if (!mesMap[m]) mesMap[m] = {mes:m, ing:0, nom:0, ingP:0, nomP:0};
     return mesMap[m];
   };
@@ -9474,6 +9511,7 @@ function renderSalarios() {
   const rows = [];
   for (let m=1; m<=12; m++) {
     const x = mesMap[m];
+    if (!passDepto(r)) return;
     if (x && (x.ing || x.nom || x.ingP || x.nomP)) rows.push(x);
   }
 
@@ -9487,6 +9525,7 @@ function renderSalarios() {
 
   // Calcular ratios por fila + diffs (real − presupuesto)
   rows.forEach(r => {
+    if (!passDepto(r)) return;
     r.ratio  = r.ing>0  ? r.nom/r.ing   : null;
     r.ratioP = r.ingP>0 ? r.nomP/r.ingP : null;
     r.difIng    = (r.ingP > 0 || r.ing > 0) ? (r.ing - r.ingP) : null;
