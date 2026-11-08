@@ -884,6 +884,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
           Aquí puedes redistribuirlo en dos modos: <strong>porcentaje fijo</strong> (p. ej. 50% Tienda / 50% Binifadet, igual todo el año)
           o <strong>según las horas de Skello</strong> (se recalcula cada mes según dónde haya trabajado realmente; ideal para quien hace extras en otros centros).
           Solo defines las excepciones; el resto queda como lo manda la gestoría. El total de coste de la empresa nunca cambia.
+          Con <strong>Departamento</strong> eliges en qué departamento cae el coste repartido dentro de cada centro (p. ej. alguien de Oficina que se reparte a los restaurantes y debe contar como Cocina); si no lo eliges, se mantiene el de la gestoría.
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <span class="fbar-label">Trabajador</span>
@@ -895,6 +896,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
           <span class="fbar-label">Modo</span>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="radio" name="rep-modo" value="fijo" onchange="onRepModeChange()"> Porcentaje fijo</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="radio" name="rep-modo" value="horas" onchange="onRepModeChange()"> Según horas de Skello</label>
+          <span class="fbar-label" style="margin-left:8px">Departamento</span>
+          <select id="rep-depto" style="font-size:12px;padding:4px 8px" title="Departamento en el que cae el coste repartido dentro de cada centro. Por defecto se mantiene el de la gestoría.">
+            <option value="">El de la gestoría</option>
+            <option value="COCINA">Cocina</option>
+            <option value="SALA">Sala</option>
+            <option value="RECEPCION">Recepción</option>
+            <option value="BODEGA">Bodega</option>
+            <option value="PRODUCCION">Producción</option>
+            <option value="TIENDA">Tienda</option>
+            <option value="ESTRUCTURA">Estructura</option>
+          </select>
         </div>
         <div id="rep-fijo-panel" style="display:none">
           <div id="rep-inputs" style="display:flex;flex-wrap:wrap;gap:10px 18px;margin-bottom:10px"></div>
@@ -2495,15 +2507,16 @@ function nominasEfectivas(opts) {
   (DB.nominas_reparto||[]).forEach(x=>{
     const d = (x.dni||'').trim();
     if(!d) return;
-    (fijo[d] = fijo[d] || []).push({ centro:(x.centro||'').toUpperCase(), pct:(+x.porcentaje)||0 });
+    (fijo[d] = fijo[d] || []).push({ centro:(x.centro||'').toUpperCase(), pct:(+x.porcentaje)||0, depto:(x.departamento||'').toUpperCase()||null });
   });
 
   // ── (2) Reparto por horas de Skello: conjunto de DNIs marcados ──
   const autoDni = new Set();
+  const autoDepto = {};  // dni -> departamento fijado al repartir por horas (opcional)
   const nomToDni = {};   // nombre normalizado -> dni (para casar filas rrhh sin dni)
   (DB.nominas_reparto_horas||[]).forEach(x=>{
     const d=(x.dni||'').trim();
-    if(d){ autoDni.add(d); if(x.nombre) nomToDni[_rnNombre(x.nombre)]=d; }
+    if(d){ autoDni.add(d); if(x.nombre) nomToDni[_rnNombre(x.nombre)]=d; if(x.departamento) autoDepto[d]=String(x.departamento).toUpperCase(); }
   });
 
   // (2b) Horas reales por (dni||anio||mes) -> {centro:horas}, solo para los marcados
@@ -2528,8 +2541,11 @@ function nominasEfectivas(opts) {
     });
   }
 
-  const escala = (r, canal, frac) => ({ ...r,
+  // `depto`: departamento fijado en el reparto (08-11-2026). Si no se fija, el
+  // trozo repartido conserva el departamento de la gestoría (p. ej. OFICINA).
+  const escala = (r, canal, frac, depto) => ({ ...r,
     canal:           canal,
+    depto:           depto || r.depto,
     coste_total:     (r.coste_total||0)     * frac,
     sueldo:          (r.sueldo||0)          * frac,
     total_devengado: (r.total_devengado||0) * frac,
@@ -2556,7 +2572,7 @@ function nominasEfectivas(opts) {
       if (suma > 0) {
         Object.entries(porCentro).forEach(([ct,h])=>{
           const frac = h/suma;
-          if(frac>0){ const o=escala(r,ct,frac); o._reparto_horas=true; out.push(o); }
+          if(frac>0){ const o=escala(r,ct,frac,autoDepto[d]); o._reparto_horas=true; out.push(o); }
         });
         return;
       }
@@ -2569,7 +2585,7 @@ function nominasEfectivas(opts) {
     const partes = fijo[d];
     const sp = partes ? partes.reduce((s,p)=>s+p.pct,0) : 0;
     if (partes && partes.length && sp > 0) {
-      partes.forEach(p=>{ const frac=p.pct/sp; if(frac>0) out.push(escala(r,p.centro,frac)); });
+      partes.forEach(p=>{ const frac=p.pct/sp; if(frac>0) out.push(escala(r,p.centro,frac,p.depto)); });
       return;
     }
 
@@ -2586,6 +2602,8 @@ function _rnNombre(s){ return _rn(s).replace(/[.,;]/g,'').replace(/\s+/g,' ').tr
 // ─── UI: gestión del reparto de nóminas (pestaña Salarios) ───────────
 // ─── UI: gestión del reparto de nóminas (pestaña Salarios) ───────────
 function _repCentroId(c){ return 'rep-pct-' + c.replace(/[^A-Z]/g,'_'); }
+const _REP_DEPTO_LABEL={COCINA:'Cocina',SALA:'Sala',RECEPCION:'Recepción',BODEGA:'Bodega',PRODUCCION:'Producción',TIENDA:'Tienda',ESTRUCTURA:'Estructura'};
+function _repDeptoLabel(d){ d=String(d||'').toUpperCase(); return _REP_DEPTO_LABEL[d]||d; }
 
 // Lista de trabajadores: unión de nóminas + los que ya tienen reparto (fijo u horas).
 function _repTrabajadores(){
@@ -2687,6 +2705,12 @@ function onSelectRepartoWorker(){
   }
   modeRow.style.display='flex';
   cancel.style.display='';
+  const depSel=document.getElementById('rep-depto');
+  if(depSel){
+    const ex=(DB.nominas_reparto||[]).concat(DB.nominas_reparto_horas||[]).find(r=>(r.dni||'').trim()===dni && r.departamento);
+    depSel.value=ex ? String(ex.departamento).toUpperCase() : '';
+    if(depSel.value!==(ex?String(ex.departamento).toUpperCase():'')) depSel.value='';
+  }
   const modo=_repWorkerMode(dni) || 'fijo';
   document.querySelectorAll('input[name="rep-modo"]').forEach(el=>{ el.checked=(el.value===modo); });
   applyRepMode(dni, modo);
@@ -2792,19 +2816,21 @@ async function saveReparto(){
   if(!dni){ alert('Selecciona un trabajador.'); return; }
   const nombre=sel.options[sel.selectedIndex].text;
   const modo=(document.querySelector('input[name="rep-modo"]:checked')||{}).value||'fijo';
+  const depSel=document.getElementById('rep-depto');
+  const departamento=(depSel && depSel.value) ? depSel.value : null;
   const btn=document.getElementById('rep-save');
   if(btn){ btn.disabled=true; btn.textContent='Guardando...'; }
   try{
     if(modo==='horas'){
       await sbFetch('nominas_reparto?dni=eq.'+encodeURIComponent(dni),{method:'DELETE',headers:{'Prefer':'return=minimal'}});
       await sbFetch('nominas_reparto_horas?dni=eq.'+encodeURIComponent(dni),{method:'DELETE',headers:{'Prefer':'return=minimal'}});
-      await sbFetch('nominas_reparto_horas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify([{dni,nombre}])});
+      await sbFetch('nominas_reparto_horas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify([{dni,nombre,departamento}])});
       DB.nominas_reparto=(DB.nominas_reparto||[]).filter(r=>(r.dni||'').trim()!==dni);
-      DB.nominas_reparto_horas=(DB.nominas_reparto_horas||[]).filter(r=>(r.dni||'').trim()!==dni).concat([{dni,nombre}]);
+      DB.nominas_reparto_horas=(DB.nominas_reparto_horas||[]).filter(r=>(r.dni||'').trim()!==dni).concat([{dni,nombre,departamento}]);
     } else {
       const o=_repValues(); const sum=Object.values(o).reduce((s,v)=>s+v,0);
       if(Math.abs(sum-100)>0.01){ alert('Los porcentajes deben sumar 100%. Ahora suman '+(Math.round(sum*100)/100)+'%.'); if(btn){btn.textContent='Guardar';} updateRepSaveState(); return; }
-      const rows=Object.entries(o).map(([centro,porcentaje])=>({dni,nombre,centro,porcentaje}));
+      const rows=Object.entries(o).map(([centro,porcentaje])=>({dni,nombre,centro,porcentaje,departamento}));
       await sbFetch('nominas_reparto_horas?dni=eq.'+encodeURIComponent(dni),{method:'DELETE',headers:{'Prefer':'return=minimal'}});
       await sbFetch('nominas_reparto?dni=eq.'+encodeURIComponent(dni),{method:'DELETE',headers:{'Prefer':'return=minimal'}});
       if(rows.length) await sbFetch('nominas_reparto',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(rows)});
@@ -2848,10 +2874,12 @@ function renderRepartoList(){
   const byDni={};
   (DB.nominas_reparto||[]).forEach(r=>{ const d=(r.dni||'').trim(); (byDni[d]=byDni[d]||{nombre:r.nombre||d,partes:[]}).partes.push(r); });
   Object.entries(byDni).forEach(([d,o])=>{
-    const detalle=o.partes.slice().sort((a,b)=>(+b.porcentaje)-(+a.porcentaje)).map(p=>`${p.centro} ${(Math.round((+p.porcentaje)*100)/100)}%`).join(' · ');
+    let detalle=o.partes.slice().sort((a,b)=>(+b.porcentaje)-(+a.porcentaje)).map(p=>`${p.centro} ${(Math.round((+p.porcentaje)*100)/100)}%`).join(' · ');
+    const dep=(o.partes.find(p=>p.departamento)||{}).departamento;
+    if(dep) detalle+=` <span style="color:#534AB7">→ ${_repDeptoLabel(dep)}</span>`;
     items.push({dni:d, nombre:o.nombre, modo:'fijo', detalle});
   });
-  (DB.nominas_reparto_horas||[]).forEach(r=>{ const d=(r.dni||'').trim(); items.push({dni:d, nombre:r.nombre||d, modo:'horas', detalle:'Según horas de Skello (mensual)'}); });
+  (DB.nominas_reparto_horas||[]).forEach(r=>{ const d=(r.dni||'').trim(); items.push({dni:d, nombre:r.nombre||d, modo:'horas', detalle:'Según horas de Skello (mensual)'+(r.departamento?` <span style="color:#534AB7">→ ${_repDeptoLabel(r.departamento)}</span>`:'')}); });
   if(!items.length){
     cont.innerHTML='<div style="font-size:12px;color:#aaa;padding:8px 0;border-top:1px solid #eee">No hay repartos definidos. Cada trabajador se imputa 100% al centro que indica la gestoría.</div>';
     return;
