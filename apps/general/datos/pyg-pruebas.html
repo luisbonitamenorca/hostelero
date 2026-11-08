@@ -572,9 +572,11 @@ async function uploadToSupabase(arrayBuffer) {
 // PyG PRUEBAS (15-09-2026) — mismo cuadro de mando que PyG Socios, pero los
 // datos NO salen del Excel de A3: salen de Contabilidad (fin_informe_mensual:
 // cuenta × mes × centro), el presupuesto del módulo Presupuesto (v_pre_pyg_mensual),
-// el detalle por proveedor de Compras (por FECHA DE FACTURA) y el mercado interno
-// de Ratios. El Excel de A3 solo se usa en la pestaña "Comparar". La idea: ir
-// en sombra hasta fin de año y, si cuadra, sustituir a PyG Socios.
+// el detalle por proveedor de Compras (por FECHA DE FACTURA) y, EN VIVO desde
+// Ratios, las ventas 700 (tabla ingresos de Ágora) y el mercado interno (tabla
+// gastos), igual que las nóminas llegan de Ratios vía el asiento automático.
+// El Excel de A3 solo se usa en la pestaña "Comparar". La idea: ir en sombra
+// hasta fin de año y, si cuadra, sustituir a PyG Socios.
 // =============================================================
 const ANIO = new Date().getFullYear();
 const CENTRO_CANAL_NOMBRE = {
@@ -677,13 +679,16 @@ async function autoLoad() {
     const prov = Object.values(provMap);
     const canales = [...new Set(pyg.map(r => r.canal).filter(Boolean))].sort();
     const balanceRows = Object.values(accB).filter(r => r.mensual.some(x => Math.abs(x) > 0.005));
-    D = { pyg, pre: pre.length ? pre : null, pdc, canales, balanceRows, pool: null, tes: null, prov, provIndex, saldoCuenta, filename: 'Contabilidad' };
+    // pygContab = la foto de Contabilidad tal cual (sin Ratios): la usa el Balance
+    // para el resultado del ejercicio, que debe cuadrar con las cuentas 1-5.
+    D = { pyg, pygContab: pyg.slice(), pre: pre.length ? pre : null, pdc, canales, balanceRows, pool: null, tes: null, prov, provIndex, saldoCuenta, filename: 'Contabilidad' };
     document.getElementById('upload-screen').style.display = 'none';
     document.getElementById('app-screen').classList.add('on');
     buildToolbar(); updatePeriodoBadge(); refresh(); renderConcilBanner();
-    // mercado interno en vivo desde Ratios (igual que PyG Socios); las ventas 700 se
-    // quedan con las de Contabilidad: es lo que se quiere poner a prueba.
-    (async () => { await refreshMercadoInterno(); })();
+    // Ventas 700 y mercado interno en vivo desde Ratios (pedido de Luis 08-11-2026:
+    // las ventas de Contabilidad se cargan a mano y se quedaban atrás; Ratios tiene
+    // Ágora al día, igual que las nóminas). Secuenciales para no competir por D.pyg.
+    (async () => { await refreshVentasRatios(); await refreshMercadoInterno(); })();
     const now = new Date();
     setStatus('ok', `Contabilidad · ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
     cargarA3();  // en segundo plano: Comparar y Pool bancario
@@ -804,7 +809,7 @@ function buildComparar() {
   if (!A3.length) { sub.textContent = 'No hay Sumas y Saldos de A3 en el servidor (datos.xlsx). Súbelo desde PyG Socios.'; return; }
   const excl = canal === 'TODOS';
   const rC = aggregate(D.pyg, canal, excl) || [], rA = aggregate(A3, canal, excl) || [];
-  sub.textContent = `Hasta ${MESES[mesHasta-1].toLowerCase()}. Contabilidad = Jano (ventas de Ágora, Compras, nóminas de Ratios, bancos). A3 = Sumas y Saldos que sube Lucía. En TODOS se excluye el mercado interno en ambos.`;
+  sub.textContent = `Hasta ${MESES[mesHasta-1].toLowerCase()}. Jano = ventas en vivo de Ratios (Ágora), Compras, nóminas de Ratios y bancos de Contabilidad. A3 = Sumas y Saldos que sube Lucía. En TODOS se excluye el mercado interno en ambos.`;
   const byG = {};
   const add = (rows, who) => rows.forEach(r => { const g = r.grupoId + ' · ' + r.grupo; const o = (byG[g] ||= { tipo: r.tipo, C: mensual0(), A: mensual0() }); r.mensual.forEach((v,i) => o[who][i] += v); });
   add(rC, 'C'); add(rA, 'A');
@@ -1002,14 +1007,14 @@ async function refreshMercadoInterno() {
 }
 
 // =============================================================
-// VENTAS (cuentas 700) EN VIVO DESDE RATIOS — mientras A3 corrige los traspasos
-// (p.ej. el cruce Tamarindos/Bar de abr-jun 2026), las ventas 700 se toman de la
-// tabla `ingresos` de Ratios (Ágora), que tiene bien el centro. El resto de
+// VENTAS (cuentas 700) EN VIVO DESDE RATIOS — las ventas de Contabilidad se
+// asientan a mano desde el listado de Ágora y se quedan atrás; la tabla
+// `ingresos` de Ratios (Ágora) está al día y tiene bien el centro. El resto de
 // cuentas 7xx (708 devoluciones, 740 subvenciones, 755 servicios al personal,
-// 778 extraordinarios…) se siguen cogiendo del Excel de A3. Las familias de
-// Ratios mapean 1:1 a las subcuentas de venta de A3, así que se conserva el
-// desglose (vino/comida/bebidas/alcoholes/visitas…). Si falla, se mantienen las
-// 700 del A3 como respaldo.
+// 778 extraordinarios…) se siguen cogiendo de Contabilidad. Las familias de
+// Ratios mapean 1:1 a las subcuentas de venta del plan, así que se gana el
+// desglose (vino/comida/bebidas/alcoholes/visitas…) que en Contabilidad va todo
+// a 700000000. Si falla, se mantienen las 700 de Contabilidad como respaldo.
 const VENTA_FAM_CUENTA = {
   'COMIDA':'700000200', 'VINO':'700000100', 'BEBIDAS':'700000300',
   'ALCOHOLES':'700000400', 'VINO EXT':'700000500', 'VISITAS':'700000600',
@@ -1023,7 +1028,7 @@ const VENTA_CUENTA_DESC = {
 async function fetchVentasRatios() {
   let all = [], off = 0;
   while (true) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/ingresos?select=centro,familia,base,mes&limit=1000&offset=${off}`, { headers: sbHeaders() });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/ingresos?select=centro,familia,base,mes&fecha=gte.${ANIO}-01-01&fecha=lte.${ANIO}-12-31&limit=1000&offset=${off}`, { headers: sbHeaders() });
     if (!r.ok) return null;
     const d = await r.json();
     all = all.concat(d);
@@ -1045,15 +1050,15 @@ async function fetchVentasRatios() {
 async function refreshVentasRatios() {
   try {
     const rows = await fetchVentasRatios();
-    if (!rows || !D) return; // sin conexión → se mantienen las 700 del A3
+    if (!rows || !D) return; // sin conexión → se mantienen las 700 de Contabilidad
     const prev = (D.canales || []).join(',');
-    // fuera las 700* del A3 (menos las de mercado interno), dentro las de Ratios
+    // fuera las 700* de Contabilidad (menos las de mercado interno), dentro las de Ratios
     D.pyg = D.pyg.filter(r => !(String(r.cuenta).startsWith('700') && !MI_CUENTAS.includes(r.cuenta))).concat(rows);
     D.canales = [...new Set(D.pyg.map(r => r.canal).filter(Boolean))].sort();
     D.ventasRatios = true;
     if (D.canales.join(',') !== prev) buildToolbar();
     refresh();
-  } catch(e) { /* silencioso: las ventas se quedan con el A3 */ }
+  } catch(e) { /* silencioso: las ventas se quedan con Contabilidad */ }
 }
 
 // ---- ADMIN MODAL ----
@@ -2938,10 +2943,13 @@ function buildBalanceData() {
     saldo: sumHasta(r.mensual, mesHasta)
   })).filter(r => Math.abs(r.saldo) > 0.005);
 
-  // Resultado del ejercicio (cuentas 6 y 7) acumulado hasta mes
+  // Resultado del ejercicio (cuentas 6 y 7) acumulado hasta mes.
+  // Se calcula con la foto de Contabilidad (D.pygContab), no con las ventas en
+  // vivo de Ratios: el Balance tiene que cuadrar con las cuentas 1-5 contables.
   let resultadoEjercicio = 0;
-  if (D.pyg) {
-    D.pyg.forEach(r => {
+  const pygBal = D.pygContab || D.pyg;
+  if (pygBal) {
+    pygBal.forEach(r => {
       // En D.pyg los ingresos (7) ya están con signo positivo y los gastos (6) positivos también
       // Resultado = ingresos - gastos. Pero r.mensual ya está orientado al PyG (con flip de 7).
       const acum = sumHasta(r.mensual, mesHasta);
