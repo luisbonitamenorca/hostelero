@@ -625,7 +625,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
             <th class="tr">Ingresos 26</th>
             <th class="tr">Presupuesto</th>
             <th class="tr">Compras</th>
-            <th class="tr" id="th-sem-int" title="Salidas internas de Producción: lo que repartió a los centros, valorado. Solo aparece en el centro Producción.">Internos</th>
+            <th class="tr" id="th-sem-int" title="Ventas internas de Producción y Bodega a los centros, netas de sus abonos internos. Solo en esos dos centros; en el resto lo interno es una compra más.">Ingresos internos</th>
             <th class="tr" id="th-sem-fc">Food cost</th>
             <th class="tr" id="th-sem-fc-acum">FC acumulado</th>
             <th class="tr">Stock teórico €</th>
@@ -1691,6 +1691,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
 const DB = {
   ingresos:            [],
   gastos:              [],
+  ventas_internas:     [],   // albaranes internos de Producción y Bodega a los centros, en POSITIVO (ver separarVentasInternas)
   presupuesto:         [],
   rrhh:                [],
   rrhh_excepciones:    [],
@@ -1890,6 +1891,25 @@ function resolveGas(r) {
   }
   if (!cat || !cat.familia) return r;
   return { ...r, familia: cat.familia, subfamilia: cat.subfamilia || r.subfamilia };
+}
+// Ventas internas (08-11-2026). La vista gastos repite cada albarán interno de
+// Producción y de Bodega como línea NEGATIVA en el centro que lo emite
+// (proveedor «→ DESTINO»). Aquí se sacan de DB.gastos y pasan a
+// DB.ventas_internas en POSITIVO. Regla de Luis (08-11-2026):
+//   · Compras = compra externa neta: los abonos restan directamente, en todos
+//     los centros; lo que llega de Producción o Bodega es una compra más.
+//   · Ingresos internos = solo Producción y Bodega: lo vendido a los centros
+//     menos sus propios abonos internos (un abono llega negativo tras invertir).
+function esSalidaInterna(r) { return typeof r.proveedor === 'string' && r.proveedor.startsWith('→ '); }
+function separarVentasInternas() {
+  const gastos = [], internas = [];
+  (DB.gastos || []).forEach(r => {
+    if (!esSalidaInterna(r)) { gastos.push(r); return; }
+    internas.push({ ...r, base: -(Number(r.base) || 0), total: -(Number(r.total) || 0),
+      cantidad: -(Number(r.cantidad) || 0), unidades: -(Number(r.unidades) || 0) });
+  });
+  DB.gastos = gastos;
+  DB.ventas_internas = internas;
 }
 let _idxDijitByName = new Map();
 function buildDijitNameIndex() {
@@ -3558,10 +3578,12 @@ function renderSemanal() {
   // ── Datos base ──
   const ingAll = (DB.ingresos||[]).filter(passCentro);
   const gasAll = (DB.gastos||[]).filter(passCentro);
+  const intAll = (DB.ventas_internas||[]).filter(passCentro);
 
   // Ingresos/gastos filtrados por familia (para columnas visibles)
   const ingShow = ingAll.filter(passFam);
   const gasShow = gasAll.filter(passFam);
+  const intShow = intAll.filter(passFam);
 
   // Presupuesto: filtra centro + familia
   const ppto = (DB.presupuesto||[]).filter(r => passCentro(r) && passFam(r));
@@ -3591,7 +3613,7 @@ function renderSemanal() {
     if (!rowMap[k]) rowMap[k] = {
       per, ct,
       i:0, p:0, g:0,
-      gc:0, gi:0,   // compras (entradas) e internos (salidas de Producción), sin compensar
+      gc:0, gi:0,   // gc compras externas netas de abonos · gi ingresos internos (solo Producción y Bodega)
       iFam:0, gFam:0,
       ultFecha:null
     };
@@ -3605,17 +3627,18 @@ function renderSemanal() {
   // Ingresos 2026: respetan el filtro de familia (esta pestaña es "Compras por familia",
   // todas las columnas deben coherentemente reflejar la familia seleccionada).
   ingShow.forEach(r => { const row=ensure(periodoOf(r), r.centro); row.i += r.base; updFecha(row, r.fecha); });
-  // Compras (respetan filtro familia). El neto (g) alimenta food cost y stock;
-  // gc/gi separan entradas y salidas internas para que Producción no enseñe la
-  // compensación sino las dos películas (petición de Luis 02-09).
-  gasShow.forEach(r => { const row=ensure(periodoOf(r), r.centro); row.g += r.base;
-    if (r.base < 0) row.gi += -r.base; else row.gc += r.base;
-    updFecha(row, r.fecha); });
+  // Compras externas netas: los abonos restan directamente, en todos los centros.
+  gasShow.forEach(r => { const row=ensure(periodoOf(r), r.centro); row.g += r.base; row.gc += r.base; updFecha(row, r.fecha); });
+  // Ingresos internos: lo que Producción y Bodega vendieron a los centros, netos
+  // de sus abonos internos (regla de Luis 08-11-2026). Para esos dos centros
+  // cuentan como ingreso en el food cost y en el stock teórico.
+  intShow.forEach(r => { const row=ensure(periodoOf(r), r.centro); row.gi += r.base; updFecha(row, r.fecha); });
   // Presupuesto: ya está filtrado por familia más arriba
   ppto.forEach(r => { ensure(periodoOf(r), r.centro).p += r.importe; });
 
-  // Para Food Cost (mismo dato, mantenemos iFam/gFam por compatibilidad)
+  // Food cost = compras externas ÷ (ventas + ingresos internos)
   ingShow.forEach(r => { ensure(periodoOf(r), r.centro).iFam += r.base; });
+  intShow.forEach(r => { ensure(periodoOf(r), r.centro).iFam += r.base; });
   gasShow.forEach(r => { ensure(periodoOf(r), r.centro).gFam += r.base; });
 
   // Filtrar filas sin datos y ordenar
@@ -3645,7 +3668,7 @@ function renderSemanal() {
   //   - semanal: último día con dato de la semana
   //   - diaria: la propia fecha
   // El "punto inicial" del acumulado = `desde` global (o 1 de enero del año si no hay desde).
-  const idxGasShow = _acumIdx(gasShow), idxIngShow = _acumIdx(ingShow);
+  const idxGasShow = _acumIdx(gasShow), idxIngShow = _acumIdx(ingShow.concat(intShow));   // ingresos + internos
   function fcAcumuladoEn(fechaHasta) {
     if (!fechaHasta) return null;
     const inicioISO = desde || (fechaHasta.substring(0,4) + '-01-01');
@@ -3674,7 +3697,7 @@ function renderSemanal() {
     }
     return { porCentro, total, idx: new Map() };
   };
-  const gruposStock = { gastos: agruparStock(DB.gastos||[]), ingresos: agruparStock(DB.ingresos||[]) };
+  const gruposStock = { gastos: agruparStock(DB.gastos||[]), ingresos: agruparStock((DB.ingresos||[]).concat(DB.ventas_internas||[])) };
   const sumaStock = (tabla, centro, famN, desdeISO, hastaISO) => {
     const g = gruposStock[tabla];
     const kIdx = centro === 'ALL' ? 'T|' + famN : 'C|' + centro + '|' + famN;
@@ -3714,7 +3737,7 @@ function renderSemanal() {
       <td class="tr">€${fmt(r.i)}</td>
       <td class="tr"><span class="${r.i>=r.p&&r.p>0?'vs-ok':r.p>0?'vs-bad':''}">€${fmt(r.p)}</span></td>
       <td class="tr">€${fmt(r.gc)}</td>
-      <td class="tr">${r.gi>0.005 ? '−€'+fmt(r.gi) : '—'}</td>
+      <td class="tr">${Math.abs(r.gi)>0.005 ? '€'+fmt(r.gi) : '—'}</td>
       ${fcCell}
       ${fcACell}
       <td class="tr">${stockVal!=null ? '€'+fmt(stockVal) : '—'}</td>
@@ -3729,7 +3752,7 @@ function renderSemanal() {
   document.getElementById('tf-sem-ing').textContent   = '€'+fmt(tI);
   document.getElementById('tf-sem-ppto').textContent  = '€'+fmt(tP);
   document.getElementById('tf-sem-gas').textContent   = '€'+fmt(tGc);
-  document.getElementById('tf-sem-int').textContent   = tGi>0.005 ? '−€'+fmt(tGi) : '—';
+  document.getElementById('tf-sem-int').textContent   = Math.abs(tGi)>0.005 ? '€'+fmt(tGi) : '—';
   document.getElementById('tf-sem-ratio').innerHTML   = tIFam>0 ? ratioCell(tGFam/tIFam).replace(/<\/?td[^>]*>/g,'') : '—';
   // FC acumulado en TOTAL = FC del global de filas (=FC total con todos los datos)
   document.getElementById('tf-sem-ratio-acum').innerHTML = tIFam>0 ? ratioCell(tGFam/tIFam).replace(/<\/?td[^>]*>/g,'') : '—';
@@ -3742,9 +3765,9 @@ function renderSemanal() {
   // Todas las cifras respetan el filtro de familia (coherencia con la pestaña).
   const aI    = ingShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
   const aP    = ppto.filter(enAcum).reduce((s,r)=>s+r.importe, 0);
-  const aGc   = gasShow.filter(enAcum).reduce((s,r)=>s+(r.base>0?r.base:0), 0);
-  const aGi   = gasShow.filter(enAcum).reduce((s,r)=>s+(r.base<0?-r.base:0), 0);
-  const aIFam = ingShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
+  const aGc   = gasShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
+  const aGi   = intShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
+  const aIFam = aI + aGi;
   const aGFam = gasShow.filter(enAcum).reduce((s,r)=>s+r.base, 0);
 
   let lblAcum = 'ACUMULADO';
@@ -3756,7 +3779,7 @@ function renderSemanal() {
   document.getElementById('tf-sem-acum-ing').textContent   = '€'+fmt(aI);
   document.getElementById('tf-sem-acum-ppto').textContent  = '€'+fmt(aP);
   document.getElementById('tf-sem-acum-gas').textContent   = '€'+fmt(aGc);
-  document.getElementById('tf-sem-acum-int').textContent   = aGi>0.005 ? '−€'+fmt(aGi) : '—';
+  document.getElementById('tf-sem-acum-int').textContent   = Math.abs(aGi)>0.005 ? '€'+fmt(aGi) : '—';
   document.getElementById('tf-sem-acum-ratio').innerHTML   = aIFam>0 ? ratioCell(aGFam/aIFam).replace(/<\/?td[^>]*>/g,'') : '—';
   document.getElementById('tf-sem-acum-ratio-acum').innerHTML = aIFam>0 ? ratioCell(aGFam/aIFam).replace(/<\/?td[^>]*>/g,'') : '—';
   const fechaStockAcum = hasta || ultFechaGlobal;
@@ -7088,6 +7111,7 @@ async function loadFromStorage() {
     // match en catálogo.
     DB.ingresos = DB.ingresos.map(resolveIng);
     DB.gastos   = DB.gastos.map(resolveGas);
+    separarVentasInternas();
     const total = DB.ingresos.length + DB.gastos.length + DB.presupuesto.length + DB.rrhh.length + DB.nominas.length + DB.presupuesto_nominas.length + DB.visitas.length + DB.comensales.length + DB.ingresos_historico.length;
     setSyncStatus(total > 0 ? `✓ ${total} registros` : 'Sin datos', '#5E7D5A');
     marcarDatosListos();
@@ -8527,6 +8551,7 @@ async function handleXlFile(file, opts) {
     // del catálogo justo después de una carga de Excel.
     DB.ingresos = DB.ingresos.map(resolveIng);
     DB.gastos   = DB.gastos.map(resolveGas);
+    separarVentasInternas();
 
     const total = ingRows.length + gasRows.length + compRows.length + pptoRows.length + rrhhRows.length + nomRows.length + pnomRows.length + visRows.length + coRows.length + ingHistRows.length;
     // Resumen de qué tablas se han actualizado en esta carga
@@ -9355,20 +9380,16 @@ function renderCompras() {
   const totBase = rows.reduce((s,r)=>s+r.base,0);
   const nProv   = new Set(rows.map(r=>r.proveedor)).size;
   const nProd   = new Set(rows.map(r=>r.producto)).size;
-  // Las salidas internas de Producción entran como compra NEGATIVA en su centro
-  // (idea de Luis 01-09): sin enseñarlas, el total "no llega" al del módulo
-  // Compras y parece un error. Se desglosa: brutas − salidas = netas.
-  const salidasInt = rows.filter(r=>r.base<0).reduce((s,r)=>s-r.base,0);
-  const brutas = totBase + salidasInt;
+  // Las ventas internas de Producción y Bodega no están en DB.gastos (van a
+  // DB.ventas_internas, en positivo): aquí Compras es siempre lo que entró por
+  // albarán, con los abonos restados. Coincide con el módulo Compras.
+  const ventasInt = (DB.ventas_internas||[]).filter(r=>
+    (!c||r.centro===c)&&(!fam||r.familia===fam)&&(!m||r.mes===m)).reduce((s,r)=>s+r.base,0);
+  const eur = v => v.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
 
-  document.getElementById('rc-metrics').innerHTML = salidasInt>0.005 ? `
-    <div class="mc"><div class="lbl">Compras brutas</div><div class="val" title="Importe para cotejar con el módulo Compras (albaranes recibidos, incluida la mercancía interna)">${brutas.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €</div></div>
-    <div class="mc"><div class="lbl">− Salidas internas Producción</div><div class="val" title="Lo que Producción repartió a los centros: resta aquí lo que suma en sus destinos, para no contar doble la mercancía interna">−${salidasInt.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €</div></div>
-    <div class="mc"><div class="lbl">= Compra externa neta</div><div class="val">${totBase.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €</div></div>
-    <div class="mc"><div class="lbl">Proveedores</div><div class="val">${nProv}</div></div>
-    <div class="mc"><div class="lbl">Productos distintos</div><div class="val">${nProd}</div></div>
-  ` : `
-    <div class="mc"><div class="lbl">Compras totales</div><div class="val" title="Importe exacto para cotejar con el módulo Compras">${totBase.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €</div></div>
+  document.getElementById('rc-metrics').innerHTML = `
+    <div class="mc"><div class="lbl">Compras netas</div><div class="val" title="Albaranes recibidos (proveedores externos e internos) con los abonos restados. Importe para cotejar con el módulo Compras.">${eur(totBase)}</div></div>
+    ${Math.abs(ventasInt)>0.005 ? `<div class="mc"><div class="lbl">Ingresos internos Producción y Bodega</div><div class="val" title="Lo que Producción y Bodega vendieron a los centros, netas de abonos internos. Es ingreso suyo y compra de sus destinos: no se resta de las compras.">${eur(ventasInt)}</div></div>` : ''}
     <div class="mc"><div class="lbl">Proveedores</div><div class="val">${nProv}</div></div>
     <div class="mc"><div class="lbl">Productos distintos</div><div class="val">${nProd}</div></div>
   `;

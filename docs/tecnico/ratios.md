@@ -75,7 +75,7 @@ cual el 24-08-2026) y **sin columna `cuenta_id`**.
 
 | Objeto | Qué es |
 |---|---|
-| `gastos` (**vista**) | Compras de todo el año desde el módulo Compras. Cuatro bloques `UNION ALL`: (1) cada línea de **albarán** (`compras_doc.tipo = 'albaran'`, `fecha >= 2026-01-01`, sin `estado_detalle = 'DUPLICADO'`) con su centro por `mapa_centro()` y familia/subfamilia/factor del catálogo `productos_dijit` vía `compras_producto.codigo_interno`; (2) una fila de **ajuste** por albarán cuando `|base − Σ líneas| > 0,15 €` (descuentos de pie, redondeos); (3) **salidas de Producción en negativo**: cada línea de los albaranes del proveedor interno de Producción se repite con signo menos en el centro `PRODUCCION` (proveedor `→ CENTRO`); (4) el espejo negativo de los ajustes de esos albaranes. Ids negativos (hash estable). Si un producto no está en el catálogo, cuenta como **COMIDA / VARIOS**. Las facturas no entran (duplicarían su albarán). |
+| `gastos` (**vista**) | Compras de todo el año desde el módulo Compras. Cuatro bloques `UNION ALL`: (1) cada línea de **albarán** (`compras_doc.tipo = 'albaran'`, `fecha >= 2026-01-01`, sin `estado_detalle = 'DUPLICADO'`) con su centro por `mapa_centro()` y familia/subfamilia/factor del catálogo `productos_dijit` vía `compras_producto.codigo_interno`; (2) una fila de **ajuste** por albarán cuando `|base − Σ líneas| > 0,15 €` (descuentos de pie, redondeos); (3) **espejo de los albaranes internos**: cada línea de los albaranes de los dos proveedores internos (Producción, NIF `B01996826-02`; Bodega, NIF `B01996826-01`, desde el 08-11-2026) se repite con signo menos en el centro que los emite (`PRODUCCION` o `BODEGA`, función `centro_interno_nif()`), proveedor `→ CENTRO`; (4) el espejo negativo de los ajustes de esos albaranes. Ratios **saca** estas filas espejo de `DB.gastos` al cargar (`separarVentasInternas()`) y las guarda en positivo en `DB.ventas_internas`. Ids negativos (hash estable). Si un producto no está en el catálogo, cuenta como **COMIDA / VARIOS**. Las facturas no entran (duplicarían su albarán). |
 | `mapa_centro(text)` | Traduce los centros de coste de Compras (BINIFADET RESTAURANTE, CASA TIRANT, COCINA PRODUCCIÓN…) a los códigos de Ratios (BINIFADET, TIRANT, PRODUCCION…). Su gemela en JS es `CANAL_COMPRAS`: si cambias una, cambia la otra. |
 | `gastos_cache` (vista materializada) | Copia de `gastos`. Solo `select` para `authenticated`. |
 | `ratios_cache_estado` | Fila `clave='gastos'` con `sucio` y `refrescado_at`. RLS sin políticas (solo la tocan funciones `security definer`). |
@@ -206,8 +206,12 @@ caché y reclasifica **todas** sus compras del año.
 - **Ratio aj.** = (compras − stock final) / ventas, **solo si hay un inventario físico** dentro del
   periodo; sin inventario se muestra el ratio bruto (restar un stock calculado con el propio ratio
   objetivo sería circular). Las subfamilias sin productos controlados usan siempre el ratio bruto.
-- Producción: su neto = materia prima comprada − salidas valoradas a los centros (las salidas entran en
-  negativo, §3.2). La columna «Internos» del detalle de Compras por familia las enseña.
+- **Compras** es siempre compra externa neta: los abonos, devoluciones de envases y descuentos de pie
+  restan directamente, en todos los centros. Lo que llega de Producción o Bodega es una compra más.
+- **Ingresos internos** (solo Producción y Bodega, columna del detalle de Compras por familia): sus
+  albaranes internos a los centros menos sus propios abonos internos (`DB.ventas_internas`). Para esos dos
+  centros cuentan como ingreso en el food cost, el FC acumulado y el stock teórico de esa pestaña. En el
+  resto de pestañas Producción y Bodega enseñan solo sus compras externas (regla de Luis 08-11-2026).
 
 ### 4.5 Asiento de nóminas → Contabilidad
 
@@ -287,6 +291,7 @@ compras muestran «⚡ último albarán», el resto «↑ subido».
 | 03-09-2026 | Alojamiento del personal = ingreso en 755 (neutro en PyG); OFICINA (solo existe en las horas) → Estructura. | Así cuadraba ya con la contabilidad; OFICINA no es centro contable. |
 | 19-09-2026 | Visitas y comensales borran **solo los días** que trae la hoja. | Una hoja de 2026 con una fecha suelta de 2025 borró todos los comensales de 2025 (se recuperaron de un Excel antiguo). |
 | 23-09-2026 | Las ventas de Ágora sustituyen solo los días del fichero; los Excel soltados antes de tiempo quedan en cola. | Un export corto dejaba el año sin ventas; los ficheros soltados pronto fallaban. |
+| 08-11-2026 | Compras = compra externa neta de abonos en todos los centros; las ventas internas de Producción **y Bodega** pasan a la columna **Ingresos internos** (positivo, netas de abonos internos). Migración `20261108120000_gastos_espejo_bodega_ingresos_internos.sql`. | La columna «Internos» sumaba cualquier línea negativa: en Binifadet o Tamarindos eran abonos y envases de proveedores externos, no mercancía interna; y Bodega no tenía espejo. |
 | 29-09-2026 | Guardado incremental (fuera el `truncate` + re-subida de 66.000 filas al añadir una venta); políticas RLS envueltas en `(select …)`. | Lentitud y riesgo de dejar la tabla a medias. |
 | 30-09-2026 | Carga en paralelo, `max rows` de PostgREST a 10.000, `gastos_cache` y caché de ventas en IndexedDB. | Ratios tardaba 8 s en abrir; ahora ≈1 s en aperturas repetidas. |
 | 01-10-2026 | Horas en vivo desde Personal; comensales en vivo desde Reservas. Los cargadores de Skello y COVERMANAGER quedan de respaldo. | Fin de los Excel semanales de Skello y Cover. |

@@ -61,9 +61,11 @@ Para volver a la portada: **«← Inicio»**, abajo en el menú de la izquierda.
 2. Arriba, elige el centro (Todos, Binifadet, Bodega, Tamarindos, Tamarindos Bar, Tirant, Tienda,
    Producción).
 3. Elige **Familia** y la **Vista**: Mensual, Semanal o Diaria.
-4. Columnas: Ingresos, Presupuesto, Compras, **Food cost** (compras ÷ ventas), **FC acumulado** y
-   **Stock teórico €**. En Producción sale además **Internos**: lo que Producción ha entregado a los
-   centros (resta de sus compras).
+4. Columnas: Ingresos, Presupuesto, **Compras** (lo comprado fuera, con los abonos ya restados),
+   **Ingresos internos**, **Food cost** (compras ÷ ventas), **FC acumulado** y **Stock teórico €**.
+   **Ingresos internos** solo tiene valor en Producción y Bodega: lo que han vendido a los demás centros
+   menos sus abonos internos. En esos dos centros el food cost divide las compras entre ventas más
+   ingresos internos. En el resto de centros la mercancía interna es una compra más.
 
 Para bajar a detalle: **Por subfamilia** (gráficos y tabla con **Food cost %**, **Ratio aj.** y
 **Stock €**).
