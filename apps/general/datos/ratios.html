@@ -543,6 +543,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
       <input type="date" id="gFechaHasta" onchange="renderAll()" style="height:30px;font-size:11px;width:130px;">
       <select id="gCentro" onchange="renderAll()">
         <option value="ALL">Todos los centros</option>
+        <option value="RESTAURANTES">Restaurantes (4)</option>
         <option value="BINIFADET">Binifadet</option>
         <option value="BODEGA">Bodega</option>
         <option value="TAMARINDOS">Tamarindos</option>
@@ -605,6 +606,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     <div id="tab-semanal" class="tab-pane">
       <div class="stabs" id="stabs-semanal">
         <button class="stab active" onclick="setSemCentro('ALL',this)">Todos</button>
+        <button class="stab" onclick="setSemCentro('RESTAURANTES',this)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button>
         <button class="stab" onclick="setSemCentro('BINIFADET',this)">Binifadet</button>
         <button class="stab" onclick="setSemCentro('BODEGA',this)">Bodega</button>
         <button class="stab" onclick="setSemCentro('TAMARINDOS',this)">Tamarindos</button>
@@ -660,7 +662,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     <!-- ══════════════ SUBFAMILIA ══════════════ -->
     <div id="tab-subfamilia" class="tab-pane">
       <div class="fb">
-<span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'sf-centro','',renderSubfamilia)">Todos</button><button class="fbtn" onclick="fset(this,'sf-centro','BINIFADET',renderSubfamilia)">Binifadet</button><button class="fbtn" onclick="fset(this,'sf-centro','BODEGA',renderSubfamilia)">Bodega</button><button class="fbtn" onclick="fset(this,'sf-centro','TAMARINDOS',renderSubfamilia)">Tamarindos</button><button class="fbtn" onclick="fset(this,'sf-centro','TAMARINDOS BAR',renderSubfamilia)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'sf-centro','TIRANT',renderSubfamilia)">Tirant</button><button class="fbtn" onclick="fset(this,'sf-centro','TIENDA',renderSubfamilia)">Tienda</button><button class="fbtn" onclick="fset(this,'sf-centro','PRODUCCION',renderSubfamilia)">Producción</button>
+<span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'sf-centro','',renderSubfamilia)">Todos</button><button class="fbtn" onclick="fset(this,'sf-centro','RESTAURANTES',renderSubfamilia)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button><button class="fbtn" onclick="fset(this,'sf-centro','BINIFADET',renderSubfamilia)">Binifadet</button><button class="fbtn" onclick="fset(this,'sf-centro','BODEGA',renderSubfamilia)">Bodega</button><button class="fbtn" onclick="fset(this,'sf-centro','TAMARINDOS',renderSubfamilia)">Tamarindos</button><button class="fbtn" onclick="fset(this,'sf-centro','TAMARINDOS BAR',renderSubfamilia)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'sf-centro','TIRANT',renderSubfamilia)">Tirant</button><button class="fbtn" onclick="fset(this,'sf-centro','TIENDA',renderSubfamilia)">Tienda</button><button class="fbtn" onclick="fset(this,'sf-centro','PRODUCCION',renderSubfamilia)">Producción</button>
 <span class="fbar-label">Familia</span><div id="sf-familia-btns" class="fbar-group"><button class="fbtn active" onclick="fsetFam(this,'sf-familia','',renderSubfamilia)">Todas</button></div>
 <span class="fbar-label">Mes</span><button class="fbtn active" onclick="fset(this,'sf-mes','',renderSubfamilia)">Todos</button><button class="fbtn" onclick="fset(this,'sf-mes','1',renderSubfamilia)">Ene</button><button class="fbtn" onclick="fset(this,'sf-mes','2',renderSubfamilia)">Feb</button><button class="fbtn" onclick="fset(this,'sf-mes','3',renderSubfamilia)">Mar</button><button class="fbtn" onclick="fset(this,'sf-mes','4',renderSubfamilia)">Abr</button><button class="fbtn" onclick="fset(this,'sf-mes','5',renderSubfamilia)">May</button><button class="fbtn" onclick="fset(this,'sf-mes','6',renderSubfamilia)">Jun</button><button class="fbtn" onclick="fset(this,'sf-mes','7',renderSubfamilia)">Jul</button><button class="fbtn" onclick="fset(this,'sf-mes','8',renderSubfamilia)">Ago</button><button class="fbtn" onclick="fset(this,'sf-mes','9',renderSubfamilia)">Sep</button><button class="fbtn" onclick="fset(this,'sf-mes','10',renderSubfamilia)">Oct</button><button class="fbtn" onclick="fset(this,'sf-mes','11',renderSubfamilia)">Nov</button><button class="fbtn" onclick="fset(this,'sf-mes','12',renderSubfamilia)">Dic</button>
       </div>
@@ -682,7 +684,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     <div id="tab-control-prod" class="tab-pane">
       <div class="fbar">
         <span class="fbar-label">Centro</span>
-        <button class="fbtn active" onclick="fset(this,'cp-centro','ALL',renderControlProd)">Todos</button>
+        <button class="fbtn active" onclick="fset(this,'cp-centro','ALL',renderControlProd)">Todos</button><button class="fbtn" onclick="fset(this,'cp-centro','RESTAURANTES',renderControlProd)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button>
         <button class="fbtn" onclick="fset(this,'cp-centro','BINIFADET',renderControlProd)">Binifadet</button>
         <button class="fbtn" onclick="fset(this,'cp-centro','BODEGA',renderControlProd)">Bodega</button>
         <button class="fbtn" onclick="fset(this,'cp-centro','TAMARINDOS',renderControlProd)">Tamarindos</button>
@@ -730,7 +732,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     </div>
     <div id="tab-resumen-ventas" class="tab-pane">
       <div class="fbar">
-        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'rv-centro','',renderVentas)">Todos</button><button class="fbtn" onclick="fset(this,'rv-centro','BINIFADET',renderVentas)">Binifadet</button><button class="fbtn" onclick="fset(this,'rv-centro','BODEGA',renderVentas)">Bodega</button><button class="fbtn" onclick="fset(this,'rv-centro','TAMARINDOS',renderVentas)">Tamarindos</button><button class="fbtn" onclick="fset(this,'rv-centro','TAMARINDOS BAR',renderVentas)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'rv-centro','TIRANT',renderVentas)">Tirant</button><button class="fbtn" onclick="fset(this,'rv-centro','TIENDA',renderVentas)">Tienda</button>
+        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'rv-centro','',renderVentas)">Todos</button><button class="fbtn" onclick="fset(this,'rv-centro','RESTAURANTES',renderVentas)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button><button class="fbtn" onclick="fset(this,'rv-centro','BINIFADET',renderVentas)">Binifadet</button><button class="fbtn" onclick="fset(this,'rv-centro','BODEGA',renderVentas)">Bodega</button><button class="fbtn" onclick="fset(this,'rv-centro','TAMARINDOS',renderVentas)">Tamarindos</button><button class="fbtn" onclick="fset(this,'rv-centro','TAMARINDOS BAR',renderVentas)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'rv-centro','TIRANT',renderVentas)">Tirant</button><button class="fbtn" onclick="fset(this,'rv-centro','TIENDA',renderVentas)">Tienda</button>
         <span class="fbar-label">Año</span><button class="fbtn" onclick="fset(this,'rv-año','',renderVentas)">Todos</button><button class="fbtn" onclick="fset(this,'rv-año','2024',renderVentas)">2024</button><button class="fbtn" onclick="fset(this,'rv-año','2025',renderVentas)">2025</button><button class="fbtn active" onclick="fset(this,'rv-año','2026',renderVentas)">2026</button>
         <span class="fbar-label">Familia</span><div id="rv-familia-btns" class="fbar-group"><button class="fbtn active" onclick="fsetFam(this,'rv-familia','',renderVentas)">Todas</button></div>
       </div>
@@ -791,7 +793,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     <!-- ══════════════ RESUMEN COMPRAS ══════════════ -->
     <div id="tab-resumen-compras" class="tab-pane">
       <div class="fbar">
-        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'rc-centro','',renderCompras)">Todos</button><button class="fbtn" onclick="fset(this,'rc-centro','BINIFADET',renderCompras)">Binifadet</button><button class="fbtn" onclick="fset(this,'rc-centro','BODEGA',renderCompras)">Bodega</button><button class="fbtn" onclick="fset(this,'rc-centro','TAMARINDOS',renderCompras)">Tamarindos</button><button class="fbtn" onclick="fset(this,'rc-centro','TAMARINDOS BAR',renderCompras)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'rc-centro','TIRANT',renderCompras)">Tirant</button><button class="fbtn" onclick="fset(this,'rc-centro','TIENDA',renderCompras)">Tienda</button><button class="fbtn" onclick="fset(this,'rc-centro','PRODUCCION',renderCompras)">Producción</button>
+        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'rc-centro','',renderCompras)">Todos</button><button class="fbtn" onclick="fset(this,'rc-centro','RESTAURANTES',renderCompras)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button><button class="fbtn" onclick="fset(this,'rc-centro','BINIFADET',renderCompras)">Binifadet</button><button class="fbtn" onclick="fset(this,'rc-centro','BODEGA',renderCompras)">Bodega</button><button class="fbtn" onclick="fset(this,'rc-centro','TAMARINDOS',renderCompras)">Tamarindos</button><button class="fbtn" onclick="fset(this,'rc-centro','TAMARINDOS BAR',renderCompras)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'rc-centro','TIRANT',renderCompras)">Tirant</button><button class="fbtn" onclick="fset(this,'rc-centro','TIENDA',renderCompras)">Tienda</button><button class="fbtn" onclick="fset(this,'rc-centro','PRODUCCION',renderCompras)">Producción</button>
         <span class="fbar-label">Familia</span><div id="rc-familia-btns" class="fbar-group"><button class="fbtn active" onclick="fsetFam(this,'rc-familia','',renderCompras)">Todas</button></div>
         <span class="fbar-label">Mes</span><button class="fbtn active" onclick="fset(this,'rc-mes','',renderCompras)">Todos</button><button class="fbtn" onclick="fset(this,'rc-mes','1',renderCompras)">Ene</button><button class="fbtn" onclick="fset(this,'rc-mes','2',renderCompras)">Feb</button><button class="fbtn" onclick="fset(this,'rc-mes','3',renderCompras)">Mar</button><button class="fbtn" onclick="fset(this,'rc-mes','4',renderCompras)">Abr</button><button class="fbtn" onclick="fset(this,'rc-mes','5',renderCompras)">May</button><button class="fbtn" onclick="fset(this,'rc-mes','6',renderCompras)">Jun</button><button class="fbtn" onclick="fset(this,'rc-mes','7',renderCompras)">Jul</button><button class="fbtn" onclick="fset(this,'rc-mes','8',renderCompras)">Ago</button><button class="fbtn" onclick="fset(this,'rc-mes','9',renderCompras)">Sep</button><button class="fbtn" onclick="fset(this,'rc-mes','10',renderCompras)">Oct</button><button class="fbtn" onclick="fset(this,'rc-mes','11',renderCompras)">Nov</button><button class="fbtn" onclick="fset(this,'rc-mes','12',renderCompras)">Dic</button>
       </div>
@@ -825,7 +827,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     <div id="tab-salarios" class="tab-pane">
       <div class="fbar">
         <span class="fbar-label">Centro</span>
-        <button class="fbtn active" onclick="fset(this,'sa-centro','',renderSalarios)">Todos</button>
+        <button class="fbtn active" onclick="fset(this,'sa-centro','',renderSalarios)">Todos</button><button class="fbtn" onclick="fset(this,'sa-centro','RESTAURANTES',renderSalarios)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button>
         <button class="fbtn" onclick="fset(this,'sa-centro','BINIFADET',renderSalarios)">Binifadet</button>
         <button class="fbtn" onclick="fset(this,'sa-centro','BODEGA',renderSalarios)">Bodega</button>
         <button class="fbtn" onclick="fset(this,'sa-centro','TAMARINDOS',renderSalarios)">Tamarindos</button>
@@ -955,7 +957,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     <!-- ══════════════ RRHH ══════════════ -->
     <div id="tab-rrhh" class="tab-pane">
       <div class="fbar">
-        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'rh-centro','',renderRRHH)">Todos</button><button class="fbtn" onclick="fset(this,'rh-centro','BINIFADET',renderRRHH)">Binifadet</button><button class="fbtn" onclick="fset(this,'rh-centro','BODEGA',renderRRHH)">Bodega</button><button class="fbtn" onclick="fset(this,'rh-centro','TAMARINDOS',renderRRHH)">Tamarindos</button><button class="fbtn" onclick="fset(this,'rh-centro','TAMARINDOS_BAR',renderRRHH)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'rh-centro','TIRANT',renderRRHH)">Tirant</button><button class="fbtn" onclick="fset(this,'rh-centro','TIENDA',renderRRHH)">Tienda</button><button class="fbtn" onclick="fset(this,'rh-centro','PRODUCCION',renderRRHH)">Producción</button><button class="fbtn" onclick="fset(this,'rh-centro','OFICINA',renderRRHH)">Oficina</button>
+        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'rh-centro','',renderRRHH)">Todos</button><button class="fbtn" onclick="fset(this,'rh-centro','RESTAURANTES',renderRRHH)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button><button class="fbtn" onclick="fset(this,'rh-centro','BINIFADET',renderRRHH)">Binifadet</button><button class="fbtn" onclick="fset(this,'rh-centro','BODEGA',renderRRHH)">Bodega</button><button class="fbtn" onclick="fset(this,'rh-centro','TAMARINDOS',renderRRHH)">Tamarindos</button><button class="fbtn" onclick="fset(this,'rh-centro','TAMARINDOS_BAR',renderRRHH)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'rh-centro','TIRANT',renderRRHH)">Tirant</button><button class="fbtn" onclick="fset(this,'rh-centro','TIENDA',renderRRHH)">Tienda</button><button class="fbtn" onclick="fset(this,'rh-centro','PRODUCCION',renderRRHH)">Producción</button><button class="fbtn" onclick="fset(this,'rh-centro','OFICINA',renderRRHH)">Oficina</button>
         <span class="fbar-label">Dpto.</span><button class="fbtn active" onclick="fset(this,'rh-depto','',renderRRHH)">Todos</button><button class="fbtn" onclick="fset(this,'rh-depto','COCINA',renderRRHH)">Cocina</button><button class="fbtn" onclick="fset(this,'rh-depto','SALA',renderRRHH)">Sala</button><button class="fbtn" onclick="fset(this,'rh-depto','RECEPCION',renderRRHH)">Recepción</button><button class="fbtn" onclick="fset(this,'rh-depto','OTROS',renderRRHH)">Otros</button>
         <span class="fbar-label">Abrir por</span><button class="fbtn active" onclick="fset(this,'rh-nivel','centro',renderRRHH)">Centro</button><button class="fbtn" onclick="fset(this,'rh-nivel','depto',renderRRHH)">Departamento</button><button class="fbtn" onclick="fset(this,'rh-nivel','persona',renderRRHH)">Persona</button>
       </div>
@@ -1028,7 +1030,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     <!-- ══════════════ COMENSALES ══════════════ -->
     <div id="tab-comensales" class="tab-pane">
       <div class="fbar">
-        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'co-centro','',renderComensales)">Todos</button><button class="fbtn" onclick="fset(this,'co-centro','BINIFADET',renderComensales)">Binifadet</button><button class="fbtn" onclick="fset(this,'co-centro','TAMARINDOS',renderComensales)">Tamarindos</button><button class="fbtn" onclick="fset(this,'co-centro','TAMARINDOS BAR',renderComensales)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'co-centro','TIRANT',renderComensales)">Tirant</button>
+        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'co-centro','',renderComensales)">Todos</button><button class="fbtn" onclick="fset(this,'co-centro','RESTAURANTES',renderComensales)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button><button class="fbtn" onclick="fset(this,'co-centro','BINIFADET',renderComensales)">Binifadet</button><button class="fbtn" onclick="fset(this,'co-centro','TAMARINDOS',renderComensales)">Tamarindos</button><button class="fbtn" onclick="fset(this,'co-centro','TAMARINDOS BAR',renderComensales)">Tam. Bar</button><button class="fbtn" onclick="fset(this,'co-centro','TIRANT',renderComensales)">Tirant</button>
         <span class="fbar-label">Servicio</span><button class="fbtn active" onclick="fset(this,'co-serv','',renderComensales)">Ambos</button><button class="fbtn" onclick="fset(this,'co-serv','Comida',renderComensales)">Comida</button><button class="fbtn" onclick="fset(this,'co-serv','Cena',renderComensales)">Cena</button>
         <span class="fbar-label">Vista</span><button class="fbtn" onclick="fset(this,'co-vista','diaria',renderComensales)">Diaria</button><button class="fbtn" onclick="fset(this,'co-vista','semanal',renderComensales)">Semanal</button><button class="fbtn active" onclick="fset(this,'co-vista','mensual',renderComensales)">Mensual</button>
         <span class="fbar-label">Mes</span><button class="fbtn active" onclick="fset(this,'co-mes','',renderComensales)">Todos</button><button class="fbtn" onclick="fset(this,'co-mes','1',renderComensales)">Ene</button><button class="fbtn" onclick="fset(this,'co-mes','2',renderComensales)">Feb</button><button class="fbtn" onclick="fset(this,'co-mes','3',renderComensales)">Mar</button><button class="fbtn" onclick="fset(this,'co-mes','4',renderComensales)">Abr</button><button class="fbtn" onclick="fset(this,'co-mes','5',renderComensales)">May</button><button class="fbtn" onclick="fset(this,'co-mes','6',renderComensales)">Jun</button><button class="fbtn" onclick="fset(this,'co-mes','7',renderComensales)">Jul</button><button class="fbtn" onclick="fset(this,'co-mes','8',renderComensales)">Ago</button><button class="fbtn" onclick="fset(this,'co-mes','9',renderComensales)">Sep</button><button class="fbtn" onclick="fset(this,'co-mes','10',renderComensales)">Oct</button><button class="fbtn" onclick="fset(this,'co-mes','11',renderComensales)">Nov</button><button class="fbtn" onclick="fset(this,'co-mes','12',renderComensales)">Dic</button>
@@ -1067,7 +1069,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g
     <!-- ══════════════ VALORACIONES (Cover · satisfacción) ══════════════ -->
     <div id="tab-valoraciones" class="tab-pane">
       <div class="fbar">
-        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'va-centro','',renderValoraciones)">Todos</button><button class="fbtn" onclick="fset(this,'va-centro','BINIFADET',renderValoraciones)">Binifadet</button><button class="fbtn" onclick="fset(this,'va-centro','TAMARINDOS',renderValoraciones)">Tamarindos</button><button class="fbtn" onclick="fset(this,'va-centro','TIRANT',renderValoraciones)">Casa Tirant</button><button class="fbtn" onclick="fset(this,'va-centro','TAMARINDOS BAR',renderValoraciones)">Bar Tamarindos</button>
+        <span class="fbar-label">Centro</span><button class="fbtn active" onclick="fset(this,'va-centro','',renderValoraciones)">Todos</button><button class="fbtn" onclick="fset(this,'va-centro','RESTAURANTES',renderValoraciones)" title="Binifadet + Tamarindos + Tamarindos Bar + Tirant">Restaurantes</button><button class="fbtn" onclick="fset(this,'va-centro','BINIFADET',renderValoraciones)">Binifadet</button><button class="fbtn" onclick="fset(this,'va-centro','TAMARINDOS',renderValoraciones)">Tamarindos</button><button class="fbtn" onclick="fset(this,'va-centro','TIRANT',renderValoraciones)">Casa Tirant</button><button class="fbtn" onclick="fset(this,'va-centro','TAMARINDOS BAR',renderValoraciones)">Bar Tamarindos</button>
         <span class="fbar-label">Servicio</span><button class="fbtn active" onclick="fset(this,'va-serv','',renderValoraciones)">Ambos</button><button class="fbtn" onclick="fset(this,'va-serv','Comida',renderValoraciones)">Comida</button><button class="fbtn" onclick="fset(this,'va-serv','Cena',renderValoraciones)">Cena</button>
         <span class="fbar-label">Año</span><button class="fbtn active" onclick="fset(this,'va-anio','2026',renderValoraciones)">2026</button><button class="fbtn" onclick="fset(this,'va-anio','2025',renderValoraciones)">2025</button><button class="fbtn" onclick="fset(this,'va-anio','2024',renderValoraciones)">2024</button><button class="fbtn" onclick="fset(this,'va-anio','2023',renderValoraciones)">2023</button><button class="fbtn" onclick="fset(this,'va-anio','todos',renderValoraciones)">Todos</button>
         <span class="fbar-label">Opiniones</span><button class="fbtn active" onclick="fset(this,'va-op','',renderValoraciones)">Todas</button><button class="fbtn" onclick="fset(this,'va-op','bajas',renderValoraciones)">Solo bajas (≤ 6)</button><button class="fbtn" onclick="fset(this,'va-op','texto',renderValoraciones)">Con comentario</button>
@@ -1735,7 +1737,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-10-21.2'; // Comensales: tabla de nacionalidades por centro (vista comensales_nacionalidad_desde_reservas)
+const APP_VERSION = '2026-11-13.1'; // Filtro «Restaurantes»: los 4 restaurantes juntos en General, Semanal, Subfamilia, Control, Ventas, Compras, Salarios, Personal, Comensales y Valoraciones
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -1792,6 +1794,20 @@ function mesANumero(v) {
   return MAP[s] || MAP[s.slice(0,3)] || 0;
 }
 const CENTROS = ['BINIFADET','BODEGA','TAMARINDOS','TAMARINDOS BAR','TIRANT','TIENDA','PRODUCCION','ESTRUCTURA'];
+// Grupos de centros seleccionables en los filtros además de un centro suelto.
+// «Restaurantes» junta los 4 restaurantes y deja fuera Estructura, Bodega, Tienda y Producción.
+const GRUPOS_CENTRO = { RESTAURANTES: ['BINIFADET','TAMARINDOS','TAMARINDOS BAR','TIRANT'] };
+function esGrupoCentro(c) { return !!(c && GRUPOS_CENTRO[c]); }
+// Centros concretos que cubre un valor de filtro; null = sin filtro (todos los centros).
+function centrosDelFiltro(c) { if (!c || c === 'ALL') return null; return GRUPOS_CENTRO[c] || [c]; }
+// ¿Pasa el centro de una fila el filtro `c`? `c` puede ser vacío/ALL, un centro o un grupo.
+// Normaliza «TAMARINDOS_BAR» (Personal) ↔ «TAMARINDOS BAR» (resto) para que el grupo valga en todos los paneles.
+function pasaCentro(c, centro) {
+  if (!c || c === 'ALL') return true;
+  const n = String(centro || '').replace(/_/g, ' ');
+  const g = GRUPOS_CENTRO[c];
+  return g ? g.includes(n) : n === String(c).replace(/_/g, ' ');
+}
 const CCOL = {
   'BINIFADET':    '#5E7D5A',
   'BODEGA':       '#2F3A45',
@@ -1949,13 +1965,13 @@ function _resueltas(tabla, resolver) {
   _resCache[tabla] = { arr, len: arr.length, ver: _catVer, filas };
   return filas;
 }
-function getIng(c,m)  { return _resueltas('ingresos', resolveIng).filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||r.mes===m)&&inRango(r.fecha)); }
+function getIng(c,m)  { return _resueltas('ingresos', resolveIng).filter(r=>pasaCentro(c,r.centro)&&(!m||r.mes===m)&&inRango(r.fecha)); }
 // El histórico Dijit guarda compras desde 2008: al filtrar por MES, el año se
 // ciñe a la temporada actual (si no, "Ago" mezclaba agostos de 2024 y 2025 con
 // el de 2026). El histórico completo sigue accesible con el rango Desde/Hasta.
 function getGas(c,m)  { const anioTemporada=String(new Date().getFullYear());
-  return _resueltas('gastos', resolveGas).filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||(r.mes===m&&String(r.fecha||'').slice(0,4)===anioTemporada))&&inRango(r.fecha)); }
-function getPpto(c,m) { return DB.presupuesto.filter(r=>(!c||c==='ALL'||r.centro===c)&&(!m||r.mes===m)&&inRango(r.fecha)); }
+  return _resueltas('gastos', resolveGas).filter(r=>pasaCentro(c,r.centro)&&(!m||(r.mes===m&&String(r.fecha||'').slice(0,4)===anioTemporada))&&inRango(r.fecha)); }
+function getPpto(c,m) { return DB.presupuesto.filter(r=>pasaCentro(c,r.centro)&&(!m||r.mes===m)&&inRango(r.fecha)); }
 
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); charts[id] = null; } }
 function extractMes(fecha) { try { return new Date(fecha).getMonth()+1; } catch { return 0; } }
@@ -3348,14 +3364,14 @@ function renderDashboard() {
   gas.forEach(r=>{ slot(k26(r)).g+=r.base; });
   // Personal real (NOMINAS) — respeta filtro de centro y mes (solo por mes: la tabla no lo muestra)
   if (gran === 'mes') nominasEfectivas().forEach(r=>{
-    if (c && c!=='ALL' && r.canal!==c) return;
+    if (!pasaCentro(c,r.canal)) return;
     if (m && r.mes!==m) return;
     if (!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,pn:0};
     mesMap[r.mes].n += (r.coste_total||0);
   });
   // Presupuesto personal (PRESUPUESTO NOMINAS) — respeta filtro de centro y mes
   if (gran === 'mes') (DB.presupuesto_nominas||[]).forEach(r=>{
-    if (c && c!=='ALL' && r.canal!==c) return;
+    if (!pasaCentro(c,r.canal)) return;
     if (m && r.mes!==m) return;
     if (!mesMap[r.mes]) mesMap[r.mes]={i:0,p:0,g:0,n:0,i25:0,pn:0};
     mesMap[r.mes].pn += (r.importe||0);
@@ -3369,7 +3385,7 @@ function renderDashboard() {
   (DB.ingresos_historico||[]).forEach(r=>{
     const yr = r.fecha ? +(''+r.fecha).slice(0,4) : (r.año || r.anio);
     if (yr !== 2025) return;
-    if (c && c!=='ALL' && r.centro!==c) return;
+    if (!pasaCentro(c,r.centro)) return;
     if (gran === 'dia') {
       const sf = addDiasISO(String(r.fecha).slice(0,10), 364);
       if (m && +sf.slice(5,7)!==m) return;
@@ -3390,7 +3406,7 @@ function renderDashboard() {
   (DB.ingresos_historico||[]).forEach(r=>{
     const yr = r.fecha ? +(''+r.fecha).slice(0,4) : (r.año || r.anio);
     if (yr !== 2024) return;
-    if (c && c!=='ALL' && r.centro!==c) return;
+    if (!pasaCentro(c,r.centro)) return;
     if (gran === 'dia') {
       const sf = addDiasISO(String(r.fecha).slice(0,10), 728);
       if (m && +sf.slice(5,7)!==m) return;
@@ -3482,8 +3498,7 @@ function renderDashboard() {
     // ── Filas por centro (acumulado del periodo filtrado) ──
     // Misma estructura que el total, pero agrupando por centro en vez de por mes.
     // Respetan el filtro de centro global: si hay uno seleccionado, solo se muestra ese.
-    const centroFiltro = c && c !== 'ALL' ? c : null;
-    const centrosMostrar = centroFiltro ? [centroFiltro] : CENTROS;
+    const centrosMostrar = centrosDelFiltro(c) || CENTROS;
     const centroRows = centrosMostrar.map(ct => {
       // Ingresos 26 (con filtros activos)
       const iCt = DB.ingresos.filter(r => r.centro===ct && (!m||r.mes===m) && inRango(r.fecha))
@@ -3599,7 +3614,7 @@ function renderSemanal() {
   const {desde, hasta} = gd();
 
   // ── Helpers de filtrado ──
-  const passCentro = r => c==='ALL' || r.centro===c;
+  const passCentro = r => pasaCentro(c, r.centro);
   const passFam    = r => !fam || r.familia===fam;
   const enAcum     = r => inRango(r.fecha);
 
@@ -3727,6 +3742,7 @@ function renderSemanal() {
   };
   const gruposStock = { gastos: agruparStock(DB.gastos||[]), ingresos: agruparStock((DB.ingresos||[]).concat(DB.ventas_internas||[])) };
   const sumaStock = (tabla, centro, famN, desdeISO, hastaISO) => {
+    if (esGrupoCentro(centro)) return GRUPOS_CENTRO[centro].reduce((s, ct) => s + sumaStock(tabla, ct, famN, desdeISO, hastaISO), 0);
     const g = gruposStock[tabla];
     const kIdx = centro === 'ALL' ? 'T|' + famN : 'C|' + centro + '|' + famN;
     let ix = g.idx.get(kIdx);
@@ -3821,14 +3837,14 @@ function renderSubfamilia() {
   const m   = +fget('sf-mes');
 
   const sfMap = {};
-  DB.ingresos.filter(r=>(!c||r.centro===c)&&(!fam||r.familia===fam)&&(!m||r.mes===m))
+  DB.ingresos.filter(r=>pasaCentro(c,r.centro)&&(!fam||r.familia===fam)&&(!m||r.mes===m))
     .forEach(r=>{
       const k=r.subfamilia+'||'+r.familia;
       if(!sfMap[k]) sfMap[k]={sf:r.subfamilia,fam:r.familia,i:0,g:0,uv:0,uc:0};
       sfMap[k].i  += r.base;
       sfMap[k].uv += r.unidades||0;
     });
-  DB.gastos.filter(r=>(!c||r.centro===c)&&(!fam||r.familia===fam)&&(!m||r.mes===m))
+  DB.gastos.filter(r=>pasaCentro(c,r.centro)&&(!fam||r.familia===fam)&&(!m||r.mes===m))
     .forEach(r=>{
       const k=r.subfamilia+'||'+r.familia;
       if(!sfMap[k]) sfMap[k]={sf:r.subfamilia,fam:r.familia,i:0,g:0,uv:0,uc:0};
@@ -3872,14 +3888,14 @@ function renderSubfamilia() {
   // Para subfamilias SIN productos controlados (Opción A): ratio aj = ratio bruto, stock = '—'
   const { desde: sfDesde, hasta: sfHasta } = _periodoDashboard(m);
   function _stockSubAg(famN, subN) {
-    if (c) {
+    if (c && !esGrupoCentro(c)) {
       // Centro concreto
       const s = stockAtSubfamilia(c, famN, subN, sfHasta);
       return s;
     }
     // ALL: sumar stocks de todos los centros (solo los que tienen control)
     let total = 0, anyCtrl = false, allFis = true;
-    for (const ct of CENTROS) {
+    for (const ct of (centrosDelFiltro(c) || CENTROS)) {
       if (ct === 'ESTRUCTURA') continue;
       const s = stockAtSubfamilia(ct, famN, subN, sfHasta);
       if (s.hayControl || s.fechaAncla) {
@@ -3894,7 +3910,7 @@ function renderSubfamilia() {
     // Si no hay productos controlados en NINGÚN centro para esta subfamilia, Δstock=0 → ratio aj = bruto
     const hayCtrlGlobal = (DB.productos_controlados||[]).some(r =>
       r.activo !== false &&
-      (!c || r.centro === c) &&
+      pasaCentro(c, r.centro) &&
       (r.familia||'').toUpperCase().trim() === famN &&
       (r.subfamilia||'').trim() === subN
     );
@@ -3905,10 +3921,10 @@ function renderSubfamilia() {
     // Stock inicial: día anterior al periodo
     const diaIni = _diaAnterior(sfDesde);
     let stockIni;
-    if (c) stockIni = stockAtSubfamilia(c, famN, subN, diaIni);
+    if (c && !esGrupoCentro(c)) stockIni = stockAtSubfamilia(c, famN, subN, diaIni);
     else {
       let total = 0, anyCtrl = false;
-      for (const ct of CENTROS) {
+      for (const ct of (centrosDelFiltro(c) || CENTROS)) {
         if (ct === 'ESTRUCTURA') continue;
         const s = stockAtSubfamilia(ct, famN, subN, diaIni);
         if (s.hayControl || s.fechaAncla) { anyCtrl = true; if (s.valor != null) total += s.valor; }
@@ -3919,11 +3935,11 @@ function renderSubfamilia() {
     // Para el cálculo del ratio aj. necesitamos compras/ingresos del periodo SOLO esta subfamilia
     // Si centro concreto:
     let compras = 0, ingresosTot = 0;
-    if (c) {
+    if (c && !esGrupoCentro(c)) {
       compras = _comprasEntre(c, sfDesde, sfHasta, famN, subN);
       ingresosTot = _ingresosEntre(c, sfDesde, sfHasta, famN, subN);
     } else {
-      for (const ct of CENTROS) {
+      for (const ct of (centrosDelFiltro(c) || CENTROS)) {
         if (ct === 'ESTRUCTURA') continue;
         compras += _comprasEntre(ct, sfDesde, sfHasta, famN, subN);
         ingresosTot += _ingresosEntre(ct, sfDesde, sfHasta, famN, subN);
@@ -4062,7 +4078,7 @@ function renderControlProd() {
 
   // Filtrar ingresos y gastos del año actual (2026) por centro + familia + subfamilia
   const YEAR_ACTUAL = 2026;
-  const passCentro = r => centro === 'ALL' || r.centro === centro;
+  const passCentro = r => pasaCentro(centro, r.centro);
   const passYear   = r => {
     if (r.fecha) return (''+r.fecha).substring(0,4) === String(YEAR_ACTUAL);
     return r.anio === YEAR_ACTUAL;
@@ -4105,7 +4121,7 @@ function renderControlProd() {
     rows.push(x);
   }
   if (!rows.length) {
-    tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#aaa;padding:30px">Sin movimientos de "'+sub+'" en '+(centro==='ALL'?'el conjunto de centros':centro)+' durante '+YEAR_ACTUAL+'.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#aaa;padding:30px">Sin movimientos de "'+sub+'" en '+(centro==='ALL'?'el conjunto de centros':centro==='RESTAURANTES'?'los 4 restaurantes':centro)+' durante '+YEAR_ACTUAL+'.</td></tr>';
     if (tf) tf.innerHTML = '';
     if (mt) mt.innerHTML = '';
     return;
@@ -8736,7 +8752,7 @@ function renderVentas() {
   const fam = fget('rv-familia');
 
   let rows = getIngAll().filter(r =>
-    (!c   || r.centro  === c)   &&
+    pasaCentro(c, r.centro)     &&
     (!año || r.fecha?.substring(0,4) === año) &&
     (!fam || r.familia === fam)
   );
@@ -9184,7 +9200,7 @@ function descargarComprasExcel() {
   const fam = fget('rc-familia');
   const m   = +fget('rc-mes');
   const rows = (DB.gastos||[]).filter(r=>
-    (!c  || r.centro  === c)  &&
+    pasaCentro(c, r.centro)   &&
     (!fam|| r.familia === fam) &&
     (!m  || r.mes     === m)
   );
@@ -9400,7 +9416,7 @@ function renderCompras() {
   const m   = +fget('rc-mes');
 
   const rows = DB.gastos.filter(r=>
-    (!c  || r.centro  === c)  &&
+    pasaCentro(c, r.centro)   &&
     (!fam|| r.familia === fam) &&
     (!m  || r.mes     === m)
   );
@@ -9412,7 +9428,7 @@ function renderCompras() {
   // DB.ventas_internas, en positivo): aquí Compras es siempre lo que entró por
   // albarán, con los abonos restados. Coincide con el módulo Compras.
   const ventasInt = (DB.ventas_internas||[]).filter(r=>
-    (!c||r.centro===c)&&(!fam||r.familia===fam)&&(!m||r.mes===m)).reduce((s,r)=>s+r.base,0);
+    pasaCentro(c,r.centro)&&(!fam||r.familia===fam)&&(!m||r.mes===m)).reduce((s,r)=>s+r.base,0);
   const eur = v => v.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
 
   document.getElementById('rc-metrics').innerHTML = `
@@ -9519,7 +9535,7 @@ function renderSalarios() {
   const mDesde = desde ? +desde.substring(5,7) : 1;
   const mHasta = hasta ? +hasta.substring(5,7) : 12;
   const enMesRango = m => m >= mDesde && m <= mHasta;
-  const passCentro = r => !c || (r.centro||r.canal) === c;
+  const passCentro = r => pasaCentro(c, r.centro||r.canal);
 
   // Acumular por mes los 4 ejes: ingresos, nóminas, presupuesto ingresos, presupuesto nóminas
   const mesMap = {};
@@ -9538,7 +9554,7 @@ function renderSalarios() {
   // la tabla DB.nominas no tiene un campo `importe`, su coste vive en `coste_total`).
   // Como es mensual, filtramos por mes en el rango.
   (nominasEfectivas()).forEach(r => {
-    if (c && r.canal !== c) return;
+    if (!pasaCentro(c, r.canal)) return;
     if (!passDepto(r)) return;
     if (r.anio && r.anio !== año) return;
     if (!enMesRango(r.mes)) return;
@@ -9546,13 +9562,13 @@ function renderSalarios() {
   });
   // Ingresos PRESUPUESTO (DB.presupuesto: campo `centro`)
   (DB.presupuesto||[]).forEach(r => {
-    if (c && r.centro !== c) return;
+    if (!pasaCentro(c, r.centro)) return;
     if (!enMesRango(r.mes)) return;
     ensure(r.mes).ingP += (r.importe||0);
   });
   // Nóminas PRESUPUESTO (DB.presupuesto_nominas: campo `canal`)
   (DB.presupuesto_nominas||[]).forEach(r => {
-    if (c && r.canal !== c) return;
+    if (!pasaCentro(c, r.canal)) return;
     if (!passDepto(r)) return;
     if (!enMesRango(r.mes)) return;
     ensure(r.mes).nomP += (r.importe||0);
@@ -9796,7 +9812,7 @@ function rrhhEnriquecido(){
 
 function renderRRHH(){
   const c=fget('rh-centro'), dep=fget('rh-depto'), nivel=fget('rh-nivel')||'centro';
-  const rows0=rrhhEnriquecido().filter(r=>(!c||r.centro===c)&&(!dep||r.depto===dep));
+  const rows0=rrhhEnriquecido().filter(r=>pasaCentro(c,r.centro)&&(!dep||r.depto===dep));
 
   const totTeo=rows0.reduce((s,r)=>s+r.teorico,0);
   const totReal=rows0.reduce((s,r)=>s+r.real,0);
@@ -10075,7 +10091,7 @@ function renderValoraciones() {
   const {desde, hasta} = gd();
 
   let all = (DB.valoraciones||[]);
-  if (centro) all = all.filter(r => r.centro === centro);
+  if (centro) all = all.filter(r => pasaCentro(centro, r.centro));
   if (serv)   all = all.filter(r => r.servicio === serv);
   if (anioF !== 'todos') all = all.filter(r => String(r.anio) === anioF);
   if (desde)  all = all.filter(r => r.fecha >= desde);
@@ -10188,7 +10204,7 @@ function renderComensales() {
 
   // Filtro base sobre toda la tabla (centro + servicio + mes + rango fechas YoY-aware)
   let all = (DB.comensales||[]);
-  if (centro) all = all.filter(r => r.centro === centro);
+  if (centro) all = all.filter(r => pasaCentro(centro, r.centro));
   if (serv)   all = all.filter(r => r.servicio === serv);
   if (mes)    all = all.filter(r => r.mes === mes);
   all = all.filter(passFechas);
@@ -10223,7 +10239,7 @@ function renderComensales() {
   // Aplicamos los mismos filtros que a comensales: centro + mes + rango de fechas 2026.
   // El servicio no se cruza (no existe en ingresos).
   let ing26 = (DB.ingresos||[]).filter(r => r.anio === 2026 || (r.fecha && String(r.fecha).slice(0,4)==='2026'));
-  if (centro) ing26 = ing26.filter(r => r.centro === centro);
+  if (centro) ing26 = ing26.filter(r => pasaCentro(centro, r.centro));
   if (mes)    ing26 = ing26.filter(r => r.mes === mes);
   if (desde)  ing26 = ing26.filter(r => r.fecha >= desde);
   if (hasta)  ing26 = ing26.filter(r => r.fecha <= hasta);
@@ -10233,7 +10249,7 @@ function renderComensales() {
   // Ingresos 2025 (del histórico) — mismos filtros, reinterpretados al año anterior.
   // El histórico guarda el año dentro de la fecha (YYYY-MM-DD), no en un campo aparte.
   let ing25 = (DB.ingresos_historico||[]).filter(r => String(r.fecha||'').slice(0,4) === '2025');
-  if (centro)  ing25 = ing25.filter(r => r.centro === centro);
+  if (centro)  ing25 = ing25.filter(r => pasaCentro(centro, r.centro));
   if (mes)     ing25 = ing25.filter(r => r.mes === mes);
   if (desde25) ing25 = ing25.filter(r => r.fecha >= desde25);
   if (hasta25) ing25 = ing25.filter(r => r.fecha <= hasta25);
@@ -10312,7 +10328,7 @@ function renderComensales() {
   // ── Gráfico Comida vs Cena (2026) ──
   // Se ignora el filtro de servicio para este gráfico — sirve precisamente para comparar.
   let allSinServ = (DB.comensales||[]);
-  if (centro) allSinServ = allSinServ.filter(r => r.centro === centro);
+  if (centro) allSinServ = allSinServ.filter(r => pasaCentro(centro, r.centro));
   if (mes)    allSinServ = allSinServ.filter(r => r.mes === mes);
   allSinServ = allSinServ.filter(passFechas);
   const cs26 = allSinServ.filter(r=>r.anio===2026);

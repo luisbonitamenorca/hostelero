@@ -40,8 +40,12 @@ Para volver a la portada: **«← Inicio»**, abajo en el menú de la izquierda.
   🍽️ Comensales, 🏷️ Clasificación, 📦 Inventarios, 🛍️ Ecommerce, 📁 Documentos). Arriba, la semana
   actual («Semana 40 · …»).
 - **Barra de arriba**: **Desde** y **Hasta** (fechas), el desplegable de centro (**Todos los centros**,
-  Binifadet, Bodega, Tamarindos, Tamarindos Bar, Tirant, Tienda) y el botón verde **«📂 Cargar Excel»**.
-  Las fechas y el centro filtran casi todas las pestañas.
+  **Restaurantes (4)**, Binifadet, Bodega, Tamarindos, Tamarindos Bar, Tirant, Tienda) y el botón verde
+  **«📂 Cargar Excel»**. Las fechas y el centro filtran casi todas las pestañas.
+- **Restaurantes**: junta Binifadet, Tamarindos, Tamarindos Bar y Tirant y deja fuera Estructura, Bodega,
+  Tienda y Producción. Está en el desplegable de arriba y como botón, al lado de **Todos**, en los filtros
+  de centro de Compras por familia, Subfamilia, Control producción, Ventas, Compras, Salarios, Fichajes,
+  Comensales y Valoraciones. Las pestañas de Inventarios no lo tienen: un inventario es siempre de un centro.
 - **«Estado de los datos»**: una línea por fuente (📋 Ventas, 🛒 Compras, 👥 Horas, 🍽️ Comensales,
   🎫 Visitas) con la fecha del último dato y cuándo se subió. Ver el punto 5.
 
@@ -58,8 +62,8 @@ Para volver a la portada: **«← Inicio»**, abajo en el menú de la izquierda.
 ### …para ver el food cost de la semana
 
 1. Pestaña **Compras por familia**.
-2. Arriba, elige el centro (Todos, Binifadet, Bodega, Tamarindos, Tamarindos Bar, Tirant, Tienda,
-   Producción).
+2. Arriba, elige el centro (Todos, Restaurantes, Binifadet, Bodega, Tamarindos, Tamarindos Bar, Tirant,
+   Tienda, Producción).
 3. Elige **Familia** y la **Vista**: Mensual, Semanal o Diaria.
 4. Columnas: Ingresos, Presupuesto, **Compras** (lo comprado fuera, con los abonos ya restados),
    **Ingresos internos**, **Food cost** (compras ÷ ventas), **FC acumulado** y **Stock teórico €**.
