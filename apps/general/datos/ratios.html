@@ -1737,7 +1737,7 @@ const DB = {
 <script>
 // app.js — Lógica principal · Ratios Food Cost · Bonita Menorca
 // Versión del build: visible en la barra lateral y en consola para diagnosticar cachés.
-const APP_VERSION = '2026-11-13.1'; // Filtro «Restaurantes»: los 4 restaurantes juntos en General, Semanal, Subfamilia, Control, Ventas, Compras, Salarios, Personal, Comensales y Valoraciones
+const APP_VERSION = '2026-11-13.2'; // Fechas futuras (OCR) no mandan en el acumulado/stock de Semanal ni en «Estado de los datos» · Filtro «Restaurantes»: los 4 restaurantes juntos en General, Semanal, Subfamilia, Control, Ventas, Compras, Salarios, Personal, Comensales y Valoraciones
 console.log('Ratios Food Cost · build', APP_VERSION);
 
 // ── Corte Dijit → App Compras ────────────────────────────────────
@@ -3662,8 +3662,12 @@ function renderSemanal() {
     };
     return rowMap[k];
   };
+  // Una fecha posterior a hoy es un error de lectura (un albarán de 01/08/2026 leído
+  // como 2028-08-01 dejó a Tirant sin FC acumulado en agosto y con el stock del
+  // total mal, 13-11-2026): no manda en la «última fecha con dato» de la fila.
+  const hoyISO = new Date().toISOString().slice(0,10);
   const updFecha = (row, fecha) => {
-    if (!fecha) return;
+    if (!fecha || fecha > hoyISO) return;
     if (!row.ultFecha || fecha > row.ultFecha) row.ultFecha = fecha;
   };
 
@@ -7211,11 +7215,12 @@ function pintaFrescura() {
   if (!el) return;
 
   // Última fecha (string YYYY-MM-DD) presente en un array dado
+  const hoyISO = new Date().toISOString().slice(0,10);
   const ultimaFecha = (arr, anioFiltro) => {
     if (!arr || arr.length === 0) return null;
     let mx = null;
     for (const r of arr) {
-      if (!r.fecha) continue;
+      if (!r.fecha || r.fecha > hoyISO) continue;   // fechas futuras = año mal leído por el OCR
       if (anioFiltro && r.anio !== anioFiltro) continue;
       if (!mx || r.fecha > mx) mx = r.fecha;
     }
